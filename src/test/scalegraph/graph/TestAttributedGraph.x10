@@ -34,12 +34,12 @@ public class TestAttributedGraph {
     	
     	v1:Vertex = new Vertex( new StringAttribute("Label", "Tokyo"));
     	v2:Vertex = new Vertex( new StringAttribute("Label", "Blue Gene"));
-    	g: AttributedGraphMock = new AttributedGraphMock();
+    	g: AttributedGraph = AttributedGraph.make(GraphSizeCategory.SMALL);
     	
     	g.addVertex(v1);
     	g.addVertex(v2);
     	
-    	g.printVertexList();
+    	g.printAllTab();
     	
     }
     
@@ -79,22 +79,23 @@ public class TestAttributedGraph {
     	g.addEdge(e3);
     	g.addEdge(e4);
 	    
-	    g.printVertexList();
-	    g.printSourceVertexList();
-	    g.printDestinationVertexList();
+	    g.printAllTab();
+	    // g.printSourceVertexList();
+	    // g.printDestinationVertexList();
     }
     
    private static def testConstructorWithVertexListParam() {
 	   
 	   Console.OUT.println("\n------testConstructorWithVertexListParam--------");
 	   
-	  	vertexList: ArrayList[Vertex] = new ArrayList[Vertex]();
-   	vertexList.add(new Vertex( new StringAttribute("Brand", "Volkswagen") ));
-   	vertexList.add(new Vertex( new StringAttribute("Brand", "BMW") ));
-   	vertexList.add(new Vertex( new StringAttribute("Brand", "Honda") ));
-   	g: AttributedGraph = new AttributedGraph(vertexList);
-   	
-   	AttributedGraphMock.printVertexList(g);
+	   vertexList: ArrayList[Vertex] = new ArrayList[Vertex]();
+	   vertexList.add(new Vertex( new StringAttribute("Brand", "Volkswagen") ));
+	   vertexList.add(new Vertex( new StringAttribute("Brand", "BMW") ));
+	   vertexList.add(new Vertex( new StringAttribute("Brand", "Honda") ));
+	   g: AttributedGraph = AttributedGraph.make(GraphSizeCategory.SMALL, vertexList);
+	   
+	   // AttributedGraphMock.printVertexList(g);
+	   g.printAllTab();
   
    }
    

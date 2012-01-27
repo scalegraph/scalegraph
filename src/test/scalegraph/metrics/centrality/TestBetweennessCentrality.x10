@@ -4,7 +4,6 @@ import org.scalegraph.metrics.centrality.BetweennessCentrality;
 import org.scalegraph.io.GMLReader;
 import org.scalegraph.graph.AttributedGraph;
 import org.scalegraph.graph.Vertex;
-import test.scalegraph.graph.AttributedGraphMock;
 import x10.util.Pair;
 
 public class TestBetweennessCentrality {
@@ -14,16 +13,11 @@ public class TestBetweennessCentrality {
 		Console.OUT.println("---------------------Start Betweennes Centrality--------------------");
 		
 		var graph: AttributedGraph;
-		graph = GMLReader.loadFromFile("/nfs/home/charuwat/graph data/bc.gml");
-		val result = BetweennessCentrality.run(graph, true);
+		graph = GMLReader.loadFromFile("/nfs/data1/igraphx10/GML/gml_writer_t2.gml");
+		val result = BetweennessCentrality.run(graph, false);
 		printBcResult(result);
 		
 		Console.OUT.println("---------------------------------------------------------------------");
-		// AttributedGraphMock.printVertexList(graphs(0));
-		// Console.OUT.println("---------------------------------------------------------------------");
-		// AttributedGraphMock.printEdgeList(graphs(0));
-		// Console.OUT.println("---------------------------------------------------------------------");
-		// AttributedGraphMock.printNeighbors(graphs(0));
 	}
 	
 	

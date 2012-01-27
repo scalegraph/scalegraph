@@ -122,6 +122,9 @@ public class AttributeSchema {
 			if(attributes == null) {
 				return true;
 			} else {
+				if(attributes.size == 0) {
+					return true;
+				}
 				return false;
 			}
 		}
