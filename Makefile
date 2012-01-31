@@ -7,10 +7,10 @@ X10_HOME = /nfs/home/miyuru/workspace/x10trunk/x10.dist
 CLASSPATH=$(X10_HOME)/../x10.gml/lib/native_gml.jar
 
 #X10 runtime environment variables
-X10_NPLACES=6
+X10_NPLACES=1
 X10_HOSTFILE=machines.txt
 
-APP_DIR=/nfs/home/miyuru/workspace/scalegraph
+APP_DIR=/nfs/home/charuwat/workspace/ScaleGraph
 OUTPUT=./bin
 
 
@@ -49,17 +49,30 @@ test_betweenness_centrality:
 	src/test/scalegraph/metrics/centrality/TestBetweennessCentrality.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/graph/Vertex.x10 \
 	src/org/scalegraph/graph/Edge.x10 \
 	src/org/scalegraph/graph/Attribute.x10 \
-	src/test/scalegraph/graph/AttributedGraphMock.x10 \
 	src/org/scalegraph/io/GMLReader.x10 \
 	src/org/scalegraph/io/GMLEntry.x10 \
+	src/org/scalegraph/graph/StringAttribute.x10 \
+	src/org/scalegraph/graph/BooleanAttribute.x10 \
+	src/org/scalegraph/graph/ByteAttribute.x10 \
+	src/org/scalegraph/graph/ShortAttribute.x10 \
+	src/org/scalegraph/graph/IntAttribute.x10 \
+	src/org/scalegraph/graph/LongAttribute.x10 \
+	src/org/scalegraph/graph/FloatAttribute.x10 \
+	src/org/scalegraph/graph/DoubleAttribute.x10 \
+	src/org/scalegraph/graph/CharAttribute.x10 \
+	src/org/scalegraph/graph/DateAttribute.x10 \
+	src/org/scalegraph/graph/AttributeSchema.x10 \
+	src/org/scalegraph/util/Date.x10 \
 	src/org/scalegraph/io/GMLToken.x10;
 	
 	@echo "----------- Launch Betweenness Centrality Tester -----------";
-	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
+#	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
 	@echo "----------- Test Completed ---------------------------------";
 	
 #Test 3
