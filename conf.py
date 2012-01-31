@@ -11,6 +11,7 @@
 ##
 #########################################################
 
+import os
 import sys
 import commands
 import socket
@@ -36,9 +37,9 @@ def updateNPlaces():
                configEntry = ''
 
                for line in open('./Makefile'):
-                      if (line.find('X10_NPLACES=') != -1):
-                            line = 'X10_NPLACES=' + userchoice + '\r\n'
-       		      configEntry += line
+			if (line.find('X10_NPLACES=') != -1):
+                     		line = 'X10_NPLACES=' + userchoice + '\n'
+			configEntry += line
 
                open('./Makefile', 'w').write(str(configEntry))
 
@@ -58,7 +59,7 @@ def main(item):
 			machinesList = userchoice.split(',')
 
 			for record in machinesList:
-				configEntry += record + '\r\n'	
+				configEntry += record + '\n'	
 			open('./machines.txt', 'w').write(str(configEntry))
 
 		updateNPlaces()
@@ -72,7 +73,7 @@ def main(item):
 		else:
 			#print (tsubameStatus)
 			spinfo = tsubameStatus.split('\n')
-			line = spinfo[5].strip()
+			line = spinfo[len(spinfo) - 1].strip()
 			lastloc = line.rfind('/')
 			print line
 			print lastloc
@@ -92,9 +93,21 @@ def main(item):
 					break
 			configEntry = ''
 			for item in hlist:
-				configEntry += item + '\r\n'
+				configEntry += item + '\n'
 			open('./machines.txt', 'w').write(str(configEntry))
 			
 			updateNPlaces()
+			configEntry = ''
+			for line in open('./Makefile'):
+				if (line.find('X10_HOME = ') != -1):
+							line = 'X10_HOME = /data0/t2gsuzumuralab/apps/x10\n'
+				if (line.find('APP_DIR=') != -1):
+							line = 'APP_DIR=' + os.path.dirname(os.path.abspath(__file__)) + '\n'
+				if (line.find('X10_NTHREADS=') != -1):
+							os.system(line)		
+							print(line)					
+	   			configEntry += line
+
+			open('./Makefile', 'w').write(str(configEntry))
 main(sys.argv[1:])
 
