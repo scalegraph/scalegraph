@@ -2,15 +2,18 @@
 # This is the Makefile for Testing the scalegraph packages
 #############################################################
 
+#Export the number of threads
+export X10_NTHREADS=10
+
 #Set the X10_HOME and class path
 X10_HOME = /nfs/home/miyuru/workspace/x10trunk/x10.dist
-CLASSPATH=$(X10_HOME)/../x10.gml/lib/native_gml.jar
+CLASSPATH=$(X10_HOME)
 
 #X10 runtime environment variables
-X10_NPLACES=1
+X10_NPLACES=4
 X10_HOSTFILE=machines.txt
 
-APP_DIR=/nfs/home/charuwat/workspace/ScaleGraph
+APP_DIR=/nfs/home/miyuru/workspace/ScaleGraph
 OUTPUT=./bin
 
 
@@ -54,6 +57,7 @@ test_betweenness_centrality:
 	src/org/scalegraph/graph/Vertex.x10 \
 	src/org/scalegraph/graph/Edge.x10 \
 	src/org/scalegraph/graph/Attribute.x10 \
+	src/test/scalegraph/graph/AttributedGraphMock.x10 \
 	src/org/scalegraph/io/GMLReader.x10 \
 	src/org/scalegraph/io/GMLEntry.x10 \
 	src/org/scalegraph/graph/StringAttribute.x10 \
@@ -242,7 +246,7 @@ test_edge_reader :
 #Test 11
 test_gen_rmat:
 	echo "----------- Testing RMAT -----------"
-	$(X10_HOME)/bin/x10c++ src/test/scalegraph/generator/TestRMAT.x10 -d $(OUTPUT) -x10lib $(X10_HOME)/../x10.gml/native_gml.properties -classpath $(CLASSPATH) -sourcepath src -post 'g++ -L/nfs/data0/miyuru/software/lapack-3.4.0/lib -lblas' -o $(OUTPUT)/Testscalegraph;
+	$(X10_HOME)/bin/x10c++ src/test/scalegraph/generator/TestRMAT.x10 -d $(OUTPUT) -classpath $(CLASSPATH) -sourcepath src -o $(OUTPUT)/Testscalegraph;
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 
 #Test 12
