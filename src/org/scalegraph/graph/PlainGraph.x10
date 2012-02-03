@@ -1,7 +1,7 @@
 package org.scalegraph.graph;
 
-import x10.matrix.dist.DistDenseMatrix;
-import x10.matrix.block.Grid;
+//import x10.matrix.dist.DistDenseMatrix;
+//import x10.matrix.block.Grid;
 import x10.util.Pair;
 import x10.array.DistArray;
 import x10.util.ArrayList;
@@ -253,7 +253,7 @@ public class PlainGraph implements Graph{
      * 
      * @return a PlainGraph with the composition results
      */
-    public def composition():org.igraphx10.graph.PlainGraph {
+    public def composition(org.scalegraph.graph.Graph):org.scalegraph.graph.PlainGraph {
     	throw new UnsupportedOperationException("Not implemented.");
     }
 
@@ -266,7 +266,7 @@ public class PlainGraph implements Graph{
      *         1 - If this PlainGraph has more Vertices than the input Graph
      *         -1 - If this PlainGraph has less Vertices compared to the input
      */
-    public def compareTo(var id:org.igraphx10.graph.Graph):x10.lang.Int {
+    public def compareTo(var id:org.scalegraph.graph.Graph):x10.lang.Int {
     	throw new UnsupportedOperationException("Not implemented.");
     }
 
@@ -275,7 +275,7 @@ public class PlainGraph implements Graph{
      * 
      * @return A complement version of this PlainGraph
      */
-    public def complement():org.igraphx10.graph.PlainGraph {
+    public def complement():org.scalegraph.graph.PlainGraph {
     	throw new UnsupportedOperationException("Not implemented.");
     }
 
@@ -285,7 +285,7 @@ public class PlainGraph implements Graph{
      * @param a PlainGraph that need to be compared with this
      * @return true if the two plain Graphs are equivalent
      */
-    public def equals(var that:org.igraphx10.graph.Graph):x10.lang.Boolean {
+    public def equals(var that:org.scalegraph.graph.Graph):x10.lang.Boolean {
     	if(this.compareTo(that as PlainGraph) == 0){
     		return true;
     	}else{
@@ -299,7 +299,7 @@ public class PlainGraph implements Graph{
      * @param the PlainGraph that need to be subtracted
      * @return a PlainGraph that contains the subtracted result
      */
-    public def substract(var id:org.igraphx10.graph.Graph):org.igraphx10.graph.PlainGraph {
+    public def substract(var id:org.scalegraph.graph.Graph):org.scalegraph.graph.PlainGraph {
 		throw new UnsupportedOperationException("Not implemented.");
     }
 
@@ -318,12 +318,21 @@ public class PlainGraph implements Graph{
     		
 	    		if(here.id == 0)
 	    		{
-	    			var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion() as Array[PlainGraphRecord];
+	    			val r:Region = adjacencyList.dist.get(here);
+	    			val pt:Point = Point.make(1, internal_vertex);
 	    			
-	    			if(l(1,internal_vertex).isEmpty()){
-	    				l(1,internal_vertex).id = vertex;
-	    				l(1,internal_vertex).edges = new ArrayList[Long]();
-	    			}	    			
+	    			if(r.contains(pt)){
+	    				if(adjacencyList(pt).id != -1l){
+	    					throw new UnsupportedOperationException("Vertex already exists in the Graph");
+	    				}
+	    				
+	    				var rec:PlainGraphRecord = null;
+	    				rec = new PlainGraphRecord();
+	    				rec.id = vertex;
+	    				rec.edges = new ArrayList[Long]();
+	    				adjacencyList(pt) = rec;   				
+	    			}
+	    			
 	    		}	
     		}else if(sizeCategory == GraphSizeCategory.MEDIUM){
     			if(vertex > (ScaleGraphMath.pow(2,sizeCategory) * Place.places().size())){
@@ -334,15 +343,12 @@ public class PlainGraph implements Graph{
     				var v:Long = ScaleGraphMath.pow(2,sizeCategory);
     				val machine:Int = ScaleGraphMath.round(vertex/v) as Int;
     				internal_vertex = (vertex % v) as Int;
-    				//internal_vertex = vertex as Int;
 
     				for(p in adjacencyList.dist.places()){
     					if(p.id == machine){
     						at(p){
     						val r:Region = adjacencyList.dist.get(p);
     						val pt:Point = Point.make(machine + 1, internal_vertex);
-    						// Console.OUT.println("in machine : " + machine);
-    						// Console.OUT.println("internal_vertex : " + internal_vertex);
     						if(r.size()==0){
     							throw new UnsupportedOperationException("region does not have any data points");
     						}
@@ -351,63 +357,22 @@ public class PlainGraph implements Graph{
     							var rec:PlainGraphRecord = null;
     							
     							if(r.contains(pt)){
-//     								Console.OUT.println("found in machine : " + here.id);
-// 
-//     								Console.OUT.println("Creating the Vertex");
+    								if(adjacencyList(pt).id != -1l){
+    									throw new UnsupportedOperationException("Vertex already exists in the Graph");
+    								}
+
     								rec = new PlainGraphRecord();
     								rec.id = vertex;
     								rec.edges = new ArrayList[Long]();
     								adjacencyList(pt) = rec;
-    								// Console.OUT.println("OK " + vertex);
+    								//Console.OUT.println("Added : " + adjacencyList(pt).id);
+    								//Console.OUT.println("rec is : " + rec.id);
     							}else{
-    								throw new UnsupportedOperationException("Vertex " + vertex + " exists in the graph.");
+    								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
     							}
-    							
     							}
     						}
     					}
-    				
-    				
-    				// if(here.id == machine){
-    				// 	var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion() as Array[PlainGraphRecord];
-    				// 	    					
-    				// 	if(l.size == 0){
-    				// 		l = new Array[PlainGraphRecord](ScaleGraphMath.pow(2,sizeCategory) as Int);
-    				// 	}
-    				// 	
-    				// 	val p:PlainGraphRecord = l(internal_vertex);
-    				// 	
-	    			// 	if(p == null){
-	    			// 		l(internal_vertex) = new PlainGraphRecord();
-	    			// 		l(internal_vertex).id = vertex;
-	    			// 		l(internal_vertex).edges = new ArrayList[Long]();
-	    			// 		Console.OUT.println("OK " + vertex);
-	    			// 		}else{
-	    			// 			throw new UnsupportedOperationException("Vertex " + vertex + " exists in the graph.");
-	    			// 		}
-    				// }   
-    				
-    				// if(here.id == machine){
-    				// 	val p:PlainGraphRecord = adjacencyList(internal_vertex);
-    				// 	if(p == null){
-    				// 		Console.OUT.println("Its NULL");
-    				// 	}
-    				// 	
-    				// 	// if(l.size == 0){
-    				// 	// 	l = new Array[PlainGraphRecord](ScaleGraphMath.pow(2,sizeCategory) as Int);
-    				// 	// }
-    				// 	// 
-    				// 	// val p:PlainGraphRecord = l(internal_vertex);
-    				// 	// 
-    				// 	// if(p == null){
-    				// 	// 	l(internal_vertex) = new PlainGraphRecord();
-    				// 	// 	l(internal_vertex).id = vertex;
-    				// 	// 	l(internal_vertex).edges = new ArrayList[Long]();
-    				// 	// 	Console.OUT.println("OK " + vertex);
-    				// 	// }else{
-    				// 	// 	throw new UnsupportedOperationException("Vertex " + vertex + " exists in the graph.");
-    				// 	// }
-    				// }
     			}
     		}
     }
@@ -418,32 +383,25 @@ public class PlainGraph implements Graph{
      * @param the PlainGraph that needs to be intersected.
      * @return a PlainGraph that corresponds to the intersection.
      */
-    public def intersect(var that:org.igraphx10.graph.Graph):org.igraphx10.graph.PlainGraph {
+    public def intersect(var that:org.scalegraph.graph.Graph):org.scalegraph.graph.PlainGraph {
     	throw new UnsupportedOperationException("Not implemented.");
     }
     
-    /**
-     * Increase the size of the Graph
-     */
-    private def scaleUp(var mat:DistDenseMatrix, var vertex:Long):DistDenseMatrix{
-    	// var M:Int = mat.M;
-    	// var N:Int = mat.N;
-    	// 
-    	// vertexIncrementFactor = Math.ceil(Math.log10(vertex)/Math.log10(2)) > vertexIncrementFactor ? Math.ceil(Math.log10(vertex)/Math.log10(2)) : vertexIncrementFactor;
-    	// 
-    	// var gridG:Grid = new Grid((Math.pow(2, vertexIncrementFactor) as Int), (Math.pow(2,vertexIncrementFactor) as Int), Place.MAX_PLACES, 1);
-    	// var adjacencyMatrix2:DistDenseMatrix = DistDenseMatrix.make(gridG);
-    	// 
-    	// 
-    	// for(var m:Int = 0; m < M; m++){
-    	// 	for(var n:Int = 0; n < N; n++){
-    	// 		adjacencyMatrix2(m, n) =  mat(m, n);
-    	// 	}
-    	// }
-    	// 
-    	// return adjacencyMatrix2;
+    
+    public def addEdges(var edlst:Array[String]):void{
+    	var s:Int = edlst.size;
+    	    	
+    	var nThreads:Int = 100;
+    	var offset:Int = s/nThreads;
     	
-    	return null;
+    	finish for(var i:Int = 0; i < s; i = i + offset){
+    		    val ind = i;
+	    		async for(var j:Int = ind; j < offset; j++){
+	    			if(edlst(j) != null){
+	    				addEdge(edlst(j));
+	    			}
+	    		}
+    	}
     }
     
     /**
@@ -459,17 +417,38 @@ public class PlainGraph implements Graph{
     	 val to:Long = Long.parse(strArr(1));
     	 var vertex:Long = from > to ? from:to;
     	 
+    	 //Just try adding the Vertices to make sure that they are properly added befoe creating the Edge
+    	 try{
+    	 	addVertex(strArr(0));
+    	 	//addVertex(strArr(1));
+    	 }catch(ec:UnsupportedOperationException){
+    		 //If the Vertex already exist do not worry adding it
+    		 //Console.OUT.println("CCCCC---->" + strArr(0));
+    	 }
+    	 
+    	 try{
+    		 addVertex(strArr(1));
+    		 //addVertex(strArr(1));
+    	 }catch(ec:UnsupportedOperationException){
+    		 //If the Vertex already exist do not worry adding it
+    		 //Console.OUT.println("CCCCCC---->" + strArr(1));
+    	 }
+    	 
+    	 //Console.OUT.println("DDDDDD---->");
+    	 
     	 //Check to see whether the graph supports the Vertex
     	 if(sizeCategory == GraphSizeCategory.SMALL){
     		 if(vertex > ScaleGraphMath.pow(2,sizeCategory)){
     			 var message:String = "The vertices of the edge does not exist in the graph size.";
     			 message = message + " Current graph size is : " + sizeCategory;
+    			 message = message + " the edge was : " + e;
     			 throw new UnsupportedOperationException(message);
     		 }
     	 }else if(sizeCategory == GraphSizeCategory.MEDIUM){
     		 if(vertex > (ScaleGraphMath.pow(2,sizeCategory))*adjacencyList.dist.places().size()){
     			 var message:String = "The vertices of the edge does not exist in the graph size.";
     			 message = message + " Current graph size is : 2^" + sizeCategory + " * " + adjacencyList.dist.places().size();
+    			 message = message + " the edge was : " + e;
     			 throw new UnsupportedOperationException(message);
     		 } 
     	 }
@@ -492,8 +471,16 @@ public class PlainGraph implements Graph{
     				 var rec:PlainGraphRecord = null;
     				 
     				 if(r.contains(pt)){
-    					 adjacencyList(pt).edges.add(to);
-    				 }    				 
+    					 //Console.OUT.println("from-->" + from + " to-->" + to);
+    					 //Console.OUT.println("pt(0)" + pt(0) + " pt(1)" + pt(1));
+    					 
+    					 //Console.OUT.println("adjacencyList(pt).id-->" + adjacencyList(pt).id);
+    					 if(!adjacencyList(pt).edges.contains(to)){
+    					 	adjacencyList(pt).edges.add(to);
+    					 }
+    				 } else{
+    					 throw new UnsupportedOperationException("from vertex does not exist");
+    				 }
     			 }
     		 }
     	 }
@@ -504,7 +491,7 @@ public class PlainGraph implements Graph{
      * 
      * @return a PlainGraph representing the union of this Graph with that
      */
-    public def union(var that:org.igraphx10.graph.Graph):org.igraphx10.graph.PlainGraph {
+    public def union(var that:org.scalegraph.graph.Graph):org.scalegraph.graph.PlainGraph {
     	throw new UnsupportedOperationException("Not implemented.");
     }
     
@@ -516,14 +503,14 @@ public class PlainGraph implements Graph{
     	
     	finish for(p in adjacencyList.dist.places()){
     		async at(p){
-    			//var l:Array[PlainGraphRecord] = adjacencyList.dist.get(p);
-    			val r:Region = adjacencyList.dist.get(p);
-    			var len:Int = r.size;
-    			    			
+    			var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion();
+    			val r:Region = l.region;
+    			var len:Int = r.size();
+    			
     			for(point:Point in r){			   				
     				if (l(point).id != -1l){
     					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
-    					   					
+    					
     					Console.OUT.print("" + l(point).id + "->");
     					if(lst.size() != 0){
     						for (item in lst){
@@ -537,50 +524,42 @@ public class PlainGraph implements Graph{
     		}
     	}
     	Console.OUT.println("Done..");
-    	
-    	
-    	// finish for(p in adjacencyList.dist.places()){
-    	// 	at(p){
-    	// 		var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion();
-    	// 		val r:Region = l.region;
-    	// 		var len:Int = l.size;
-    	// 		
-    	// 		Console.OUT.println("Size : " + len);
-    	// 		var offset:Int = len/workerThreadCount;
-    	// 		var next:Int = 1;
-    	// 		Console.OUT.println("Offset : " + offset);
-    	// 		
-    	// 		for(var i:Int = 1; i < len ; i++){
-    	// 			Console.OUT.println("Started at : " + i);
-    	// 			finish async for(j:Int in i..next){
-	    // 				if (l(1,i).id != -1l){
-	    // 					var lst:ArrayList[Long] = (l(1,i).edges as ArrayList[Long]);
-	    // 					
-	    // 					Console.OUT.println("Size-->"+lst.size());
-	    // 					
-	    // 					Console.OUT.print("" + l(1,i).id + "->");
-	    // 					if(lst.size() != 0){
-	    // 						for (item in lst){
-	    // 							Console.OUT.print(item + ",");
-	    // 						}
-	    // 						Console.OUT.println();
-	    // 					}
-	    // 				}
-    	// 			}
-    	// 			next = i + offset;
-    	// 			i = next;
-    	// 		}
-    	// 	}
-    	// }
-    	// Console.OUT.println("Done..");
-    	
-    	
     }
     
-    public def composition(var id$601122:org.igraphx10.graph.Graph):org.igraphx10.graph.Graph {
-    // TODO: auto-generated method stub
-return null;
-}
+    public def getEdgesAsString():String{
+    	val res = GlobalRef[Cell[String]](new Cell[String](null));
+
+    	finish for(p in adjacencyList.dist.places()){
+    		async at(p){
+    			var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion();
+    			val r:Region = l.region;
+    			var len:Int = r.size();
+    			var locRes:String = null;
+    			
+    			for(point:Point in r){			   				
+    				if (l(point).id != -1l){
+    					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
+    					
+    					if(lst.size() != 0){
+    						for (item in lst){
+    							if(locRes == null){
+    								locRes = "" + l(point).id + " " + item + "\r\n";
+    							}else{
+    								locRes = locRes + l(point).id + " " + item + "\r\n";
+    							}
+
+    						}
+    					}
+    				}
+    			}
+    			
+    			if(locRes != null){
+    				res()() = locRes;
+    			}
+    		}
+    }
+    	return res()();
+    }
 
 
 }
