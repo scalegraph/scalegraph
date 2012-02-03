@@ -12,8 +12,12 @@ public class TestBetweennessCentrality {
 		
 		Console.OUT.println("---------------------Start Betweennes Centrality--------------------");
 		
+		if(args.size == 0) {
+			throw new UnsupportedOperationException("Please enter file name");
+		}
+		
 		var graph: AttributedGraph;
-		graph = GMLReader.loadFromFile("/nfs/data1/igraphx10/GML/gml_writer_t2.gml");
+		graph = GMLReader.loadFromFile(args(0));
 		val result = BetweennessCentrality.run(graph, false);
 		printBcResult(result);
 		

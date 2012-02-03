@@ -18,7 +18,7 @@ public class AttributedGraph  implements Graph {
 	protected var edgeAttrNameIdMap: HashMap[String, Int];
 	protected var edgeAttrIdNameMap: HashMap[Int, String];
 
-	protected var directedFlag: Boolean = false;
+	protected var isDirected: Boolean = false;
 	
 	transient protected var vertexAttributeSchema: AttributeSchema = null; // Attribute schema for vertex
 	transient protected var edgeAttributeSchema: AttributeSchema = null; // Attribute schema for edge
@@ -34,8 +34,8 @@ public class AttributedGraph  implements Graph {
 	//val rooms: Int = 107374182;// 483647;
 	//val rooms: Int = 33554432; // 2^25
 	//val rooms: Int = 262144; // 2^15
-	//val rooms: Int = 32768; // 2^18
-	val rooms: Int = 650;
+	val rooms: Int = 32768; // 2^18
+	//val rooms: Int = 650;
 	val R = 0..(rooms - 1);
 	
 	var dist: Dist;
@@ -59,7 +59,7 @@ public class AttributedGraph  implements Graph {
 	
 	protected def init() {
 		
-		dist = Dist.makeBlock(R);
+		dist = Dist.makeBlock(R, 0);
 		
 		Console.OUT.println("Create Vertex table");
 		initVertexTab();
@@ -329,11 +329,11 @@ public class AttributedGraph  implements Graph {
 	}
 	
 	public def setDirected(isDirected: Boolean) {
-		this.directedFlag = isDirected;
+		this.isDirected = isDirected;
 	}
 	
 	public def isDirected():x10.lang.Boolean {
-		return this.directedFlag;
+		return this.isDirected;
 	}
 	
 	public def printVertex() {
@@ -488,7 +488,7 @@ public class AttributedGraph  implements Graph {
 	public def getNeighbors(v: Vertex): Array[Vertex] {
 		
 		// Incase of directed graph, returned out neigbors only
-		if(directedFlag) {
+		if(isDirected) {
 			throw new UnsupportedOperationException("Have not been implemented yet");
 			// return getOutNeighbors(v);
 		}
@@ -503,6 +503,7 @@ public class AttributedGraph  implements Graph {
 		val index = v.internalId as Int;
 		val srcPlace = dist(index);
 		var neighbors: ArrayList[Vertex] = new ArrayList[Vertex]();
+		val addedVertexId = new HashMap[Long, Any]();
 		
 		// Process in edge
 		val inEdges: ArrayList[Int] = at (srcPlace) vertexTab(index)(1) as ArrayList[Int];
@@ -521,6 +522,7 @@ public class AttributedGraph  implements Graph {
 			
 			vertex.internalId = neighborId;
 			neighbors.add(vertex);
+			addedVertexId.put(vertex.getInternalId(), null);
 		}
 		
 		// in case of undirected graph, 
@@ -540,8 +542,8 @@ public class AttributedGraph  implements Graph {
 			val vertex = new Vertex(attriubtes);
 			
 			vertex.internalId = neighborId;
-			neighbors.add(vertex);
-			if(!neighbors.contains(vertex)) {
+			// neighbors.add(vertex);
+			if(!addedVertexId.containsKey(neighborId)) {
 				neighbors.add(vertex);
 			}
 		}
@@ -638,7 +640,57 @@ public class AttributedGraph  implements Graph {
 		
 	}
 	
-	public def addEdge(var id$19059:x10.lang.Object):void {
+	public def addEdge(var o:Object):void {
+		
+		val edge = o as Edge;
+		
+
+		var intputEdgeAttributes: Array[Attribute] = edge.getAttributes();
+		
+		if(edgeAttributeSchema == null) {
+			createEdgeAttributeSchemaFromAttributes(intputEdgeAttributes);
+		} else {
+			if(edgeAttributeSchema.validateAttribute(intputEdgeAttributes) == false) {
+				// Attribute does not follow schema
+				throw new UnsupportedOperationException(
+						"Edge " + edge + " does not follow Attribute schema");
+			}
+		}
+		
+		val from = edge.getFrom();
+		val to = edge.getTo();
+		
+
+		// Get vertex record for from-vertex
+		val FromAttribute = from.getAttributes();
+		val fromAttributeRecord = new Array[Any](0..vertexAttrNameIdMap.size());
+		for(i in FromAttribute) {
+			val a = FromAttribute(i);
+			val columnId = vertexAttrNameIdMap.get(a.getName()).value;
+			fromAttributeRecord(columnId) = a.getValue();
+		}
+		
+		val fromVertexIndex = getVertexIndex(fromAttributeRecord);
+		if(fromVertexIndex == -1L) {
+			// Vertex has not been added create one
+			throw new UnsupportedOperationException("Vertex '" + from + "' does not exist");
+		}
+		
+		// Get vertex record for to-vertex
+		val toAttribute = to.getAttributes();
+		val toAttributeRecord = new Array[Any](0..vertexAttrNameIdMap.size());
+		for(i in toAttribute) {
+			val a = toAttribute(i);
+			val columnId = vertexAttrNameIdMap.get(a.getName()).value;
+			toAttributeRecord(columnId) = a.getValue();
+		}
+		
+		val toVertexIndex = getVertexIndex(toAttributeRecord);
+		if(toVertexIndex == -1L) {
+			// Vertex has not been added create one
+			throw new UnsupportedOperationException("Vertex '" + from + "' does not exist");
+		}
+		
 		throw new UnsupportedOperationException("Not implemented.");
 	}
 

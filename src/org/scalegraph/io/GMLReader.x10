@@ -393,16 +393,17 @@ public class GMLReader {
 					// }
 
 					numAddVertexAsync.getAndIncrement();
-					async {
+					// async {
 						graph.addVertex(v);
 						numAddVertexAsync.getAndDecrement();
-					}
+						Console.OUT.println("End Add node");
+					// }
 					
 				}
 			} 
 			
 			if(elementPath(1).equals("edge")) {
-				Console.OUT.println("T");
+				Console.OUT.println("Add Edge");
 				if(src == -1L || dst == -1L) {
 					throw new Exception("source or target were not defined");
 				}
@@ -410,7 +411,7 @@ public class GMLReader {
 				val attr: Array[Attribute] = this.attributes.size() > 0 ? null : this.attributes.clone().toArray();
 				
 				if(isFirstEdge) {
-					when(numAddVertexAsync.get() == 0);
+					// when(numAddVertexAsync.get() == 0);
 					graph.addEdge(src as Int, dst as Int, attr);
 					isFirstEdge = false;
 				} else {
@@ -426,11 +427,11 @@ public class GMLReader {
 					val tempSrc = src;
 					val tempDst = dst;
 
-					async {
+					// async {
 						// Used Array.clone to avoid conflict data between thread
 						graph.addEdge(tempSrc as Int, tempDst as Int, attr);
 						numAddEdgeAsync.getAndDecrement();
-					}	
+					// }	
 				}
 					
 			}

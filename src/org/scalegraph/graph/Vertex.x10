@@ -4,16 +4,30 @@ import x10.util.ArrayList;
 import x10.lang.Int;
 import x10.compiler.Native;
 import x10.util.StringBuilder;
+import x10.io.CustomSerialization;
+import x10.io.SerialData;
 
 /**
  * This class represents a Vertex in the Graph
  */
-public class Vertex implements Comparable[Vertex] {
+public class Vertex implements Comparable[Vertex], CustomSerialization {
 	
 	protected var internalId: long = -1; // Library generated id, default = -1
 	protected var attributes: Array[Attribute] = null;
 	protected var hashCode: Int;
 	protected static val nextVertexId:Long = 0; // Current vertex id to be assigned
+	
+	public def this(serialData: SerialData) {
+		val v = serialData.data as Vertex;
+		
+		this.hashCode = v.hashCode;
+		this.internalId = v.internalId;
+		this.attributes = v.attributes;
+	}
+	
+	public def serialize(): SerialData {
+		return new SerialData(this, null);
+	}
 	
 	
 	/**
