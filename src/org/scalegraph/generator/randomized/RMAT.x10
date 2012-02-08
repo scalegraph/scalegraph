@@ -4,6 +4,7 @@ import x10.array.Dist;
 import x10.util.Random;
 import x10.util.ArrayList;
 
+import org.scalegraph.util.ScaleGraphRandom;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
@@ -117,7 +118,7 @@ public class RMAT {
 	 * Generates a vector of M random numbers 
 	 */
 	
-	public def rand(rng:Random, numElements:Int):Array[Double]{
+	public def randRMT(rng:Random, numElements:Int):Array[Double]{
 		var result:Array[Double] = new Array[Double](numElements);
 		for(var i:Int = 0; i < numElements; i = i + 1){
 				result(i) = rng.nextDouble();
@@ -135,23 +136,27 @@ public class RMAT {
 		var s:Int = nThreads * offset;
 		var randArr:Array[Random] = new Array[Random](nThreads+1);
 		var c:Int = 0;
+		ScaleGraphRandom.init();
 		
-		var rnd:Random = new Random(seed);
-		
-		for(var i:Int = 0; i < s; i = i + offset){			
-			for(var j:Int = i; j < (offset + 1); j++){
-				result(j) = rnd.nextDouble();
+		finish for(var i:Int = 0; i < s; i = i + offset){	
+			val ind:Int = i;
+			async for(var j:Int = ind; j < (offset + 1); j++){
+				result(j) = ScaleGraphRandom.getRand();//rnd.nextDouble();
 			}
 		}
 		
 		if(s < numElements){
 				for(var j:Int = s; j < numElements; j++){
-					result(j) = rnd.nextDouble();
+					result(j) = ScaleGraphRandom.getRand();//rnd.nextDouble();
 				}
 		}
 		
 		return result;
 	}
+	
+	// public def randSG(numElements:Int):Array[Double]{
+	// 	
+	// }
 	
 	/**
 	 * A straightforward addition of two vectors of Double.
@@ -280,6 +285,15 @@ public class RMAT {
 		return result;
 	}
 	
+	
+	/**
+	 * Generates a vector of M random numbers 
+	 */
+	private def rand_old(rng:Random, numElements:Int):Array[Double]{
+		return new Array[Double] (numElements, (Int)=>rng.nextDouble());
+	}
+	
+
 	/**
 	 * This is the method that generates the Graph
 	 */
@@ -294,86 +308,95 @@ public class RMAT {
 		val numEdges:Int = 8 * numVertices;
 		val np:Int = 100;
 		val offset:Int = numEdges/np;
-				
+		
 		val ii:Array[Array[Int]] = new Array[Array[Int]](np); 
 		val jj:Array[Array[Int]] = new Array[Array[Int]](np);
-				
+		
 		for (var i:Int = 0; i < np; i++){
 			ii(i) = zeros_par(offset);
 			jj(i) = zeros_par(offset);
 		}
-	
+		
 		val ab = a+b;
 		val cNorm = c/(c+d);
 		val aNorm = a/(a+b);
 		
-		finish for(var q:Int = 0; q < np; q++){
+		finish {
+			for(var q:Int = 0; q < np; q++){
 
-			val ind:Int = q;
-			
-			for (var ib:Int = 0; ib < scale; ib++) {
-				    val rnds:Random = rnd;
-				    val ar = rand(rnds, offset);
-				    val ar2 = rand(rnds, offset);
-				    var iiBit:Array[Int] = null;
-				    var jjBitComparator:Array[Double] = null;
-				    var jjBit:Array[Int] = null;
-				    
-					iiBit = this.greaterThan_par(ar, ab);
-										
-					jjBitComparator = add_par(multiply_par(iiBit, cNorm, false),this.multiply_par(iiBit, aNorm, true));
-					jjBit = greaterThan_par(ar2,jjBitComparator);
-
-					
-				    val exponent = Math.pow (2, ib) as Int;
-				    
-					finish{
-						async{
-							ii(ind) = add_par(ii(ind), multiply_par(iiBit, exponent));
-						}
+				val ind:Int = q;
+				
+				for (var ib:Int = 0; ib < scale; ib++) {
+					val ibb = ib;
+					async{
+						val rnds:Random = rnd;
+						val ar = rand_par(seed, offset);
+						val ar2 = rand_par(seed, offset);
+			    
+						var iiBit:Array[Int] = null;
+						var jjBitComparator:Array[Double] = null;
+						var jjBit:Array[Int] = null;
 						
-						async{
-							jj(ind) = add_par(jj(ind), multiply_par(jjBit, exponent));
+						iiBit = this.greaterThan_par(ar, ab);
+						
+						jjBitComparator = add_par(multiply_par(iiBit, cNorm, false),this.multiply_par(iiBit, aNorm, true));
+						jjBit = greaterThan_par(ar2,jjBitComparator);
+
+						
+						val exponent = Math.pow (2, ibb) as Int;
+						
+						finish{
+							async{
+								ii(ind) = add_par(ii(ind), multiply_par(iiBit, exponent));
+							}
+							
+							async{
+								jj(ind) = add_par(jj(ind), multiply_par(jjBit, exponent));
+							}
 						}
 					}
+				}
+			}
+			
+			async{
+				if(scale <= GraphSizeCategory.SMALL){
+					result = new PlainGraph();	
+				}
+				else{
+					if(scale <= GraphSizeCategory.MEDIUM + (Math.log(Place.places().size())/Math.log(2))){
+						result = new PlainGraph(GraphSizeCategory.MEDIUM);	
+					}else{
+						throw new UnsupportedOperationException("A graph of scale " + scale + " cannot be supported with the current number of places.");
+					}
+				}	
+			}
+			
+		}	
 
-			}
-		}
-				
-		if(scale <= GraphSizeCategory.SMALL){
-			result = new PlainGraph();	
-		}
-		else{
-			if(scale < GraphSizeCategory.MEDIUM + (Math.log(Place.places().size())/Math.log(2))){
-				result = new PlainGraph(GraphSizeCategory.MEDIUM);	
-			}else{
-				throw new UnsupportedOperationException("A graph of scale " + scale + " cannot be supported with the current number of places.");
-			}
-		}
-		
-		var u:Int = 0;
 		var j:Int = 0;
-		var q:Array[String] = new Array[String](numEdges);
 		
-		
-		Console.OUT.println("Done running RMAT");
+		Console.OUT.println("Done running RMAT at " + System.currentTimeMillis());
 		
 		finish for(j = 0; j < np; j++){
-				val f:Int = j;
-				async for(var i:Int = 0; i < ii(f).size; i++){				
-					q(u) = ((ii(f)(i))+ 1) + " " + ((jj(f)(i))+1);
-					atomic{
+			val f:Int = j;
+			val plainG:PlainGraph = (result as PlainGraph);
+			async{
+				var u:Int = 0;
+				val q:Array[String] = new Array[String](ii(f).size);
+				
+				for(var i:Int = 0; i < ii(f).size; i++){	
+					if((ii(f)(i) != 0) && (jj(f)(i) != 0)){
+						q(u) = ((ii(f)(i))+ 1) + " " + ((jj(f)(i))+1);
 						u++;
 					}
 				}
+				
+				plainG.addEdges(q);
+			}
 		}
 		
-		Console.OUT.println("Done creating big array");
+		Console.OUT.println("Done adding edges at " + System.currentTimeMillis());
 		
-		(result as PlainGraph).addEdges(q);
-		
-		Console.OUT.println("Done adding edges");
-				
 		return result;
 	}
 }
