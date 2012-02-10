@@ -99,7 +99,7 @@ public interface Graph extends Comparable[Graph] {
 	 * 
 	 * @param the Vertex that needs to be added to the Graph
 	 */
-	public def addVertex(Object): void;
+	public def addVertex(Object): Int;
 	
 	/**
 	 * The method defines how this Graph is Equal to another Graph.

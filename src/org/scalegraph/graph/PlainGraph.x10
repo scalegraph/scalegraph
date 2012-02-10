@@ -5,9 +5,9 @@ package org.scalegraph.graph;
 import x10.util.Pair;
 import x10.array.DistArray;
 import x10.util.ArrayList;
+import x10.util.StringBuilder;
 
 import org.scalegraph.graph.GraphSizeCategory;
-import org.scalegraph.util.Matrix;
 import org.scalegraph.util.ScaleGraphMath;
 
 /**
@@ -65,13 +65,10 @@ public class PlainGraph implements Graph{
     			R2 = (1..Place.MAX_PLACES)*(1..nVertices);
     		}
     		    		
-    		//Console.OUT.println("nVertices : " + nVertices);
-    		//var R2:Region = (1..1)*(1..nVertices);
     		var b:Dist = Dist.makeBlock(R2);
-    		Console.OUT.println("Start creating the array");
     		adjacencyList = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
     		
-    		Console.OUT.println("Init size : " + adjacencyList.getLocalPortion().size);
+    		Console.OUT.println("Total graph size (vertices) : " + nVertices * Place.MAX_PLACES);
     		
     	}else{
     		throw new UnsupportedOperationException("Invalid Graph Size Category was specified : " + sizeCat);    		
@@ -118,93 +115,6 @@ public class PlainGraph implements Graph{
 	    	var R2:Region = (1..1)*(1..nVertices);
 	    	var b:Dist = Dist.makeBlock(R2);
 	    	adjacencyList = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
-    	}else{
-    		throw new UnsupportedOperationException("Invalid Graph Size Category was specified : " + sizeCat);
-    	}
-    }
-    
-    /**
-     * This constructor accepts a Matrix having the graph contents
-     * 
-     * @param mat A Matrix holding the initial Graph contents
-     */
-    public def this(var mat:Matrix) { 	
-    	//By default the graph size category is set to SMALL
-    	
-    	var lDim:Long = mat.getDimensions().first > mat.getDimensions().second ? mat.getDimensions().first:mat.getDimensions().second; 
-    	
-    	if((lDim < ScaleGraphMath.pow(2, GraphSizeCategory.SMALL))){
-    		this.sizeCategory = GraphSizeCategory.SMALL;
-    	}else if((lDim > ScaleGraphMath.pow(2, GraphSizeCategory.SMALL))&&(lDim < ScaleGraphMath.pow(2, GraphSizeCategory.MEDIUM))){
-    		this.sizeCategory = GraphSizeCategory.MEDIUM;
-    	}else{
-    		this.sizeCategory = GraphSizeCategory.LARGE;
-    	}
-    	
-    	//Set the initial row, column sizes
-    	if((this.sizeCategory == GraphSizeCategory.MEDIUM)||((this.sizeCategory == GraphSizeCategory.LARGE))){
-    		nVertices = (ScaleGraphMath.pow(2, GraphSizeCategory.MEDIUM) * Place.MAX_PLACES) as Int;
-    	}else{
-    		nVertices = ScaleGraphMath.pow(2, GraphSizeCategory.SMALL) as Int;
-    	}
-    	
-    	var R2:Region = (1..1)*(1..nVertices);
-    	var b:Dist = Dist.makeBlock(R2);
-    	adjacencyList = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
-    }
-    
-    /**
-     * This constructor accepts the size category of the graph and a Matrix having the graph contents
-     * 
-     * @param sizeCat the size cateegory of the Graph. This is one of the fields from GraphSizeCategory class.
-     * @param mat A Matrix holding the initial Graph contents
-     */
-    public def this(val sizeCat:Short, var mat:Matrix) {
-   	
-    	if((mat.getDimensions().first > ScaleGraphMath.pow(2,sizeCat))&&(mat.getDimensions().second > ScaleGraphMath.pow(2,sizeCat))){
-    		throw new UnsupportedOperationException("The input matrix's scale exceeds the Graph size category.");
-    	}
-    	
-    	if((sizeCat == GraphSizeCategory.SMALL) || (sizeCat == GraphSizeCategory.MEDIUM) || (sizeCat == GraphSizeCategory.LARGE)){
-    		//Set the size category of the Graph
-    		this.sizeCategory = sizeCat;
-    		//Set the initial row, column sizes
-    		vertexIncrementFactor = ((Math.pow(2, vertexIncrementFactor) < Place.places().size)) ? Place.places().size as Double : vertexIncrementFactor;
-    		
-    		nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
-    		var R2:Region = (1..nVertices)*(1..1);
-    		var b:Dist = Dist.makeBlock(R2);
-    		adjacencyList = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
-    	}else{
-    		throw new UnsupportedOperationException("Invalid Graph Size Category was specified : " + sizeCat);    		
-    	}
-    }
-    
-    /**
-     * This constructor accepts the initial size of the Graph to be created. This can be used if the user has an idea the size
-     * of the Graph he/she handles.
-     * 
-     * @param  scale the scale of the graph to be created
-     * @param sizeCat the size cateegory of the Graph. This is one of the fields from GraphSizeCategory class.
-     * @param mat A Matrix holding the initial Graph contents
-     */
-    public def this(val scale:Int, val sizeCat:Short, var mat:Matrix){
-    	
-    	if((mat.getDimensions().first > scale)&&(mat.getDimensions().second > scale)){
-    		throw new UnsupportedOperationException("The input matrix's scale exceeds the specified scale");
-    	}
-    	
-    	if((sizeCat == GraphSizeCategory.SMALL) || (sizeCat == GraphSizeCategory.MEDIUM) || (sizeCat == GraphSizeCategory.LARGE)){
-    		//Set the size category of the Graph
-    		this.sizeCategory = sizeCat;
-    		
-    		//Set the initial row, column sizes
-    		vertexIncrementFactor = scale;
-    		
-    		nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
-    		var R2:Region = (1..1)*(1..nVertices);
-    		var b:Dist = Dist.makeBlock(R2);
-    		adjacencyList = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
     	}else{
     		throw new UnsupportedOperationException("Invalid Graph Size Category was specified : " + sizeCat);
     	}
@@ -308,7 +218,7 @@ public class PlainGraph implements Graph{
      * 
      * @param the Vertex that needs to be added to the PlainGraph
      */
-    public def addVertex(var id:Object):void {
+    public def addVertex(var id:Object):Int {
     	var e:String = id as String;
     	val vertex:Long = Long.parse(e);
     	val internal_vertex:Int;
@@ -323,7 +233,8 @@ public class PlainGraph implements Graph{
 	    			
 	    			if(r.contains(pt)){
 	    				if(adjacencyList(pt).id != -1l){
-	    					throw new UnsupportedOperationException("Vertex already exists in the Graph");
+	    					//throw new UnsupportedOperationException("Vertex already exists in the Graph");
+	    					return -1;
 	    				}
 	    				
 	    				var rec:PlainGraphRecord = null;
@@ -358,7 +269,8 @@ public class PlainGraph implements Graph{
     							
     							if(r.contains(pt)){
     								if(adjacencyList(pt).id != -1l){
-    									throw new UnsupportedOperationException("Vertex already exists in the Graph");
+    									//throw new UnsupportedOperationException("Vertex already exists in the Graph");
+    									return; //Just return without adding, the Vertex exists in the Graph
     								}
 
     								rec = new PlainGraphRecord();
@@ -370,11 +282,12 @@ public class PlainGraph implements Graph{
     							}else{
     								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
     							}
-    							}
-    						}
-    					}
+							}
+						}
+					}
     			}
     		}
+    	return 0;
     }
    
     /**
@@ -395,8 +308,9 @@ public class PlainGraph implements Graph{
     	var offset:Int = s/nThreads;
     	
     	finish for(var i:Int = 0; i < s; i = i + offset){
-    		    val ind = i;
-	    		async for(var j:Int = ind; j < offset; j++){
+    		    var startPos:Int = i;
+    		    var endPos:Int = i + offset;
+	    		for(var j:Int = startPos; j < endPos; j++){
 	    			if(edlst(j) != null){
 	    				addEdge(edlst(j));
 	    			}
@@ -411,28 +325,17 @@ public class PlainGraph implements Graph{
      */
     public def addEdge(var id:Object):void {
     	 var e:String = id as String;
-    	     	
+    	 
     	 var strArr:Array[String] = e.split(" ");
     	 val from:Long = Long.parse(strArr(0));
     	 val to:Long = Long.parse(strArr(1));
     	 var vertex:Long = from > to ? from:to;
     	 
     	 //Just try adding the Vertices to make sure that they are properly added befoe creating the Edge
-    	 try{
-    	 	addVertex(strArr(0));
-    	 	//addVertex(strArr(1));
-    	 }catch(ec:UnsupportedOperationException){
-    		 //If the Vertex already exist do not worry adding it
-    		 //Console.OUT.println("CCCCC---->" + strArr(0));
-    	 }
-    	 
-    	 try{
-    		 addVertex(strArr(1));
-    		 //addVertex(strArr(1));
-    	 }catch(ec:UnsupportedOperationException){
-    		 //If the Vertex already exist do not worry adding it
-    		 //Console.OUT.println("CCCCCC---->" + strArr(1));
-    	 }
+
+    	 //Try adding the vertices. They might exist in the graph, but don't worry.
+    	 addVertex(strArr(0));
+ 		 addVertex(strArr(1));
     	 
     	 //Console.OUT.println("DDDDDD---->");
     	 
@@ -457,6 +360,10 @@ public class PlainGraph implements Graph{
     	 val machine:Int = ScaleGraphMath.round(from/v) as Int;
     	 val internal_vertex:Int = (from % v) as Int;
 
+    	 if(machine != 0){
+    	 	Console.OUT.println("from vertex : " + from + " machine : " + machine);
+    	 }
+    	 
     	 for(p in adjacencyList.dist.places()){
     		 if(p.id == machine){
     			 at(p){
@@ -526,40 +433,83 @@ public class PlainGraph implements Graph{
     	Console.OUT.println("Done..");
     }
     
-    public def getEdgesAsString():String{
-    	val res = GlobalRef[Cell[String]](new Cell[String](null));
+    public def getEdgesAsString(var p:Place):String{
+    	val res = GlobalRef[Cell[StringBuilder]](new Cell[StringBuilder](null));
+    	
+    	finish{
+	   		async at(p){
+	    			var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion();
+	    			val r:Region = l.region;
+	    			var len:Int = r.size();
+	    			var locRes:StringBuilder = new StringBuilder();
+	    			
+	    			if(len != 0){
+			    			for(point:Point in r){	
+			    				if (l(point).id != -1l){
+			    					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
+			    					if(lst.size() != 0){
+			    						for (item in lst){
+			    							locRes.add("" + l(point).id + " " + item + "\r\n");	
+			    						}
+			    					}
+			    				}
+			    			
+			    			if(locRes != null){
+			    				res()() = locRes;
+			    			}
+			    		}
+	    			}
+	    }
+    	}
+    	    	
+    	return res()() == null ? null:res()().toString();
+    }
 
-    	finish for(p in adjacencyList.dist.places()){
-    		async at(p){
-    			var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion();
-    			val r:Region = l.region;
-    			var len:Int = r.size();
-    			var locRes:String = null;
-    			
-    			for(point:Point in r){			   				
-    				if (l(point).id != -1l){
-    					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
-    					
-    					if(lst.size() != 0){
-    						for (item in lst){
-    							if(locRes == null){
-    								locRes = "" + l(point).id + " " + item + "\r\n";
-    							}else{
-    								locRes = locRes + l(point).id + " " + item + "\r\n";
-    							}
+    public def getGraphSizeCategory():Short{
+    	return sizeCategory;
+    }
+    
+    public def getNeighbours(val vertexID:Long):Array[Long]{
+    	val result = GlobalRef[Cell[Array[Long]]](new Cell[Array[Long]](null));
+    	
+    	var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    	val machine:Int = ScaleGraphMath.round(vertexID/v) as Int;
+    	val internal_vertex:Int = (vertexID % v) as Int;
+    	
+    	for(p in adjacencyList.dist.places()){
+    		if(p.id == machine){
+    			at(p){
+    				val r:Region = adjacencyList.dist.get(p);
+    				val pt:Point = Point.make(machine + 1, internal_vertex);
 
+    				if(r.size()==0){
+    					throw new UnsupportedOperationException("region does not have any data points");
+    				}
+    				
+    				var flag:Boolean = false;
+    				var rec:PlainGraphRecord = null;
+    				
+    				if(r.contains(pt)){
+    					if((adjacencyList(pt) != null) && (adjacencyList(pt).edges != null) && (adjacencyList(pt).edges.size() > 0)){
+    						Console.OUT.println("OOK2");
+    						var locRes:Array[Long] = new Array[Long](adjacencyList(pt).edges.size());
+    						var counter:Int = 0;
+    						Console.OUT.println("OOK3");
+    						for(item in adjacencyList(pt).edges){
+    							locRes(counter) = item;
     						}
+    						Console.OUT.println("OOK4");
+    						result()() = locRes;
     					}
+    					
+    				} else{
+    					throw new UnsupportedOperationException("The vertex does not exist");
     				}
     			}
-    			
-    			if(locRes != null){
-    				res()() = locRes;
-    			}
     		}
+    	}
+    	
+    	return result()();
     }
-    	return res()();
-    }
-
 
 }
