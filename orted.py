@@ -1,3 +1,15 @@
+##########################################################
+##
+## Period  : Dec 2011
+##
+## program : orted.py
+##
+## Purpose : This script is used to clean up the environment
+##           after an unexpected exit.
+##           
+##
+#########################################################
+
 import sys
 import commands
 import socket
@@ -14,6 +26,6 @@ def main(item):
 		if line != '\n':
 			hList.append(line.strip());
 
-	removeProcesses(hList, 'TestScaleGraph')	
+	removeProcesses(hList, 'Testscalegraph')	
 
 main(sys.argv[1:])

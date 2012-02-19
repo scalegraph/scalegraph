@@ -4,6 +4,8 @@ import org.scalegraph.generator.randomized.RMAT;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.PlainGraph;
 
+import org.scalegraph.io.EdgeListWriter;
+
 import x10.util.Random;
 
 public class TestRMAT{
@@ -24,7 +26,10 @@ public class TestRMAT{
     	
     	Console.OUT.println("Done generatin at : " + System.currentTimeMillis());
     	
-    	(graph as PlainGraph).printCont();
+    	//(graph as PlainGraph).printCont();
+    	
+    	val edw:EdgeListWriter = new EdgeListWriter();
+    	edw.writeToFile(("rmat_" + scale + ".dl"), (graph as PlainGraph));
     	
     	Console.OUT.println("--------------------- End RMAT Generator Test ----------------------");
     } 

@@ -6,21 +6,22 @@
 export X10_NTHREADS=10
 
 #Set the X10_HOME and class path
-X10_HOME = /nfs/home/miyuru/workspace/x10trunk/x10.dist
+X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
 CLASSPATH=$(X10_HOME)
 
 #X10 runtime environment variables
-X10_NPLACES=4
+X10_NPLACES=64
 X10_HOSTFILE=machines.txt
 
 APP_DIR=/nfs/home/miyuru/workspace/ScaleGraph
 OUTPUT=./bin
 
+INTERM=./out
 
 #Test 1
 test_attributed_graph:
 	@echo "----------- Compile Attributed Graph Tester -----------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/graph/TestAttributedGraph.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
@@ -48,7 +49,7 @@ test_attributed_graph:
 #Test 2	
 test_betweenness_centrality:
 	@echo "----------- Compile Betweenness Centrality Tester -----------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/metrics/centrality/TestBetweennessCentrality.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
@@ -82,7 +83,7 @@ test_betweenness_centrality:
 #Test 3
 test_gml_reader:
 	@echo "----------- Compiile GML Reader Tester ---------------------";
-	$(X10_HOME)/bin/x10c++  -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/io/TestGMLReader.x10 \
 	src/org/scalegraph/io/GMLReader.x10 \
 	src/org/scalegraph/io/GMLEntry.x10 \
@@ -114,7 +115,7 @@ test_gml_reader:
 #Test 4
 test_gml_writer:
 	@echo "----------- Compile GML Writer Tester -----------------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/io/TestGMLWriter.x10 \
 	src/org/scalegraph/io/GMLWriter.x10 \
 	src/org/scalegraph/io/GMLReader.x10 \
@@ -145,7 +146,7 @@ test_gml_writer:
 #Test 5
 test_sax_parser:
 	@echo "----------- Compile SAX Parser Tester -----------------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-cxx-prearg -Isrc/org/scalegraph/io/ \
 	-cxx-prearg -I/nfs/home/charuwat/software/xerces/include \
 	-cxx-postarg /nfs/home/charuwat/software/xerces/lib/libxerces-c.a \
@@ -160,7 +161,7 @@ test_sax_parser:
 #Test 6
 test_gexf_reader:
 	@echo "----------- Compile GEXF Reader Tester ---------------";
-	$(X10_HOME)/bin/x10c++ -VERBOSE_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -VERBOSE_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-cxx-prearg -Isrc/org/scalegraph/io/ \
 	-cxx-prearg -I/nfs/home/charuwat/software/xerces/include \
 	-cxx-postarg /nfs/home/charuwat/software/xerces/lib/libxerces-c.a \
@@ -182,7 +183,7 @@ test_gexf_reader:
 #Test 7
 test_gexf_writer:
 	@echo "----------- Compile GEXF Writer Tester ----------------";
-	$(X10_HOME)/bin/x10c++ -VERBOSE_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -VERBOSE_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-cxx-prearg -Isrc/org/scalegraph/io/ \
 	-cxx-prearg -I/nfs/home/charuwat/software/xerces/include \
 	-cxx-postarg /nfs/home/charuwat/software/xerces/lib/libxerces-c.a \
@@ -205,7 +206,7 @@ test_gexf_writer:
 #Test 8
 test_graphml_reader:
 	@echo "----------- Compile GraphML Reader Tester ---------";
-	$(X10_HOME)/bin/x10c++ -VERBOSE_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -VERBOSE_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-cxx-prearg -Isrc/org/scalegraph/io/ \
 	-cxx-prearg -I/nfs/home/charuwat/software/xerces/include \
 	-cxx-postarg /nfs/home/charuwat/software/xerces/lib/libxerces-c.a \
@@ -227,32 +228,51 @@ test_graphml_reader:
 #Test 9
 test_plain_graph :
 	echo "----------- Testing PlainGraph -----------" 
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT)  -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT)  -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/graph/TestPlainGraph.x10 \
-	src/org/scalegraph/util/scalegraphMath.x10 \
-	-x10lib $(X10_HOME)/../x10.gml/native_gml.properties \
-	-classpath $(CLASSPATH) -sourcepath src -post 'g++ -L/nfs/data0/miyuru/software/lapack-3.4.0/lib -lblas';
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/util/scalegraphMath.x10 ;
 	@echo "----------- Launch PlainGraph Tester -----------"; 
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	echo "----------- Test Completed -----------";
 
 #Test 10
-test_edge_reader :
-	echo "----------- Testing EdgelistReader -----------" 
-	$(X10_HOME)/bin/x10c++ src/test/scalegraph/io/TestEdgeListReader.x10 -d $(OUTPUT) -x10lib $(X10_HOME)/../x10.gml/native_gml.properties -classpath $(CLASSPATH) -sourcepath src -post 'g++ -L/nfs/data0/miyuru/software/lapack-3.4.0/lib -lblas' -o $(OUTPUT)/Testscalegraph;
+test_edge_reader:
+	echo "----------- Testing EdgelistReader -----------";
+	$(X10_HOME)/bin/x10c++ -O -d $(INTERM) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/io/TestEdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListWriter.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10;
+	
+	@echo "----------- Launch ScaleGraphRandom Tester -----------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
-	echo "----------- Test Completed -----------";
+	@echo "----------- Test Completed ---------------------------";
 
 #Test 11
 test_gen_rmat:
 	echo "----------- Testing RMAT -----------"
-	$(X10_HOME)/bin/x10c++ src/test/scalegraph/generator/TestRMAT.x10 -d $(OUTPUT) -classpath $(CLASSPATH) -sourcepath src -o $(OUTPUT)/Testscalegraph;
+	$(X10_HOME)/bin/x10c++ -O -d $(INTERM) -classpath $(CLASSPATH) -sourcepath src -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/generator/TestRMAT.x10 \
+	src/org/scalegraph/generator/randomized/RMAT.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/io/EdgeListWriter.x10 \
+	src/org/scalegraph/graph/Graph.x10;
+	
+	@echo "----------- Launch RMAT Test ------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------";
+	
 
 #Test 12
 test_attribute:
 	@echo "----------- Compile Test Attribute tester -------------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/graph/TestAttribute.x10 \
 	src/org/scalegraph/graph/Attribute.x10 \
 	src/org/scalegraph/graph/StringAttribute.x10 \
@@ -272,7 +292,7 @@ test_attribute:
 #Test 13
 test_vertex:
 	@echo "----------- Compile Attributed Graph Tester -----------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/graph/TestVertex.x10 \
 	src/org/scalegraph/graph/Attribute.x10 \
 	src/org/scalegraph/graph/StringAttribute.x10 \
@@ -295,7 +315,7 @@ test_vertex:
 #Test 14
 test_math:
 	@echo "----------- Compile scalegraphMath Tester -----------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/util/TestscalegraphMath.x10 \
 	src/org/scalegraph/util/scalegraphMath.x10;
 	
@@ -306,36 +326,69 @@ test_math:
 #Test 15
 test_date:
 	@echo "----------- Compile Date Tester -----------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/util/TestDate.x10 \
 	src/org/scalegraph/util/Date.x10 ;
 	
 	@echo "----------- Launch Date Tester -----------";
 	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";
-		
-#Test 16
-test_matrix:
-	@echo "----------- Compile Matrix Tester -----------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	src/test/scalegraph/util/TestMatrix.x10 \
-	src/org/scalegraph/util/Matrix.x10 ;
 	
-	@echo "----------- Launch Date Tester -----------";
+#Test 16
+test_rand:
+	@echo "----------- Compile ScaleGraphRandom Tester -----------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/util/TestScaleGraphRandom.x10 \
+	src/org/scalegraph/util/ScaleGraphRandom.x10;
+	
+	@echo "----------- Launch ScaleGraphRandom Tester -----------";
 	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";
 	
-#Test 16
-test_matrix:
-	@echo "----------- Compile Matrix Tester -----------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	src/test/scalegraph/util/TestMatrix.x10 \
-	src/org/scalegraph/util/Matrix.x10 ;
+#Test 17
+test_degree:
+	@echo "----------- Compile Degree Tester -----------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/metrics/TestDegree.x10 \
+	src/org/scalegraph/metrics/Degree.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
-	@echo "----------- Launch Date Tester -----------";
+	@echo "----------- Launch scalegraphMath Tester -----------";
 	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
-	@echo "----------- Test Completed ---------------------------";
+	@echo "----------- Test Completed ---------------------------";		
+	
+#Test 18
+test_edge_scat:
+	@echo "----------- Compile ScatteredEdgeListReader Tester -----------";
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/io/TestScatteredEdgeListReader.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/graph/Graph.x10;
+	
+	@echo "----------- Launch ScatteredEdgeListReader Tester -----------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------";	
 
+test_dir:
+	@echo "----------- Compile Degree Tester -----------";
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/util/TestDirInfo.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10;
+	
+	@echo "----------- Launch scalegraphMath Tester -----------";
+	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------";	
+	
 help:
 	@echo '---- scalegraph build help -------'
 	@echo 'Usage : make <command>'
@@ -372,7 +425,11 @@ help:
 	#Test 15
 	@echo 'test_date : Test Date class'
 	#Test 16
-	@echo 'test_matrix : Test Matrix class'	
+	@echo 'test_rand : Test ScaleGraphRandom class'
+	#Test 17
+	@echo 'test_degree : Test Degree class'
+	#Test 18
+	@echo 'test_edge_scat : Test ScatteredEdgeListReader class'
 	@echo 'clean : To clean the build'
 	@echo '---------------------------------';
 

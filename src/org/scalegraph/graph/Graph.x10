@@ -89,7 +89,7 @@ public interface Graph extends Comparable[Graph] {
 	 * 
 	 * @param the Edge that needs to be added
 	 */
-	public def addEdge(Object): void;
+	public def addEdge(Object): Int;
 
 	/**
 	 * The method adds a New Vertex to the Graph. The Vertex will be checked against the currently available set of Vetrices in the Graph for equivalency.

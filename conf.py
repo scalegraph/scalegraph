@@ -44,6 +44,10 @@ def updateNPlaces():
                open('./Makefile', 'w').write(str(configEntry))
 
 def main(item):
+	
+	if (len(item) > 0):
+		print 'Special mode'
+	
 	configEntry = ''
 	userchoice = ''
 
@@ -73,7 +77,11 @@ def main(item):
 		else:
 			#print (tsubameStatus)
 			spinfo = tsubameStatus.split('\n')
-			line = spinfo[len(spinfo) - 1].strip()
+			line = ''
+			for l in spinfo:
+				if ( (l.find('+') != -1) and (l.find('*') != -1) and (l.find('/') != -1)):
+					line += l.strip()
+			#line = spinfo[len(spinfo) - 1].strip()
 			lastloc = line.rfind('/')
 			print line
 			print lastloc
@@ -100,7 +108,7 @@ def main(item):
 			configEntry = ''
 			for line in open('./Makefile'):
 				if (line.find('X10_HOME = ') != -1):
-							line = 'X10_HOME = /data0/t2gsuzumuralab/apps/x10\n'
+							line = 'X10_HOME = /data0/t2gsuzumuralab/scalegraph/x10-runtimes/x10build/x10-2.2.2-fulloptimized-withgc-mpi/x10.dist\n'
 				if (line.find('APP_DIR=') != -1):
 							line = 'APP_DIR=' + os.path.dirname(os.path.abspath(__file__)) + '\n'
 				if (line.find('X10_NTHREADS=') != -1):

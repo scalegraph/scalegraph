@@ -21,6 +21,14 @@ public class PlainGraph implements Graph{
 	private var sizeCategory:Short = -1;				//The size of the Graph
 	private var nVertices:Int = -1;
 	private var workerThreadCount:Int = 100;			//The number of threads that run simultaneously
+	private var totalVertices:Long = 0l;				//This is the supported number of vertices
+	private var edgeSplitSymbol:String = " ";
+	private var addedCountTemp:Int = 0;
+	private var v:Long = 0l;
+	private var largestReportedVertex:Long = 0l;
+	private var actualTotalVertices:Long = 0l;			//This is the total number of vertices
+	private var uniqueVertexList:DistArray[Long] = null; //List of unique vertices
+	private var uniqueVertexCounter:DistArray[Int] = null; //This array of integers keeps track of the unique vertices
 	
 	/**
      * Default constructor 
@@ -56,11 +64,14 @@ public class PlainGraph implements Graph{
     			vertexIncrementFactor = sizeCat;
     			nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
     			R2 = (1..1)*(1..nVertices);
+    			totalVertices = nVertices;
     		}else if((sizeCat == GraphSizeCategory.LARGE) || (sizeCat == GraphSizeCategory.MEDIUM)){
     			vertexIncrementFactor = GraphSizeCategory.MEDIUM;
     			nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
-    			
+    			totalVertices = Place.MAX_PLACES*nVertices as long;
+    			v = ScaleGraphMath.pow(2,sizeCategory);
     			Console.OUT.println("nVertices : " + nVertices);
+    			Console.OUT.println("totalVertices : " + totalVertices);
     			
     			R2 = (1..Place.MAX_PLACES)*(1..nVertices);
     		}
@@ -68,7 +79,7 @@ public class PlainGraph implements Graph{
     		var b:Dist = Dist.makeBlock(R2);
     		adjacencyList = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
     		
-    		Console.OUT.println("Total graph size (vertices) : " + nVertices * Place.MAX_PLACES);
+    		Console.OUT.println("Total graph size (vertices) : " + ((nVertices * Place.MAX_PLACES) as long));
     		
     	}else{
     		throw new UnsupportedOperationException("Invalid Graph Size Category was specified : " + sizeCat);    		
@@ -126,16 +137,46 @@ public class PlainGraph implements Graph{
      */
     public def getVertexCount():Long{
     	val vCount = GlobalRef[Cell[Long]](new Cell[Long](0));
+    	vertexIncrementFactor = GraphSizeCategory.MEDIUM;
+    	nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
+    	var maxMachine:Int = (largestReportedVertex/(nVertices)) as Int;
+    	
+    	Console.OUT.println("maxMachine : " + maxMachine);
+    	Console.OUT.println("largestReportedVertex : " + largestReportedVertex);
     	
     	finish for(p in adjacencyList.dist.places()){
-    		at(p)async{
-    			var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion();
-    			
-    			for(item in l){
-    				vCount()() += l(item(0),item(1)).id > 0 ? 1:0;
-    			}
+    		if(p.id <= maxMachine){
+		    		async at(p){
+		    			var l:Array[PlainGraphRecord] = adjacencyList.getLocalPortion();
+		    			
+		    			if(l != null){
+			    			if(l.size > 0){
+				    			for(item in l){
+				    				
+				    				if((item != null) && (item(1) > largestReportedVertex)){
+				    					Console.OUT.println("Found largest vertex, Now exitting...");
+				    					break;
+				    				}
+				    				
+				    				if(l(item(0),item(1)) != null){
+				    					atomic{
+				    						vCount()() += l(item(0),item(1)).id > 0 ? 1:0;
+				    					}
+				    				}else{
+				    					Console.OUT.println("IS NULL");
+				    				}
+				    			}
+			    			}else{
+			    				Console.OUT.println("The array is 0 size at place : " + here.id);
+			    			}
+		    		}else{
+		    			Console.OUT.println("The array is NULL at place : " + here.id);
+		    		}
+		    	 }
     		}
     	}
+    	
+    	actualTotalVertices = vCount()(); 
     	
     	return vCount()();
     }    
@@ -231,45 +272,56 @@ public class PlainGraph implements Graph{
 	    			val r:Region = adjacencyList.dist.get(here);
 	    			val pt:Point = Point.make(1, internal_vertex);
 	    			
-	    			if(r.contains(pt)){
-	    				if(adjacencyList(pt).id != -1l){
-	    					//throw new UnsupportedOperationException("Vertex already exists in the Graph");
-	    					return -1;
-	    				}
-	    				
-	    				var rec:PlainGraphRecord = null;
-	    				rec = new PlainGraphRecord();
-	    				rec.id = vertex;
-	    				rec.edges = new ArrayList[Long]();
-	    				adjacencyList(pt) = rec;   				
-	    			}
+	    			var flag:Boolean = false;
 	    			
+	    			for(item in r){				
+	    				if((item(0) == pt(0)) && (item(1) == pt(1))){
+	    					flag = true;
+	    					break;
+	    				}
+	    			}	
+	    			
+	    			if(flag){
+		    			if(adjacencyList(pt).id != -1l){
+		    				return -1;
+		    			}
+		    	
+		    			addedCountTemp++;
+		    			
+		    			var rec:PlainGraphRecord = null;
+		    			rec = new PlainGraphRecord();
+		    			rec.id = vertex;
+		    			rec.edges = new ArrayList[Long]();
+		    			adjacencyList(pt) = rec;
+	    			}else{
+	    				Console.OUT.println("vertex : " + vertex + " not added");
+	    			}
 	    		}	
     		}else if(sizeCategory == GraphSizeCategory.MEDIUM){
-    			if(vertex > (ScaleGraphMath.pow(2,sizeCategory) * Place.places().size())){
+    			if(vertex > (totalVertices)){
     				var message:String = "The vertex is not supported by the graph.";
     				message = message + " Current graph size is : " + sizeCategory;
     				throw new UnsupportedOperationException(message);
     			}else{
-    				var v:Long = ScaleGraphMath.pow(2,sizeCategory);
     				val machine:Int = ScaleGraphMath.round(vertex/v) as Int;
     				internal_vertex = (vertex % v) as Int;
 
     				for(p in adjacencyList.dist.places()){
-    					if(p.id == machine){
-    						at(p){
-    						val r:Region = adjacencyList.dist.get(p);
-    						val pt:Point = Point.make(machine + 1, internal_vertex);
-    						if(r.size()==0){
-    							throw new UnsupportedOperationException("region does not have any data points");
-    						}
+    					if((machine != 0)&&(p.id == machine)){
+
+    						at(p){    							
+	    						val r:Region = adjacencyList.dist.get(p);
+	    						val pt:Point = Point.make(machine + 1, internal_vertex);
+	    						
+	    						if(r.size()==0){
+	    							throw new UnsupportedOperationException("region does not have any data points");
+	    						}
     						
     							var flag:Boolean = false;
     							var rec:PlainGraphRecord = null;
     							
     							if(r.contains(pt)){
     								if(adjacencyList(pt).id != -1l){
-    									//throw new UnsupportedOperationException("Vertex already exists in the Graph");
     									return; //Just return without adding, the Vertex exists in the Graph
     								}
 
@@ -277,12 +329,48 @@ public class PlainGraph implements Graph{
     								rec.id = vertex;
     								rec.edges = new ArrayList[Long]();
     								adjacencyList(pt) = rec;
-    								//Console.OUT.println("Added : " + adjacencyList(pt).id);
-    								//Console.OUT.println("rec is : " + rec.id);
     							}else{
     								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
     							}
 							}
+    						
+						}else if((machine == 0) && (p.id == machine))
+						{						
+							val r:Region = adjacencyList.dist.get(p);
+							val pt:Point = Point.make(machine + 1, internal_vertex);
+													
+							if(r.size()==0){
+								throw new UnsupportedOperationException("region does not have any data points");
+							}
+							
+							var flag:Boolean = false;
+							var rec:PlainGraphRecord = null;
+							
+							for(item in r){				
+								if((item(0) == pt(0)) && (item(1) == pt(1))){
+									flag = true;
+									break;
+								}
+							}							
+							
+							if(flag){
+								if(adjacencyList(pt).id != -1l){
+									return -1; //Just return without adding, the Vertex exists in the Graph
+								}
+
+								rec = new PlainGraphRecord();
+								rec.id = vertex;
+								rec.edges = new ArrayList[Long]();
+								adjacencyList(pt) = rec;
+								
+								if(largestReportedVertex < vertex){
+									largestReportedVertex = vertex;
+								}
+								
+							}else{
+								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+							}
+
 						}
 					}
     			}
@@ -306,16 +394,20 @@ public class PlainGraph implements Graph{
     	    	
     	var nThreads:Int = 100;
     	var offset:Int = s/nThreads;
-    	
-    	finish for(var i:Int = 0; i < s; i = i + offset){
-    		    var startPos:Int = i;
-    		    var endPos:Int = i + offset;
-	    		for(var j:Int = startPos; j < endPos; j++){
-	    			if(edlst(j) != null){
-	    				addEdge(edlst(j));
-	    			}
-	    		}
-    	}
+    	var startPos:Int = 0;
+    	var endPos:Int = 0;
+    	var i:Int = 0;
+    	   	
+    	for(i = 0; i < s; i = i + offset){
+		    startPos = i;
+		    endPos = i + offset;
+
+    		for(var j:Int = startPos; j < endPos; j++){
+    			if(edlst(j) != null){
+    				addEdge(edlst(j));
+    			}
+    		}
+    	}    	
     }
     
     /**
@@ -323,50 +415,125 @@ public class PlainGraph implements Graph{
      * 
      * @param the id of the Edge to be added to the Graph
      */
-    public def addEdge(var id:Object):void {
+    public def addEdge(var id:Object):Int {
     	 var e:String = id as String;
+    	     	 
+    	 var strArr:Array[String] = e.split(edgeSplitSymbol);
+
+    	 if(strArr.size != 2){
+    		 if(edgeSplitSymbol.equals(" ")){
+    		 	edgeSplitSymbol = "\t";
+    		 	strArr = e.split(edgeSplitSymbol);
+    		 }else{
+    			 edgeSplitSymbol = " ";
+    			 strArr = e.split(edgeSplitSymbol);
+    		 }
+    	 }
     	 
-    	 var strArr:Array[String] = e.split(" ");
-    	 val from:Long = Long.parse(strArr(0));
-    	 val to:Long = Long.parse(strArr(1));
+    	 if(strArr.size != 2){
+    		 return -1;
+    	 }
+    	     	 
+    	 var fromT:Long = 0l;
+    	 var toT:Long = 0l;
+    	 
+    	 try{
+    	 	fromT = Long.parse(strArr(0));
+    	 	toT = Long.parse(strArr(1));
+    	 }catch(exe:NumberFormatException){
+    		 Console.OUT.println("Error adding the edge : " + e);
+    		 
+    		 return -1;
+    	 }
+    	 
+    	 val from:Long = fromT;
+    	 val to:Long = toT;
+    	 
+    	 
     	 var vertex:Long = from > to ? from:to;
     	 
     	 //Just try adding the Vertices to make sure that they are properly added befoe creating the Edge
-
     	 //Try adding the vertices. They might exist in the graph, but don't worry.
     	 addVertex(strArr(0));
  		 addVertex(strArr(1));
-    	 
-    	 //Console.OUT.println("DDDDDD---->");
-    	 
     	 //Check to see whether the graph supports the Vertex
     	 if(sizeCategory == GraphSizeCategory.SMALL){
-    		 if(vertex > ScaleGraphMath.pow(2,sizeCategory)){
+    		 if(vertex > (Math.pow(2, sizeCategory) * adjacencyList.dist.places().size())){
     			 var message:String = "The vertices of the edge does not exist in the graph size.";
     			 message = message + " Current graph size is : " + sizeCategory;
     			 message = message + " the edge was : " + e;
     			 throw new UnsupportedOperationException(message);
     		 }
+    		 
+    		 var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    		 val machine:Int = ScaleGraphMath.round(from/v) as Int;
+    		 val internal_vertex:Int = (from % v) as Int;
+    		 
+    		 val r:Region = adjacencyList.dist.get(here);
+    		 val pt:Point = Point.make(machine + 1, internal_vertex);
+
+    		 if(r.size()==0){
+    			 throw new UnsupportedOperationException("region does not have any data points");
+    		 }
+    		 
+    		 var flag:Boolean = false;
+    		 var rec:PlainGraphRecord = null;
+    		 
+    		 if(r.contains(pt)){
+    			 atomic{
+    			 	 if(!adjacencyList(pt).edges.contains(to)){
+    					 adjacencyList(pt).edges.add(to);
+    				 }
+    			 }
+    		 } else{
+    			 throw new UnsupportedOperationException("from vertex does not exist");
+    		 }
+    		 
+    		 
+    		 
     	 }else if(sizeCategory == GraphSizeCategory.MEDIUM){
-    		 if(vertex > (ScaleGraphMath.pow(2,sizeCategory))*adjacencyList.dist.places().size()){
+    		 //if(vertex > (Math.pow(2, sizeCategory) * adjacencyList.dist.places().size())){
+    		 if(vertex > (totalVertices)){
     			 var message:String = "The vertices of the edge does not exist in the graph size.";
     			 message = message + " Current graph size is : 2^" + sizeCategory + " * " + adjacencyList.dist.places().size();
+    			 message = message + " Total Vertex : " + totalVertices;
     			 message = message + " the edge was : " + e;
     			 throw new UnsupportedOperationException(message);
     		 } 
-    	 }
+    		 
+    		 //var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    		 val machine:Int = ScaleGraphMath.round(from/v) as Int;
+    		 //Console.OUT.println("v : " + v + " machine : " + machine);
+    		 val internal_vertex:Int = (from % v) as Int;
+    		 
+    		 if(machine != 0){
+    			 Console.OUT.println("from vertex : " + from + " machine : " + machine);
+    		 }
+    		 
+    		 for(p in adjacencyList.dist.places()){
+    			 if((machine != 0) && (p.id == machine)){
+    				 at(p){    					 
+    					 val r:Region = adjacencyList.dist.get(p);
+    					 val pt:Point = Point.make(machine + 1, internal_vertex);
 
-    	 var v:Long = ScaleGraphMath.pow(2,sizeCategory);
-    	 val machine:Int = ScaleGraphMath.round(from/v) as Int;
-    	 val internal_vertex:Int = (from % v) as Int;
-
-    	 if(machine != 0){
-    	 	Console.OUT.println("from vertex : " + from + " machine : " + machine);
-    	 }
-    	 
-    	 for(p in adjacencyList.dist.places()){
-    		 if(p.id == machine){
-    			 at(p){
+    					 if(r.size()==0){
+    						 throw new UnsupportedOperationException("region does not have any data points");
+    					 }
+    					 
+    					 var flag:Boolean = false;
+    					 var rec:PlainGraphRecord = null;
+    					 
+    					 if(r.contains(pt)){
+    						 atomic{
+    							 if(!adjacencyList(pt).edges.contains(to)){
+    								 adjacencyList(pt).edges.add(to);
+    							 }
+    						 }
+    					 } else{
+    						 throw new UnsupportedOperationException("from vertex does not exist");
+    					 }
+    				 }
+    			 }else if((machine == 0)&& (p.id == machine)){
     				 val r:Region = adjacencyList.dist.get(p);
     				 val pt:Point = Point.make(machine + 1, internal_vertex);
 
@@ -378,19 +545,19 @@ public class PlainGraph implements Graph{
     				 var rec:PlainGraphRecord = null;
     				 
     				 if(r.contains(pt)){
-    					 //Console.OUT.println("from-->" + from + " to-->" + to);
-    					 //Console.OUT.println("pt(0)" + pt(0) + " pt(1)" + pt(1));
-    					 
-    					 //Console.OUT.println("adjacencyList(pt).id-->" + adjacencyList(pt).id);
-    					 if(!adjacencyList(pt).edges.contains(to)){
-    					 	adjacencyList(pt).edges.add(to);
+    					 atomic{
+    					 	if(!adjacencyList(pt).edges.contains(to)){
+    							 adjacencyList(pt).edges.add(to);
+    						 }
     					 }
     				 } else{
     					 throw new UnsupportedOperationException("from vertex does not exist");
-    				 }
+    				 }    			 
     			 }
-    		 }
+    		 }    		 
+    		 
     	 }
+    	 return 0;
     }
 
     /**
@@ -491,14 +658,11 @@ public class PlainGraph implements Graph{
     				
     				if(r.contains(pt)){
     					if((adjacencyList(pt) != null) && (adjacencyList(pt).edges != null) && (adjacencyList(pt).edges.size() > 0)){
-    						Console.OUT.println("OOK2");
     						var locRes:Array[Long] = new Array[Long](adjacencyList(pt).edges.size());
     						var counter:Int = 0;
-    						Console.OUT.println("OOK3");
     						for(item in adjacencyList(pt).edges){
     							locRes(counter) = item;
     						}
-    						Console.OUT.println("OOK4");
     						result()() = locRes;
     					}
     					
@@ -510,6 +674,105 @@ public class PlainGraph implements Graph{
     	}
     	
     	return result()();
+    }
+    
+    /**
+     * Returns the list of unique vertices from a graph
+     * 
+     * @return a DistArray of vertices. The vertices are distributed among places evenly
+     * for efficient use of memory
+     */
+    
+    public def getVertexList():DistArray[Long]{
+    	var R1:Region = null;
+    	var R2:Region = null;
+    	var nvl:Int = 0;
+    	val doneFill = GlobalRef[Cell[Int]](new Cell[Int](0));
+    	val curMachine = GlobalRef[Cell[Int]](new Cell[Int](0));
+    	val curVertex = GlobalRef[Cell[Long]](new Cell[Long](0));
+    	
+    	if(uniqueVertexList == null){    	
+	    	if(actualTotalVertices == 0l){
+	    		actualTotalVertices = getVertexCount();
+	    	}
+	    	    	
+	    	if(this.sizeCategory == GraphSizeCategory.SMALL){
+	    		vertexIncrementFactor = this.sizeCategory;
+	    		nvl = actualTotalVertices as Int; // Here we know that the total number of vertices is an Int
+	    		R1 = (1..1)*(1..1);
+	    		R2 = (1..1)*(1..nvl);	
+	    	}else if((this.sizeCategory == GraphSizeCategory.LARGE) || (this.sizeCategory == GraphSizeCategory.MEDIUM)){
+	    		vertexIncrementFactor = GraphSizeCategory.MEDIUM;
+	    		nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
+	    		totalVertices = Place.MAX_PLACES*nVertices as long;
+	    		v = ScaleGraphMath.pow(2,sizeCategory);
+	    		
+	    		nvl = Math.ceil((actualTotalVertices/(Place.MAX_PLACES)) as Double) as Int; // Again we know that the number of vertices is an Int per place
+	    		
+	    		//Just add one more to make space in the unique vertices array
+	    		nvl += 1;
+	    		Console.OUT.println("nv is : " + nvl);
+	    		
+	    		R1 = (1..Place.MAX_PLACES)*(1..1);
+	    		R2 = (1..Place.MAX_PLACES)*(1..nvl);
+	    	}
+	    	
+	    	val nv:Int = nvl;
+	    	var b:Dist = Dist.makeBlock(R2);
+	    	var b2:Dist = Dist.makeBlock(R1);
+
+	    	uniqueVertexList = DistArray.make[Long](b, 0l);
+	    	uniqueVertexCounter = DistArray.make[Int](b2, 1l);
+	    	
+	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));
+	    	
+	    	for(p:Place in Place.places()){
+	    		val rAdjList:Region = adjacencyList.dist.get(p);
+	    		
+	    		at(p){
+	    			for(point:Point in rAdjList){
+	    				
+	    				//This optimization might be helpful for small network loaded to large graph space
+	    				if(point(1) > largestReportedVertex){
+	    					break;
+	    				}
+	    				
+	    				if (adjacencyList(point).id != -1l){	
+	    					
+	    					curVertex()() = adjacencyList(point).id;
+	    					
+	    					for(p2:Place in Place.places()){
+	    						
+	    						if(curMachine()()==p2.id){
+	    							val myVal = curVertex()();
+	    						
+	    						at(p2){
+	    							val rVertList:Region = uniqueVertexList.dist.get(p2);
+	    							val rVertCounter:Region = uniqueVertexCounter.dist.get(p2);
+	    							
+		    						for(point2:Point in rVertCounter){
+
+		    							if((uniqueVertexCounter(point2) <= nv)){
+		    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
+		    								uniqueVertexCounter(point2) += 1;
+		    							}else{
+	    									at (p) {curMachine()() = p2.id + 1;}
+	    									break;
+		    							}
+		    						}
+	    						}
+	    						
+	    					}
+	    					}
+
+	    				}
+	    				
+	    			} 			
+	    		}
+	    	} 
+    	}
+    	
+    	return uniqueVertexList;
     }
 
 }
