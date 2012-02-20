@@ -39,8 +39,7 @@ test_attributed_graph:
 	src/org/scalegraph/graph/CharAttribute.x10 \
 	src/org/scalegraph/graph/DateAttribute.x10 \
 	src/org/scalegraph/graph/AttributeSchema.x10 \
-	src/org/scalegraph/util/Date.x10 \
-	src/test/scalegraph/graph/AttributedGraphMock.x10;
+	src/org/scalegraph/util/Date.x10 ;
 	
 	@echo "----------- Launch Attributed Graph Tester -----------";
 	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
