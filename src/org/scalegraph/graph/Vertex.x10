@@ -17,6 +17,8 @@ public class Vertex implements Comparable[Vertex], CustomSerialization {
 	protected var hashCode: Int;
 	protected static val nextVertexId:Long = 0; // Current vertex id to be assigned
 	
+	protected def this() {}
+	
 	public def this(serialData: SerialData) {
 		val v = serialData.data as Vertex;
 		
