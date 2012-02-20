@@ -33,8 +33,8 @@ public class AttributedGraph  implements Graph {
 	
 	//val rooms: Int = 107374182;// 483647;
 	//val rooms: Int = 33554432; // 2^25
-	//val rooms: Int = 262144; // 2^15
-	val rooms: Int = 32768; // 2^18
+	val rooms: Int = 262144; // 2^15
+	//val rooms: Int = 32768; // 2^18
 	//val rooms: Int = 650;
 	val R = 0..(rooms - 1);
 	
@@ -47,10 +47,20 @@ public class AttributedGraph  implements Graph {
 	}
 	
 	public static def make(sizeCategory: Short, vertexList: ArrayList[Vertex]): AttributedGraph {
-		throw new UnsupportedOperationException("Not implemented.");
-		// val g = new AttributedGraph(sizeCategory);
-		// g.init();
-		// return g;
+		
+		val g = new AttributedGraph(sizeCategory);
+		g.init();
+		g.addVertices(vertexList);
+		return g;
+	}
+	
+	public static def make(sizeCategory: Short, vertexList: ArrayList[Vertex], edgeList: Array[Edge]): AttributedGraph {
+
+		val g = new AttributedGraph(sizeCategory);
+		g.init();
+		g.addVertices(vertexList);
+		g.addEdge(edgeList);
+		return g;
 	}
 	
 	private def this(sizeCategory: Short) {
@@ -156,6 +166,14 @@ public class AttributedGraph  implements Graph {
 		 	
 		// Increase vertex count
 		 	++vertexCount;
+
+		return 1;
+	}
+	
+	public def addVertices(vertexList: ArrayList[Vertex]) {
+		for(v in vertexList) {
+			addVertex(v);
+		}
 	}
 	
 	protected def createVertexAttributeSchemaFromAttributes(attributes: Array[Attribute]) {
@@ -263,6 +281,12 @@ public class AttributedGraph  implements Graph {
 			}
 		}
 		addEdgeToTable(edgeIndex as Int, srcVertexId, dstVertexId, attrRecord);
+	}
+	
+	public def addEdges(edgeList: ArrayList[Edge]) {
+		for(e in edgeList) {
+			addEdge(e);
+		}
 	}
 	
 	protected def addEdgeToTable(index: Int, srcVertexId: Int, dstVertexId: Int, attrRecord: Array[Any]) {
@@ -506,19 +530,29 @@ public class AttributedGraph  implements Graph {
 		val addedVertexId = new HashMap[Long, Any]();
 		
 		// Process in edge
-		val inEdges: ArrayList[Int] = at (srcPlace) vertexTab(index)(1) as ArrayList[Int];
+		//*************************************
+		// val inEdges: ArrayList[Int] = at (srcPlace) vertexTab(index)(1) as ArrayList[Int];
+		val inEdges: ArrayList[Int] = vertexTab(index)(1) as ArrayList[Int];
+		//*************************************
 		for( i in 0..(inEdges.size()-1)) {
 			// Get edge
 			val edgeIndex = inEdges(i) as Int;
 			val edgePlace = dist(edgeIndex);
 			
 			// Get to
-			val neighborId = at(edgePlace)edgeTab(edgeIndex)(1) as Int;
+			//*************************************
+			// val neighborId = at(edgePlace)edgeTab(edgeIndex)(1) as Int;
+			val neighborId = edgeTab(edgeIndex)(1) as Int;
+			//*************************************
 			val neighborPlace = dist(neighborId);
 			
-			val attributeRecord = at(neighborPlace) vertexAttrTab(neighborId) as Array[Any];
-			val attriubtes = attributeRecordToAttributes(attributeRecord, vertexAttrIdNameMap);
-			val vertex = new Vertex(attriubtes);
+			 //*************************************
+			// val attributeRecord = at(neighborPlace) vertexAttrTab(neighborId) as Array[Any];
+			// val attributeRecord = vertexAttrTab(neighborId) as Array[Any];
+			//*************************************
+			// val attriubtes = attributeRecordToAttributes(attributeRecord, vertexAttrIdNameMap);
+			// val vertex = new Vertex(attriubtes);
+			val vertex = new Vertex();
 			
 			vertex.internalId = neighborId;
 			neighbors.add(vertex);
@@ -527,19 +561,27 @@ public class AttributedGraph  implements Graph {
 		
 		// in case of undirected graph, 
 		// add other node that has this node as destination
-		val outEdges: ArrayList[Int] = at (srcPlace) vertexTab(index)(2) as ArrayList[Int];
+		// val outEdges: ArrayList[Int] = at (srcPlace) vertexTab(index)(2) as ArrayList[Int];
+		val outEdges: ArrayList[Int] = vertexTab(index)(2) as ArrayList[Int];
 		
 		for( i in 0..(outEdges.size() - 1)) {
 			val edgeIndex = outEdges(i) as Int;
 			val edgePlace = dist(edgeIndex);
 			
 			// Get to
-			val neighborId = at(edgePlace)edgeTab(edgeIndex)(2) as Int;
+			// *************************************
+			// val neighborId = at(edgePlace)edgeTab(edgeIndex)(2) as Int;
+			val neighborId = edgeTab(edgeIndex)(2) as Int;
+			// *************************************
 			val neighborPlace = dist(neighborId);
 			
-			val attributeRecord = at(neighborPlace) vertexAttrTab(neighborId) as Array[Any];
-			val attriubtes = attributeRecordToAttributes(attributeRecord, vertexAttrIdNameMap);
-			val vertex = new Vertex(attriubtes);
+			 // *************************************
+			// val attributeRecord = at(neighborPlace) vertexAttrTab(neighborId) as Array[Any];
+			// val attributeRecord = vertexAttrTab(neighborId) as Array[Any];
+			// *************************************
+			// val attriubtes = attributeRecordToAttributes(attributeRecord, vertexAttrIdNameMap);
+			// val vertex = new Vertex(attriubtes);
+			val vertex = new Vertex();
 			
 			vertex.internalId = neighborId;
 			// neighbors.add(vertex);
@@ -640,7 +682,7 @@ public class AttributedGraph  implements Graph {
 		
 	}
 	
-	public def addEdge(var o:Object):void {
+	public def addEdge(var o:Object):Int {
 		
 		val edge = o as Edge;
 		
@@ -691,7 +733,23 @@ public class AttributedGraph  implements Graph {
 			throw new UnsupportedOperationException("Vertex '" + from + "' does not exist");
 		}
 		
-		throw new UnsupportedOperationException("Not implemented.");
+		val AttributeColumns = edgeAttributeSchema.nameAndTypeMap.size();
+		val edgeAttrRecord: Array[Any] = new Array[Any](0..AttributeColumns);
+		
+		if(intputEdgeAttributes != null) {
+			for(i in intputEdgeAttributes) {
+				val a = intputEdgeAttributes(i);
+				val columnId = edgeAttrNameIdMap.get(a.getName()).value;
+				edgeAttrRecord(columnId) = a.getValue();
+			}
+		}
+		var edgeIndex: Int;
+		atomic {
+			edgeIndex = nextEdgeId as Int;
+			++nextEdgeId;
+		}
+		addEdgeToTable(edgeIndex, fromVertexIndex as Int, toVertexIndex as Int, edgeAttrRecord);
+		return 1;
 	}
 
 	public def union(var id$18696:org.scalegraph.graph.Graph):org.scalegraph.graph.Graph {
