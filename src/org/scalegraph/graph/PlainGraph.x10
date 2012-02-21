@@ -721,7 +721,7 @@ public class PlainGraph implements Graph{
 	    	var b:Dist = Dist.makeBlock(R2);
 	    	var b2:Dist = Dist.makeBlock(R1);
 
-	    	uniqueVertexList = DistArray.make[Long](b, 0l);
+	    	uniqueVertexList = DistArray.make[Long](b, -1l);
 	    	uniqueVertexCounter = DistArray.make[Int](b2, 1l);
 	    	
 	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));
