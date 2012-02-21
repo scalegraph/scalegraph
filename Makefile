@@ -46,18 +46,19 @@ test_attributed_graph:
 	@echo "----------- Test Completed ---------------------------";
 	
 #Test 2	
-test_betweenness_centrality:
+test_betweenness_centrality_attribute:
 	@echo "----------- Compile Betweenness Centrality Tester -----------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	src/test/scalegraph/metrics/centrality/TestBetweennessCentrality.x10 \
+	src/test/scalegraph/metrics/centrality/TestBetweennessCentralityAttribute.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/graph/Vertex.x10 \
 	src/org/scalegraph/graph/Edge.x10 \
 	src/org/scalegraph/graph/Attribute.x10 \
-	src/test/scalegraph/graph/AttributedGraphMock.x10 \
 	src/org/scalegraph/io/GMLReader.x10 \
 	src/org/scalegraph/io/GMLEntry.x10 \
 	src/org/scalegraph/graph/StringAttribute.x10 \
@@ -72,6 +73,7 @@ test_betweenness_centrality:
 	src/org/scalegraph/graph/DateAttribute.x10 \
 	src/org/scalegraph/graph/AttributeSchema.x10 \
 	src/org/scalegraph/util/Date.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
 	src/org/scalegraph/io/GMLToken.x10;
 	
 	@echo "----------- Launch Betweenness Centrality Tester -----------";
@@ -377,6 +379,41 @@ test_edge_scat:
 	@echo "----------- Launch ScatteredEdgeListReader Tester -----------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";	
+
+#Test 19	
+test_betweenness_centrality_plain:
+	@echo "----------- Compile Betweenness Centrality Tester -----------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/metrics/centrality/TestBetweennessCentralityPlain.x10 \
+	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
+	src/org/scalegraph/graph/AttributedGraph.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/Vertex.x10 \
+	src/org/scalegraph/graph/Edge.x10 \
+	src/org/scalegraph/graph/Attribute.x10 \
+	src/org/scalegraph/io/GMLReader.x10 \
+	src/org/scalegraph/io/GMLEntry.x10 \
+	src/org/scalegraph/graph/StringAttribute.x10 \
+	src/org/scalegraph/graph/BooleanAttribute.x10 \
+	src/org/scalegraph/graph/ByteAttribute.x10 \
+	src/org/scalegraph/graph/ShortAttribute.x10 \
+	src/org/scalegraph/graph/IntAttribute.x10 \
+	src/org/scalegraph/graph/LongAttribute.x10 \
+	src/org/scalegraph/graph/FloatAttribute.x10 \
+	src/org/scalegraph/graph/DoubleAttribute.x10 \
+	src/org/scalegraph/graph/CharAttribute.x10 \
+	src/org/scalegraph/graph/DateAttribute.x10 \
+	src/org/scalegraph/graph/AttributeSchema.x10 \
+	src/org/scalegraph/util/Date.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/io/GMLToken.x10;
+	
+	@echo "----------- Launch Betweenness Centrality Tester -----------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	@echo "----------- Test Completed ---------------------------------";
 
 test_dir:
 	@echo "----------- Compile Degree Tester -----------";
