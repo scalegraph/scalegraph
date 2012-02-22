@@ -355,12 +355,13 @@ test_degree:
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
-	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	@echo "----------- Launch scalegraphMath Tester -----------";
-	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";		
 	
 #Test 18
