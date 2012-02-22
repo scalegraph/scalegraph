@@ -551,6 +551,7 @@ public class PlainGraph implements Graph{
     					 atomic{
     					 	if(!adjacencyList(pt).edges.contains(to)){
     							 adjacencyList(pt).edges.add(to);
+    							 Console.OUT.println("added from : " + from + " to : " + to);
     						 }
     					 }
     				 } else{
@@ -560,12 +561,10 @@ public class PlainGraph implements Graph{
     		 }    		 
     		 
     		 if(!isDirected){
-    			 //var v:Long = ScaleGraphMath.pow(2,sizeCategory);
     			 val machine2:Int = ScaleGraphMath.round(to/v) as Int;
-    			 //Console.OUT.println("v : " + v + " machine : " + machine);
     			 val internal_vertex2:Int = (to % v) as Int;
     			 
-    			 if(machine != 0){
+    			 if(machine2 != 0){
     				 Console.OUT.println("from vertex : " + to + " machine : " + machine2);
     			 }
     			 
@@ -607,6 +606,7 @@ public class PlainGraph implements Graph{
     						 atomic{
     							 if(!adjacencyList(pt).edges.contains(from)){
     								 adjacencyList(pt).edges.add(from);
+    								 Console.OUT.println("added from : " + to + " to : " + from);
     							 }
     						 }
     					 } else{
