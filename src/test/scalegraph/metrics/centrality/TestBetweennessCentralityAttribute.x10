@@ -6,7 +6,7 @@ import org.scalegraph.graph.AttributedGraph;
 import org.scalegraph.graph.Vertex;
 import x10.util.Pair;
 
-public class TestBetweennessCentrality {
+public class TestBetweennessCentralityAttribute {
 	
 	public static def main(args: Array[String]) {
 		
