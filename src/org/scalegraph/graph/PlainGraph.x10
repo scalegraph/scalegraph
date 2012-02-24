@@ -29,6 +29,12 @@ public class PlainGraph implements Graph{
 	private var actualTotalVertices:Long = 0l;			//This is the total number of vertices
 	private var uniqueVertexList:DistArray[Long] = null; //List of unique vertices
 	private var uniqueVertexCounter:DistArray[Int] = null; //This array of integers keeps track of the unique vertices
+	private var VERTEX_CACHE_SIZE:Int = 20;
+	private var VERTEX_CACHE_DELWINDOW:Int = 5;
+	private var VERTEX_CACHE_REFRESH_FREQ:Int = VERTEX_CACHE_SIZE * 1000;
+	private var VERTEX_CACHE_THRESHOLD:Int = VERTEX_CACHE_SIZE - VERTEX_CACHE_DELWINDOW;
+	private var cacheCounter:Int = 0;
+	private var vertexCache:Array[VertexCacheRecord] = new Array[VertexCacheRecord](VERTEX_CACHE_SIZE);
 	
 	/**
      * Default constructor 
@@ -70,8 +76,8 @@ public class PlainGraph implements Graph{
     			nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
     			totalVertices = Place.MAX_PLACES*nVertices as long;
     			v = ScaleGraphMath.pow(2,sizeCategory);
-    			Console.OUT.println("nVertices : " + nVertices);
-    			Console.OUT.println("totalVertices : " + totalVertices);
+    			Console.OUT.println("vertices per place : " + nVertices);
+    			Console.OUT.println("total supported vertices : " + totalVertices);
     			
     			R2 = (1..Place.MAX_PLACES)*(1..nVertices);
     		}
@@ -79,7 +85,13 @@ public class PlainGraph implements Graph{
     		var b:Dist = Dist.makeBlock(R2);
     		adjacencyList = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
     		
-    		Console.OUT.println("Total graph size (vertices) : " + ((nVertices * Place.MAX_PLACES) as long));
+    		//Initialize the Vertex Cache
+    		for(item in vertexCache){
+    			vertexCache(item) = new VertexCacheRecord();
+    			vertexCache(item).id = -1;
+    			vertexCache(item).nFound = 0;
+    			vertexCache(item).nChecked = 1;
+    		}
     		
     	}else{
     		throw new UnsupportedOperationException("Invalid Graph Size Category was specified : " + sizeCat);    		
@@ -141,8 +153,6 @@ public class PlainGraph implements Graph{
 	    	vertexIncrementFactor = GraphSizeCategory.MEDIUM;
 	    	nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
 	    	var maxMachine:Int = (largestReportedVertex/(nVertices)) as Int;
-	    	
-	    	Console.OUT.println("maxMachine : " + maxMachine);
 	    	Console.OUT.println("largestReportedVertex : " + largestReportedVertex);
 	    	
 	    	finish for(p in adjacencyList.dist.places()){
@@ -259,13 +269,109 @@ public class PlainGraph implements Graph{
     }
 
     /**
+     * This method checks whether a particular vertex exists in the Vertex cache
+     * @param Vertex ID
+     * @param true - if the vertex exists, false otherwise.
+     */
+    private def isInVertexCache(vertex:Long):Boolean{
+    	var flag:Boolean = false;
+    	var loc:Point = null;
+    	var vertCachRec:VertexCacheRecord = null;
+    	    	
+    	for(item in vertexCache){
+    		vertCachRec = vertexCache(item);
+    		if(vertCachRec.id != -1L){
+    			if(vertCachRec.id == vertex){
+    				vertCachRec.nFound += 1;
+    				vertCachRec.nChecked += 1;
+    				flag = true;
+    			}else{
+    				vertCachRec.nChecked += 1;
+    			}
+    		}else{
+    			if(loc == null){
+    				loc = item;
+    			}
+    		}
+    	}
+    	
+    	if((!flag)&&(loc!=null)){
+    		vertCachRec = vertexCache(loc);
+    		vertCachRec.id = vertex;
+    		vertCachRec.nFound = 1;
+    		vertCachRec.nChecked = 1;
+    	}
+    	cacheCounter++;
+
+    
+    	if(cacheCounter>VERTEX_CACHE_REFRESH_FREQ){
+    		//Cache is stale, lets refresh
+    		cacheCounter = 0;
+    		var i:Int = 0;
+    		
+   			sortVertexCache();
+    		
+    		//Delete the low scoring cache records
+    		for(item in vertexCache){
+    			if(i>VERTEX_CACHE_THRESHOLD){
+    				vertCachRec = vertexCache(item);
+    				vertCachRec.id = -1;
+    				vertCachRec.nFound = 0;
+    				vertCachRec.nChecked = 1;
+    			}else{
+    				i++;
+    			}
+    		}
+    	}
+
+    	return flag;
+    }
+    
+    /**
+     * This function sorts the vertex cache in Descending order based on their score frequencies
+     */
+    private def sortVertexCache(){
+    	var len:Int = VERTEX_CACHE_SIZE;
+    	var vertCacheRecord:VertexCacheRecord = null;
+    	var j:Int = 0;
+    	var curVal:Float = 0f;
+    	
+    	for(var i:Int = 1; i < len; i++){  		
+    		j = i;
+    		vertCacheRecord = vertexCache(i);
+    		
+    		while((j>0)&&((vertexCache(j-1).nFound/vertexCache(j-1).nChecked)<(vertCacheRecord.nFound/vertCacheRecord.nChecked))){
+    			vertexCache(j) = vertexCache(j-1);
+    			j--;
+    		}
+    		
+            if(j > 0){
+    			vertexCache(j) = vertCacheRecord;
+            }else{
+            	vertexCache(0) = vertCacheRecord;
+            }
+    	}
+    }
+    
+    
+    /**
      * Adds a new Vertex object to the PlainGraph.
      * 
      * @param the Vertex that needs to be added to the PlainGraph
      */
     public def addVertex(var id:Object):Int {
     	var e:String = id as String;
+    	
+    	if((e == null)||(e.equals(""))||(e.equals("0"))){
+    		return -1;
+    	}
+    	
     	val vertex:Long = Long.parse(e);
+    	
+    	if(isInVertexCache(vertex)){
+    		return -1;
+    	}   	
+    	    	
     	val internal_vertex:Int;
     	  
     	if(sizeCategory == GraphSizeCategory.SMALL){
@@ -274,7 +380,7 @@ public class PlainGraph implements Graph{
 	    		if(here.id == 0)
 	    		{
 	    			val r:Region = adjacencyList.dist.get(here);
-	    			val pt:Point = Point.make(1, internal_vertex);
+	    			val pt:Point = Point.make(1, internal_vertex + 1);
 	    			
 	    			var flag:Boolean = false;
 	    			
@@ -308,14 +414,15 @@ public class PlainGraph implements Graph{
     				throw new UnsupportedOperationException(message);
     			}else{
     				val machine:Int = ScaleGraphMath.round(vertex/v) as Int;
+    				
     				internal_vertex = (vertex % v) as Int;
-
-    				for(p in adjacencyList.dist.places()){
-    					if((machine != 0)&&(p.id == machine)){
-
+    				    				
+    				val p:Place = Place.places()(machine);
+    				
+    					if(machine != 0){    						
     						at(p){    							
 	    						val r:Region = adjacencyList.dist.get(p);
-	    						val pt:Point = Point.make(machine + 1, internal_vertex);
+	    						val pt:Point = Point.make(machine + 1, internal_vertex + 1);
 	    						
 	    						if(r.size()==0){
 	    							throw new UnsupportedOperationException("region does not have any data points");
@@ -338,24 +445,21 @@ public class PlainGraph implements Graph{
     							}
 							}
     						
-						}else if((machine == 0) && (p.id == machine))
-						{						
+						}else{			
+							try{
 							val r:Region = adjacencyList.dist.get(p);
-							val pt:Point = Point.make(machine + 1, internal_vertex);
+							val pt:Point = Point.make(machine + 1, internal_vertex + 1);
 													
 							if(r.size()==0){
 								throw new UnsupportedOperationException("region does not have any data points");
 							}
 							
 							var flag:Boolean = false;
-							var rec:PlainGraphRecord = null;
+							var rec:PlainGraphRecord = null;			
 							
-							for(item in r){				
-								if((item(0) == pt(0)) && (item(1) == pt(1))){
-									flag = true;
-									break;
-								}
-							}							
+							if(adjacencyList(pt)!= null){
+								flag = true;
+							}
 							
 							if(flag){
 								if(adjacencyList(pt).id != -1l){
@@ -374,11 +478,14 @@ public class PlainGraph implements Graph{
 							}else{
 								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
 							}
-
+							}catch(ec:Exception){
+								Console.OUT.println("Got the error : " + ec.getMessage());
+								Console.OUT.println("Edge is : |" + e + "|");
+							}
 						}
 					}
     			}
-    		}
+    	
     	return 0;
     }
    
@@ -393,24 +500,23 @@ public class PlainGraph implements Graph{
     }
     
     
-    public def addEdges(var edlst:Array[String]):void{
-    	var s:Int = edlst.size;
-    	    	
-    	var nThreads:Int = 100;
+    public def addEdges(val edlst:Array[String]):void{
+    	var s:Int = edlst.size;    	
+    	var nThreads:Int = 20;
     	var offset:Int = s/nThreads;
-    	var startPos:Int = 0;
-    	var endPos:Int = 0;
     	var i:Int = 0;
     	   	
-    	for(i = 0; i < s; i = i + offset){
-		    startPos = i;
-		    endPos = i + offset;
+    	finish for(i = 0; i < s; i = i + offset){
+		    val startPos = i;
+		    val endPos = i + offset;
 
+		    async{
     		for(var j:Int = startPos; j < endPos; j++){
     			if(edlst(j) != null){
-    				addEdge(edlst(j));
+    						addEdge(edlst(j));
     			}
     		}
+		    }
     	}    	
     }
     
@@ -421,7 +527,7 @@ public class PlainGraph implements Graph{
      */
     public def addEdge(var id:Object):Int {
     	 var e:String = id as String;
-    	     	 
+    	 
     	 var strArr:Array[String] = e.split(edgeSplitSymbol);
 
     	 if(strArr.size != 2){
@@ -437,7 +543,12 @@ public class PlainGraph implements Graph{
     	 if(strArr.size != 2){
     		 return -1;
     	 }
-    	     	 
+ 
+    	 //Just try adding the Vertices to make sure that they are properly added befoe creating the Edge
+    	 //Try adding the vertices. They might exist in the graph, but don't worry.
+    	 addVertex(strArr(0));
+    	 addVertex(strArr(1));
+    	 
     	 var fromT:Long = 0l;
     	 var toT:Long = 0l;
     	 
@@ -455,12 +566,7 @@ public class PlainGraph implements Graph{
     	 
     	 
     	 var vertex:Long = from > to ? from:to;
-    	 
-    	 //Just try adding the Vertices to make sure that they are properly added befoe creating the Edge
-    	 //Try adding the vertices. They might exist in the graph, but don't worry.
-    	 addVertex(strArr(0));
- 		 addVertex(strArr(1));
-    	 //Check to see whether the graph supports the Vertex
+
     	 if(sizeCategory == GraphSizeCategory.SMALL){
     		 if(vertex > (Math.pow(2, sizeCategory) * adjacencyList.dist.places().size())){
     			 var message:String = "The vertices of the edge does not exist in the graph size.";
@@ -474,7 +580,7 @@ public class PlainGraph implements Graph{
     		 val internal_vertex:Int = (from % v) as Int;
     		 
     		 val r:Region = adjacencyList.dist.get(here);
-    		 val pt:Point = Point.make(machine + 1, internal_vertex);
+    		 val pt:Point = Point.make(machine + 1, internal_vertex + 1);
 
     		 if(r.size()==0){
     			 throw new UnsupportedOperationException("region does not have any data points");
@@ -504,20 +610,15 @@ public class PlainGraph implements Graph{
     			 throw new UnsupportedOperationException(message);
     		 } 
     		 
-    		 //var v:Long = ScaleGraphMath.pow(2,sizeCategory);
     		 val machine:Int = ScaleGraphMath.round(from/v) as Int;
-    		 //Console.OUT.println("v : " + v + " machine : " + machine);
     		 val internal_vertex:Int = (from % v) as Int;
+    		    		 
+    		 val p:Place = Place.places()(machine);
     		 
-    		 if(machine != 0){
-    			 Console.OUT.println("from vertex : " + from + " machine : " + machine);
-    		 }
-    		 
-    		 for(p in adjacencyList.dist.places()){
-    			 if((machine != 0) && (p.id == machine)){
+    			 if(machine != 0){
     				 at(p){    					 
     					 val r:Region = adjacencyList.dist.get(p);
-    					 val pt:Point = Point.make(machine + 1, internal_vertex);
+    					 val pt:Point = Point.make(machine + 1, internal_vertex + 1);
 
     					 if(r.size()==0){
     						 throw new UnsupportedOperationException("region does not have any data points");
@@ -528,18 +629,25 @@ public class PlainGraph implements Graph{
     					 
     					 if(r.contains(pt)){
     						 atomic{
-    							 if(!adjacencyList(pt).edges.contains(to)){
+    							 if((adjacencyList(pt).edges != null)&&(!adjacencyList(pt).edges.contains(to))){
     								 adjacencyList(pt).edges.add(to);
     							 }
     						 }
     					 } else{
-    						 throw new UnsupportedOperationException("from vertex does not exist");
+    						 var message:String = "from vertex does not exist : ";
+    						 message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    						 message += "from : " + from + " to : " + to;
+    						 throw new UnsupportedOperationException(message);
     					 }
     				 }
-    			 }else if((machine == 0)&& (p.id == machine)){
+    			 }else{
     				 val r:Region = adjacencyList.dist.get(p);
-    				 val pt:Point = Point.make(machine + 1, internal_vertex);
+    				 val pt:Point = Point.make(machine + 1, internal_vertex + 1);
 
+    				 if(r == null){
+    					 return -1;
+    				 }
+    				 
     				 if(r.size()==0){
     					 throw new UnsupportedOperationException("region does not have any data points");
     				 }
@@ -549,30 +657,28 @@ public class PlainGraph implements Graph{
     				 
     				 if(r.contains(pt)){
     					 atomic{
-    					 	if(!adjacencyList(pt).edges.contains(to)){
+    					 	if((adjacencyList(pt).edges != null)&&(!adjacencyList(pt).edges.contains(to))){
     							 adjacencyList(pt).edges.add(to);
-    							 Console.OUT.println("added from : " + from + " to : " + to);
     						 }
     					 }
     				 } else{
-    					 throw new UnsupportedOperationException("from vertex does not exist");
+    					 var message:String = "from vertex does not exist : ";
+    					 message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    					 message += "from : " + from + " to : " + to;
+    					 throw new UnsupportedOperationException(message);
     				 }    			 
-    			 }
-    		 }    		 
+    			 }   		 
     		 
     		 if(!isDirected){
     			 val machine2:Int = ScaleGraphMath.round(to/v) as Int;
     			 val internal_vertex2:Int = (to % v) as Int;
     			 
-    			 if(machine2 != 0){
-    				 Console.OUT.println("from vertex : " + to + " machine : " + machine2);
-    			 }
+    			 val p2 = Place.places()(machine2);
     			 
-    			 for(p in adjacencyList.dist.places()){
-    				 if((machine2 != 0) && (p.id == machine2)){
-    					 at(p){    					 
-    						 val r:Region = adjacencyList.dist.get(p);
-    						 val pt:Point = Point.make(machine2 + 1, internal_vertex2);
+    				 if(machine2 != 0){
+    					 at(p2){    					 
+    						 val r:Region = adjacencyList.dist.get(p2);
+    						 val pt:Point = Point.make(machine2 + 1, internal_vertex2 + 1);
 
     						 if(r.size()==0){
     							 throw new UnsupportedOperationException("region does not have any data points");
@@ -583,18 +689,25 @@ public class PlainGraph implements Graph{
     						 
     						 if(r.contains(pt)){
     							 atomic{
-    								 if(!adjacencyList(pt).edges.contains(from)){
+    								 if((adjacencyList(pt).edges != null)&&(!adjacencyList(pt).edges.contains(from))){
     									 adjacencyList(pt).edges.add(from);
     								 }
     							 }
     						 } else{
-    							 throw new UnsupportedOperationException("from vertex does not exist");
+    							 var message:String = "from vertex does not exist : ";
+    							 message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    							 message += "from : " + from + " to : " + to;
+    							 throw new UnsupportedOperationException(message);
     						 }
     					 }
-    				 }else if((machine2 == 0)&& (p.id == machine2)){
-    					 val r:Region = adjacencyList.dist.get(p);
-    					 val pt:Point = Point.make(machine2 + 1, internal_vertex2);
+    				 }else {
+    					 val r:Region = adjacencyList.dist.get(p2);
+    					 val pt:Point = Point.make(machine2 + 1, internal_vertex2 + 1);
 
+    					 if(r == null){
+    						 return -1;
+    					 }
+    					 
     					 if(r.size()==0){
     						 throw new UnsupportedOperationException("region does not have any data points");
     					 }
@@ -604,18 +717,20 @@ public class PlainGraph implements Graph{
     					 
     					 if(r.contains(pt)){
     						 atomic{
-    							 if(!adjacencyList(pt).edges.contains(from)){
+    							 if((adjacencyList(pt).edges != null)&&(!adjacencyList(pt).edges.contains(from))){
     								 adjacencyList(pt).edges.add(from);
-    								 Console.OUT.println("added from : " + to + " to : " + from);
     							 }
     						 }
     					 } else{
-    						 throw new UnsupportedOperationException("from vertex does not exist");
+    						 var message:String = "from vertex does not exist : ";
+    						 message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    						 message += "from : " + from + " to : " + to;
+    						 throw new UnsupportedOperationException(message);
     					 }    			 
     				 }
     			 }  
     		 }
-    	 }
+
     	 return 0;
     }
 
@@ -640,7 +755,13 @@ public class PlainGraph implements Graph{
     			val r:Region = l.region;
     			var len:Int = r.size();
     			
-    			for(point:Point in r){			   				
+    			for(point:Point in r){		
+    				
+    				//This is an optimization
+    				if(point(1) > largestReportedVertex){
+    					break;
+    				}
+    				
     				if (l(point).id != -1l){
     					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
     					
@@ -699,16 +820,14 @@ public class PlainGraph implements Graph{
     }
     
     public def getNeighbours(val vertexID:Long):Array[Long]{
-    	//val result = GlobalRef[Cell[Array[Long]]](new Cell[Array[Long]](null));
     	val result2:Array[Array[Long]]=new Array[Array[Long]](1);
     	
     	var v:Long = ScaleGraphMath.pow(2,sizeCategory);
-    	val machine:Int = ScaleGraphMath.round(vertexID/v) as Int;
-    	//val machine2:Int = (vertexID/v) as Int;   	
+    	val machine:Int = ScaleGraphMath.round(vertexID/v) as Int; 	
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	val pt:Point = Point.make(machine + 1, internal_vertex + 1);
     	
     	var resultTotal:Array[Long] = null; 
     	
@@ -721,17 +840,12 @@ public class PlainGraph implements Graph{
 						if(l(pt).edges != null){
 							var lst:ArrayList[Long] = (l(pt).edges as ArrayList[Long]);
 							if(lst.size() != 0){
-								//result()() = new Array[Long](lst.size());
-								//result2(0) = new Array[Long](lst.size());
 								var resultFin:Array[Long] = new Array[Long](lst.size());
 								
 								var counter:Int = 0;
 								for (item in lst){
-									//result()()(counter) = item;
-									//result2(0)(counter) = item;
 									resultFin(counter) = item;
-									counter++;
-									//locRes.add("" + l(point).id + " " + item + "\r\n");	
+									counter++;	
 								}
 								
 								return resultFin;
@@ -741,18 +855,7 @@ public class PlainGraph implements Graph{
 					
 					return null;
     			};
-    		
-    	
-//		if(result()() != null){
-		// if(resultTotal != null){
-  //   		//Console.OUT.println("vertex : " + vertexID + " result edges count2 : " + result()().size);
-		// 	Console.OUT.println("vertex : " + vertexID + " result edges count2 : " + resultTotal.size);
-		// }else{
-		// 	Console.OUT.println("vertex : " + vertexID + " does not have neighbours.");
-		// }
-    	
-    	//return result()();
-		//return result2(0);
+    			
     	return resultTotal;
     }
     
@@ -858,4 +961,13 @@ public class PlainGraph implements Graph{
     public def getMaximumVertexID():Long{
     	return largestReportedVertex;
     }
+}
+
+/**
+ * This class supports the vertex caching mechanism.
+ */
+class VertexCacheRecord{
+	public var id:Long = -1l;
+	public var nFound:Long = -1l;
+	public var nChecked:Long = -1l;
 }
