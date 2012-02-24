@@ -299,8 +299,8 @@ public class BetweennessCentrality {
 				val v = data(i);
 				if(v < 0)
 					continue;
-				
-				// Console.OUT.println("Run for source: " + v + " On place: " + here.id);
+
+				Console.OUT.println("Run for source: " + v + " On place: " + here.id);
 				async doBfsOnPlainGraph(data(i));
 			}
 		}
@@ -325,6 +325,82 @@ public class BetweennessCentrality {
 		Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 	}
 	
+	protected class Cache {
+		var numData: Int = 0;
+		var records: ArrayList[CacheRecord];
+		var size: Int;
+		
+		def this(sz: Int) {
+			numData = 0;
+			this.size = sz;
+			records = new ArrayList[CacheRecord](this.size);
+			
+			// for(i in 0..(this.size -1)) {
+			// 	records(i) = new CacheRecord();
+			// }
+		}
+		
+		public def size() = size;
+		
+		public def getIndexForKey(key: Int) {
+			return binSearch(key, 0, size() - 1);
+		}
+		
+		protected def binSearch(key:Int, lower: Int, upper: Int): Int {
+			val mid = (lower + upper) / 2;
+			val dat = records(mid).key;
+			
+			if(lower > upper)
+				return -1;
+			
+			if(key == dat) {
+				return mid;
+			}
+			
+			if(key < dat)
+				return binSearch(key, lower, mid -1);
+			
+			return binSearch(key, mid + 1, upper);
+		}
+	}
+	
+	protected class CacheRecord {
+		var key: Int;
+		var data: Array[Long];
+		var hit: Int = 0;
+		// var used: Boolean = false;
+	}
+	
+	protected def getNeighBours(cache: Cache, vertexId:Int) {
+		// // Console.OUT.println("Start get index");
+		// val index = cache.getIndexForKey(vertexId);
+		// // Console.OUT.println("End get index");
+		// var data: Array[Long] = null;
+		// 
+		// if(index == -1) {
+		// 	data = this.plainGraph.getNeighbours(vertexId);
+		// 	
+		// 	//Update data
+		// 	val fillIndex = 0;
+		// 	val record = cache.records(fillIndex);
+		// 	record.key = vertexId;
+		// 	record.data = data;
+		// 	++record.hit;
+		// 	++cache.numData;
+		// 	
+		// 	// Sort data
+		// 	val sortKey = (r1: CacheRecord, r2: CacheRecord) => {
+		// 		  return r1.key.compareTo(r2.key);
+		// 	};
+		// 	
+		// 	cache.records.sort(sortKey);
+		// 	
+		// 	return data;
+		// }
+		// return cache.records(index).data;
+		return this.plainGraph.getNeighbours(vertexId);
+	}
+	
 	protected def doBfsOnPlainGraph(vertexId: Long) {
 		
 		val traverseQ: ArrayList[Int] = new ArrayList[Int]();
@@ -332,6 +408,12 @@ public class BetweennessCentrality {
 		val geodesicsMap: Array[Long] = new Array[Long](maximumVertexId);
 		val tempScore: Array[Double] = new Array[Double](maximumVertexId);
 		val predecessorIdStack: Stack[Int] = new Stack[Int]();
+		
+		// Caching 
+		// val cacheSize = 5000;
+		// val localThreadCache = new Cache(cacheSize);
+		// var fill: Int = 0;
+		
 		
 		// Cleare previous data
 		finish {
@@ -356,7 +438,7 @@ public class BetweennessCentrality {
 			
 			val actor: int = traverseQ.removeFirst();
 			val neighbors = this.plainGraph.getNeighbours(actor);
-			
+			// val neighbors = getNeighBours(localThreadCache, actor);
 			if(neighbors == null)
 				continue;
 			
