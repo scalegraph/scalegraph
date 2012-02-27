@@ -23,7 +23,11 @@ public class BetweennessCentrality {
 	val betweennessScore: Array[Double];
 	val numVertex: Int;
 	val maximumVertexId: Int;
-
+	
+	val isDisableCache: Boolean = true;
+	
+	val globalCaches: Array[Cache] = new Array[Cache](Runtime.MAX_THREADS, (i: Int) => new Cache(5000));
+	val globalLock: Lock = new Lock();
 
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
 		// Keep datafrom user to instance's memeber
@@ -54,7 +58,6 @@ public class BetweennessCentrality {
 		// Unuse properties
 		this.vertexIdAndIndexMap = null;
 		this.attributedGraph = null;
-		
 		
 	}
     /****************************************************************************
@@ -120,7 +123,7 @@ public class BetweennessCentrality {
 	}
 
 
-	public def calculateOnAttrGraph() {
+	protected def calculateOnAttrGraph() {
 		
 		finish {
 			attributedGraph.iterateOverVerticesLocally((v: Vertex) => {
@@ -271,7 +274,7 @@ public class BetweennessCentrality {
 		
 		finish {
 			for(p in Place.places()) {
-				async at (p) {
+				at (p) async {
 					betweennessCentrality().calculateOnPlainGraph();
 				}
 			}
@@ -294,16 +297,32 @@ public class BetweennessCentrality {
 			val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
 			val data = distVertexList.getLocalPortion();
 			var counter: Int = 0;
+						
 			for (i in data) {
 								
 				val v = data(i);
-				if(v < 0)
-					continue;
+				if(v >= 0) {
+					
+					// Console.OUT.println("Run for source: " + v + " On place: " + here.id);
 
-				Console.OUT.println("Run for source: " + v + " On place: " + here.id);
-				async doBfsOnPlainGraph(data(i));
+					if(isDisableCache) {
+						async doBfsOnPlainGraph(null, data(i));
+					} else {
+						val cache = acquireCache();
+						async doBfsOnPlainGraph(cache, data(i));
+					}
+				}
+				
 			}
+			
+			Console.OUT.println("***************************");
+			Console.OUT.println("Before reaching finish:" + here.id);
+			Console.OUT.println("***************************");
 		}
+		Console.OUT.println("***************************");
+		Console.OUT.println("Run for all source vertex" + here.id);
+		Console.OUT.println("***************************");
+		
 		
 		// if undirected graph divide by 2
 		if(this.plainGraph.isDirected() == false) {
@@ -325,94 +344,118 @@ public class BetweennessCentrality {
 		Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 	}
 	
-	protected class Cache {
-		var numData: Int = 0;
-		var records: ArrayList[CacheRecord];
-		var size: Int;
+	protected static class Cache {
 		
+		var numData: Int = 0;
+		val records: ArrayList[CacheRecord];
+		val size: Int;
+		var isUsed: Boolean = false;
+
 		def this(sz: Int) {
 			numData = 0;
 			this.size = sz;
 			records = new ArrayList[CacheRecord](this.size);
 			
-			// for(i in 0..(this.size -1)) {
-			// 	records(i) = new CacheRecord();
-			// }
+			for(i in 0..(this.size -1)) {
+				records(i) = new CacheRecord();
+			}
 		}
 		
 		public def size() = size;
 		
 		public def getIndexForKey(key: Int) {
-			return binSearch(key, 0, size() - 1);
-		}
-		
-		protected def binSearch(key:Int, lower: Int, upper: Int): Int {
-			val mid = (lower + upper) / 2;
-			val dat = records(mid).key;
 			
-			if(lower > upper)
+			if(numData <= 0)
 				return -1;
 			
-			if(key == dat) {
-				return mid;
+			for(i in 0..(numData -1)) {
+				val r = records(i);
+				if(r.key == key) {
+					return i;
+				}
+			}
+			return -1;
+		}
+		
+
+		public def update(key: Int, g: PlainGraph) {
+			
+			val dat = g.getNeighbours(key);
+
+			if(numData == size) {
+				throw new Exception("Data excedddddddddddddddd cash");
 			}
 			
-			if(key < dat)
-				return binSearch(key, lower, mid -1);
+			val index = numData;
+			val r = records(index);
+			r.key = key;
+			r.data = dat;
+			++r.hit;
+			++numData;
+		
+			return dat;
+		}
+	
+		public operator this(key:Int, g:PlainGraph) {
 			
-			return binSearch(key, mid + 1, upper);
+			val i = getIndexForKey(key);
+			if(i == -1) {
+				val dat = update(key, g);
+				return dat;
+			}
+			val dat = records(i).data;
+			return dat;
 		}
 	}
 	
-	protected class CacheRecord {
-		var key: Int;
+	protected static class CacheRecord {
+		var key: Int = -1;
 		var data: Array[Long];
 		var hit: Int = 0;
-		// var used: Boolean = false;
 	}
 	
 	protected def getNeighBours(cache: Cache, vertexId:Int) {
-		// // Console.OUT.println("Start get index");
-		// val index = cache.getIndexForKey(vertexId);
-		// // Console.OUT.println("End get index");
-		// var data: Array[Long] = null;
-		// 
-		// if(index == -1) {
-		// 	data = this.plainGraph.getNeighbours(vertexId);
-		// 	
-		// 	//Update data
-		// 	val fillIndex = 0;
-		// 	val record = cache.records(fillIndex);
-		// 	record.key = vertexId;
-		// 	record.data = data;
-		// 	++record.hit;
-		// 	++cache.numData;
-		// 	
-		// 	// Sort data
-		// 	val sortKey = (r1: CacheRecord, r2: CacheRecord) => {
-		// 		  return r1.key.compareTo(r2.key);
-		// 	};
-		// 	
-		// 	cache.records.sort(sortKey);
-		// 	
-		// 	return data;
-		// }
-		// return cache.records(index).data;
-		return this.plainGraph.getNeighbours(vertexId);
+		
+		return cache(vertexId, this.plainGraph);
+		
 	}
 	
-	protected def doBfsOnPlainGraph(vertexId: Long) {
+	protected def acquireCache() {
+		
+		globalLock.lock();
+		var didAcquire: Boolean = false;
+		var returnCache: Cache = null;
+		while(!didAcquire) {
+			for(i in globalCaches) {
+				val cache = globalCaches(i);
+				if(!cache.isUsed) {
+					// cache is available
+					cache.isUsed = true;
+					returnCache = cache;
+					didAcquire = true;
+					break;
+				}
+			}
+		}
+		
+		globalLock.unlock();
+		
+		return returnCache;
+	}
+	
+	protected def releaseCache(cache: Cache) {
+		cache.isUsed = false;
+	}
+	
+	protected def doBfsOnPlainGraph(cache: Cache, vertexId: Long) {
 		
 		val traverseQ: ArrayList[Int] = new ArrayList[Int]();
 		val distanceMap: Array[Long] = new Array[Long](maximumVertexId);;
 		val geodesicsMap: Array[Long] = new Array[Long](maximumVertexId);
 		val tempScore: Array[Double] = new Array[Double](maximumVertexId);
-		val predecessorIdStack: Stack[Int] = new Stack[Int]();
+		val predecessorMap: Array[Stack[Int]] = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
+		val vertexStack: Stack[Int] = new Stack[Int]();
 		
-		// Caching 
-		// val cacheSize = 5000;
-		// val localThreadCache = new Cache(cacheSize);
-		// var fill: Int = 0;
 		
 		
 		// Cleare previous data
@@ -422,9 +465,12 @@ public class BetweennessCentrality {
 			async tempScore.fill(0);
 		}
 		
-		while(!predecessorIdStack.isEmpty()) {
-			predecessorIdStack.pop();
+		
+		for(i in predecessorMap) {
+			 predecessorMap(i).clear();
 		}
+		
+		vertexStack.clear();
 		
 		// Get source vertex
 		val source: Int = vertexId as Int;
@@ -437,8 +483,19 @@ public class BetweennessCentrality {
 		while(!traverseQ.isEmpty()) {
 			
 			val actor: int = traverseQ.removeFirst();
-			val neighbors = this.plainGraph.getNeighbours(actor);
-			// val neighbors = getNeighBours(localThreadCache, actor);
+			// val neighbors = this.plainGraph.getNeighbours(actor);
+			
+			
+			var  neighbors: Array[Long] = null;
+			
+			if(isDisableCache) {
+				neighbors = this.plainGraph.getNeighbours(actor);
+			} else {
+				neighbors = getNeighBours(cache, actor);
+			}
+			
+			vertexStack.push(actor);
+			
 			if(neighbors == null)
 				continue;
 			
@@ -449,52 +506,84 @@ public class BetweennessCentrality {
 					// We found this node again, another shortest path
 					if(distanceMap(neighbor) == distanceMap(actor) + 1) {
 						geodesicsMap(neighbor) += geodesicsMap(actor);
+						predecessorMap(neighbor).push(actor);
 					}
 				} else {
 					// Found this node first time
 					geodesicsMap(neighbor) += geodesicsMap(actor);
 					distanceMap(neighbor) = distanceMap(actor) + 1;
 					traverseQ.add(neighbor);
-					predecessorIdStack.push(neighbor);
+					predecessorMap(neighbor).push(actor);
 				}
 			}
 		} // End of traversal
-			
+		
 		// Calculate score
-		while(!predecessorIdStack.isEmpty()) {
+		while(!vertexStack.isEmpty()) {
 			
-			val actor: Int = predecessorIdStack.pop();
+			val actor: Int = vertexStack.pop();
 			
 			// Skip process the source
 			if(distanceMap(actor) <= 1) {
 				continue;
 			}
 			
-			var neighbors: Array[Long] = null;
-			
-			if(this.plainGraph.isDirected()) {
-				// For directed graph update in-neighbours
-				// neighbors = this.plainGraph.getInNeighbours(actor);
-				// This is for workaround to test other part
-				throw new UnsupportedOperationException("BC for directed plain graph havent ben implemented yet");
-			} else {
-				// For undirected graph update all neighbours
-				neighbors = this.plainGraph.getNeighbours(actor);
+			while(!predecessorMap(actor).isEmpty()) {
+				val pred = predecessorMap(actor).pop();
+
+				tempScore(pred) += (tempScore(actor) + 1.0D) * 
+				(geodesicsMap(pred) as Double) / (geodesicsMap(actor) as Double);
+				
 			}
 			
-			for(i in neighbors) {
-				neighbor: Int = neighbors(i) as Int;
-			
-				if(distanceMap(neighbor) == distanceMap(actor) - 1) {
-					tempScore(neighbor) += (tempScore(actor) + 1.0D) * 
-					(geodesicsMap(neighbor) as Double) / (geodesicsMap(actor) as Double);
-				}
-			}
 		}
+		
 		atomic {
 			betweennessScore.map(betweennessScore, tempScore, (a: Double, b: Double)=> a + b);
 		}
 		
+		if(!isDisableCache) {
+			releaseCache(cache);
+		}
+		
+		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
+			
+		// // Calculate score
+		// while(!predecessorIdStack.isEmpty()) {
+		// 	
+		// 	val actor: Int = predecessorIdStack.pop();
+		// 	
+		// 	// Skip process the source
+		// 	if(distanceMap(actor) <= 1) {
+		// 		continue;
+		// 	}
+		// 	
+		// 	var neighbors: Array[Long] = null;
+		// 	
+		// 	if(this.plainGraph.isDirected()) {
+		// 		// For directed graph update in-neighbours
+		// 		// neighbors = this.plainGraph.getInNeighbours(actor);
+		// 		// This is for workaround to test other part
+		// 		throw new UnsupportedOperationException("BC for directed plain graph havent ben implemented yet");
+		// 	} else {
+		// 		// For undirected graph update all neighbours
+		// 		neighbors = this.plainGraph.getNeighbours(actor);
+		// 	}
+		// 	
+		// 	for(i in neighbors) {
+		// 		neighbor: Int = neighbors(i) as Int;
+		// 	
+		// 		if(distanceMap(neighbor) == distanceMap(actor) - 1) {
+		// 			tempScore(neighbor) += (tempScore(actor) + 1.0D) * 
+		// 			(geodesicsMap(neighbor) as Double) / (geodesicsMap(actor) as Double);
+		// 		}
+		// 	}
+		// }
+		// atomic {
+		// 	betweennessScore.map(betweennessScore, tempScore, (a: Double, b: Double)=> a + b);
+		// }
+		// 
+		// releaseCache(cache);
 		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 	}
 }

@@ -12,18 +12,22 @@ public class TestBetweennessCentralityPlain {
 	
 	public static def main(args: Array[String]) {
 
-		var graph:PlainGraph = null;
-		// var reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
+		if(args(0) == null) {
+			throw new Exception("Please enter file name");
+		}
 		
-		// graph = reader.loadFromDir("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale12-scattered");
+		var graph:PlainGraph = null;
 		
 		val edgeListReader = new EdgeListReader();
-		graph = edgeListReader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale12/scale-12-3628.dl");
+		graph = edgeListReader.loadFromFile(args(0));
+		
+		// graph = edgeListReader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale12/scale-12-3628.dl");
 		// graph = edgeListReader.loadFromFile("/nfs/home/charuwat/Desktop/small-header.dl");
 		// graph = edgeListReader.loadFromFile("/nfs/home/charuwat/Desktop/small-header2.dl");
 		// graph = edgeListReader.loadFromFile("/nfs/home/charuwat/Desktop/small-header3.dl");
 		// graph = edgeListReader.loadFromFile("/nfs/home/charuwat/Desktop/small-header4.dl");
-		
+		// graph = edgeListReader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
+
 		val distVertexList:DistArray[Long] = graph.getVertexList();
 		val vertexListBuilder: ArrayBuilder[Long] = new ArrayBuilder[Long]();
 		
@@ -60,10 +64,14 @@ public class TestBetweennessCentralityPlain {
 				}
 			}
 		}
+		
+		val buildStart = System.currentTimeMillis();
 		val vertexList = vertexListBuilder.result();
-		val start = System.currentTimeMillis();
+		val buildEnd = System.currentTimeMillis();
+		
+		val calStart = System.currentTimeMillis();
 		val result = BetweennessCentrality.run(graph, vertexList, false);
-		val end = System.currentTimeMillis();
+		val calEnd = System.currentTimeMillis();
 		
 		for(i in result) {
 			var k: Long = result(i).first;
@@ -72,10 +80,15 @@ public class TestBetweennessCentralityPlain {
 			Console.OUT.printf("%ld %.12lf\n", k, v);
 		}
 		
+		val vertexCountStart = System.currentTimeMillis();
 		var vcount:Long = graph.getVertexCount();
-		Console.OUT.println("Total vertex count : " + vcount);
+		val vertexCountEnd = System.currentTimeMillis();
 		
-		Console.OUT.println("Time for cal (ms): " + (end - start) );
+		Console.OUT.println("---------------------------------------------------------------------");
+		Console.OUT.println("Total vertex count : " + vcount);
+		Console.OUT.println("Time to BuildList (ms): " + (buildEnd - buildStart) );
+		Console.OUT.println("Time to Cal (ms): " + (calEnd - calStart) );
+		Console.OUT.println("Time to Count vertex (ms): " + (vertexCountEnd - vertexCountStart) );
 		Console.OUT.println("---------------------------------------------------------------------");
 		
 	}
