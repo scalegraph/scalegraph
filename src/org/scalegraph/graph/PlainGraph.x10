@@ -951,8 +951,8 @@ public class PlainGraph implements Graph{
     	for(var j:Int = 0; j < s; j++){
     		if(edlst(j) != null){
     			
-    			addEdge(edlst(j));
-    			/*
+    			//addEdge(edlst(j));
+    			
     			val e:String = edlst(j);
     			
     			var strArr:Array[String] = e.split(edgeSplitSymbol);
@@ -973,7 +973,7 @@ public class PlainGraph implements Graph{
     				//Try adding the vertices. They might exist in the graph, but don't worry.
     				addVertex(strArr(1));
     				addVertexWithEdge(strArr(0),strArr(1));
-    			}*/
+    			}
     		}
     		//}
     	
