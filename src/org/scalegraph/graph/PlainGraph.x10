@@ -461,7 +461,7 @@ public class PlainGraph implements Graph{
 	    		if(here.id == 0)
 	    		{
 	    			val r:Region = adjacencyListAtoB.dist.get(here);
-	    			val pt:Point = Point.make(1, internal_vertex + 1);
+	    			val pt:Point = Point.make(1, internal_vertex);
 	    			
 	    			var flag:Boolean = false;
 	    			
@@ -701,7 +701,7 @@ public class PlainGraph implements Graph{
     			val r:Region = adjacencyListAtoB.dist.get(here);
     			val r2:Region = adjacencyListBtoA.dist.get(here);
     			
-    			val pt:Point = Point.make(1, internal_vertex + 1);
+    			val pt:Point = Point.make(1, internal_vertex);
     			
     			var flag:Boolean = false;
     			
@@ -777,7 +777,7 @@ public class PlainGraph implements Graph{
     					val r2:Region = adjacencyListBtoA.dist.get(p);
     					
     					
-    					val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    					val pt:Point = Point.make(machine + 1, internal_vertex);
     					// var retval:Long = 0;
     					
     					if(r.size()==0){
@@ -1074,7 +1074,7 @@ public class PlainGraph implements Graph{
     		 val internal_vertex:Int = (from % v) as Int;
     		 
     		 val r:Region = adjacencyListAtoB.dist.get(here);
-    		 val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    		 val pt:Point = Point.make(machine + 1, internal_vertex);
 
     		 if(r.size()==0){
     			 throw new UnsupportedOperationException("region does not have any data points");
@@ -1143,7 +1143,7 @@ public class PlainGraph implements Graph{
     			 }else{
     				 try{
     				 val r:Region = adjacencyListAtoB.dist.get(p);
-    				 val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    				 val pt:Point = Point.make(machine + 1, internal_vertex);
 
     				 if(r == null){
     					 return -1;
@@ -1185,7 +1185,7 @@ public class PlainGraph implements Graph{
     		 if((machine2 != 0)||((machine2==0)&&(here.id != 0))){
     			 at(p2){    					 
     				 val r:Region = adjacencyListBtoA.dist.get(p2);
-    				 val pt:Point = Point.make(machine2 + 1, internal_vertex2 + 1);
+    				 val pt:Point = Point.make(machine2 + 1, internal_vertex2);
 
     				 if(r.size()==0){
     					 throw new UnsupportedOperationException("region does not have any data points");
@@ -1212,7 +1212,7 @@ public class PlainGraph implements Graph{
     			 //Console.OUT.println("AAAA");
     			 val r:Region = adjacencyListBtoA.dist.get(p2);
     			 //Console.OUT.println("BBB");
-    			 val pt:Point = Point.make(machine2 + 1, internal_vertex2 + 1);
+    			 val pt:Point = Point.make(machine2 + 1, internal_vertex2);
     			 //Console.OUT.println("CCCCC");
     			 if(r == null){
     				 return -1;
