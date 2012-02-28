@@ -100,7 +100,8 @@ public class TestBetweennessCentralityPlain {
 			for(i in result) {
 				var k: Long = result(i).first;
 				var v: Double = result(i).second;
-				p.printf("%ld %.12lf\n", k, v);
+				// p.printf("%ld %.15lf\n", k, v);
+				p.println("" + k + " = " + v);
 			}
 			
 			p.println("---------------------------------------------------------------------");
