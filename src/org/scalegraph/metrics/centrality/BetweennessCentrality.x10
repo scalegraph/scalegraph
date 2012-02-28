@@ -24,9 +24,10 @@ public class BetweennessCentrality {
 	val numVertex: Int;
 	val maximumVertexId: Int;
 	
-	val isDisableCache: Boolean = true;
+	var isEnableCache: Boolean = false;
 	
-	val globalCaches: Array[Cache] = new Array[Cache](Runtime.MAX_THREADS, (i: Int) => new Cache(5000));
+	static val CACHE_SIZE: Int = 10000;
+	val globalCaches: Array[Cache] = new Array[Cache](Runtime.MAX_THREADS, (i: Int) => new Cache(CACHE_SIZE));
 	val globalLock: Lock = new Lock();
 
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
@@ -297,6 +298,13 @@ public class BetweennessCentrality {
 			val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
 			val data = distVertexList.getLocalPortion();
 			var counter: Int = 0;
+			
+			// In case of muliple places (nodes), enable cache
+			if(Place.MAX_PLACES == 1) {
+				isEnableCache = false;
+			} else {
+				isEnableCache = true;
+			}
 						
 			for (i in data) {
 								
@@ -304,12 +312,11 @@ public class BetweennessCentrality {
 				if(v >= 0) {
 					
 					// Console.OUT.println("Run for source: " + v + " On place: " + here.id);
-
-					if(isDisableCache) {
-						async doBfsOnPlainGraph(null, data(i));
-					} else {
+					if(isEnableCache) {
 						val cache = acquireCache();
 						async doBfsOnPlainGraph(cache, data(i));
+					} else {
+						async doBfsOnPlainGraph(null, data(i));
 					}
 				}
 				
@@ -380,10 +387,20 @@ public class BetweennessCentrality {
 
 		public def update(key: Int, g: PlainGraph) {
 			
-			val dat = g.getNeighbours(key);
+			val dat = g.getOutNeighbours(key);
 
 			if(numData == size) {
-				throw new Exception("Data excedddddddddddddddd cash");
+				
+				 // Caceh full
+				Console.OUT.println("Cache full");
+				
+				// Hit return -1
+				records.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
+				numData = size / 2;
+				
+				for(i in records) {
+					i.hit = 0;
+				}
 			}
 			
 			val index = numData;
@@ -488,10 +505,10 @@ public class BetweennessCentrality {
 			
 			var  neighbors: Array[Long] = null;
 			
-			if(isDisableCache) {
-				neighbors = this.plainGraph.getNeighbours(actor);
-			} else {
+			if(isEnableCache) {
 				neighbors = getNeighBours(cache, actor);
+			} else {
+				neighbors = this.plainGraph.getOutNeighbours(actor);
 			}
 			
 			vertexStack.push(actor);
@@ -542,48 +559,10 @@ public class BetweennessCentrality {
 			betweennessScore.map(betweennessScore, tempScore, (a: Double, b: Double)=> a + b);
 		}
 		
-		if(!isDisableCache) {
+		if(isEnableCache) {
 			releaseCache(cache);
 		}
 		
-		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
-			
-		// // Calculate score
-		// while(!predecessorIdStack.isEmpty()) {
-		// 	
-		// 	val actor: Int = predecessorIdStack.pop();
-		// 	
-		// 	// Skip process the source
-		// 	if(distanceMap(actor) <= 1) {
-		// 		continue;
-		// 	}
-		// 	
-		// 	var neighbors: Array[Long] = null;
-		// 	
-		// 	if(this.plainGraph.isDirected()) {
-		// 		// For directed graph update in-neighbours
-		// 		// neighbors = this.plainGraph.getInNeighbours(actor);
-		// 		// This is for workaround to test other part
-		// 		throw new UnsupportedOperationException("BC for directed plain graph havent ben implemented yet");
-		// 	} else {
-		// 		// For undirected graph update all neighbours
-		// 		neighbors = this.plainGraph.getNeighbours(actor);
-		// 	}
-		// 	
-		// 	for(i in neighbors) {
-		// 		neighbor: Int = neighbors(i) as Int;
-		// 	
-		// 		if(distanceMap(neighbor) == distanceMap(actor) - 1) {
-		// 			tempScore(neighbor) += (tempScore(actor) + 1.0D) * 
-		// 			(geodesicsMap(neighbor) as Double) / (geodesicsMap(actor) as Double);
-		// 		}
-		// 	}
-		// }
-		// atomic {
-		// 	betweennessScore.map(betweennessScore, tempScore, (a: Double, b: Double)=> a + b);
-		// }
-		// 
-		// releaseCache(cache);
 		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 	}
 }
