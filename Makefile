@@ -416,6 +416,23 @@ test_betweenness_centrality_plain:
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
 	@echo "----------- Test Completed ---------------------------------";
 
+#Test 20
+#LAPACK_DIR = /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS
+LAPACK_DIR = /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic
+test_lapack:
+	@echo "----------- Compile LAPACK Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-cxx-prearg -I$(LAPACK_DIR)/include \
+	-cxx-postarg $(LAPACK_DIR)/lib/liblapack.a \
+	-cxx-postarg $(LAPACK_DIR)/lib/libblas.a \
+	-cxx-postarg $(LAPACK_DIR)/lib/libf2c.a \
+	src/org/scalegraph/clustering/TestLAPACK.x10 \
+	src/org/scalegraph/clustering/LAPACK.x10;
+	
+	@echo "----------- Launch LAPACK Tester ---------------------------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	@echo "----------- Test Completed ---------------------------------";
+
 test_dir:
 	@echo "----------- Compile Degree Tester -----------";
 	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
@@ -467,6 +484,8 @@ help:
 	@echo 'test_degree : Test Degree class'
 	#Test 18
 	@echo 'test_edge_scat : Test ScatteredEdgeListReader class'
+	#Test 20
+	@echo 'test_lapack : Test LAPACK class'
 	@echo 'clean : To clean the build'
 	@echo '---------------------------------';
 
