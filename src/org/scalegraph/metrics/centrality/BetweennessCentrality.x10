@@ -541,22 +541,27 @@ public class BetweennessCentrality {
 			val actor: Int = vertexStack.pop();
 			
 			// Skip process the source
-			if(distanceMap(actor) <= 1) {
-				continue;
-			}
+			// if(distanceMap(actor) <= 1) {
+			// 	continue;
+			// }
 			
 			while(!predecessorMap(actor).isEmpty()) {
 				val pred = predecessorMap(actor).pop();
 
 				tempScore(pred) += (tempScore(actor) + 1.0D) * 
-				(geodesicsMap(pred) as Double) / (geodesicsMap(actor) as Double);
+				(geodesicsMap(pred) as Double / geodesicsMap(actor) as Double);
 				
 			}
 			
 		}
 		
 		atomic {
-			betweennessScore.map(betweennessScore, tempScore, (a: Double, b: Double)=> a + b);
+			for(i in 0..betweennessScore.size) {
+				if(i == source)
+					continue;
+				betweennessScore(i) += tempScore(i);
+			}
+			// betweennessScore.map(betweennessScore, tempScore, (a: Double, b: Double)=> a + b);
 		}
 		
 		if(isEnableCache) {
