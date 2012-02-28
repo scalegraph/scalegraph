@@ -41,6 +41,8 @@ public class PlainGraph implements Graph{
 	private var largestLocalVertex:Long = 0l;
 	private var lrvFound:boolean = false;
 	private val largeV = new GlobalRef[Cell[Long]](new Cell[Long](0l));
+	private val curMachine = GlobalRef[Cell[Int]](new Cell[Int](0));
+	private val curVertex = GlobalRef[Cell[Long]](new Cell[Long](0));
 	
 	/**
      * Default constructor 
@@ -513,7 +515,8 @@ public class PlainGraph implements Graph{
 	    						val r:Region = adjacencyListAtoB.dist.get(p);
 	    						val r2:Region = adjacencyListBtoA.dist.get(p);
 	    						
-	    						val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+	    						//val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+	    						val pt:Point = Point.make(machine + 1, internal_vertex);
 	    						// var retval:Long = 0;
 	    						
 	    						if(r.size()==0){
@@ -583,7 +586,8 @@ public class PlainGraph implements Graph{
 	 							val r:Region = adjacencyListAtoB.dist.get(p);
 	 							val r2:Region = adjacencyListBtoA.dist.get(p);
 	 							
-	 							val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+	 							//val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+	 							val pt:Point = Point.make(machine + 1, internal_vertex);
 	 							
 	 							if(r.size()==0){
 	 								throw new UnsupportedOperationException("region A->B does not have any data points");
@@ -814,7 +818,7 @@ public class PlainGraph implements Graph{
     						rec.edges.add(vertex2);//Add the edge at the same time
     						
     						adjacencyListBtoA(pt) = rec;
-    						Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
+    						//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     						//retval = vertex;
     						}
     					}else{
@@ -846,7 +850,8 @@ public class PlainGraph implements Graph{
     					val r:Region = adjacencyListAtoB.dist.get(p);
     					val r2:Region = adjacencyListBtoA.dist.get(p);
     					
-    					val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    					//val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    					val pt:Point = Point.make(machine + 1, internal_vertex);
     					
     					if(r.size()==0){
     						throw new UnsupportedOperationException("region does not have any data points");
@@ -945,6 +950,7 @@ public class PlainGraph implements Graph{
 
     	for(var j:Int = 0; j < s; j++){
     		if(edlst(j) != null){
+    			
     			addEdge(edlst(j));
     			/*
     			val e:String = edlst(j);
@@ -1254,7 +1260,12 @@ public class PlainGraph implements Graph{
      * This method prints the contents of the Graph.
      */
     public def printCont(){
+    	// val lv = getMaximumVertexID();
+    	// val vc = getVertexCount();
+    	// val rlv = lv > vc ? lv : vc;
+    	
     	val rlv = getMaximumVertexID();
+    	
     	Console.OUT.println("Printing A -> B");
     	finish for(p in adjacencyListAtoB.dist.places()){
     		async at(p){
@@ -1265,9 +1276,9 @@ public class PlainGraph implements Graph{
     			for(point:Point in r){		
     				
     				//This is an optimization
-    				if(point(1) > rlv){
-    					break;
-    				}
+    				// if(point(1) > rlv){
+    				// 	break;
+    				// }
     				
     				if (l(point).id != -1l){
     					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
@@ -1298,9 +1309,9 @@ public class PlainGraph implements Graph{
     			for(point:Point in r){		
     				
     				//This is an optimization
-    				if(point(1) > rlv){
-    					break;
-    				}
+    				// if(point(1) > rlv){
+    				// 	break;
+    				// }
     				
     				if (l(point).id != -1l){
     					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
@@ -1453,8 +1464,8 @@ public class PlainGraph implements Graph{
     	var R2:Region = null;
     	var nvl:Int = 0;
     	val doneFill = GlobalRef[Cell[Int]](new Cell[Int](0));
-    	val curMachine = GlobalRef[Cell[Int]](new Cell[Int](0));
-    	val curVertex = GlobalRef[Cell[Long]](new Cell[Long](0));
+    	//val curMachine = GlobalRef[Cell[Int]](new Cell[Int](0));
+    	//val curVertex = GlobalRef[Cell[Long]](new Cell[Long](0));
     	
     	if(uniqueVertexList == null){    	
 	    	if(actualTotalVertices == 0l){
@@ -1487,9 +1498,14 @@ public class PlainGraph implements Graph{
 	    	var b2:Dist = Dist.makeBlock(R1);
 
 	    	uniqueVertexList = DistArray.make[Long](b, -1l);
-	    	uniqueVertexCounter = DistArray.make[Int](b2, 1l);
+	    	uniqueVertexCounter = DistArray.make[Int](b2, 0l);
 	    	
 	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));
+	    	// val rlv = getVertexCount();	
+	    	// val vc = getMaximumVertexID();
+	    	// 
+	    	// val largestVert = rlv > vc ? rlv : vc;
+	    	
 	    	val largestVert = getMaximumVertexID();
 	    	
 	    	Console.OUT.println("largestVert : " + largestVert);	    	
@@ -1502,10 +1518,17 @@ public class PlainGraph implements Graph{
 	    				
 	    				//This optimization might be helpful for small network loaded to large graph space
 	    				if(point(1) > largestVert){
+	    					Console.OUT.println("Now breaking point(1) : " + point(1)  + " largestVert : " + largestVert);
 	    					break;
 	    				}
 	    				
+	    				// if((p.id * GraphSizeCategory.MEDIUM) > argestVert){
+	    				// 	break;
+	    				// }
+	    				
 	    				if (adjacencyListAtoB(point).id != -1l){	
+	    					
+	    					Console.OUT.println("Now data point is : " + point(1) + "Now vertex is : " + adjacencyListAtoB(point).id);
 	    					
 	    					curVertex()() = adjacencyListAtoB(point).id;
 	    					
@@ -1520,8 +1543,8 @@ public class PlainGraph implements Graph{
 	    							
 		    						for(point2:Point in rVertCounter){
 
-		    							if((uniqueVertexCounter(point2) <= nv)){
-		    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
+		    							if((uniqueVertexCounter(point2) <= nv)){//There is more space there...
+		    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
 		    								uniqueVertexCounter(point2) += 1;
 		    							}else{
 	    									at (p) {curMachine()() = p2.id + 1;}
@@ -1533,6 +1556,8 @@ public class PlainGraph implements Graph{
 	    					}
 	    					}
 
+	    				}else{
+	    					Console.OUT.println("Now data point is : " + point(1) + "Now vertex is : " + adjacencyListAtoB(point).id);
 	    				}
 	    				
 	    			} 			
