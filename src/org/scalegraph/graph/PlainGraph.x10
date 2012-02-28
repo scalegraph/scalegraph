@@ -1259,11 +1259,7 @@ public class PlainGraph implements Graph{
      * Test method
      * This method prints the contents of the Graph.
      */
-    public def printCont(){
-    	// val lv = getMaximumVertexID();
-    	// val vc = getVertexCount();
-    	// val rlv = lv > vc ? lv : vc;
-    	
+    public def printCont(){   	
     	val rlv = getMaximumVertexID();
     	
     	Console.OUT.println("Printing A -> B");
@@ -1276,9 +1272,9 @@ public class PlainGraph implements Graph{
     			for(point:Point in r){		
     				
     				//This is an optimization
-    				// if(point(1) > rlv){
-    				// 	break;
-    				// }
+    				 if(point(1) > rlv){
+    				 	break;
+    				 }
     				
     				if (l(point).id != -1l){
     					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
@@ -1309,9 +1305,9 @@ public class PlainGraph implements Graph{
     			for(point:Point in r){		
     				
     				//This is an optimization
-    				// if(point(1) > rlv){
-    				// 	break;
-    				// }
+    				 if(point(1) > rlv){
+    				 	break;
+    				 }
     				
     				if (l(point).id != -1l){
     					var lst:ArrayList[Long] = (l(point).edges as ArrayList[Long]);
@@ -1380,7 +1376,7 @@ public class PlainGraph implements Graph{
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    	val pt:Point = Point.make(machine + 1, internal_vertex);
     	
     	var resultTotal:Array[Long] = null; 
     	
@@ -1420,7 +1416,7 @@ public class PlainGraph implements Graph{
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    	val pt:Point = Point.make(machine + 1, internal_vertex);
     	
     	var resultTotal:Array[Long] = null; 
     	
@@ -1500,12 +1496,7 @@ public class PlainGraph implements Graph{
 	    	uniqueVertexList = DistArray.make[Long](b, -1l);
 	    	uniqueVertexCounter = DistArray.make[Int](b2, 0l);
 	    	
-	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));
-	    	// val rlv = getVertexCount();	
-	    	// val vc = getMaximumVertexID();
-	    	// 
-	    	// val largestVert = rlv > vc ? rlv : vc;
-	    	
+	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));	    	
 	    	val largestVert = getMaximumVertexID();
 	    	
 	    	Console.OUT.println("largestVert : " + largestVert);	    	
@@ -1518,18 +1509,11 @@ public class PlainGraph implements Graph{
 	    				
 	    				//This optimization might be helpful for small network loaded to large graph space
 	    				if(point(1) > largestVert){
-	    					Console.OUT.println("Now breaking point(1) : " + point(1)  + " largestVert : " + largestVert);
 	    					break;
 	    				}
 	    				
-	    				// if((p.id * GraphSizeCategory.MEDIUM) > argestVert){
-	    				// 	break;
-	    				// }
-	    				
 	    				if (adjacencyListAtoB(point).id != -1l){	
-	    					
-	    					Console.OUT.println("Now data point is : " + point(1) + "Now vertex is : " + adjacencyListAtoB(point).id);
-	    					
+	    						    					
 	    					curVertex()() = adjacencyListAtoB(point).id;
 	    					
 	    					for(p2:Place in Place.places()){
@@ -1556,10 +1540,7 @@ public class PlainGraph implements Graph{
 	    					}
 	    					}
 
-	    				}else{
-	    					Console.OUT.println("Now data point is : " + point(1) + "Now vertex is : " + adjacencyListAtoB(point).id);
-	    				}
-	    				
+	    				}	    				
 	    			} 			
 	    		}
 	    	} 
