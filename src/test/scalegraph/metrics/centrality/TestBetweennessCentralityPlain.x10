@@ -42,10 +42,10 @@ public class TestBetweennessCentralityPlain {
 		// Determine input path
 		val inputFile  = new File(inputPath);
 		
-		if(!inputFile.exists()) {
-			Console.ERR.println("Input file does not exist");
-			return;
-		}
+		// if(!inputFile.exists()) {
+		// 	Console.ERR.println("Input file does not exist");
+		// 	return;
+		// }
 		
 		if(inputFile.isDirectory()) {
 			
