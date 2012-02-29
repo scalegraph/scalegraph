@@ -716,12 +716,14 @@ public class PlainGraph implements Graph{
     			
     			if(flag){
     				if(adjacencyListAtoB(pt).id != -1l){
+    					atomic adjacencyListAtoB(pt).edges.add(vertex2);
     					return -1;
     				}    				    				
     				
     				rec = new PlainGraphRecord();
     				rec.id = vertex;
     				rec.edges = new ArrayList[Long]();
+    				rec.edges.add(vertex2);
     				adjacencyListAtoB(pt) = rec;
     			}else{
     				Console.OUT.println("vertex : " + vertex + " not added");
@@ -738,12 +740,14 @@ public class PlainGraph implements Graph{
     			
     			if(flag){
     				if(adjacencyListBtoA(pt).id != -1l){
+    					atomic adjacencyListBtoA(pt).edges.add(vertex2);
     					return -1;
     				}
     				
     				rec = new PlainGraphRecord();
     				rec.id = vertex;
     				rec.edges = new ArrayList[Long]();
+    				rec.edges.add(vertex2);
     				adjacencyListBtoA(pt) = rec;
     			}else{
     				Console.OUT.println("vertex : " + vertex + " not added");
@@ -799,6 +803,10 @@ public class PlainGraph implements Graph{
     						adjacencyListAtoB(pt) = rec;
     						//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     						//retval = vertex;
+    						}else{
+    							atomic{
+    							adjacencyListAtoB(pt).edges.add(vertex2);
+    							}
     						}
     					}else{
     						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
@@ -820,6 +828,8 @@ public class PlainGraph implements Graph{
     						adjacencyListBtoA(pt) = rec;
     						//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     						//retval = vertex;
+    						}else{
+    							atomic adjacencyListBtoA(pt).edges.add(vertex2);
     						}
     					}else{
     						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
@@ -868,13 +878,14 @@ public class PlainGraph implements Graph{
     					
     					if(flag){
     						if(adjacencyListAtoB(pt).id != -1l){
+    							atomic adjacencyListBtoA(pt).edges.add(vertex2);
     							return -1; //Just return without adding, the Vertex exists in the Graph
     						}
     						
     						rec = new PlainGraphRecord();
     						rec.id = vertex;
     						rec.edges = new ArrayList[Long]();
-    						
+    						rec.edges.add(vertex2);
     						adjacencyListAtoB(pt) = rec;
     						//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     						
@@ -896,13 +907,14 @@ public class PlainGraph implements Graph{
     					
     					if(flag){
     						if(adjacencyListBtoA(pt).id != -1l){
+    							atomic adjacencyListBtoA(pt).edges.add(vertex2);
     							return -1; //Just return without adding, the Vertex exists in the Graph
     						}
     						
     						rec = new PlainGraphRecord();
     						rec.id = vertex;
     						rec.edges = new ArrayList[Long]();
-    						
+    						rec.edges.add(vertex2);
     						adjacencyListBtoA(pt) = rec;
     						//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     						
