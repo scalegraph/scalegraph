@@ -28,7 +28,8 @@ public class BetweennessCentrality {
 	
 	static val CACHE_SIZE: Int = 10000;
 	val globalCaches: Array[Cache] = new Array[Cache](Runtime.MAX_THREADS, (i: Int) => new Cache(CACHE_SIZE));
-	val globalLock: Lock = new Lock();
+	val cacheLock: Lock = new Lock();
+	val updateScoreLock: Lock = new Lock();
 
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
 		// Keep datafrom user to instance's memeber
@@ -240,11 +241,12 @@ public class BetweennessCentrality {
 				}
 			}
 		}
-		atomic {
+		updateScoreLock.lock();
 			for(i in 0..(betweennessScore.size -1)) {
 				betweennessScore(i) += tempScore(i);
 			}
-		}
+		
+		updateScoreLock.unlock();
 		
 		Console.OUT.println("End for src: " + source);
 	}
@@ -276,6 +278,7 @@ public class BetweennessCentrality {
 		finish {
 			for(p in Place.places()) {
 				at (p) async {
+					Team.WORLD.barrier(here.id);
 					betweennessCentrality().calculateOnPlainGraph();
 				}
 			}
@@ -311,7 +314,7 @@ public class BetweennessCentrality {
 				val v = data(i);
 				if(v >= 0) {
 					
-					// Console.OUT.println("Run for source: " + v + " On place: " + here.id);
+					Console.OUT.println("Run for source: " + v + " On place: " + here.id);
 					if(isEnableCache) {
 						val cache = acquireCache();
 						async doBfsOnPlainGraph(cache, data(i));
@@ -392,7 +395,7 @@ public class BetweennessCentrality {
 			if(numData == size) {
 				
 				 // Caceh full
-				Console.OUT.println("Cache full");
+				 // Console.OUT.println("Cache full");
 				
 				// Hit return -1
 				records.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
@@ -439,7 +442,7 @@ public class BetweennessCentrality {
 	
 	protected def acquireCache() {
 		
-		globalLock.lock();
+		cacheLock.lock();
 		var didAcquire: Boolean = false;
 		var returnCache: Cache = null;
 		while(!didAcquire) {
@@ -455,7 +458,7 @@ public class BetweennessCentrality {
 			}
 		}
 		
-		globalLock.unlock();
+		cacheLock.unlock();
 		
 		return returnCache;
 	}
@@ -472,8 +475,6 @@ public class BetweennessCentrality {
 		val tempScore: Array[Double] = new Array[Double](maximumVertexId);
 		val predecessorMap: Array[Stack[Int]] = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
 		val vertexStack: Stack[Int] = new Stack[Int]();
-		
-		
 		
 		// Cleare previous data
 		finish {
@@ -568,6 +569,6 @@ public class BetweennessCentrality {
 			releaseCache(cache);
 		}
 		
-		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
+		Console.OUT.println("End for src: " + source + " On place: " + here.id);
 	}
 }
