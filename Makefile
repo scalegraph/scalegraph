@@ -417,15 +417,13 @@ test_betweenness_centrality_plain:
 	@echo "----------- Test Completed ---------------------------------";
 
 #Test 20
-#LAPACK_DIR = /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS
-LAPACK_DIR = /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic
 test_lapack:
 	@echo "----------- Compile LAPACK Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-prearg -I$(LAPACK_DIR)/include \
-	-cxx-postarg $(LAPACK_DIR)/lib/liblapack.a \
-	-cxx-postarg $(LAPACK_DIR)/lib/libblas.a \
-	-cxx-postarg $(LAPACK_DIR)/lib/libf2c.a \
+	-cxx-prearg -I/data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/include \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/liblapack.a \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libblas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libf2c.a \
 	src/org/scalegraph/clustering/TestLAPACK.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10;
 	
