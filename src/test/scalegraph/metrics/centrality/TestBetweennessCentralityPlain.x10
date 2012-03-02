@@ -95,32 +95,61 @@ public class TestBetweennessCentralityPlain {
 		val vcount:Long = graph.getVertexCount();
 		val vertexCountEnd = System.currentTimeMillis();
 		
-		val showResult = (p: Printer) => {
-			
-			for(i in result) {
-				var k: Long = result(i).first;
-				var v: Double = result(i).second;
-				// p.printf("%ld %.15lf\n", k, v);
-				p.println("" + k + " = " + v);
-			}
-			
-			p.println("---------------------------------------------------------------------");
-			p.println("Total vertex count : " + vcount);
-			p.println("Time to BuildList (ms): " + (buildEnd - buildStart) );
-			p.println("Time to Cal (ms): " + (calEnd - calStart) );
-			p.println("Time to Count vertex (ms): " + (vertexCountEnd - vertexCountStart) );
-			p.println("---------------------------------------------------------------------");
-		};
 		
-		showResult(Console.OUT);
+		
+		showResult(Console.OUT, 
+				result,
+				vcount,
+				buildStart,
+				buildEnd,
+				calStart,
+				calEnd,
+				vertexCountStart,
+				vertexCountEnd
+		);
 		
 		// Print Running result
 		if(!outfile.equals("")) {
 			val writer = new FileWriter(new File(args(1)));
 			val printer = new Printer(writer);
-			showResult(printer);
+			showResult(printer,
+					result,
+					vcount,
+					buildStart,
+					buildEnd,
+					calStart,
+					calEnd,
+					vertexCountStart,
+					vertexCountEnd);
 			printer.close();
 		}
+	}
+	
+	protected static def showResult (p: Printer, 
+			result: Array[Pair[Long, Double]],
+			vcount: Long,
+			buildStart: Long,
+			buildEnd: Long,
+			calStart: Long,
+			calEnd: Long,
+			vertexCountStart: Long,
+			vertexCountEnd: Long
+			){
+		
+		for(i in result) {
+			var k: Long = result(i).first;
+			var v: Double = result(i).second;
+			// p.printf("%ld %.15lf\n", k, v);
+			p.println("" + k + " = " + v);
+		}
+		
+		p.println("---------------------------------------------------------------------");
+		p.println("Total vertex count : " + vcount);
+		p.println("Time to BuildList (ms): " + (buildEnd - buildStart) );
+		p.println("Time to Cal (ms): " + (calEnd - calStart) );
+		p.println("Time to Count vertex (ms): " + (vertexCountEnd - vertexCountStart) );
+		p.println("---------------------------------------------------------------------");
+		p.flush();
 	}
 
 	
