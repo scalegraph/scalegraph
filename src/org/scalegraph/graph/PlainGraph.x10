@@ -505,12 +505,12 @@ public class PlainGraph implements Graph{
     					if((machine != 0)||((machine==0)&&(here.id != 0))){    						
     						//val remoteObj = at(p){    	
     							at(p){    
-    								if(lrv(p.id)()() < vertex){
+    								//if(lrv(p.id)()() < vertex){
     									//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
-    									lrv(p.id)()() = vertex;
+    								//	lrv(p.id)()() = vertex;
     									// lrv()() = vertex;
     									//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
-    								}
+    								//}
     								
 	    						val r:Region = adjacencyListAtoB.dist.get(p);
 	    						val r2:Region = adjacencyListBtoA.dist.get(p);
@@ -538,6 +538,13 @@ public class PlainGraph implements Graph{
     								adjacencyListAtoB(pt) = rec;
     								//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     								//retval = vertex;
+    								
+    								if(lrv(p.id)()() < vertex){
+    									//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
+    									lrv(p.id)()() = vertex;
+    									// lrv()() = vertex;
+    									//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
+    								}
     								}
     							}else{
     								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
@@ -556,6 +563,13 @@ public class PlainGraph implements Graph{
     								adjacencyListBtoA(pt) = rec;
     								//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     								//retval = vertex;
+    								
+    								if(lrv(p.id)()() < vertex){
+    									//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
+    									lrv(p.id)()() = vertex;
+    									// lrv()() = vertex;
+    									//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
+    								}
     								}
     							}else{
     								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
@@ -725,6 +739,8 @@ public class PlainGraph implements Graph{
     				rec.edges = new ArrayList[Long]();
     				rec.edges.add(vertex2);
     				adjacencyListAtoB(pt) = rec;
+    				
+    				
     			}else{
     				Console.OUT.println("vertex : " + vertex + " not added");
     			}
@@ -770,12 +786,12 @@ public class PlainGraph implements Graph{
     			if((machine != 0)||((machine==0)&&(here.id != 0))){    						
     				//val remoteObj = at(p){    	
     				at(p){    
-    					if(lrv(p.id)()() < vertex){
+    					//if(lrv(p.id)()() < vertex){
     						//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
-    						lrv(p.id)()() = vertex;
+    						//lrv(p.id)()() = vertex;
     						// lrv()() = vertex;
     						//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
-    					}
+    					//}
     					
     					val r:Region = adjacencyListAtoB.dist.get(p);
     					val r2:Region = adjacencyListBtoA.dist.get(p);
@@ -803,6 +819,13 @@ public class PlainGraph implements Graph{
     						adjacencyListAtoB(pt) = rec;
     						//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     						//retval = vertex;
+    						
+    						if(lrv(p.id)()() < vertex){
+    							//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
+    							lrv(p.id)()() = vertex;
+    							// lrv()() = vertex;
+    							//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
+    						}
     						}else{
     							atomic{
     							adjacencyListAtoB(pt).edges.add(vertex2);
@@ -828,6 +851,13 @@ public class PlainGraph implements Graph{
     						adjacencyListBtoA(pt) = rec;
     						//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
     						//retval = vertex;
+    						
+    						if(lrv(p.id)()() < vertex){
+    							//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
+    							lrv(p.id)()() = vertex;
+    							// lrv()() = vertex;
+    							//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
+    						}
     						}else{
     							atomic adjacencyListBtoA(pt).edges.add(vertex2);
     						}
@@ -855,7 +885,7 @@ public class PlainGraph implements Graph{
     				// 	}
     				// }
     				
-    			}else {			
+    			} else {			
     				try{
     					val r:Region = adjacencyListAtoB.dist.get(p);
     					val r2:Region = adjacencyListBtoA.dist.get(p);
@@ -877,8 +907,8 @@ public class PlainGraph implements Graph{
     					/*---------- Important Optimization ---*/
     					
     					if(flag){
-    						if(adjacencyListAtoB(pt).id != -1l){
-    							atomic adjacencyListBtoA(pt).edges.add(vertex2);
+    						/*if(adjacencyListAtoB(pt).id != -1l){
+    							atomic adjacencyListAtoB(pt).edges.add(vertex2);
     							return -1; //Just return without adding, the Vertex exists in the Graph
     						}
     						
@@ -895,6 +925,33 @@ public class PlainGraph implements Graph{
     							//at(Place.places()(0)) lrv()() = vertex;
     							lrv(here.id)()() = vertex;
     						}
+    						 */
+    						
+    						if(adjacencyListAtoB(pt).id == -1l){
+    							//return; //Just return without adding, the Vertex exists in the Graph
+    							//retval = -1;
+
+
+    							rec = new PlainGraphRecord();
+    							rec.id = vertex;
+    							rec.edges = new ArrayList[Long]();
+    							
+    							rec.edges.add(vertex2);//Add the edge at the same time
+    							
+    							adjacencyListAtoB(pt) = rec;
+    							//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
+    							//retval = vertex;
+    							
+    							if(lrv(p.id)()() < vertex){
+    								//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
+    								lrv(p.id)()() = vertex;
+    								// lrv()() = vertex;
+    								//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
+    							}
+    						}else{
+    							atomic adjacencyListAtoB(pt).edges.add(vertex2);
+    						}
+    						
     					}else{
     						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
     					}
@@ -906,7 +963,7 @@ public class PlainGraph implements Graph{
     					}
     					
     					if(flag){
-    						if(adjacencyListBtoA(pt).id != -1l){
+    					/*	if(adjacencyListBtoA(pt).id != -1l){
     							atomic adjacencyListBtoA(pt).edges.add(vertex2);
     							return -1; //Just return without adding, the Vertex exists in the Graph
     						}
@@ -923,7 +980,33 @@ public class PlainGraph implements Graph{
     							//largestReportedVertex = vertex;
     							//at(Place.places()(0)) lrv()() = vertex;
     							lrv(here.id)()() = vertex;
+    						}*/
+    						
+    						if(adjacencyListBtoA(pt).id == -1l){
+    							//return; //Just return without adding, the Vertex exists in the Graph
+    							//retval = -1;
+
+
+    							rec = new PlainGraphRecord();
+    							rec.id = vertex;
+    							rec.edges = new ArrayList[Long]();
+    							
+    							rec.edges.add(vertex2);//Add the edge at the same time
+    							
+    							adjacencyListBtoA(pt) = rec;
+    							//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added vertex : " + vertex);
+    							//retval = vertex;
+    							
+    							if(lrv(p.id)()() < vertex){
+    								//Console.OUT.println("Largest Reported vertex at " + p.id + " was : " + lrv(p.id)()());
+    								lrv(p.id)()() = vertex;
+    								// lrv()() = vertex;
+    								//Console.OUT.println("So far the Largest Reported vertex at " + p.id + " is : " + lrv(p.id)()());
+    							}
+    						}else{
+    							atomic adjacencyListBtoA(pt).edges.add(vertex2);
     						}
+    						
     					}else{
     						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
     					}
