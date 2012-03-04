@@ -314,7 +314,7 @@ public class BetweennessCentrality {
 				val v = data(i);
 				if(v >= 0) {
 					
-					Console.OUT.println("Run for source: " + v + " On place: " + here.id);
+					// Console.OUT.println("Run for source: " + v + " On place: " + here.id);
 					if(isEnableCache) {
 						val cache = acquireCache();
 						async doBfsOnPlainGraph(cache, data(i));
@@ -470,17 +470,17 @@ public class BetweennessCentrality {
 	protected def doBfsOnPlainGraph(cache: Cache, vertexId: Long) {
 		
 		val traverseQ: ArrayList[Int] = new ArrayList[Int]();
-		val distanceMap: Array[Long] = new Array[Long](maximumVertexId);;
-		val geodesicsMap: Array[Long] = new Array[Long](maximumVertexId);
-		val tempScore: Array[Double] = new Array[Double](maximumVertexId);
-		val predecessorMap: Array[Stack[Int]] = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
+		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);;
+		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
+		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
+		val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
 		val vertexStack: Stack[Int] = new Stack[Int]();
 		
 		// Cleare previous data
 		finish {
-			async distanceMap.fill(0);
-			async geodesicsMap.fill(0);
-			async tempScore.fill(0);
+			async distanceMap.clear(0, maximumVertexId);
+			async geodesicsMap.clear(0, maximumVertexId);
+			async tempScore.clear(0, maximumVertexId);
 		}
 		
 		
@@ -492,8 +492,8 @@ public class BetweennessCentrality {
 		
 		// Get source vertex
 		val source: Int = vertexId as Int;
-		distanceMap(source) = 0;
-		geodesicsMap(source) = 1;
+		distanceMap(source) = 0L;
+		geodesicsMap(source) = 1L;
 		
 		traverseQ.add(source);
 		
@@ -569,6 +569,6 @@ public class BetweennessCentrality {
 			releaseCache(cache);
 		}
 		
-		Console.OUT.println("End for src: " + source + " On place: " + here.id);
+		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 	}
 }
