@@ -20,9 +20,9 @@ public class TestEdgeListReader {
         //val testG:PlainGraph = reader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-16.dl");
         //var testG:PlainGraph = reader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale12/scale-12-3628.dl");
         
-        //val testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-12-3628.dl");
+        val testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-12-3628.dl");
         
-        val testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-16.dl");
+        //val testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-16.dl");
         
         //var testG:PlainGraph = reader.loadFromFile("/nfs/data1/miyuru/twitter-kaist/newdata.dl");
         //var testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/newdata.dl");
