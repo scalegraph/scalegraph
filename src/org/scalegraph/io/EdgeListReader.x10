@@ -21,7 +21,7 @@ public class EdgeListReader {
     
     public def loadFromFile(fileName: String) : PlainGraph{
     	var reader: FileReader = new FileReader(new File(fileName));
-    	var result:PlainGraph = new PlainGraph(); //This is a small graph
+    	var result:PlainGraph = new PlainGraph(GraphSizeCategory.MEDIUM); //This is a small graph
     	var line:String = "";
     	var bulkResult:String = "";
     	
@@ -99,10 +99,6 @@ public class EdgeListReader {
 	    		}
 	    	}
 	    	
-	    	Console.OUT.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	    	Console.OUT.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	    	Console.OUT.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-	    	Console.OUT.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
     	return result;
     }
 }

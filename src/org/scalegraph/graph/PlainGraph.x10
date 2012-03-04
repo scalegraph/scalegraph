@@ -1024,7 +1024,233 @@ public class PlainGraph implements Graph{
     	return 0;
     }
     
-    
+    public def addEdgeFast(var id:Object):Int {
+    	val e:String = id as String;
+    	
+    	var strArr:Array[String] = e.split(edgeSplitSymbol);
+
+    	if(strArr.size != 2){
+    		if(edgeSplitSymbol.equals(" ")){
+    			edgeSplitSymbol = "\t";
+    			strArr = e.split(edgeSplitSymbol);
+    		}else{
+    			edgeSplitSymbol = " ";
+    			strArr = e.split(edgeSplitSymbol);
+    		}
+    	}
+    	
+    	if(strArr.size != 2){
+    		return -1;
+    	}
+    	
+    	//Just try adding the Vertices to make sure that they are properly added befoe creating the Edge
+    	//Try adding the vertices. They might exist in the graph, but don't worry.
+    	addVertex(strArr(0));
+    	addVertexWithEdge(strArr(1), strArr(0));
+    	
+    	var fromT:Long = 0l;
+    	var toT:Long = 0l;
+    	
+    	try{
+    		fromT = Long.parse(strArr(0));
+    		toT = Long.parse(strArr(1));
+    	}catch(exe:NumberFormatException){
+    		Console.OUT.println("Error adding the edge : " + e);
+    		
+    		return -1;
+    	}
+    	
+    	val from:Long = fromT;
+    	val to:Long = toT;
+    	
+    	
+    	var vertex:Long = from > to ? from:to;
+
+    	if(sizeCategory == GraphSizeCategory.SMALL){
+    		if(vertex > (Math.pow(2, sizeCategory) * adjacencyListAtoB.dist.places().size())){
+    			var message:String = "The vertices of the edge does not exist in the graph size.";
+    			message = message + " Current graph size is : " + sizeCategory;
+    			message = message + " the edge was : " + e;
+    			throw new UnsupportedOperationException(message);
+    		}
+    		
+    		var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    		val machine:Int = ScaleGraphMath.round(from/v) as Int;
+    		val internal_vertex:Int = (from % v) as Int;
+    		
+    		val r:Region = adjacencyListAtoB.dist.get(here);
+    		val pt:Point = Point.make(machine + 1, internal_vertex);
+
+    		if(r.size()==0){
+    			throw new UnsupportedOperationException("region does not have any data points");
+    		}
+    		
+    		var flag:Boolean = false;
+    		var rec:PlainGraphRecord = null;
+    		
+    		if(r.contains(pt)){
+    			atomic{
+    				if(!adjacencyListAtoB(pt).edges.contains(to)){
+    					adjacencyListAtoB(pt).edges.add(to);
+    				}
+    			}
+    		} else{
+    			throw new UnsupportedOperationException("from vertex does not exist");
+    		}
+    		
+    		
+    		
+    	}else if(sizeCategory == GraphSizeCategory.MEDIUM){
+    		if(vertex > (totalVertices)){
+    			var message:String = "The vertices of the edge does not exist in the graph size.";
+    			message = message + " Current graph size is : 2^" + sizeCategory + " * " + adjacencyListAtoB.dist.places().size();
+    			message = message + " Total Vertex : " + totalVertices;
+    			message = message + " the edge was : " + e;
+    			throw new UnsupportedOperationException(message);
+    		} 
+    		
+    		val machine:Int = ScaleGraphMath.round(from/v) as Int;
+    		val internal_vertex:Int = (from % v) as Int;
+    		
+    		val p:Place = Place.places()(machine);
+    		
+    		if((machine != 0)||((machine==0)&&(here.id != 0))){
+    			at(p){  
+    				try{
+    					val r:Region = adjacencyListAtoB.dist.get(p);
+    					val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+
+    					if(r.size()==0){
+    						throw new UnsupportedOperationException("region does not have any data points");
+    					}
+    					
+    					var flag:Boolean = false;
+    					var rec:PlainGraphRecord = null;
+    					
+    					if(r.contains(pt)){
+    						atomic{
+    							if((adjacencyListAtoB(pt).edges != null)&&(!adjacencyListAtoB(pt).edges.contains(to))){
+    								adjacencyListAtoB(pt).edges.add(to);
+    								//Console.OUT.println("machine--> " + machine + "AA--> " + here.id + " Added edge : " + e);
+    							}
+    						}
+    					} else{
+    						var message:String = "from vertex does not exist : ";
+    						message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    						message += "from : " + from + " to : " + to;
+    						throw new UnsupportedOperationException(message);
+    					}
+    				}catch(ec:Exception){
+    					Console.OUT.println("DEF : " + ec.getMessage());
+    					Console.OUT.println("Here is : " + here.id + " machine is : " + machine);
+    				}
+    			}    				 
+    		}else{
+    			try{
+    				val r:Region = adjacencyListAtoB.dist.get(p);
+    				val pt:Point = Point.make(machine + 1, internal_vertex);
+
+    				if(r == null){
+    					return -1;
+    				}
+    				
+    				if(r.size()==0){
+    					throw new UnsupportedOperationException("region does not have any data points");
+    				}
+    				
+    				var flag:Boolean = false;
+    				var rec:PlainGraphRecord = null;
+    				
+    				if(r.contains(pt)){
+    					atomic{
+    						if((adjacencyListAtoB(pt).edges != null)&&(!adjacencyListAtoB(pt).edges.contains(to))){
+    							adjacencyListAtoB(pt).edges.add(to);
+    							//Console.OUT.println("BB--> Added edge : " + e);
+    						}
+    					}
+    				} else{
+    					var message:String = "from vertex does not exist : ";
+    					message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    					message += "from : " + from + " to : " + to;
+    					throw new UnsupportedOperationException(message);
+    				}   
+    			}catch(ec:Exception){
+    				Console.OUT.println("ABC : " + ec.getMessage());
+    				Console.OUT.println("Here is : " + here.id + " machine is : " + machine);
+    			}
+    		}   		 
+    		
+    		/*val machine2:Int = ScaleGraphMath.round(to/v) as Int;
+    		val internal_vertex2:Int = (to % v) as Int;
+    		
+    		//Console.OUT.println("machine2 : " + machine2 + " internal_vertex2 : " + internal_vertex2);
+    		
+    		val p2 = Place.places()(machine2);
+    		
+    		if((machine2 != 0)||((machine2==0)&&(here.id != 0))){
+    			at(p2){    					 
+    				val r:Region = adjacencyListBtoA.dist.get(p2);
+    				val pt:Point = Point.make(machine2 + 1, internal_vertex2);
+
+    				if(r.size()==0){
+    					throw new UnsupportedOperationException("region does not have any data points");
+    				}
+    				
+    				var flag:Boolean = false;
+    				var rec:PlainGraphRecord = null;
+    				
+    				if(r.contains(pt)){
+    					atomic{
+    						if((adjacencyListBtoA(pt).edges != null)&&(!adjacencyListBtoA(pt).edges.contains(from))){
+    							adjacencyListBtoA(pt).edges.add(from);
+    							Console.OUT.println("Adding B - > A " + to + " " + from);
+    						}
+    					}
+    				} else{
+    					var message:String = "from vertex does not exist : ";
+    					message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    					message += "from : " + from + " to : " + to;
+    					throw new UnsupportedOperationException(message);
+    				}
+    			}
+    		}else {
+    			//Console.OUT.println("AAAA");
+    			val r:Region = adjacencyListBtoA.dist.get(p2);
+    			//Console.OUT.println("BBB");
+    			val pt:Point = Point.make(machine2 + 1, internal_vertex2);
+    			//Console.OUT.println("CCCCC");
+    			if(r == null){
+    				return -1;
+    			}
+    			//Console.OUT.println("DDDD");
+    			if(r.size()==0){
+    				throw new UnsupportedOperationException("region does not have any data points");
+    			}
+    			//Console.OUT.println("EEEE");
+    			var flag:Boolean = false;
+    			var rec:PlainGraphRecord = null;
+    			
+    			if(r.contains(pt)){
+    				atomic{
+    					if((adjacencyListBtoA(pt).edges != null)&&(!adjacencyListBtoA(pt).edges.contains(from))){
+    						adjacencyListBtoA(pt).edges.add(from);
+    						//Console.OUT.println("Adding B - > A " + to + " " + from);
+    					}//else{
+    					//Console.OUT.println("adjacencyListBtoA(pt).edges " + adjacencyListBtoA(pt).edges);
+    					//}
+    				}
+    			} else{
+    				var message:String = "from vertex does not exist : ";
+    				message += "pt(0) : " + pt(0) + " pt(1) : " + pt(1);
+    				message += "from : " + from + " to : " + to;
+    				throw new UnsupportedOperationException(message);
+    			}    			 
+    		}
+    		  */
+    	}  
+
+    	return 0;
+    }
     
     /**
      * Returns the intersection of this graph with that Graph
@@ -1048,6 +1274,9 @@ public class PlainGraph implements Graph{
     			
     			//addEdge(edlst(j));
     			
+    			addEdgeFast(edlst(j));
+    			
+    			/*
     			val e:String = edlst(j);
     			
     			var strArr:Array[String] = e.split(edgeSplitSymbol);
@@ -1068,44 +1297,8 @@ public class PlainGraph implements Graph{
     				//Try adding the vertices. They might exist in the graph, but don't worry.
     				addVertex(strArr(1));
     				addVertexWithEdge(strArr(0),strArr(1));
-    			}
+    			}*/
     		}
-    		//}
-    	
-    	
-    	/*
-    	finish for(i = 0; i < s; i = i + offset){
-		    val startPos = i;
-		    val endPos = i + offset;
-
-		   // async{
-    		for(var j:Int = startPos; j < endPos; j++){
-    			if(edlst(j) != null){
-    						//addEdge(edlst(j));
-    				val e:String = edlst(j);
-    				
-    				var strArr:Array[String] = e.split(edgeSplitSymbol);
-
-    				if(strArr.size != 2){
-    					if(edgeSplitSymbol.equals(" ")){
-    						edgeSplitSymbol = "\t";
-    						strArr = e.split(edgeSplitSymbol);
-    					}else{
-    						edgeSplitSymbol = " ";
-    						strArr = e.split(edgeSplitSymbol);
-    					}
-    				}
-    				
-    				if(strArr.size == 2){
-    				
-    				//Just try adding the Vertices to make sure that they are properly added befoe creating the Edge
-    				//Try adding the vertices. They might exist in the graph, but don't worry.
-    				addVertex(strArr(1));
-    				addVertexWithEdge(strArr(0),strArr(1));
-    				}
-    			}
-    		//}
-		    }*/
     	}    	
     }
     
@@ -1208,7 +1401,7 @@ public class PlainGraph implements Graph{
     				 at(p){  
     					 try{
     					 val r:Region = adjacencyListAtoB.dist.get(p);
-    					 val pt:Point = Point.make(machine + 1, internal_vertex + 1);
+    					 val pt:Point = Point.make(machine + 1, internal_vertex);
 
     					 if(r.size()==0){
     						 throw new UnsupportedOperationException("region does not have any data points");
