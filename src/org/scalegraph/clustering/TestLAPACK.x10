@@ -32,7 +32,7 @@ public class TestLAPACK {
 		b(1,0) =  0; b(1,1) =   2; b(1,2) = 999;
 		b(2,0) =  2; b(2,1) =   0; b(2,2) =   2;
 		
-		val result = LAPACK.dsygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info);
+		val result = LAPACK.dsygvWrap(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info);
 		
 		Console.OUT.println("result = " + result);
 		Console.OUT.println("info = " + info);
