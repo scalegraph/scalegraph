@@ -25,3 +25,13 @@ int sum(int *array, int n){
 void test_ptr(int *p){
 	*p = 10;
 }
+
+void show_matrix(double *array, int m, int n){
+	int i, j;
+	for(j = 0; j < n; j++){
+		for(i = 0; i < m; i++){
+			printf("%.1lf ", array[j*m+i]);
+		}
+		puts("");
+	}
+}

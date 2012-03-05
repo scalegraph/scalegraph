@@ -6,3 +6,4 @@ int dsygv_wrap(long int itype, x10_char jobz, x10_char uplo, long int n,
 
 int sum(int *array, int n);
 void test_ptr(int *p);
+void show_matrix(double *array, int m, int n);
