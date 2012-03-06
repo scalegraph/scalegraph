@@ -1,7 +1,12 @@
 package org.scalegraph.clustering;
 
+import x10.util.Random;
+import x10.util.Timer;
+import x10.matrix.Matrix;
+import x10.matrix.DenseMatrix;
+import x10.matrix.Vector;
+
 import org.scalegraph.graph.PlainGraph;
-import x10.matrix.*;
 
 public class SpectralClustering {
 	
@@ -32,13 +37,30 @@ public class SpectralClustering {
 		Console.OUT.println(d);
 		Console.OUT.println(l);
 		
-		val w = new Array[Double](l.M);
+		val nPoints = l.M;
+		val nClusters = 2;
+		val w = new Array[Double](nPoints);
 		solveEigenvalueProblem(l as DenseMatrix, d as DenseMatrix, w);
 		
 		Console.OUT.println(l);
 		for(pt in w){
 			Console.OUT.println(w(pt));
 		}
+		
+		//val eigenvectors:DenseMatrix = new DenseMatrix(nPoints, nClusters);
+		//DenseMatrix.copySubset(l as DenseMatrix, 0, 1, eigenvectors, 0, 0, nPoints, nClusters);
+		//Console.OUT.println(eigenvectors);
+		
+		val points = new Array[Vector](nPoints);
+		for(var i:Int = 0; i < nPoints; i++){
+			points(i) = Vector.make(nClusters);
+			for(var j:Int = 0; j < nClusters; j++){
+				points(i)(j) = l(i, j + 1);
+			}
+		}
+		
+		//kmeans(nClusters, nClusters, nPoints, eigenvectors.d);
+		kmeans(nClusters, nClusters, nPoints, points);
 		return null;
 	}
 	
@@ -102,7 +124,79 @@ public class SpectralClustering {
 		return info;
 	}
 	
-	private def kmeans(k:Int, dim:Int, points:Array[Float]): ClusteringResult {
+	private def kmeans(k:Int, dim:Int, nPoints:Int, points:Array[Vector]): ClusteringResult {
+		val curClusters = new Array[Vector](k, (Int) => Vector.make(dim));
+		val newClusters = new Array[Vector](k, (Int) => Vector.make(dim));
+		val clusterCounts = new Array[Int](k, 0);
+		val result = new Array[Int](nPoints, 0);
+		val iterations = 50;
+		
+		/* initialize */
+		val random = new Random(Timer.nanoTime());
+		for(i in points){
+			val c = random.nextInt(k);
+			curClusters(c).cellAdd(points(i));
+			clusterCounts(c)++;
+			result(i) = c;
+		}
+		/* compute central points of current clusters */
+		for(i in curClusters){
+			curClusters(i).cellDiv(clusterCounts(i));
+			clusterCounts(i) = 0;  // reset counter
+		}
+		/* debug print */
+		for(i in result){
+			Console.OUT.println("" + i + points(i) + " -> [" + result(i) + "]" + curClusters(result(i)));
+		}
+		
+		for(iter in 1..iterations){
+			Console.OUT.println("iteration: " + iter);
+			/* compute new clusters and counters */
+			for(i in points){
+				/* compute which cluster is closest to each point */
+				var minDist:Double = Double.MAX_VALUE;
+				var closestCluster:Int = 0;
+				for([j] in curClusters){
+					var dist:Double = (curClusters(j) - points(i)).norm();
+					if(dist < minDist){
+						minDist = dist;
+						closestCluster = j;
+					}
+				}
+				/* add the point to the cluster */
+				newClusters(closestCluster).cellAdd(points(i));
+				clusterCounts(closestCluster)++;
+				result(i) = closestCluster;
+			}
+			
+			/* compute central points of new clusters */
+			for(i in newClusters){
+				newClusters(i).cellDiv(clusterCounts(i));
+				clusterCounts(i) = 0;  // reset counter
+			}
+			
+			/* debug print */
+			for(i in result){
+				Console.OUT.println("" + i + points(i) + " -> [" + result(i) + "]" + newClusters(result(i)));
+			}
+			
+			/* test for convergence */
+			var b:Boolean = true;
+			for(i in curClusters){
+				if((newClusters(i) - curClusters(i)).norm() > 0.0001){
+					b = false;
+					break;
+				}
+			}
+			if(b) break;
+			
+			/* move new clusters to current clusters */
+			for(i in curClusters){
+				Array.copy(newClusters(i).d, curClusters(i).d);
+				//newClusters(i).copyTo(curClusters(i));
+				newClusters(i).reset();
+			}
+		}
 		
 		return null;
 	}
