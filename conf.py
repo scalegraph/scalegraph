@@ -79,7 +79,8 @@ def main(item):
 			spinfo = tsubameStatus.split('\n')
 			line = ''
 			for l in spinfo:
-				if ( (l.find('+') != -1) and (l.find('*') != -1) and (l.find('/') != -1)):
+				#if ( (l.find('+') != -1) and (l.find('*') != -1) and (l.find('/') != -1)):
+				if ( (l.find('*') != -1) and (l.find('/') != -1)):
 					line += l.strip()
 			#line = spinfo[len(spinfo) - 1].strip()
 			lastloc = line.rfind('/')
