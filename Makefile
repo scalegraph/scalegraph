@@ -417,10 +417,10 @@ test_betweenness_centrality_plain:
 	@echo "----------- Test Completed ---------------------------------";
 
 #Test 20
+#	-cxx-prearg -I/data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/include
 test_lapack:
 	@echo "----------- Compile LAPACK Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-prearg -I/data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/include \
 	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/liblapack.a \
 	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libblas.a \
 	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libf2c.a \
@@ -428,7 +428,52 @@ test_lapack:
 	src/org/scalegraph/clustering/LAPACK.x10;
 	
 	@echo "----------- Launch LAPACK Tester ---------------------------";
-	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
+
+#Test 21
+# For some reason, LAPACK libraries and LAPACK.x10 is needed to use GML library.
+test_gml:
+	@echo "----------- Compile GML Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/liblapack.a \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libblas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libf2c.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libf77blas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libatlas.a \
+	-classpath /data0/t2gsuzumuralab/ogata/Developments/x10.gml/lib/native_gml.jar \
+	-x10lib /data0/t2gsuzumuralab/ogata/Developments/x10.gml/native_gml.properties \
+	src/org/scalegraph/clustering/TestGML.x10 \
+	src/org/scalegraph/clustering/LAPACK.x10;
+	
+	@echo "----------- Launch GML Tester ---------------------------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
+
+#Test 22
+test_clustering:
+	@echo "----------- Compile Spectral Clustering Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/liblapack.a \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libblas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libf2c.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libf77blas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libatlas.a \
+	-classpath /data0/t2gsuzumuralab/ogata/Developments/x10.gml/lib/native_gml.jar \
+	-x10lib /data0/t2gsuzumuralab/ogata/Developments/x10.gml/native_gml.properties \
+	src/org/scalegraph/clustering/TestSpectralClustering.x10 \
+	src/org/scalegraph/clustering/SpectralClustering.x10 \
+	src/org/scalegraph/clustering/ClusteringResult.x10 \
+	src/org/scalegraph/clustering/LAPACK.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10;
+	
+	@echo "----------- Launch Spectral Clustering Tester ---------------------------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 test_dir:
@@ -484,6 +529,10 @@ help:
 	@echo 'test_edge_scat : Test ScatteredEdgeListReader class'
 	#Test 20
 	@echo 'test_lapack : Test LAPACK class'
+	#Test 21
+	@echo 'test_gml : Test GML library'
+	#Test 22
+	@echo 'test_clustering : Test SpectralClustering class'
 	@echo 'clean : To clean the build'
 	@echo '---------------------------------';
 
