@@ -15,6 +15,7 @@ public class Degree {
 	public def getInDegree(val graph:PlainGraph):HashMap[Long, Long]{
 		var sizecat:Short = graph.getGraphSizeCategory();
 		val totalVerts:Long = graph.getMaximumVertexID();
+		val unconnected = GlobalRef[Cell[Long]](new Cell[Long](0));
 		
 		Console.OUT.println("Getting the In Degree");
 		
@@ -51,8 +52,10 @@ public class Degree {
 						neighbours = graph.getInNeighbours(vertID);
 
 						if(neighbours != null){
-							edgeCount = neighbours.size;							
+							edgeCount = neighbours.size;
+														
 						}else{
+							unconnected()() = unconnected()() + 1;
 							continue;
 						}
 						
@@ -81,6 +84,8 @@ public class Degree {
 						intermRes3.put(key, (intermRes2.get(key).value as Long));
 					}
 				}
+				
+				intermRes3.put(0, unconnected()());
 			}
 		}
 		
@@ -101,11 +106,13 @@ public class Degree {
 		val pVerts:Array[Array[Long]] = new Array[Array[Long]](1); 
 		var intermRes3:HashMap[Long, Long] = new HashMap[Long, Long](); 
 		var intermRes4:HashMap[Long, Long] = new HashMap[Long, Long]();
+		val unconnected = GlobalRef[Cell[Long]](new Cell[Long](0));
 		
 		for(p:Place in Place.places()){
 			val r:Region = uqverts.dist.get(p);
 			var len2:Int = r.size();
 			var intermRes2:HashMap[Long, Long] = null;
+
 
 			intermRes2 = at(p){
 				var c:Int = 0;
@@ -126,6 +133,7 @@ public class Degree {
 						if(neighbours != null){
 							edgeCount = neighbours.size;
 						}else{
+							unconnected()() = unconnected()() + 1;
 							continue;
 						}
 						
@@ -153,6 +161,8 @@ public class Degree {
 						intermRes3.put(key, (intermRes2.get(key).value as Long));
 					}
 				}
+				
+				intermRes3.put(0, unconnected()());
 			}
 		}
 
@@ -165,7 +175,7 @@ public class Degree {
 	public def getInOutDegree(val graph:PlainGraph):HashMap[Long, Long]{
 
 		var intermRes2:HashMap[Long, Long] = new HashMap[Long, Long](); 
-
+		
 		var outDeg:HashMap[Long, Long] = getOutDegree(graph);
 		var inDeg:HashMap[Long, Long] = getInDegree(graph);
 		
