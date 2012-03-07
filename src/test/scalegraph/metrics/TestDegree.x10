@@ -7,25 +7,34 @@ import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.io.ScatteredEdgeListReader;
 import org.scalegraph.io.EdgeListReader;
 import org.scalegraph.metrics.Degree;
+import test.scalegraph.metrics.YahooAltavistaReader;
 
 public class TestDegree {
 	
 	public static def main(args: Array[String]) {
 		val reader:EdgeListReader = new EdgeListReader();
 		//var reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
+		//var reader:YahooAltavistaReader = new YahooAltavistaReader();
 		//var graph:PlainGraph = null;
 		
 		val startLoadingTime = System.currentTimeMillis();
 		//Console.OUT.println("Start loading at : " + System.currentTimeMillis());
+		var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-18-39322.dl");
+		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-20-82792.dl");
 		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
 		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-12-3628.dl");
 		
-		var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-16.dl");
+		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-16.dl");
 		
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale12-scattered");
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale16-scattered");
 		
+		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale16-scattered");
+		
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scattered_twitter");
+		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scattered_twitter_exact");
+		
+		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/cdr/yaltavista");
 		
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/twitter-677");
 		
@@ -48,7 +57,7 @@ public class TestDegree {
 		val largestVert = graph.getMaximumVertexID();
 		
 		val startDegreeTime = System.currentTimeMillis();
-				
+		
 		Console.OUT.println("--------------------- Start Degree Test --------------------");
 		
 		var deg:Degree = new Degree();
