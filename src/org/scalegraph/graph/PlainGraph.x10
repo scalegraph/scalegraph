@@ -43,6 +43,8 @@ public class PlainGraph implements Graph{
 	private val largeV = new GlobalRef[Cell[Long]](new Cell[Long](0l));
 	private val curMachine = GlobalRef[Cell[Int]](new Cell[Int](0));
 	private val curVertex = GlobalRef[Cell[Long]](new Cell[Long](0));
+	//private val notConnectedVertexCount = new GlobalRef[Cell[Long]](new Cell[Long](0l));
+	private var notConnectedVertexCount:Long = 0L;
 	
 	/**
      * Default constructor 
@@ -251,7 +253,8 @@ public class PlainGraph implements Graph{
 					    				
 					    				if(l(item(0),item(1)) != null){
 					    					atomic{
-					    						vCount()() += l(item(0),item(1)).id > 0 ? 1:0;
+					    						Console.OUT.println("Counted item : " + l(item(0),item(1)).id);
+					    						vCount()() += l(item(0),item(1)).id >= 0 ? 1:0; //Sometimes vertex ID might be 0
 					    					}
 					    				}else{
 					    					Console.OUT.println("IS NULL");
@@ -1630,6 +1633,145 @@ public class PlainGraph implements Graph{
     	return resultTotal;
     }    
     
+    
+    public def getUnconnectedVertexCount():Long{
+    	//val result2:Array[Long]=new Array[Long](1);
+    	var result:Long = 0L;
+    	
+    	if(notConnectedVertexCount == 0L){
+    	
+    	var resultTotal:Long = 0L;
+    	val uqverts:DistArray[Long] = getVertexList();
+    	
+    	//var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    	// val machine:Int = ScaleGraphMath.round(vertexID/v) as Int; 	
+    	
+    	// val internal_vertex:Int = (vertexID % v) as Int;
+    	//val p2:Place = Place.places()(machine);
+    	//val pt:Point = Point.make(machine + 1, internal_vertex);
+    	
+    	//var resultTotal:Array[Long] = null; 
+    	
+    	var inNeighbours:Array[Long] = null; 
+    	var outNeighbours:Array[Long] = null;
+    	var inNeighbourCount:Long = 0;
+    	var outNeighbourCount:Long = 0;
+    	val vertCount:Long = getVertexCount();
+    	var noNeigh:Int = 0;
+    	
+    	Console.OUT.println("Total VERT Count : " + vertCount);
+    	
+    	for(place in Place.places()){
+    		val r:Region = uqverts.dist.get(place);
+    		var len2:Int = r.size();
+    		
+    		Console.OUT.println("At place : " + place.id + " len 2 is : " + len2);
+    		
+    		for(pt in r){	   			
+    			if(pt(1) <= vertCount){
+    				inNeighbours = getInNeighbours(uqverts(pt));
+    				outNeighbours = getOutNeighbours(uqverts(pt));
+	    			//Console.OUT.println("pt(0) : " + pt(0) + "pt(1) : " + pt(1));
+	    			
+	    			// if((inNeighbours != null)&&(outNeighbours != null)){
+	    			// 	inNeighbourCount = inNeighbours.size;
+	    			// 	outNeighbourCount = outNeighbours.size;
+	    			// 	
+	    			// 	Console.OUT.println("vertex : " + uqverts(pt) + " inNeighbourCount : " + inNeighbourCount + " outNeighbourCount : " + outNeighbourCount);
+	    			// 	
+	    			// 	if((inNeighbourCount == 0L)&&(outNeighbourCount == 0L)){
+	    			// 		result++;
+	    			// 	}
+	    			// }else{
+	    			// 	//if(uqverts(pt).id != -1L){
+	    			// 		noNeigh++;
+	    			// 	//}
+	    			// }
+    				
+    				if((inNeighbours == null)&&(outNeighbours == null)){
+    					result++;
+    				}
+    			}
+	    	}
+    	}
+    	
+    	notConnectedVertexCount = result;
+    	
+    	}
+    	
+  
+    	Console.OUT.println("Unconencted vert count : " + notConnectedVertexCount);
+    	
+    	return notConnectedVertexCount;
+    }
+    
+    public def getUnconnectedInVertexCount():Long{
+    	//val result2:Array[Long]=new Array[Long](1);
+    	var result:Long = 0L;
+    	
+    	if(notConnectedVertexCount == 0L){
+    		
+    		var resultTotal:Long = 0L;
+    		val uqverts:DistArray[Long] = getVertexList();
+    		
+    		//var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    		// val machine:Int = ScaleGraphMath.round(vertexID/v) as Int; 	
+    		
+    		// val internal_vertex:Int = (vertexID % v) as Int;
+    		//val p2:Place = Place.places()(machine);
+    		//val pt:Point = Point.make(machine + 1, internal_vertex);
+    		
+    		//var resultTotal:Array[Long] = null; 
+    		
+    		var inNeighbours:Array[Long] = null; 
+    		//var outNeighbours:Array[Long] = null;
+    		var inNeighbourCount:Long = 0;
+    		//var outNeighbourCount:Long = 0;
+    		val vertCount:Long = getVertexCount();
+    		var noNeigh:Int = 0;
+    		
+    		Console.OUT.println("Total VERT Count : " + vertCount);
+    		
+    		for(place in Place.places()){
+    			val r:Region = uqverts.dist.get(place);
+    			var len2:Int = r.size();
+    			
+    			Console.OUT.println("At place : " + place.id + " len 2 is : " + len2);
+    			
+    			for(pt in r){	   			
+    				if(pt(1) <= vertCount){
+    					inNeighbours = getInNeighbours(uqverts(pt));
+    					//outNeighbours = getOutNeighbours(uqverts(pt));
+    					//Console.OUT.println("pt(0) : " + pt(0) + "pt(1) : " + pt(1));
+    					
+    					if((inNeighbours != null)){
+    						inNeighbourCount = inNeighbours.size;
+    						//outNeighbourCount = outNeighbours.size;
+    						
+    						Console.OUT.println("vertex : " + uqverts(pt) + " inNeighbourCount : " + inNeighbourCount);
+    						
+    						if(inNeighbourCount == 0L){
+    							result++;
+    						}
+    					}else{
+    						//if(uqverts(pt).id != -1L){
+    							noNeigh++;
+    						//}
+    					}
+    				}
+    			}
+    		}
+    		
+    		notConnectedVertexCount = result;
+    		Console.OUT.println("noNeigh : " + noNeigh);
+    	}
+    	
+    	
+    	Console.OUT.println("Unconencted vert count : " + notConnectedVertexCount);
+    	
+    	return notConnectedVertexCount;
+    }
+    
     /**
      * Returns the list of unique vertices from a graph
      * 
@@ -1689,6 +1831,7 @@ public class PlainGraph implements Graph{
 	    				
 	    				//This optimization might be helpful for small network loaded to large graph space
 	    				if(point(1) > largestVert){
+	    					Console.OUT.println("Before exit -> point(1) : " + point(1) + "largest vert " + largestVert);
 	    					break;
 	    				}
 	    				
@@ -1708,7 +1851,9 @@ public class PlainGraph implements Graph{
 		    						for(point2:Point in rVertCounter){
 
 		    							if((uniqueVertexCounter(point2) <= nv)){//There is more space there...
+		    								Console.OUT.println("Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
 		    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
+		    								//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
 		    								uniqueVertexCounter(point2) += 1;
 		    							}else{
 	    									at (p) {curMachine()() = p2.id + 1;}
