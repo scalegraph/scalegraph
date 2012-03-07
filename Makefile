@@ -428,10 +428,10 @@ test_betweenness_centrality_plain:
 test_lapack:
 	@echo "----------- Compile LAPACK Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/liblapack.a \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libblas.a \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libf2c.a \
-	src/org/scalegraph/clustering/TestLAPACK.x10 \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/lapack_LINUX.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/blas_LINUX.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a \
+	src/test/scalegraph/clustering/TestLAPACK.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10;
 	
 	@echo "----------- Launch LAPACK Tester ---------------------------";
@@ -443,14 +443,14 @@ test_lapack:
 test_gml:
 	@echo "----------- Compile GML Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/liblapack.a \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libblas.a \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libf2c.a \
-	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libf77blas.a \
-	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libatlas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/lapack_LINUX.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/blas_LINUX.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libf77blas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libatlas.a \
 	-classpath /data0/t2gsuzumuralab/ogata/Developments/x10.gml/lib/native_gml.jar \
 	-x10lib /data0/t2gsuzumuralab/ogata/Developments/x10.gml/native_gml.properties \
-	src/org/scalegraph/clustering/TestGML.x10 \
+	src/test/scalegraph/clustering/TestGML.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10;
 	
 	@echo "----------- Launch GML Tester ---------------------------";
@@ -461,14 +461,14 @@ test_gml:
 test_clustering:
 	@echo "----------- Compile Spectral Clustering Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/liblapack.a \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libblas.a \
-	-cxx-postarg /data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/lib/libf2c.a \
-	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libf77blas.a \
-	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/x10-runtimes/gml/ATLAS/lib/libatlas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/lapack_LINUX.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/blas_LINUX.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libf77blas.a \
+	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libatlas.a \
 	-classpath /data0/t2gsuzumuralab/ogata/Developments/x10.gml/lib/native_gml.jar \
 	-x10lib /data0/t2gsuzumuralab/ogata/Developments/x10.gml/native_gml.properties \
-	src/org/scalegraph/clustering/TestSpectralClustering.x10 \
+	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10 \
@@ -501,7 +501,7 @@ help:
 	#Test 1
 	@echo 'test_attributed_graph : Test the AttributedGraph class'
 	#Test 2	
-	@echo 'test_betweenness_centrality : Test the BetweennessCentrality class'
+	@echo 'test_betweenness_centrality : Test the BetweennessCentrality class for AttributedGraph'
 	#Test 3
 	@echo 'test_gml_reader : Test the GMLReader class'
 	#Test 4
@@ -534,6 +534,8 @@ help:
 	@echo 'test_degree : Test Degree class'
 	#Test 18
 	@echo 'test_edge_scat : Test ScatteredEdgeListReader class'
+	#Test 19
+	@echo 'test_betweenness_centrality_plain : Test Betweenness Centrality for PlainGraph'
 	#Test 20
 	@echo 'test_lapack : Test LAPACK class'
 	#Test 21
