@@ -232,7 +232,11 @@ test_plain_graph :
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT)  -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/graph/TestPlainGraph.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
-	src/org/scalegraph/util/scalegraphMath.x10 ;
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 ;
+	
 	@echo "----------- Launch PlainGraph Tester -----------"; 
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	echo "----------- Test Completed -----------";
@@ -349,14 +353,16 @@ test_rand:
 #Test 17
 test_degree:
 	@echo "----------- Compile Degree Tester -----------";
-	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/metrics/TestDegree.x10 \
 	src/org/scalegraph/metrics/Degree.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
@@ -415,6 +421,7 @@ test_betweenness_centrality_plain:
 	@echo "----------- Launch Betweenness Centrality Tester -----------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
 	@echo "----------- Test Completed ---------------------------------";
+
 
 #Test 20
 #	-cxx-prearg -I/data0/t2gsuzumuralab/ogata/Developments/CLAPACK-3.2.1-fpic/include
