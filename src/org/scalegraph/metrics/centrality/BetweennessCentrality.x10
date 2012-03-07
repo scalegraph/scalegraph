@@ -27,12 +27,13 @@ public class BetweennessCentrality {
 	// var isEnableCache: Boolean = false;
 	
 	static val CACHE_SIZE: Int = 10000;
-	val globalCaches: Array[Cache] = new Array[Cache](Runtime.MAX_THREADS, (i: Int) => new Cache(CACHE_SIZE));
+	val ALLOC_SPACE = Runtime.MAX_THREADS - 5;
+	val globalCaches: Array[Cache] = new Array[Cache](ALLOC_SPACE, (i: Int) => new Cache(CACHE_SIZE));
 	val aquireSpaceLock: Lock = new Lock();
 	val freeSpaceAccessLock = new Lock();
 	val updateScoreLock: Lock = new Lock();
 	
-	val freeSpace = new Array[Boolean](Runtime.MAX_THREADS, (i : Int) => true);
+	val freeSpace = new Array[Boolean](ALLOC_SPACE, (i : Int) => true);
 	
 	var globalTraverseQ: Array[ArrayList[Int]];
 	var globalDistanceMap: Array[IndexedMemoryChunk[Long]];
@@ -314,23 +315,23 @@ public class BetweennessCentrality {
 			
 			// Init share space
 			globalTraverseQ = new Array[ArrayList[Int]]
-				(Runtime.MAX_THREADS, (int: Int) => new ArrayList[Int]());
+				(ALLOC_SPACE, (int: Int) => new ArrayList[Int]());
 			
 			globalDistanceMap = new Array[IndexedMemoryChunk[Long]]
-				(Runtime.MAX_THREADS, (i: Int) => IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId));
+				(ALLOC_SPACE, (i: Int) => IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId));
 			
 			globalGeodesicsMap = new Array[IndexedMemoryChunk[Long]]
-				(Runtime.MAX_THREADS, (i: Int) => IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId));
+				(ALLOC_SPACE, (i: Int) => IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId));
 			
 			globalTempScore = new Array[IndexedMemoryChunk[Double]]
-				(Runtime.MAX_THREADS, (i: Int) => IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId));
+				(ALLOC_SPACE, (i: Int) => IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId));
 			
 			globalPredecessorMap = new Array[Array[Stack[Int]]]
-				(Runtime.MAX_THREADS, (i : Int) => 
+				(ALLOC_SPACE, (i : Int) => 
 					new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]()));
 			
 			globalVertexStack = new Array[Stack[Int]]
-				(Runtime.MAX_THREADS, (i: Int) => new Stack[Int]());
+				(ALLOC_SPACE, (i: Int) => new Stack[Int]());
 			
 			
 			// In case of muliple places (nodes), enable cache
@@ -339,16 +340,19 @@ public class BetweennessCentrality {
 			// } else {
 			// 	isEnableCache = true;
 			// }
+			
+			// Console.OUT.println("Allocate space..........");
+			// Console.IN.readChar();
 						
 			for (i in data) {
 								
 				val v = data(i);
 				if(v >= 0) {
 					
-					Console.OUT.println("Run for source: " + v + " On place: " + here.id);
+					// Console.OUT.println("Run for source: " + v + " On place: " + here.id);
 					// if(isEnableCache) {
-						
-						async doBfsOnPlainGraph(data(i));
+					val spaceId = acquireSpaceId();
+					async doBfsOnPlainGraph(spaceId, data(i));
 					// } else {
 					// 	async doBfsOnPlainGraph(0, data(i));
 					// }
@@ -423,13 +427,9 @@ public class BetweennessCentrality {
 			val dat = g.getOutNeighbours(key);
 
 			if(numData == size) {
-				
-				 // Caceh full
-				 // Console.OUT.println("Cache full");
-				
-				// Hit return -1
+				// Cache full
 				records.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
-				numData = size / 2;
+				numData = size - size / 3;
 				
 				for(i in records) {
 					i.hit = 0;
@@ -486,8 +486,8 @@ public class BetweennessCentrality {
 					break;
 				}
 			}
-			Console.OUT.print('F');
-			// System.sleep(1);
+			// Console.OUT.print('F');
+			System.sleep(1);
 			// freeSpaceAccessLock.unlock();
 		}
 		
@@ -502,9 +502,9 @@ public class BetweennessCentrality {
 		// freeSpaceAccessLock.unlock();
 	}
 	
-	protected def doBfsOnPlainGraph(vertexId: Long) {
+	protected def doBfsOnPlainGraph(spaceId: Int, vertexId: Long) {
 		
-		val spaceId = acquireSpaceId();
+		
 		
 		val traverseQ  = globalTraverseQ(spaceId);
 		val distanceMap = globalDistanceMap(spaceId);
@@ -545,12 +545,12 @@ public class BetweennessCentrality {
 			
 			
 			var  neighbors: Array[Long] = null;
-			
-			if(here.id == 0) {
-				neighbors = this.plainGraph.getOutNeighbours(actor);
-			} else {
+			// 
+			// if(here.id == 0) {
+			// 	neighbors = this.plainGraph.getOutNeighbours(actor);
+			// } else {
 				neighbors = getNeighBours(cache, actor);
-			}
+			// }
 			
 			vertexStack.push(actor);
 			
