@@ -448,8 +448,8 @@ test_gml:
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libf77blas.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libatlas.a \
-	-classpath /data0/t2gsuzumuralab/ogata/Developments/x10.gml/lib/native_gml.jar \
-	-x10lib /data0/t2gsuzumuralab/ogata/Developments/x10.gml/native_gml.properties \
+	-classpath /data0/t2gsuzumuralab/scalegraph/x10.gml/lib/native_gml.jar \
+	-x10lib /data0/t2gsuzumuralab/scalegraph/x10.gml/native_gml.properties \
 	src/test/scalegraph/clustering/TestGML.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10;
 	
@@ -466,8 +466,8 @@ test_clustering:
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libf77blas.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libatlas.a \
-	-classpath /data0/t2gsuzumuralab/ogata/Developments/x10.gml/lib/native_gml.jar \
-	-x10lib /data0/t2gsuzumuralab/ogata/Developments/x10.gml/native_gml.properties \
+	-classpath /data0/t2gsuzumuralab/scalegraph/x10.gml/lib/native_gml.jar \
+	-x10lib /data0/t2gsuzumuralab/scalegraph/x10.gml/native_gml.properties \
 	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
