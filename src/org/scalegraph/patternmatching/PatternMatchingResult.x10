@@ -1,4 +1,5 @@
 package org.scalegraph.patternmatching;
 
-public class PatternmatchingResult {
+public class PatternMatchingResult {
+	
 }

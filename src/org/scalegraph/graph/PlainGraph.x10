@@ -1850,7 +1850,7 @@ public class PlainGraph implements Graph{
 	    							
 		    						for(point2:Point in rVertCounter){
 
-		    							if((uniqueVertexCounter(point2) <= nv)){//There is more space there...
+		    							if((uniqueVertexCounter(point2) < nv)){//There is more space there...
 		    								Console.OUT.println("Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
 		    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
 		    								//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;

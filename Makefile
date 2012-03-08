@@ -484,26 +484,31 @@ test_clustering:
 	@echo "----------- Test Completed ---------------------------------";
 
 test_dir:
-	@echo "----------- Compile Degree Tester -----------";
+	@echo "----------- Compile DirInfo Tester -----------";
 	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/util/TestDirInfo.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10;
 	
-	@echo "----------- Launch scalegraphMath Tester -----------";
+	@echo "----------- Launch DirInfo Tester -----------";
 	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";	
 	
-	#Test 23
+#Test 23
 test_pattern:
-	@echo "----------- Compile Graph Patternmatching -----------------";
+	@echo "----------- Compile Graph Pattern Matching -----------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	src/test/scalegraph/graph/PlainGraph.x10 \
-	src/org/scalegraph/patternmatching/Patternmatching.x10 \
-	src/org/scalegraph/patternmatching/PatternmatchingResult.x10 \
-	src/org/scalegraph/graph/PlainGraph.x10;
+	src/test/scalegraph/patternmatching/TestPatternMatching.x10 \
+	src/org/scalegraph/patternmatching/PatternMatching.x10 \
+	src/org/scalegraph/patternmatching/PatternMatchingResult.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	
-	@echo "----------- Launch Graph Patternmatching ------------------";
+	@echo "----------- Launch Graph Pattern Matching ------------------";
 	$(X10_HOME)/bin/X10Launcher $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";
 	
@@ -554,12 +559,12 @@ help:
 	@echo 'test_betweenness_centrality_plain : Test Betweenness Centrality for PlainGraph'
 	#Test 20
 	@echo 'test_lapack : Test LAPACK class'
-	#Test 23
-	@echo 'test_pattern : Test Graph Pattern Matching'
 	#Test 21
 	@echo 'test_gml : Test GML library'
 	#Test 22
 	@echo 'test_clustering : Test SpectralClustering class'
+	#Test 23
+	@echo 'test_pattern : Test Graph Pattern Matching'
 	@echo 'clean : To clean the build'
 	@echo '---------------------------------';
 
