@@ -253,7 +253,7 @@ public class PlainGraph implements Graph{
 					    				
 					    				if(l(item(0),item(1)) != null){
 					    					atomic{
-					    						Console.OUT.println("Counted item : " + l(item(0),item(1)).id);
+					    						//Console.OUT.println("Counted item : " + l(item(0),item(1)).id);
 					    						vCount()() += l(item(0),item(1)).id >= 0 ? 1:0; //Sometimes vertex ID might be 0
 					    					}
 					    				}else{
@@ -1485,7 +1485,7 @@ public class PlainGraph implements Graph{
     			val r:Region = l.region;
     			var len:Int = r.size();
     			
-    			Console.OUT.println("b->a len : " + len);
+    			//Console.OUT.println("b->a len : " + len);
     			
     			for(point:Point in r){		
     				
@@ -1659,13 +1659,13 @@ public class PlainGraph implements Graph{
     	val vertCount:Long = getVertexCount();
     	var noNeigh:Int = 0;
     	
-    	Console.OUT.println("Total VERT Count : " + vertCount);
+    	//Console.OUT.println("Total VERT Count : " + vertCount);
     	
     	for(place in Place.places()){
     		val r:Region = uqverts.dist.get(place);
     		var len2:Int = r.size();
     		
-    		Console.OUT.println("At place : " + place.id + " len 2 is : " + len2);
+    		//Console.OUT.println("At place : " + place.id + " len 2 is : " + len2);
     		
     		for(pt in r){	   			
     			if(pt(1) <= vertCount){
@@ -1700,7 +1700,7 @@ public class PlainGraph implements Graph{
     	}
     	
   
-    	Console.OUT.println("Unconencted vert count : " + notConnectedVertexCount);
+    	//Console.OUT.println("Unconencted vert count : " + notConnectedVertexCount);
     	
     	return notConnectedVertexCount;
     }
@@ -1730,13 +1730,13 @@ public class PlainGraph implements Graph{
     		val vertCount:Long = getVertexCount();
     		var noNeigh:Int = 0;
     		
-    		Console.OUT.println("Total VERT Count : " + vertCount);
+    		//Console.OUT.println("Total VERT Count : " + vertCount);
     		
     		for(place in Place.places()){
     			val r:Region = uqverts.dist.get(place);
     			var len2:Int = r.size();
     			
-    			Console.OUT.println("At place : " + place.id + " len 2 is : " + len2);
+    			//Console.OUT.println("At place : " + place.id + " len 2 is : " + len2);
     			
     			for(pt in r){	   			
     				if(pt(1) <= vertCount){
@@ -1748,7 +1748,7 @@ public class PlainGraph implements Graph{
     						inNeighbourCount = inNeighbours.size;
     						//outNeighbourCount = outNeighbours.size;
     						
-    						Console.OUT.println("vertex : " + uqverts(pt) + " inNeighbourCount : " + inNeighbourCount);
+    						//Console.OUT.println("vertex : " + uqverts(pt) + " inNeighbourCount : " + inNeighbourCount);
     						
     						if(inNeighbourCount == 0L){
     							result++;
@@ -1763,7 +1763,7 @@ public class PlainGraph implements Graph{
     		}
     		
     		notConnectedVertexCount = result;
-    		Console.OUT.println("noNeigh : " + noNeigh);
+    		//Console.OUT.println("noNeigh : " + noNeigh);
     	}
     	
     	
@@ -1805,7 +1805,7 @@ public class PlainGraph implements Graph{
 	    		
 	    		//Just add one more to make space in the unique vertices array
 	    		nvl += 1;
-	    		Console.OUT.println("nv is : " + nvl);
+	    		//Console.OUT.println("nv is : " + nvl);
 	    		
 	    		R1 = (1..Place.MAX_PLACES)*(1..1);
 	    		R2 = (1..Place.MAX_PLACES)*(1..nvl);
@@ -1821,7 +1821,7 @@ public class PlainGraph implements Graph{
 	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));	    	
 	    	val largestVert = getMaximumVertexID();
 	    	
-	    	Console.OUT.println("largestVert : " + largestVert);	    	
+	    	//Console.OUT.println("largestVert : " + largestVert);	    	
 	    	
 	    	for(p:Place in Place.places()){
 	    		val rAdjListAtoB:Region = adjacencyListAtoB.dist.get(p);
@@ -1831,7 +1831,7 @@ public class PlainGraph implements Graph{
 	    				
 	    				//This optimization might be helpful for small network loaded to large graph space
 	    				if(point(1) > largestVert){
-	    					Console.OUT.println("Before exit -> point(1) : " + point(1) + "largest vert " + largestVert);
+	    					//Console.OUT.println("Before exit -> point(1) : " + point(1) + "largest vert " + largestVert);
 	    					break;
 	    				}
 	    				
@@ -1851,7 +1851,7 @@ public class PlainGraph implements Graph{
 		    						for(point2:Point in rVertCounter){
 
 		    							if((uniqueVertexCounter(point2) < nv)){//There is more space there...
-		    								Console.OUT.println("Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
+		    								//Console.OUT.println("Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
 		    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
 		    								//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
 		    								uniqueVertexCounter(point2) += 1;
