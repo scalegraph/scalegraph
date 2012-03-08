@@ -493,6 +493,22 @@ test_dir:
 	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";	
 	
+	#Test 23
+test_pattern:
+	@echo "----------- Compile Graph Patternmatching -----------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/patternmatching/Patternmatching.x10 \
+	src/org/scalegraph/patternmatching/PatternmatchingResult.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10;
+	
+	
+	@echo "----------- Launch Graph Patternmatching ------------------";
+	$(X10_HOME)/bin/X10Launcher $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------";
+	
+	
+	
 help:
 	@echo '---- scalegraph build help -------'
 	@echo 'Usage : make <command>'
@@ -538,6 +554,8 @@ help:
 	@echo 'test_betweenness_centrality_plain : Test Betweenness Centrality for PlainGraph'
 	#Test 20
 	@echo 'test_lapack : Test LAPACK class'
+	#Test 23
+	@echo 'test_pattern : Test Graph Pattern Matching'
 	#Test 21
 	@echo 'test_gml : Test GML library'
 	#Test 22
