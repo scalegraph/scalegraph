@@ -514,15 +514,15 @@ test_pattern:
 	
 # Test 24
 test_randomwalk:
-	@echo "----------- Compile Spectral Clustering Tester --------------------------";
+	@echo "----------- Compile Random Walk with Restart Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/lapack_LINUX.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/blas_LINUX.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libf77blas.a \
 	-cxx-postarg /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libatlas.a \
-	-classpath /data0/t2gsuzumuralab/ogata/Developments/x10.gml/lib/native_gml.jar \
-	-x10lib /data0/t2gsuzumuralab/ogata/Developments/x10.gml/native_gml.properties \
+	-classpath /data0/t2gsuzumuralab/scalegraph/x10.gml/lib/native_gml.jar \
+	-x10lib /data0/t2gsuzumuralab/scalegraph/x10.gml/native_gml.properties \
 	./src/org/scalegraph/graph/PlainGraph.x10 \
 	./src/org/scalegraph/graph/Graph.x10 \
 	./src/org/scalegraph/communities/RandomWalk.x10 \
@@ -533,10 +533,12 @@ test_randomwalk:
 	./src/org/scalegraph/util/DirectoryInfo.x10 \
 	./src/org/scalegraph/clustering/LAPACK.x10 \
 	./src/test/scalegraph/communities/TestRandomWalk.x10;
-	@echo "----------- Launch random walk with restart Tester ---------------------------";
+	
+	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
+	
 	
 help:
 	@echo '---- scalegraph build help -------'

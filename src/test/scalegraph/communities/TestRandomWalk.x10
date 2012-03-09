@@ -14,11 +14,28 @@ public class TestRandomWalk {
         graph.addEdge("1 2");
         Console.OUT.println("count vertex");
         try {
-            graph.getVertexCount();
+            val vcount = graph.getVertexCount();
+            
+            Console.OUT.println("vertex count is : " + vcount);
+            
         } catch (NullPointerException) {
             Console.OUT.println("crashed by NullPointerException");
             return;
         }
+        
+        val result:DistArray[Long] = graph.getVertexList();
+        
+        Console.OUT.println("printing vertex List");
+        for(p in Place.places()){
+        	val r:Region = result.dist.get(p);
+        	
+        	at(p){
+        		for(point:Point in r){
+        			Console.OUT.println(result(point));
+        		}
+        	}
+        }
+        
         Console.OUT.println("End Test");
     }
 }

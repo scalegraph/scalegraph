@@ -82,6 +82,7 @@ public class PlainGraph implements Graph{
     			nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
     			R2 = (1..1)*(1..nVertices);
     			totalVertices = nVertices;
+    			lrv(0) = GlobalRef[Cell[Long]](new Cell[Long](0l));
     		}else if((sizeCat == GraphSizeCategory.LARGE) || (sizeCat == GraphSizeCategory.MEDIUM)){
     			vertexIncrementFactor = GraphSizeCategory.MEDIUM;
     			nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
@@ -102,12 +103,12 @@ public class PlainGraph implements Graph{
     		adjacencyListBtoA = DistArray.make[PlainGraphRecord](b, new PlainGraphRecord());
     		
     		//Initialize the Vertex Cache
-    		for(item in vertexCache){
-    			vertexCache(item) = new VertexCacheRecord();
-    			vertexCache(item).id = -1;
-    			vertexCache(item).nFound = 0;
-    			vertexCache(item).nChecked = 1;
-    		}
+    		// for(item in vertexCache){
+    		// 	vertexCache(item) = new VertexCacheRecord();
+    		// 	vertexCache(item).id = -1;
+    		// 	vertexCache(item).nFound = 0;
+    		// 	vertexCache(item).nChecked = 1;
+    		// }
     		
     	}else{
     		throw new UnsupportedOperationException("Invalid Graph Size Category was specified : " + sizeCat);    		
@@ -229,6 +230,38 @@ public class PlainGraph implements Graph{
      */
     public def getVertexCount():Long{
     	if(actualTotalVertices == 0l){
+    		
+    		if(this.sizeCategory == GraphSizeCategory.SMALL){
+    			var vCount:Long = 0;
+    			val lvr = getMaximumVertexID(); 
+    			
+    			Console.OUT.println("Now executing from here....");
+    			var l:Array[PlainGraphRecord] = adjacencyListAtoB.getLocalPortion();
+    			
+    			if(l != null){
+    				if(l.size > 0){
+    					for(item in l){
+    						if((item != null) && (item(1) > lvr)){
+    							Console.OUT.println("Found largest vertex, Now exitting...");
+    							break;
+    						}
+    						
+    						if(l(item(0),item(1)) != null){
+    							atomic{
+    								//Console.OUT.println("Counted item : " + l(item(0),item(1)).id);
+    								vCount += l(item(0),item(1)).id >= 0 ? 1:0; //Sometimes vertex ID might be 0
+    							}
+    						}else{
+    							Console.OUT.println("IS NULL");
+    						}
+    					}
+    				}else{
+    					Console.OUT.println("The array is 0 size at place : " + here.id);
+    				}
+    			}
+    			
+    			actualTotalVertices = vCount;
+    		}else{    		
 	    	val vCount = GlobalRef[Cell[Long]](new Cell[Long](0));
 	    	vertexIncrementFactor = GraphSizeCategory.MEDIUM;
 	    	nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
@@ -271,8 +304,9 @@ public class PlainGraph implements Graph{
 	    	}
 	    	
 	    	actualTotalVertices = vCount()(); 
-	    	
-	    	return vCount()();
+    		}
+    		
+	    	return actualTotalVertices;
     	}else{
     		return actualTotalVertices;
     	}    	
@@ -459,31 +493,51 @@ public class PlainGraph implements Graph{
     	  
     	if(sizeCategory == GraphSizeCategory.SMALL){
     		internal_vertex = vertex as Int; //In this case it is safe to cast the vertex to Int because it is in the scale of small Graph
-    		
+    		    		
 	    		if(here.id == 0)
 	    		{
 	    			val r:Region = adjacencyListAtoB.dist.get(here);
+	    			val r2:Region = adjacencyListBtoA.dist.get(here);
 	    			val pt:Point = Point.make(1, internal_vertex);
+
+	    			//var flag:Boolean = false;
 	    			
-	    			var flag:Boolean = false;
+	    			// for(item in r){				
+	    			// 	if((item(0) == pt(0)) && (item(1) == pt(1))){
+	    			// 		flag = true;
+	    			// 		break;
+	    			// 	}
+	    			// }	
 	    			
-	    			for(item in r){				
-	    				if((item(0) == pt(0)) && (item(1) == pt(1))){
-	    					flag = true;
-	    					break;
-	    				}
-	    			}	
-	    			
-	    			if(flag){
-		    			if(adjacencyListAtoB(pt).id != -1l){
-		    				return -1;
+	    			//if(flag){
+	    			if(r.contains(pt)){
+		    			if(adjacencyListAtoB(pt).id == -1l){
+			    			var rec:PlainGraphRecord = null;
+			    			rec = new PlainGraphRecord();
+			    			rec.id = vertex;
+			    			rec.edges = new ArrayList[Long]();
+			    			adjacencyListAtoB(pt) = rec;
+
+			    			if(lrv(0)()() < vertex){
+			    				lrv(0)()() = vertex;
+			    			}
 		    			}
-		    			
-		    			var rec:PlainGraphRecord = null;
-		    			rec = new PlainGraphRecord();
-		    			rec.id = vertex;
-		    			rec.edges = new ArrayList[Long]();
-		    			adjacencyListAtoB(pt) = rec;
+	    			}else{
+	    				Console.OUT.println("vertex : " + vertex + " not added");
+	    			}
+
+	    			if(r2.contains(pt)){
+	    				if(adjacencyListBtoA(pt).id == -1l){
+	    					var rec:PlainGraphRecord = null;
+	    					rec = new PlainGraphRecord();
+	    					rec.id = vertex;
+	    					rec.edges = new ArrayList[Long]();
+	    					adjacencyListBtoA(pt) = rec;
+	    					
+	    					// if(lrv(0)()() < vertex){
+	    					// 	lrv(0)()() = vertex;
+	    					// }
+	    				}
 	    			}else{
 	    				Console.OUT.println("vertex : " + vertex + " not added");
 	    			}
@@ -535,9 +589,9 @@ public class PlainGraph implements Graph{
 	    								rec.edges = new ArrayList[Long]();
 	    								adjacencyListBtoA(pt) = rec;
 	
-	    								if(lrv(p.id)()() < vertex){
-	    									lrv(p.id)()() = vertex;
-	    								}
+	    								// if(lrv(p.id)()() < vertex){
+	    								// 	lrv(p.id)()() = vertex;
+	    								// }
     								}
     							}else{
     								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
@@ -598,9 +652,9 @@ public class PlainGraph implements Graph{
 	 								
 	 								adjacencyListBtoA(pt) = rec;
 	 								
-	 								if(lrv(here.id)()() < vertex){
-	 									lrv(here.id)()() = vertex;
-	 								}
+	 								// if(lrv(here.id)()() < vertex){
+	 								// 	lrv(here.id)()() = vertex;
+	 								// }
 	 								}
 	 							}else{
 	 								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
@@ -1881,21 +1935,31 @@ public class PlainGraph implements Graph{
     public def getMaximumVertexID():Long{
     	val lvalue=at(Place.places()(0))largeV()();
     	
-    	if(lvalue==0l){
-    		for(p in Place.places()){
-    			val tmp = at(p) { lrv(p.id)};
-    			
-    			if(largestReportedVertex < (at(tmp) tmp()())){
-    				largestReportedVertex = at(tmp) tmp()();
-    			}
+    	if(this.sizeCategory==GraphSizeCategory.SMALL){
+    		val tmp = lrv(0);
+    		
+    		if(largestReportedVertex < (at(tmp) tmp()())){
+    			largestReportedVertex = at(tmp) tmp()();
     		}
-
-    		val tmp2 = largestReportedVertex;
-    		at(Place.places()(0)){largeV()()=tmp2;} 
-    		return at(Place.places()(0))largeV()();
+    		
+    		return largestReportedVertex;
     	}else{
-    		return lvalue;
-    	}
+	    	if(lvalue==0l){
+	    		for(p in Place.places()){
+	    			val tmp = at(p) { lrv(p.id)};
+	    			
+	    			if(largestReportedVertex < (at(tmp) tmp()())){
+	    				largestReportedVertex = at(tmp) tmp()();
+	    			}
+	    		}
+	
+	    		val tmp2 = largestReportedVertex;
+	    		at(Place.places()(0)){largeV()()=tmp2;} 
+	    		return at(Place.places()(0))largeV()();
+	    	}else{
+	    		return lvalue;
+	    	}
+	    }
     }
 }
 
