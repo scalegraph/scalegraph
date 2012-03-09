@@ -41,12 +41,7 @@ public class TestBetweennessCentralityPlain {
 			
 		// Determine input path
 		val inputFile  = new File(inputPath);
-		
-		// if(!inputFile.exists()) {
-		// 	Console.ERR.println("Input file does not exist");
-		// 	return;
-		// }
-		
+				
 		if(inputFile.isDirectory()) {
 			
 			Console.OUT.println("Load with ScatteredEdgeListReader");
@@ -62,6 +57,9 @@ public class TestBetweennessCentralityPlain {
 		
 		val distVertexList:DistArray[Long] = graph.getVertexList();
 		val vertexListBuilder: ArrayBuilder[Long] = new ArrayBuilder[Long]();
+		
+		// Console.OUT.println("Create vertex list...........");
+		// Console.IN.readChar();
 		
 		// Build an array of vertex to estimate
 		finish {
@@ -123,6 +121,21 @@ public class TestBetweennessCentralityPlain {
 					vertexCountEnd);
 			printer.close();
 		}
+		
+		// finish {
+		// 	val g = graph;
+		// 	for(p:Place in Place.places()){
+		// 		async {
+		// 			at(p) {
+		// 				val  l = distVertexList.getLocalPortion();
+		// 				for(i in l) {
+		// 					Console.OUT.println(l(i) + ": -> " + g.getInNeighbours(l(i)));
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
+		
 	}
 	
 	protected static def showResult (p: Printer, 
