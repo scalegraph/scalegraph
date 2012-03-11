@@ -29,9 +29,7 @@ public class TestRandomWalk {
         Console.OUT.println("end add edges");
         try {
             val vcount = graph.getVertexCount();
-            
             Console.OUT.println("vertex count is : " + vcount);
-            
         } catch (NullPointerException) {
             Console.OUT.println("crashed by NullPointerException");
             return;
@@ -42,7 +40,7 @@ public class TestRandomWalk {
         Console.OUT.println("printing vertex List");
         for(p in Place.places()){
         	val r:Region = result.dist.get(p);
-        	
+            
         	at(p){
         		for(point:Point in r){
         			Console.OUT.println(result(point));
@@ -50,7 +48,11 @@ public class TestRandomWalk {
         	}
         }
 
-        RandomWalk.run(graph);
+        val rwr:RandomWalk = new RandomWalk(graph);
+        Console.OUT.println("Start Pre-compute stage");
+        rwr.run();
+        Console.OUT.println("Start Query Stage");
+        rwr.query(4);
         
         Console.OUT.println("End Test");
     }
