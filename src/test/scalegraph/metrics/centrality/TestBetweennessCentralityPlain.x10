@@ -122,20 +122,6 @@ public class TestBetweennessCentralityPlain {
 			printer.close();
 		}
 		
-		// finish {
-		// 	val g = graph;
-		// 	for(p:Place in Place.places()){
-		// 		async {
-		// 			at(p) {
-		// 				val  l = distVertexList.getLocalPortion();
-		// 				for(i in l) {
-		// 					Console.OUT.println(l(i) + ": -> " + g.getInNeighbours(l(i)));
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// }
-		
 	}
 	
 	protected static def showResult (p: Printer, 
