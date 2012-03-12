@@ -27,7 +27,7 @@ public class BetweennessCentrality {
 	// var isEnableCache: Boolean = false;
 	
 	static val CACHE_SIZE: Int = 10000;
-	val ALLOC_SPACE = Runtime.MAX_THREADS - 5;
+	val ALLOC_SPACE = Runtime.MAX_THREADS;
 	val globalCaches: Array[Cache] = new Array[Cache](ALLOC_SPACE, (i: Int) => new Cache(CACHE_SIZE));
 	val aquireSpaceLock: Lock = new Lock();
 	val freeSpaceAccessLock = new Lock();
@@ -333,29 +333,11 @@ public class BetweennessCentrality {
 			globalVertexStack = new Array[Stack[Int]]
 				(ALLOC_SPACE, (i: Int) => new Stack[Int]());
 			
-			
-			// In case of muliple places (nodes), enable cache
-			// if(Place.MAX_PLACES == 1) {
-			// 	isEnableCache = false;
-			// } else {
-			// 	isEnableCache = true;
-			// }
-			
-			// Console.OUT.println("Allocate space..........");
-			// Console.IN.readChar();
-						
-			for (i in data) {
-								
+			for (i in data) {		
 				val v = data(i);
 				if(v >= 0) {
-					
-					// Console.OUT.println("Run for source: " + v + " On place: " + here.id);
-					// if(isEnableCache) {
 					val spaceId = acquireSpaceId();
-					async doBfsOnPlainGraph(spaceId, data(i));
-					// } else {
-					// 	async doBfsOnPlainGraph(0, data(i));
-					// }
+					async doBfsOnPlainGraph(spaceId, v);
 				}
 				
 			}
@@ -467,16 +449,16 @@ public class BetweennessCentrality {
 	protected def getNeighBours(cache: Cache, vertexId:Int) {
 		
 		return cache(vertexId, this.plainGraph);
-		
 	}
 	
 	protected def acquireSpaceId() {
 		
 		aquireSpaceLock.lock();
+		
 		var didAcquire: Boolean = false;
 		var id: Int = -1;
 		while(!didAcquire) {
-			// freeSpaceAccessLock.lock();
+			
 			for(i in 0..(freeSpace.size - 1)) {
 				if(freeSpace(i)) {
 					// Space is available
@@ -486,9 +468,7 @@ public class BetweennessCentrality {
 					break;
 				}
 			}
-			// Console.OUT.print('F');
 			System.sleep(1);
-			// freeSpaceAccessLock.unlock();
 		}
 		
 		aquireSpaceLock.unlock();
@@ -497,15 +477,11 @@ public class BetweennessCentrality {
 	}
 	
 	protected def releaseSpaceId(spaceId: Int) {
-		// freeSpaceAccessLock.lock();
 		freeSpace(spaceId) = true;
-		// freeSpaceAccessLock.unlock();
 	}
 	
 	protected def doBfsOnPlainGraph(spaceId: Int, vertexId: Long) {
-		
-		
-		
+
 		val traverseQ  = globalTraverseQ(spaceId);
 		val distanceMap = globalDistanceMap(spaceId);
 		val geodesicsMap = globalGeodesicsMap(spaceId);
@@ -515,14 +491,12 @@ public class BetweennessCentrality {
 		val cache = globalCaches(spaceId);
 		
 		
-		
 		// Cleare previous data
 		finish {
 			async distanceMap.clear(0, maximumVertexId);
 			async geodesicsMap.clear(0, maximumVertexId);
 			async tempScore.clear(0, maximumVertexId);
 		}
-		
 		
 		for(i in predecessorMap) {
 			 predecessorMap(i).clear();
@@ -541,17 +515,11 @@ public class BetweennessCentrality {
 		while(!traverseQ.isEmpty()) {
 			
 			val actor: int = traverseQ.removeFirst();
-			// val neighbors = this.plainGraph.getNeighbours(actor);
-			
-			
 			var  neighbors: Array[Long] = null;
-			// 
-			// if(here.id == 0) {
-			// 	neighbors = this.plainGraph.getOutNeighbours(actor);
-			// } else {
-				neighbors = getNeighBours(cache, actor);
-			// }
-			
+
+			Runtime.probe();
+			neighbors = getNeighBours(cache, actor);
+
 			vertexStack.push(actor);
 			
 			if(neighbors == null)
@@ -581,11 +549,6 @@ public class BetweennessCentrality {
 			
 			val actor: Int = vertexStack.pop();
 			
-			// Skip process the source
-			// if(distanceMap(actor) <= 1) {
-			// 	continue;
-			// }
-			
 			while(!predecessorMap(actor).isEmpty()) {
 				val pred = predecessorMap(actor).pop();
 
@@ -596,14 +559,13 @@ public class BetweennessCentrality {
 			
 		}
 		
-		atomic {
+		updateScoreLock.lock();
 			for(i in 0..betweennessScore.size) {
 				if(i == source)
 					continue;
 				betweennessScore(i) += tempScore(i);
 			}
-			// betweennessScore.map(betweennessScore, tempScore, (a: Double, b: Double)=> a + b);
-		}
+		updateScoreLock.unlock();
 		
 		releaseSpaceId(spaceId);
 		Console.OUT.println("End for src: " + source + " On place: " + here.id);
