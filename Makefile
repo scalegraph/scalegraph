@@ -4,6 +4,8 @@
 
 #Export the number of threads
 export X10_NTHREADS=10
+export X10_STATIC_THREADS=true
+export X10_NO_STEALS=false
 
 #Set the X10_HOME and class path
 X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
@@ -389,8 +391,9 @@ test_edge_scat:
 
 #Test 19	
 test_betweenness_centrality_plain:
+#	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -OPTIMIZE_COMMUNICATIONS=true -OPTIMIZE=true -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph 
 	@echo "----------- Compile Betweenness Centrality Tester -----------";
-	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++  -OPTIMIZE_COMMUNICATIONS=true -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/metrics/centrality/TestBetweennessCentralityPlain.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
@@ -416,6 +419,9 @@ test_betweenness_centrality_plain:
 	src/org/scalegraph/graph/AttributeSchema.x10 \
 	src/org/scalegraph/util/Date.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
 	src/org/scalegraph/io/GMLToken.x10;
 	
 	@echo "----------- Launch Betweenness Centrality Tester -----------";
