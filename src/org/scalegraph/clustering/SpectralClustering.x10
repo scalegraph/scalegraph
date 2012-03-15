@@ -12,8 +12,8 @@ import org.scalegraph.graph.PlainGraph;
 public class SpectralClustering {
 	
 	private var graph:PlainGraph;
-	private var IDtoIDX:HashMap[Long, Int];
-	private var IDXtoID:HashMap[Int, Long];
+	private var IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
+	private var IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
 	
 	public def this(g:PlainGraph){
 		graph = g;
@@ -39,13 +39,21 @@ public class SpectralClustering {
 		
 		val nPoints = l.M;
 		val w = new Array[Double](nPoints);
-		solveEigenvalueProblem(l as DenseMatrix, d as DenseMatrix, w);  // step 4
+		val info = solveEigenvalueProblem(l as DenseMatrix, d as DenseMatrix, w);  // step 4
+		if(info != 0l){
+			Console.OUT.println("cannot solve eigenvalue problem");
+			return null;
+		}
 		
 		Console.OUT.println(l);
 		for(pt in w){
 			Console.OUT.println(w(pt));
 		}
 		
+		/*
+		 * copy eigenvectors to Array
+		 * Eigenvector which correspond to eigenvalue 0 is not used
+		 */
 		val points = new Array[Vector](nPoints);
 		for(var i:Int = 0; i < nPoints; i++){
 			points(i) = Vector.make(nClusters);
@@ -143,7 +151,7 @@ public class SpectralClustering {
 	
 	private def kmeans(k:Int, points:Array[Vector]): Array[Int] {
 		val dim:Int = k;
-		val nPoints = points.size;
+		val nPoints:Int = points.size;
 		val curClusters = new Array[Vector](k, (Int) => Vector.make(dim));
 		val newClusters = new Array[Vector](k, (Int) => Vector.make(dim));
 		val clusterCounts = new Array[Int](k, 0);
