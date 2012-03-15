@@ -1,37 +1,39 @@
 package org.scalegraph.clustering;
 
+import x10.util.ArrayList;
+import x10.util.HashMap;
 import x10.util.StringBuilder;
 
-public class ClusteringResult(size:Int) implements Iterable[Point{self.rank==1}] {
+public class ClusteringResult(size:Int) {
 	
-	public var d:Array[Int](1);
+	private var d:Array[Int](1);
+	private var IDtoIDX:HashMap[Long, Int];
+	private var IDXtoID:HashMap[Int, Long];
 	
-	public def this(n:Int){
-		property(n);
-		d = new Array[Int](n);
+	def this(d:Array[Int](1), IDtoIDX:HashMap[Long, Int], IDXtoID:HashMap[Int, Long]){
+		property(d.size);
+		this.d = d;
+		this.IDtoIDX = IDtoIDX;
+		this.IDXtoID = IDXtoID;
 	}
 	
-	public operator this(i:Int) = d(i);
-	public operator this(i:Point{self.rank==1}) = d(i);
+	public def getCluster(vertexID:Long) = d(IDtoIDX.get(vertexID)());
 	
-	public operator this(i:Int)=(v:Int): Int {
-		d(i) = v;
-		return v;
-	}
-	public operator this(i:Point{self.rank==1})=(v:Int): Int {
-		d(i) = v;
-		return v;
-	}
-	
-	public def iterator(): Iterator[Point{self.rank==1}] {
-		return d.iterator();
+	public def getVertices(clusterNum:Int): Array[Long] {
+		val result:ArrayList[Long] = new ArrayList[Long]();
+		for([i] in d){
+			if(d(i) == clusterNum){
+				result.add(IDXtoID.get(i)());
+			}
+		}
+		return result.toArray();
 	}
 	
 	public def toString(): String {
 		val sb = new StringBuilder();
 		sb.add("-------- ClusteringResult("+size+") --------\n");
-		for(i in d){
-			sb.add(i + " -> [" + d(i) + "]\n");
+		for([i] in d){
+			sb.add("[" + IDXtoID.get(i)() + "] -> [" + d(i) + "]\n");
 		}
 		sb.add("----------------------------------------\n");
 		return sb.result();
