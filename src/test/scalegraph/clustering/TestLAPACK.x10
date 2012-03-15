@@ -1,4 +1,6 @@
-package org.scalegraph.clustering;
+package test.scalegraph.clustering;
+
+import org.scalegraph.clustering.LAPACK;
 
 public class TestLAPACK {
 	
