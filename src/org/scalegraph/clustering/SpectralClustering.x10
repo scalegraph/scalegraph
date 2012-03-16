@@ -1,6 +1,6 @@
 package org.scalegraph.clustering;
 
-import x10.util.ArrayList;
+import x10.util.ArrayBuilder;
 import x10.util.HashMap;
 import x10.util.Random;
 import x10.util.Timer;
@@ -220,7 +220,7 @@ public class SpectralClustering {
 			
 			/* move new clusters to current clusters */
 			for(i in curClusters){
-				Array.copy(newClusters(i).d, curClusters(i).d);
+				Array.copy(newClusters(i).rail(), curClusters(i).rail());
 				//newClusters(i).copyTo(curClusters(i));
 				newClusters(i).reset();
 			}
@@ -232,7 +232,7 @@ public class SpectralClustering {
 	private def makeClusteringResult(nClusters:Int, array:Array[Int](1)): ClusteringResult {
 		val VtoC = new HashMap[Long, Int](array.size);
 		val CtoV = new HashMap[Int, Array[Long]](nClusters);
-		val tmpLists = new Array[ArrayList[Long]](nClusters, (Int) => new ArrayList[Long]());
+		val tmpLists = new Array[ArrayBuilder[Long]](nClusters, (Int) => new ArrayBuilder[Long]());
 		
 		for([i] in array){
 			val vertexID = IDXtoID(i)();
@@ -241,7 +241,7 @@ public class SpectralClustering {
 			tmpLists(clusterNum).add(vertexID);
 		}
 		for([i] in tmpLists){
-			CtoV.put(i, tmpLists(i).toArray());
+			CtoV.put(i, tmpLists(i).result());
 		}
 		
 		return new ClusteringResult(VtoC, CtoV);
