@@ -1,5 +1,6 @@
 package org.scalegraph.clustering;
 
+import x10.util.ArrayList;
 import x10.util.HashMap;
 import x10.util.Random;
 import x10.util.Timer;
@@ -63,7 +64,7 @@ public class SpectralClustering {
 		}
 		
 		val resultArray:Array[Int] = kmeans(nClusters, points);  // step 5
-		val result:ClusteringResult = new ClusteringResult(resultArray, IDtoIDX, IDXtoID);
+		val result:ClusteringResult = makeClusteringResult(nClusters, resultArray);
 		return result;
 	}
 	
@@ -226,5 +227,23 @@ public class SpectralClustering {
 		}
 		
 		return result;
+	}
+	
+	private def makeClusteringResult(nClusters:Int, array:Array[Int](1)): ClusteringResult {
+		val VtoC = new HashMap[Long, Int](array.size);
+		val CtoV = new HashMap[Int, Array[Long]](nClusters);
+		val tmpLists = new Array[ArrayList[Long]](nClusters, (Int) => new ArrayList[Long]());
+		
+		for([i] in array){
+			val vertexID = IDXtoID(i)();
+			val clusterNum = array(i);
+			VtoC.put(vertexID, clusterNum);
+			tmpLists(clusterNum).add(vertexID);
+		}
+		for([i] in tmpLists){
+			CtoV.put(i, tmpLists(i).toArray());
+		}
+		
+		return new ClusteringResult(VtoC, CtoV);
 	}
 }
