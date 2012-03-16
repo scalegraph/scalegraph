@@ -12,7 +12,13 @@ public class TestSpectralClustering {
 		//val graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/ogata/data/mini_graph.dl");
 		
 		val sc = new SpectralClustering(graph);
-		val result = sc.run(8);
+		val result = sc.run(2);
 		Console.OUT.println(result);
+		for(vertexID in result.getAllVertices()){
+			Console.OUT.println("[" + vertexID + "] -> [" + result.getCluster(vertexID) + "]");
+		}
+		for(i in result.getAllClusters()){
+			Console.OUT.println("[" + i + "] -> " + result.getVertices(i));
+		}
 	}
 }
