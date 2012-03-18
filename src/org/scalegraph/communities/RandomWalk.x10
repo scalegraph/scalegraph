@@ -57,17 +57,14 @@ public class RandomWalk {
                 }
             }
         }
-        U.print();
 
         // S = (trans(U) * U) ^ (-1)
         val S = new DenseMatrix(t, t);
         S.transMult(U, U);
         S(0, 0) = 1 / S(0, 0); // t == 1
-        S.print();
 
         // V = trans(U) * W
         V.transMult(U, W);
-        V.print();
 
         // L = (S^(-1) - c * V * U) ^ (-1)
         val vu = new DenseMatrix(1, 1);
@@ -75,9 +72,7 @@ public class RandomWalk {
         val Sinv = new DenseMatrix(1, 1);
         Sinv(0, 0) = 1 / S(0, 0); // t == 1
         L = Sinv - c * vu;
-        L.print();
         L(0, 0) = 1 / L(0, 0);
-        L.print();
     }
 
     /**
@@ -138,7 +133,6 @@ public class RandomWalk {
                 }
             }
         }
-        globalMatrix().print();
         return globalMatrix();
     }
 
@@ -153,18 +147,14 @@ public class RandomWalk {
         var result:DenseMatrix = new DenseMatrix(nVertex, 1);
         val tmp1 = new DenseMatrix(t, 1);
         tmp1.mult(V, ei);
-        tmp1.print();
         val tmp2 = new DenseMatrix(t, 1);
         tmp2.mult(L, tmp1);
-        tmp2.print();
          
         result.mult(U, tmp2);
-        result.print();
         
         result *= c;
         result += ei;
         result *= (1 - c);
-        result.print();
         return result;
     }
 }

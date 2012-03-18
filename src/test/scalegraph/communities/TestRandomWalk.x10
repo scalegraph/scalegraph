@@ -4,6 +4,7 @@ import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
 import org.scalegraph.io.ScatteredEdgeListReader;
 import org.scalegraph.communities.RandomWalk;
+import org.scalegraph.communities.LAPACK;
 import x10.matrix.DenseMatrix;
 import x10.util.HashMap;
 
@@ -54,12 +55,31 @@ public class TestRandomWalk {
         Console.OUT.println("Start Pre-compute stage");
         rwr.run();
         Console.OUT.println("Start Query Stage");
-        rwr.query(1);
+        rwr.query(1).print();
+        Console.OUT.println("Start OnTheFly method");
         iterateRandomWalk(graph, 1);
-        
+        Console.OUT.println("Start PreComputational method");
+        preComputationRandomWalk(graph, 1);
         Console.OUT.println("End Test");
     }
 
+    private static def preComputationRandomWalk(graph:PlainGraph, id:Int) {
+        val nVertex:Int = graph.getVertexCount() as Int;
+        val matrix:DenseMatrix = convertGraphToMatrix(graph);
+        var ei:DenseMatrix = new DenseMatrix(nVertex, 1);
+        val c = 0.85;
+        ei(id, 0) = 1.0;
+        var Q:DenseMatrix = new DenseMatrix(nVertex, nVertex);
+        for (var i:Int = 0; i < nVertex; i++) {
+            Q(i, i) = 1;
+        }
+        Q -= c * matrix;
+        val Qinv = LAPACK.inverseDenseMatrix(Q);
+        var ri:DenseMatrix = new DenseMatrix(nVertex, 1);
+        ri.mult(Qinv, ei);
+        ri *= (1 - c);
+        ri.print();
+    }
     private static def iterateRandomWalk(graph:PlainGraph, id:Int) {        
         val nVertex:Int = graph.getVertexCount() as Int;
         val matrix:DenseMatrix = convertGraphToMatrix(graph);
@@ -142,7 +162,6 @@ public class TestRandomWalk {
                 }
             }
         }
-        globalMatrix().print();
         return globalMatrix();
     }
 }
