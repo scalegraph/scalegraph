@@ -14,7 +14,7 @@ public class RandomWalk {
     private var V:DenseMatrix;
     private var L:DenseMatrix;
     
-    static private val c = 0.95;
+    static private val c = 0.85;
     static private val t = 1;
 
     /**
@@ -40,6 +40,7 @@ public class RandomWalk {
 
     /**
        @param W the normalized weighted matrix
+       @return none
     **/
     private def lowRankAod(W:DenseMatrix) {
         for (i in idToIdxMap.keySet()) {
@@ -47,10 +48,13 @@ public class RandomWalk {
             val nodeIdx = idToIdxMap(i)();
             if (neighbours != null) {
                 for (nbrs in neighbours) {
-                    U(nodeIdx, 0) += W(nodeIdx, idToIdxMap(neighbours(nbrs))());
+                    val neighbourIdx = idToIdxMap(neighbours(nbrs))();
+                    U(neighbourIdx, 0) += W(neighbourIdx, nodeIdx);
                 }
             } else {
-                U(nodeIdx, 0) = 1.0;
+                for (var j:Int = 0; j < nVertex; j++) {
+                    U(j, 0) += W(j, nodeIdx);
+                }
             }
         }
         U.print();
@@ -76,20 +80,10 @@ public class RandomWalk {
         L.print();
     }
 
-    /*
-      private def normalize(matrix:DenseMatrix, graph:PlainGraph) {
-      val D = DenseMatrix.make(matrix.m, matrix.n, 0.0);
-      for (i in 0..(D.m - 1)) {
-      val neighbours = graph.getOutNeighbours();
-      if (neighbours != null && neighbours.size > 0) {
-      D(i, i) = graph.getOutNeighbours().size;
-      } else {
-      D(i, i) = 1;
-      }
-      }
-      }
-    */
-    
+    /**
+       @param PlainGraph
+       @return adjacency matrix which correspond to graph
+     **/
     private def convertGraphToMatrix(graph:PlainGraph):DenseMatrix {
         val globalMatrix =
             GlobalRef[DenseMatrix](new DenseMatrix(nVertex as Int, nVertex as Int));
@@ -128,15 +122,15 @@ public class RandomWalk {
                     if (neighbours != null && neighbours.size != 0) {
                         for (j in neighbours) {
                             at (globalMatrix) {
-                                globalMatrix()(globalMap()(nodeId)(),
-                                               globalMap()(neighbours(j))()) =
+                                globalMatrix()(globalMap()(neighbours(j))(),
+                                               globalMap()(nodeId)()) =
                                     1.0 / neighbours.size;
                             }
                         }
                     } else {
                         for (j in 0..(nVertex - 1)) {
                             at (globalMatrix) {
-                                globalMatrix()(globalMap()(nodeId)(), j as Int)
+                                globalMatrix()(j as Int, globalMap()(nodeId)())
                                     = 1.0 / nVertex;
                             }
                         }
@@ -148,6 +142,10 @@ public class RandomWalk {
         return globalMatrix();
     }
 
+    /**
+       @param node id which you want to calculate RWR score
+       @return DenseMatrix RWR score
+     **/
     public def query(id:Long) {
         val ei = new DenseMatrix(nVertex, 1);
         ei(idToIdxMap(id)(), 0) = 1.0;
