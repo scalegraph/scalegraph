@@ -55,7 +55,7 @@ public class TestRandomWalk {
         Console.OUT.println("Start Pre-compute stage");
         rwr.run();
         Console.OUT.println("Start Query Stage");
-        rwr.query(1).print();
+        Console.OUT.println(rwr.query(1));
         Console.OUT.println("Start OnTheFly method");
         iterateRandomWalk(graph, 1);
         Console.OUT.println("Start PreComputational method");

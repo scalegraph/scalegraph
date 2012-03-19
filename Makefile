@@ -530,6 +530,7 @@ test_randomwalk:
 	-classpath /data0/t2gsuzumuralab/scalegraph/x10.gml/lib/native_gml.jar \
 	-x10lib /data0/t2gsuzumuralab/scalegraph/x10.gml/native_gml.properties \
 	./src/org/scalegraph/graph/PlainGraph.x10 \
+	./src/org/scalegraph/communities/LAPACK.x10 \
 	./src/org/scalegraph/graph/Graph.x10 \
 	./src/org/scalegraph/communities/RandomWalk.x10 \
 	./src/org/scalegraph/util/ScaleGraphMath.x10 \

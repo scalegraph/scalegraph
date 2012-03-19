@@ -10,7 +10,6 @@ public class RandomWalk {
     private var nVertex:Int;
     private var idToIdxMap:HashMap[Long, Int];
     private var U:DenseMatrix;
-    // private var S:DenseMatrix;
     private var V:DenseMatrix;
     private var L:DenseMatrix;
     
@@ -155,6 +154,6 @@ public class RandomWalk {
         result *= c;
         result += ei;
         result *= (1 - c);
-        return result;
+        return new RandomWalkResult(idToIdxMap, result);
     }
 }
