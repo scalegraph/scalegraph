@@ -43,6 +43,12 @@ def updateNPlaces():
 
                open('./Makefile', 'w').write(str(configEntry))
 
+def printUsage():
+	print 'Configuration script of ScaleGraph Test'
+	print 'Usage :'
+	print '1) Just run the conf.py'
+	print '2) python conf.py -hosts <comma separated host list>'
+
 def main(item):
 	hostsFlag = False;
 	hostList = [];
@@ -50,7 +56,9 @@ def main(item):
 		if item[0] == '-hosts':
 			hostsFlag = True;
 			hostList = item[1].split(',')
-
+		else:
+		    printUsage()
+		    return
 	
 	configEntry = ''
 	userchoice = ''
@@ -79,6 +87,7 @@ def main(item):
 			if (len(tsubameStatus) == 0):
 				     print ('Error : No nodes have been allocated. Please allocate them using \'alloc\' command')
 				     print ('Example : /data0/t2gsuzumuralab/apps/utils/bin/allocnode -q S -g t2gsuzumuralab -c 2 -n 4')		
+				     return
 			else:
 				#print (tsubameStatus)
 				spinfo = tsubameStatus.split('\n')
