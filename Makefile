@@ -539,6 +539,7 @@ test_randomwalk:
 	./src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	./src/org/scalegraph/util/DirectoryInfo.x10 \
 	./src/org/scalegraph/clustering/LAPACK.x10 \
+	./src/org/scalegraph/communities/RandomWalkResult.x10 \
 	./src/test/scalegraph/communities/TestRandomWalk.x10;
 	
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";

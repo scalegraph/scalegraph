@@ -13,22 +13,23 @@ public class TestRandomWalk {
         Console.OUT.println("Start Random Walk with Restart Test");
         val graph = new PlainGraph(GraphSizeCategory.SMALL);
         Console.OUT.println("add edges");
-        graph.addEdge("1 2");
-        graph.addEdge("1 3");
-        graph.addEdge("1 4");
-        graph.addEdge("2 3");
-        graph.addEdge("2 8");
-        graph.addEdge("3 4");
-        graph.addEdge("4 5");
-        graph.addEdge("5 6");
-        graph.addEdge("5 7");
-        graph.addEdge("6 7");
-        graph.addEdge("8 9");
-        graph.addEdge("8 11");
-        graph.addEdge("9 10");
-        graph.addEdge("10 11");
-        graph.addEdge("10 12");
-        graph.addEdge("11 12");
+        graph.addEdge("1 2");        graph.addEdge("2 1");
+        graph.addEdge("1 3");        graph.addEdge("3 1");
+        graph.addEdge("1 4");        graph.addEdge("4 1");
+        graph.addEdge("2 3");        graph.addEdge("3 2");
+        graph.addEdge("2 8");        graph.addEdge("8 2");
+        graph.addEdge("3 4");        graph.addEdge("4 3");
+        graph.addEdge("4 5");        graph.addEdge("5 4");
+        graph.addEdge("5 6");        graph.addEdge("6 5");
+        graph.addEdge("5 7");        graph.addEdge("7 5");
+        graph.addEdge("6 7");        graph.addEdge("7 6");
+        graph.addEdge("8 9");        graph.addEdge("9 8");
+        graph.addEdge("8 11");        graph.addEdge("11 8");
+        graph.addEdge("9 10");        graph.addEdge("10 9");
+        graph.addEdge("10 11");        graph.addEdge("11 10");
+        graph.addEdge("10 12");        graph.addEdge("12 10");
+        graph.addEdge("11 12");        graph.addEdge("12 11");
+
         Console.OUT.println("end add edges");
         try {
             val vcount = graph.getVertexCount();
@@ -55,11 +56,11 @@ public class TestRandomWalk {
         Console.OUT.println("Start Pre-compute stage");
         rwr.run();
         Console.OUT.println("Start Query Stage");
-        Console.OUT.println(rwr.query(1));
+        Console.OUT.println(rwr.query(4));
         Console.OUT.println("Start OnTheFly method");
-        iterateRandomWalk(graph, 1);
+        iterateRandomWalk(graph, 3);
         Console.OUT.println("Start PreComputational method");
-        preComputationRandomWalk(graph, 1);
+        preComputationRandomWalk(graph, 3);
         Console.OUT.println("End Test");
     }
 

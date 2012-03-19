@@ -4,6 +4,8 @@ import x10.matrix.Matrix;
 import x10.matrix.DenseMatrix;
 import x10.util.HashMap;
 import org.scalegraph.graph.PlainGraph;
+import org.scalegraph.graph.GraphSizeCategory;
+import org.scalegraph.clustering.SpectralClustering;
 
 public class RandomWalk {
     private var graph:PlainGraph;
@@ -14,7 +16,7 @@ public class RandomWalk {
     private var L:DenseMatrix;
     
     static private val c = 0.85;
-    static private val t = 1;
+    static private val t = 3;
 
     /**
        @param graph
@@ -24,7 +26,6 @@ public class RandomWalk {
         this.nVertex = graph.getVertexCount() as Int;
         this.idToIdxMap = new HashMap[Long, Int]();
         U = new DenseMatrix(nVertex, t);
-        // S = new DenseMatrix(t, t);
         V = new DenseMatrix(t, nVertex);
         L = new DenseMatrix(t, t);
     }
@@ -42,36 +43,21 @@ public class RandomWalk {
        @return none
     **/
     private def lowRankAod(W:DenseMatrix) {
-        for (i in idToIdxMap.keySet()) {
-            val neighbours = graph.getOutNeighbours(i);
-            val nodeIdx = idToIdxMap(i)();
-            if (neighbours != null) {
-                for (nbrs in neighbours) {
-                    val neighbourIdx = idToIdxMap(neighbours(nbrs))();
-                    U(neighbourIdx, 0) += W(neighbourIdx, nodeIdx);
-                }
-            } else {
-                for (var j:Int = 0; j < nVertex; j++) {
-                    U(j, 0) += W(j, nodeIdx);
-                }
-            }
-        }
+        // calculate U
+        U = clusteringMatrix(W);
 
-        // S = (trans(U) * U) ^ (-1)
-        val S = new DenseMatrix(t, t);
-        S.transMult(U, U);
-        S(0, 0) = 1 / S(0, 0); // t == 1
+        // S^(-1) = (trans(U) * U)
+        val Sinv = new DenseMatrix(t, t);
+        Sinv.transMult(U, U);
 
         // V = trans(U) * W
         V.transMult(U, W);
 
         // L = (S^(-1) - c * V * U) ^ (-1)
-        val vu = new DenseMatrix(1, 1);
+        val vu = new DenseMatrix(t, t);
         vu.mult(V, U);
-        val Sinv = new DenseMatrix(1, 1);
-        Sinv(0, 0) = 1 / S(0, 0); // t == 1
-        L = Sinv - c * vu;
-        L(0, 0) = 1 / L(0, 0);
+        val Ltmp = Sinv - c * vu;
+        L = LAPACK.inverseDenseMatrix(Ltmp);
     }
 
     /**
@@ -135,6 +121,42 @@ public class RandomWalk {
         return globalMatrix();
     }
 
+    /**
+       @param matrix
+       @return U
+     **/
+    private def clusteringMatrix(matrix:DenseMatrix) {
+        val graph = convertMatrixToGraph(matrix);
+        val clustering = new SpectralClustering(graph);
+        val result = clustering.run(t);
+        Console.OUT.println(result);
+        val U:DenseMatrix = new DenseMatrix(nVertex, t);
+        for (var i:Int = 0; i < nVertex; i++) {
+            val col = result.getCluster((i + 1) as Long);
+            for (var j:Int = 0; j < nVertex; j++) {
+                U(j, col) += matrix(j, i);
+            }
+        }
+        U.print();
+        return U;
+    }
+    
+    private def convertMatrixToGraph(matrix:DenseMatrix) {
+        val graph:PlainGraph = new PlainGraph(GraphSizeCategory.SMALL);
+        Console.OUT.println("convert matrix to graph");
+        matrix.print();
+        for (var i:Int = 0; i < matrix.M; i++) {
+            for (var j:Int = 0; j < matrix.N; j++) {
+                if (matrix(i, j) > 0) {
+                    val edge = (j + 1).toString() + " " + (i + 1);
+                    Console.OUT.println(edge);
+                    graph.addEdge(edge);
+                }
+            }
+        }
+        return graph;
+    }
+    
     /**
        @param node id which you want to calculate RWR score
        @return DenseMatrix RWR score
