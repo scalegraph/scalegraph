@@ -74,7 +74,7 @@ public class BetweennessCentrality {
 		
 	}
     /****************************************************************************
-    *                                AttributedGraph                            *
+    *                                AttributedGraph                  *
     ****************************************************************************/
 
 	public static def run(g: AttributedGraph, isNormalize: Boolean) : Array[Pair[Vertex, Double]] {
@@ -263,7 +263,7 @@ public class BetweennessCentrality {
 	}
 	
     /****************************************************************************
-    *                               PlainGraph                                  *
+    *                               PlainGraph                        *
     ****************************************************************************/
    
 	public static def run(g: PlainGraph, isNormalize: Boolean) : Array[Pair[Long, Double]] {
@@ -343,7 +343,7 @@ public class BetweennessCentrality {
 			}
 			
 			Console.OUT.println("***************************");
-			Console.OUT.println("Before reaching finish:" + here.id);
+			Console.OUT.println("Reaching finish:" + here.id);
 			Console.OUT.println("***************************");
 		}
 		Console.OUT.println("***************************");
@@ -371,80 +371,7 @@ public class BetweennessCentrality {
 		Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 	}
 	
-	protected static class Cache {
-		
-		var numData: Int = 0;
-		val records: ArrayList[CacheRecord];
-		val size: Int;
-
-		def this(sz: Int) {
-			numData = 0;
-			this.size = sz;
-			records = new ArrayList[CacheRecord](this.size);
-			
-			for(i in 0..(this.size -1)) {
-				records(i) = new CacheRecord();
-			}
-		}
-		
-		public def size() = size;
-		
-		public def getIndexForKey(key: Int) {
-			
-			if(numData <= 0)
-				return -1;
-			
-			for(i in 0..(numData -1)) {
-				val r = records(i);
-				if(r.key == key) {
-					return i;
-				}
-			}
-			return -1;
-		}
-		
-
-		public def update(key: Int, g: PlainGraph) {
-			
-			val dat = g.getOutNeighbours(key);
-
-			if(numData == size) {
-				// Cache full
-				records.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
-				numData = size - size / 3;
-				
-				for(i in records) {
-					i.hit = 0;
-				}
-			}
-			
-			val index = numData;
-			val r = records(index);
-			r.key = key;
-			r.data = dat;
-			++r.hit;
-			++numData;
-		
-			return dat;
-		}
 	
-		public operator this(key:Int, g:PlainGraph) {
-			
-			val i = getIndexForKey(key);
-			if(i == -1) {
-				val dat = update(key, g);
-				return dat;
-			}
-			val dat = records(i).data;
-			return dat;
-		}
-	}
-	
-	protected static class CacheRecord {
-		var key: Int = -1;
-		var data: Array[Long];
-		var hit: Int = 0;
-	}
 	
 	protected def getNeighBours(cache: Cache, vertexId:Int) {
 		
@@ -569,5 +496,84 @@ public class BetweennessCentrality {
 		
 		releaseSpaceId(spaceId);
 		Console.OUT.println("End for src: " + source + " On place: " + here.id);
+	}
+	
+	/****************************************************************************
+	 *                              Inner Classes                     *
+	 ****************************************************************************/
+	
+	protected static class Cache {
+		
+		var numData: Int = 0;
+		val records: ArrayList[CacheRecord];
+		val size: Int;
+
+		def this(sz: Int) {
+			numData = 0;
+			this.size = sz;
+			records = new ArrayList[CacheRecord](this.size);
+			
+			for(i in 0..(this.size -1)) {
+				records(i) = new CacheRecord();
+			}
+		}
+		
+		public def size() = size;
+		
+		public def getIndexForKey(key: Int) {
+			
+			if(numData <= 0)
+				return -1;
+			
+			for(i in 0..(numData -1)) {
+				val r = records(i);
+				if(r.key == key) {
+					return i;
+				}
+			}
+			return -1;
+		}
+		
+
+		public def update(key: Int, g: PlainGraph) {
+			
+			val dat = g.getOutNeighbours(key);
+
+			if(numData == size) {
+				// Cache full
+				records.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
+				numData = size - size / 3;
+				
+				for(i in records) {
+					i.hit = 0;
+				}
+			}
+			
+			val index = numData;
+			val r = records(index);
+			r.key = key;
+			r.data = dat;
+			++r.hit;
+			++numData;
+			
+			return dat;
+		}
+		
+		public operator this(key:Int, g:PlainGraph) {
+			
+			val i = getIndexForKey(key);
+			if(i == -1) {
+				val dat = update(key, g);
+				return dat;
+			}
+			val dat = records(i).data;
+			return dat;
+		}
+	}
+	
+	protected static class CacheRecord {
+		var key: Int = -1;
+		var data: Array[Long];
+		var hit: Int = 0;
 	}
 }
