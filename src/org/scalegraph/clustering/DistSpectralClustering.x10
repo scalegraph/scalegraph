@@ -10,10 +10,11 @@ import x10.util.Timer;
 import x10.matrix.Matrix;
 import x10.matrix.DenseMatrix;
 import x10.matrix.Vector;
+import x10.matrix.dist.DistDenseMatrix;
 
 import org.scalegraph.graph.PlainGraph;
 
-public class SpectralClustering {
+public class DistSpectralClustering {
 	
 	private var graph:PlainGraph;
 	private var IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
@@ -40,19 +41,21 @@ public class SpectralClustering {
 		}
 		
 		/*
-		 * copy eigenvectors to Array
+		 * copy eigenvectors to DistArray
 		 * Eigenvector which correspond to eigenvalue 0 is not used
 		 */
 		val nPoints = l.M;
-		val points = new Array[Vector](nPoints);
-		for(var i:Int = 0; i < nPoints; i++){
-			points(i) = Vector.make(nClusters);
-			for(var j:Int = 0; j < nClusters; j++){
-				points(i)(j) = l(i, j + 1);
+		val points = DistArray.make[Vector](Dist.makeBlock(0..(nPoints-1)), (Point) => Vector.make(nClusters));
+		finish for(p in points.dist.places()) async at(p) {
+			for([i] in points.dist.get(p)){
+				//Console.OUT.println("point: [" + i + "]");
+				for(var j:Int = 0; j < nClusters; j++){
+					points(i)(j) = l(i, j + 1);
+				}
 			}
 		}
 		
-		val resultArray:Array[Int] = kmeans(nClusters, points);  // step 5
+		val resultArray:DistArray[Int] = kmeans(nClusters, points);  // step 5
 		val result:ClusteringResult = makeClusteringResult(nClusters, resultArray);
 		
 		/*
@@ -74,13 +77,18 @@ public class SpectralClustering {
 		IDXtoID = new HashMap[Int, Long](nVertices);
 		Console.OUT.println("nVertices = " + nVertices);
 		
+		val globalIDtoIDX = GlobalRef[HashMap[Long, Int]](IDtoIDX);
+		val globalIDXtoID = GlobalRef[HashMap[Int, Long]](IDXtoID);
 		var counter:Int = 0;
-		for(vpt in vertexList) {
-			val vertexID:Long = at(vertexList.dist(vpt)) vertexList(vpt);
-			if(vertexID != -1l){
-				IDtoIDX.put(vertexID, counter);
-				IDXtoID.put(counter, vertexID);
-				counter++;
+		val there = here;
+		finish for(p in vertexList.dist.places()) async at(p) {
+			for(vpt in vertexList.dist.get(p)){
+				val vertexID:Long = vertexList(vpt);
+				if(vertexID != -1l) at(there) atomic {
+					globalIDtoIDX().put(vertexID, counter);
+					globalIDXtoID().put(counter, vertexID);
+					counter++;
+				}
 			}
 		}
 	}
@@ -91,7 +99,7 @@ public class SpectralClustering {
 		val l = DenseMatrix.make(nVertices, nVertices);
 		
 		/* make degree matrix and Laplacian matrix */
-		for(vertexID in IDtoIDX.keySet()) {
+		finish for(vertexID in IDtoIDX.keySet()) async {
 			val outNeighbours:Array[Long] = graph.getOutNeighbours(vertexID);
 			val inNeighbours:Array[Long] = graph.getInNeighbours(vertexID);
 			val nNeighbours = (outNeighbours != null ? outNeighbours.size : 0) + (inNeighbours != null ? inNeighbours.size : 0);
@@ -137,22 +145,26 @@ public class SpectralClustering {
 		return info;
 	}
 	
-	private def kmeans(k:Int, points:Array[Vector]): Array[Int] {
+	private def kmeans(k:Int, points:DistArray[Vector]): DistArray[Int] {
 		val dim:Int = k;
-		val nPoints:Int = points.size;
+		val nPoints:Int = points.dist.region.size();
+		//val random = PlaceLocalandle.make[Random](Dist.makeUnique(), () => new Random(Timer.nanoTime()));
+		val localCurClusters = PlaceLocalHandle.make[Array[Vector]](Dist.makeUnique(), () => new Array[Vector](k, (Int) => Vector.make(dim)));
+		val localNewClusters = PlaceLocalHandle.make[Array[Vector]](Dist.makeUnique(), () => new Array[Vector](k, (Int) => Vector.make(dim)));
+		val localClusterCounts = PlaceLocalHandle.make[Array[Int]](Dist.makeUnique(), () => new Array[Int](k, 0));
 		val curClusters = new Array[Vector](k, (Int) => Vector.make(dim));
 		val newClusters = new Array[Vector](k, (Int) => Vector.make(dim));
 		val clusterCounts = new Array[Int](k, 0);
-		val result = new Array[Int](nPoints);
+		val result = DistArray.make[Int](points.dist);
 		val iterations = 50;
 		
 		/* initialize */
 		val random = new Random(Timer.milliTime());
 		for(i in points){
 			val c = random.nextInt(k);
-			curClusters(c).cellAdd(points(i));
+			curClusters(c).cellAdd(at(points.dist(i)) points(i));
 			clusterCounts(c)++;
-			result(i) = c;
+			at(result.dist(i)) result(i) = c;
 		}
 		/* compute central points of current clusters */
 		for(i in curClusters){
@@ -160,28 +172,51 @@ public class SpectralClustering {
 			clusterCounts(i) = 0;  // reset counter
 		}
 		/* debug print */
-		/*for(i in result){
-			Console.OUT.println("" + i + points(i) + " -> [" + result(i) + "]" + curClusters(result(i)));
-		}*/
+		//Console.OUT.println(result);
 		
 		for(iter in 1..iterations){
 			Console.OUT.println("iteration: " + iter);
-			/* compute new clusters and counters */
-			for(i in points){
-				/* compute which cluster is closest to each point */
-				var minDist:Double = Double.MAX_VALUE;
-				var closestCluster:Int = 0;
-				for([j] in curClusters){
-					var dist:Double = (curClusters(j) - points(i)).norm();
-					if(dist < minDist){
-						minDist = dist;
-						closestCluster = j;
-					}
+			
+			/* copy current clusters to local current clusters */
+			finish for(p in Place.places()) async at(p) {
+				for(var i:Int = 0; i < k; i++){
+					localCurClusters()(i) = curClusters(i);
+					localNewClusters()(i).reset();
+					localClusterCounts()(i) = 0;
 				}
-				/* add the point to the cluster */
-				newClusters(closestCluster).cellAdd(points(i));
-				clusterCounts(closestCluster)++;
-				result(i) = closestCluster;
+			}
+			
+			/* compute local new clusters and local counters */
+			finish for(p in Place.places()) async at(p) {
+				for(i in points.dist.get(p)){
+					/* compute which cluster is closest to each point */
+					var minDist:Double = Double.MAX_VALUE;
+					var closestCluster:Int = 0;
+					for(var j:Int = 0; j < k; j++){
+						var dist:Double = (localCurClusters()(j) - points(i)).norm();
+						if(dist < minDist){
+							minDist = dist;
+							closestCluster = j;
+						}
+					}
+					/* add the point to the cluster */
+					localNewClusters()(closestCluster).cellAdd(points(i));
+					localClusterCounts()(closestCluster) = localClusterCounts()(closestCluster) + 1;
+					result(i) = closestCluster;
+				}
+			}
+			
+			/* merge local new clusters into new clusters */
+			val newClustersGR = GlobalRef(newClusters);
+			val clusterCountsGR = GlobalRef(clusterCounts);
+			val there = here;
+			finish for(p in Place.places()) async at(p) {
+				val tmpNewClusters = localNewClusters();
+				val tmpClusterCounts = localClusterCounts();
+				at(there) atomic for(var i:Int = 0; i < k; i++){
+					newClustersGR()(i).cellAdd(tmpNewClusters(i));
+					clusterCountsGR()(i) += tmpClusterCounts(i);
+				}
 			}
 			
 			/* compute central points of new clusters */
@@ -191,9 +226,7 @@ public class SpectralClustering {
 			}
 			
 			/* debug print */
-			/*for(i in result){
-				Console.OUT.println("" + i + points(i) + " -> [" + result(i) + "]" + newClusters(result(i)));
-			}*/
+			//Console.OUT.println(result);
 			
 			/* test for convergence */
 			var b:Boolean = true;
@@ -216,16 +249,20 @@ public class SpectralClustering {
 		return result;
 	}
 	
-	private def makeClusteringResult(nClusters:Int, array:Array[Int](1)): ClusteringResult {
-		val VtoC = new HashMap[Long, Int](array.size);
+	private def makeClusteringResult(nClusters:Int, array:DistArray[Int](1)): ClusteringResult {
+		val VtoC = new HashMap[Long, Int](array.dist.region.size());
 		val CtoV = new HashMap[Int, Array[Long]](nClusters);
 		val tmpLists = new Array[ArrayBuilder[Long]](nClusters, (Int) => new ArrayBuilder[Long]());
 		
-		for([i] in array){
-			val vertexID = IDXtoID(i)();
-			val clusterNum = array(i);
-			VtoC.put(vertexID, clusterNum);
-			tmpLists(clusterNum).add(vertexID);
+		finish for(p in array.dist.places()) async {
+			for([i] in array.dist.get(p)){
+				val vertexID = IDXtoID(i)();
+				val clusterNum = at(p) array(i);
+				atomic {
+					VtoC.put(vertexID, clusterNum);
+					tmpLists(clusterNum).add(vertexID);
+				}
+			}
 		}
 		for([i] in tmpLists){
 			CtoV.put(i, tmpLists(i).result());

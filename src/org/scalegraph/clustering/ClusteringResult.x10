@@ -26,9 +26,9 @@ public class ClusteringResult(nVertices:Int, nClusters:Int) {
 	public def toString(): String {
 		val sb = new StringBuilder();
 		sb.add("-------- ClusteringResult("+nVertices+", "+nClusters+") --------\n");
-		sb.add("[vertexID] -> [clusterNum]\n");
-		for(vertexID in VtoC.keySet()){
-			sb.add("[" + vertexID + "] -> [" + VtoC.get(vertexID) + "]\n");
+		sb.add("[clusterNum] -> [vertexID]\n");
+		for(clusterNum in getAllClusters()){
+			sb.add("[" + clusterNum + "] -> " + getVertices(clusterNum) + "\n");
 		}
 		sb.add("----------------------------------------\n");
 		return sb.result();
