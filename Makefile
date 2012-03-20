@@ -475,6 +475,7 @@ test_clustering:
 	-classpath /data0/t2gsuzumuralab/scalegraph/x10.gml/lib/native_gml.jar \
 	-x10lib /data0/t2gsuzumuralab/scalegraph/x10.gml/native_gml.properties \
 	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
+	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10 \
