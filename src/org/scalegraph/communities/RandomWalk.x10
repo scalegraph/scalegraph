@@ -3,21 +3,45 @@ package org.scalegraph.communities;
 import x10.matrix.Matrix;
 import x10.matrix.DenseMatrix;
 import x10.util.HashMap;
+import x10.util.Pair;
+import x10.util.ArrayList;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
 import org.scalegraph.clustering.SpectralClustering;
+import org.scalegraph.clustering.ClusteringResult;
 
 public class RandomWalk {
     private var graph:PlainGraph;
     private var nVertex:Int;
     private var idToIdxMap:HashMap[Long, Int];
+    private var idxToIdMap:HashMap[Int, Long];
     private var U:DenseMatrix;
     private var V:DenseMatrix;
     private var L:DenseMatrix;
+    private var Q1inv:DenseMatrix;
     
     static private val c = 0.85;
     static private val t = 3;
+    static private val k = 4;
 
+    private class DecomposeResult {
+        public val W1:DenseMatrix;
+        public val W2:DenseMatrix;
+        public val result:ArrayList[Pair[Int, Int]];
+        public val idToIdxMap:HashMap[Long, Int];
+        public val idxToIdMap:HashMap[Int, Long];
+        public def this(W1:DenseMatrix, W2:DenseMatrix,
+                        result:ArrayList[Pair[Int, Int]],
+                        idToIdxMap:HashMap[Long, Int],
+                        idxToIdMap:HashMap[Int, Long]) {
+            this.W1 = W1;
+            this.W2 = W2;
+            this.result = result;
+            this.idToIdxMap = idToIdxMap;
+            this.idxToIdMap = idxToIdMap;
+        }
+    }
+    
     /**
        @param graph
      **/
@@ -28,36 +52,218 @@ public class RandomWalk {
         U = new DenseMatrix(nVertex, t);
         V = new DenseMatrix(t, nVertex);
         L = new DenseMatrix(t, t);
+        Q1inv = new DenseMatrix(nVertex, nVertex);
     }
 
+    private def testDecompose(result:DecomposeResult) {
+        val vertexList = graph.getVertexList();
+        for (p in Place.places()) {
+            at (p) {
+                val region = (vertexList.dist | p).region;
+                for (i in region) {
+                    val id = vertexList(i);
+                    val neighbours = graph.getOutNeighbours(id);
+                    val idx = idToIdxMap(id)();
+                    for (neighbour in neighbours) {
+                        val nIdx = idToIdxMap(neighbours(neighbour))();
+                        if (!(result.W1(idx, nIdx) > 0 ||
+                              result.W2(idx, nIdx) > 0)) {
+                            throw new Error();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public def testInverseW1(Q1inv:DenseMatrix, W1:DenseMatrix) {
+        val I = new DenseMatrix(nVertex, nVertex);
+        for (var i:Int = 0; i < nVertex; i++) {
+            I(i, i) = 1.0;
+        }
+        val Q1 = I - c * W1;
+        val _I = new DenseMatrix(nVertex, nVertex);
+        _I.mult(Q1, Q1inv);
+        _I.print();
+        if ((_I - I).norm() > 0.001) {
+            throw new Error();
+        }
+    }
+
+    private def testLowRankAod(U:DenseMatrix, Sinv:DenseMatrix, V:DenseMatrix,
+                               W2:DenseMatrix) {
+        val S = LAPACK.inverseDenseMatrix(Sinv);
+        val SV = new DenseMatrix(t, nVertex);
+        SV.mult(S, V);
+        val USV = new DenseMatrix(nVertex, nVertex);
+        USV.mult(U, SV);
+        W2.print();
+        USV.print();
+    }
+    
     /**
        calculate pre-computation stage
      **/
     public def run() {
-        val W:DenseMatrix = convertGraphToMatrix(graph);
-        lowRankAod(W);
+        val Ws:DecomposeResult = decomposeGraph(graph);
+        val Q1inv = inverseW1(Ws.W1, Ws.result);
+        val W2 = Ws.W2;
+        this.idToIdxMap = Ws.idToIdxMap;
+        this.idxToIdMap = Ws.idxToIdMap;
+        testDecompose(Ws);
+        testInverseW1(Q1inv, Ws.W1);
+        val W2Aod:Array[DenseMatrix] = lowRankAod(W2);
+        val U = W2Aod(0);
+        val Sinv = W2Aod(1);
+        val V = W2Aod(2);
+        val L = calculateL(U, Sinv, V, Q1inv);
+        testLowRankAod(U, Sinv, V, W2);
+        this.U = U;
+        this.V = V;
+        this.L = L;
+        this.Q1inv = Q1inv;
     }
 
     /**
-       @param W the normalized weighted matrix
-       @return none
+       to calculate Q1 inverse
+       @param W1 Q1 = I - c * W1
+       @param clusterRange clustering range
+       @return Q1 inverse
+     **/
+    private def inverseW1(W1:DenseMatrix, clusterRange:ArrayList[Pair[Int, Int]]) {
+        val I = new DenseMatrix(W1.M, W1.N);
+        for (var i:Int = 0; i < I.M; i++) {
+                I(i, i) = 1;
+        }
+        val Q1 = I - c * W1;
+        val Q1inv = new DenseMatrix(Q1.M, Q1.N);
+        for (range in clusterRange) {
+            val size = range.second - range.first;
+            val q1 = new DenseMatrix(size, size);
+            copySubset(Q1, range.first, range.first,
+                       q1, 0, 0, size, size);
+            val q1inv = LAPACK.inverseDenseMatrix(q1);
+            q1inv.print();
+            copySubset(q1inv, 0, 0,
+                       Q1inv, range.first, range.first, size, size);
+        }
+        return Q1inv;
+    }
+
+    private def copySubset(src:DenseMatrix, srcRowOffset:Int, srcColOffset:Int,
+                           dst:DenseMatrix, dstRowOffset:Int, dstColOffset:Int,
+                           rowCnt:Int, colCnt:Int) {
+        for (var i:Int = 0; i < rowCnt; i++) {
+            for (var j:Int = 0; j < colCnt; j++) {
+                dst(dstRowOffset + i, dstColOffset + j) =
+                    src(srcRowOffset + i, srcColOffset + j);
+            }
+        }
+    }
+    
+    private def decomposeGraph(graph:PlainGraph) {
+        val clustering = new SpectralClustering(graph);
+        val result = clustering.run(k);
+        Console.OUT.println(result);
+        val clusters = result.getAllClusters();
+        var cnt:Int = 0;
+        val idToIdxMap = GlobalRef[HashMap[Long, Int]](new HashMap[Long, Int]());
+        val idxToIdMap = GlobalRef[HashMap[Int, Long]](new HashMap[Int, Long]());
+        val W1 = GlobalRef[DenseMatrix](new DenseMatrix(nVertex, nVertex));
+        val W2 = GlobalRef[DenseMatrix](new DenseMatrix(nVertex, nVertex));
+
+        val clusterRange:ArrayList[Pair[Int, Int]] =
+            new ArrayList[Pair[Int, Int]]();
+        for (key in clusters) {
+            val vertices = result.getVertices(key);
+            val tmp = cnt;
+            for (j in vertices) {
+                val vertex = vertices(j);
+                idToIdxMap().put(vertex, cnt);
+                idxToIdMap().put(cnt, vertex);
+                cnt++;
+            }
+            clusterRange.add(new Pair[Int, Int](tmp, cnt));
+        }
+        
+        val vertexList = graph.getVertexList();
+        for (p in Place.places()) {
+            at (p) {
+                val r = (vertexList.dist | p).region;
+                for (i in r) {
+                    val nodeId = vertexList(i);
+                    val neighbours = graph.getOutNeighbours(nodeId);
+                    val nodeIdx = idToIdxMap()(nodeId)();
+                    if (neighbours != null && neighbours.size != 0) {
+                        for (j in neighbours) {
+                            val neighbour = neighbours(j);
+                            val neighbourIdx = idToIdxMap()(neighbour)();
+                            val prob = 1.0 / neighbours.size;
+                            if (result.getCluster(nodeId) ==
+                                result.getCluster(neighbour)) {
+                                at (W1) {
+                                    W1()(nodeIdx, neighbourIdx) = prob;
+                                }
+                            } else {
+                                at (W2) {
+                                    W2()(nodeIdx, neighbourIdx) = prob;
+                                }
+                            }
+                        }
+                    } else {
+                        for (j in 0..(nVertex - 1)) {
+                            val prob = 1.0 / nVertex;
+                            val neighbour = idxToIdMap()(j)();
+                            if (result.getCluster(nodeId) ==
+                                result.getCluster(neighbour)) {
+                                at (W1) {
+                                    W1()(nodeIdx, j) = prob;
+                                }
+                            } else {
+                                at (W2) {
+                                    W2()(nodeIdx, j) = prob;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return new DecomposeResult(W1(), W2(), clusterRange,
+                                   idToIdxMap(), idxToIdMap());
+    }
+    
+    /**
+       @param W2 the normalized weighted matrix
+       @return result of Array which has U, S, V(W2 = U * S * V)
     **/
-    private def lowRankAod(W:DenseMatrix) {
+    private def lowRankAod(W2:DenseMatrix) {
         // calculate U
-        U = clusteringMatrix(W);
+        U = clusteringMatrix(W2);
 
         // S^(-1) = (trans(U) * U)
         val Sinv = new DenseMatrix(t, t);
         Sinv.transMult(U, U);
 
         // V = trans(U) * W
-        V.transMult(U, W);
+        V.transMult(U, W2);
 
-        // L = (S^(-1) - c * V * U) ^ (-1)
-        val vu = new DenseMatrix(t, t);
-        vu.mult(V, U);
-        val Ltmp = Sinv - c * vu;
-        L = LAPACK.inverseDenseMatrix(Ltmp);
+        val result:Array[DenseMatrix] = new Array[DenseMatrix](3);
+        result(0) = U;
+        result(1) = Sinv;
+        result(2) = V;
+        return result;
+    }
+
+    private def calculateL(U:DenseMatrix, Sinv:DenseMatrix,
+                           V:DenseMatrix, Q1inv:DenseMatrix) {
+        val Q1invU = new DenseMatrix(nVertex, t);
+        Q1invU.mult(Q1inv, U);
+        val VQ1invU = new DenseMatrix(t, t);
+        VQ1invU.mult(V, Q1invU);
+        val Linv = Sinv - c * VQ1invU;
+        return LAPACK.inverseDenseMatrix(Linv);
     }
 
     /**
@@ -145,6 +351,9 @@ public class RandomWalk {
         val graph:PlainGraph = new PlainGraph(GraphSizeCategory.SMALL);
         Console.OUT.println("convert matrix to graph");
         matrix.print();
+        for (var i:Int = 1; i <= matrix.N; i++) {
+            graph.addVertex(i.toString());
+        }
         for (var i:Int = 0; i < matrix.M; i++) {
             for (var j:Int = 0; j < matrix.N; j++) {
                 if (matrix(i, j) > 0) {
@@ -164,18 +373,19 @@ public class RandomWalk {
     public def query(id:Long) {
         val ei = new DenseMatrix(nVertex, 1);
         ei(idToIdxMap(id)(), 0) = 1.0;
-        // result = (1 - c) * (ei + c * U * L * V * ei)
-        var result:DenseMatrix = new DenseMatrix(nVertex, 1);
-        val tmp1 = new DenseMatrix(t, 1);
-        tmp1.mult(V, ei);
-        val tmp2 = new DenseMatrix(t, 1);
-        tmp2.mult(L, tmp1);
-         
-        result.mult(U, tmp2);
-        
-        result *= c;
-        result += ei;
-        result *= (1 - c);
+        // result = (1 - c) * (Q1^(-1) * ei + c * Q1^(-1) * U * L * V * Q1^(-1) * ei)
+        val Q1invE1 = new DenseMatrix(nVertex, 1);
+        Q1invE1.mult(Q1inv, ei);
+        val VQ1invE1 = new DenseMatrix(t, 1);
+        VQ1invE1.mult(V, Q1invE1);
+        val LVQ1invE1 = new DenseMatrix(t, 1);
+        LVQ1invE1.mult(L, VQ1invE1);
+        val ULVQ1invE1 = new DenseMatrix(nVertex, 1);
+        ULVQ1invE1.mult(U, LVQ1invE1);
+        val Q1invULVQ1invE1 = new DenseMatrix(nVertex, 1);
+        Q1invULVQ1invE1.mult(Q1inv, ULVQ1invE1);
+
+        val result = (1 - c) * (Q1invE1 + c * Q1invULVQ1invE1);
         return new RandomWalkResult(idToIdxMap, result);
     }
 }

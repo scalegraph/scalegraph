@@ -9,10 +9,8 @@ import x10.matrix.DenseMatrix;
 import x10.util.HashMap;
 
 public class TestRandomWalk {
-    public static def main(Array[String]) {
-        Console.OUT.println("Start Random Walk with Restart Test");
+    private static def graphSetUp():PlainGraph {
         val graph = new PlainGraph(GraphSizeCategory.SMALL);
-        Console.OUT.println("add edges");
         graph.addEdge("1 2");        graph.addEdge("2 1");
         graph.addEdge("1 3");        graph.addEdge("3 1");
         graph.addEdge("1 4");        graph.addEdge("4 1");
@@ -29,39 +27,33 @@ public class TestRandomWalk {
         graph.addEdge("10 11");        graph.addEdge("11 10");
         graph.addEdge("10 12");        graph.addEdge("12 10");
         graph.addEdge("11 12");        graph.addEdge("12 11");
+        return graph;
+    }
 
-        Console.OUT.println("end add edges");
-        try {
-            val vcount = graph.getVertexCount();
-            Console.OUT.println("vertex count is : " + vcount);
-        } catch (NullPointerException) {
-            Console.OUT.println("crashed by NullPointerException");
-            return;
-        }
-        
+    private static graphSetUpTsubame():PlainGraph {
+        val reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
+        val graph =
+            reader.
+            loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale12-scattered");
+        return graph;
+    }
+    
+    public static def main(Array[String]) {
+        Console.OUT.println("Start Random Walk with Restart Test");
+        val graph = graphSetUpTsubame();
+
         val result:DistArray[Long] = graph.getVertexList();
         
-        Console.OUT.println("printing vertex List");
-        for(p in Place.places()){
-        	val r:Region = result.dist.get(p);
-            
-        	at(p){
-        		for(point:Point in r){
-        			Console.OUT.println(result(point));
-        		}
-        	}
-        }
-
         val rwr:RandomWalk = new RandomWalk(graph);
-        Console.OUT.println("Start Pre-compute stage");
+        Console.OUT.println("----------Start Pre-compute stage----------");
         rwr.run();
-        Console.OUT.println("Start Query Stage");
+        Console.OUT.println("----------Start Query Stage----------");
         Console.OUT.println(rwr.query(4));
-        Console.OUT.println("Start OnTheFly method");
+        Console.OUT.println("----------Start OnTheFly method----------");
         iterateRandomWalk(graph, 3);
-        Console.OUT.println("Start PreComputational method");
+        Console.OUT.println("----------Start PreComputational method----------");
         preComputationRandomWalk(graph, 3);
-        Console.OUT.println("End Test");
+        Console.OUT.println("----------End Test----------");
     }
 
     private static def preComputationRandomWalk(graph:PlainGraph, id:Int) {
