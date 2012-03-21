@@ -26,9 +26,10 @@ public class BetweennessCentrality {
 	
 	// var isEnableCache: Boolean = false;
 	
-	static val CACHE_SIZE: Int = 10000;
+	static val CACHE_INDEX: Int = 1;
+	static val CACHE_ENTRY_PERINDEX: Int = 10000;
 	val ALLOC_SPACE = Runtime.MAX_THREADS;
-	val globalCaches: Array[Cache] = new Array[Cache](ALLOC_SPACE, (i: Int) => new Cache(CACHE_SIZE));
+	val globalCaches: Array[Cache] = new Array[Cache](ALLOC_SPACE, (i: Int) => new Cache(CACHE_INDEX, CACHE_ENTRY_PERINDEX));
 	val aquireSpaceLock: Lock = new Lock();
 	val freeSpaceAccessLock = new Lock();
 	val updateScoreLock: Lock = new Lock();
@@ -504,70 +505,75 @@ public class BetweennessCentrality {
 	
 	protected static class Cache {
 		
-		var numData: Int = 0;
-		val records: ArrayList[CacheRecord];
-		val size: Int;
+		val records: Array[ArrayList[CacheRecord]];
+		val numIndex: Int;
+		val numEntry: Int;
+		val pt: Array[Int];
 
-		def this(sz: Int) {
-			numData = 0;
-			this.size = sz;
-			records = new ArrayList[CacheRecord](this.size);
+		def this(nIndex: Int, nEntry: Int) {
+			this.numIndex = nIndex;
+			this.numEntry = nEntry;
+			this.pt = new Array[Int](this.numIndex, (i: Int) => 0);
+			records = new Array[ArrayList[CacheRecord]](nIndex, (i: Int) => new ArrayList[CacheRecord](nEntry));
 			
-			for(i in 0..(this.size -1)) {
-				records(i) = new CacheRecord();
+			for(i in records) {
+				for(e in 0..(this.numEntry -1)) {
+					records(i)(e) = new CacheRecord();
+				}
 			}
 		}
 		
-		public def size() = size;
+		public def size() = numIndex;
 		
-		public def getIndexForKey(key: Int) {
+		public def getDataForKey(key: Int) : Array[Long]{
 			
-			if(numData <= 0)
-				return -1;
+			val loc = key % numIndex;
+			val r = records(loc);
 			
-			for(i in 0..(numData -1)) {
-				val r = records(i);
-				if(r.key == key) {
-					return i;
+			if(pt(loc) <= 0)
+				return null;
+			
+			for(i in 0..(pt(loc) -1)) {
+				val e = records(loc)(i);
+				if(e.key == key) {
+					++e.hit;
+					return e.data;
 				}
 			}
-			return -1;
+			return null;
 		}
 		
 
 		public def update(key: Int, g: PlainGraph) {
 			
 			val dat = g.getOutNeighbours(key);
-
-			if(numData == size) {
+			val loc = key % numIndex;
+			val r = records(loc);
+			
+			if(pt(loc) == numEntry) {
 				// Cache full
-				records.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
-				numData = size - size / 3;
-				
-				for(i in records) {
-					i.hit = 0;
-				}
+				r.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
+				pt(loc) = numEntry - numEntry / 3;
 			}
 			
-			val index = numData;
-			val r = records(index);
-			r.key = key;
-			r.data = dat;
-			++r.hit;
-			++numData;
+			
+			val e = records(loc)(pt(loc));
+			e.key = key;
+			e.data = dat;
+			e.hit = 0;
+			pt(loc) += 1;
 			
 			return dat;
 		}
 		
 		public operator this(key:Int, g:PlainGraph) {
 			
-			val i = getIndexForKey(key);
-			if(i == -1) {
-				val dat = update(key, g);
-				return dat;
+			val d = getDataForKey(key);
+			if(d == null) {
+				val newData = update(key, g);
+				return newData;
 			}
-			val dat = records(i).data;
-			return dat;
+			return d;
 		}
 	}
 	
