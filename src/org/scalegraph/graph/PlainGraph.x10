@@ -1698,12 +1698,11 @@ public class PlainGraph implements Graph{
     	val p2:Place = Place.places()(machine);
     	val pt:Point = Point.make(machine + 1, internal_vertex);
     	var arrayBuilder:ArrayBuilder[Long] = new ArrayBuilder[Long]();
+    	
     	var resultTotalOut:Array[Long] = null; 
     	
     	resultTotalOut = at(p2){
     		var l:Array[PlainGraphRecord] = adjacencyListAtoB.getLocalPortion();
-    		val r:Region = l.region;
-    		var len:Int = r.size();
 
     		if((l(pt) != null)&&(l(pt).id != -1l)){
     			if(l(pt).edges != null){
@@ -1729,8 +1728,6 @@ public class PlainGraph implements Graph{
     	
     	resultTotalIn = at(p2){
     		var l:Array[PlainGraphRecord] = adjacencyListBtoA.getLocalPortion();
-    		val r:Region = l.region;
-    		var len:Int = r.size();
 
     		if((l(pt) != null)&&(l(pt).id != -1l)){
     			if(l(pt).edges != null){
@@ -1752,10 +1749,13 @@ public class PlainGraph implements Graph{
     		return null;
     	};
     	
+    	if(resultTotalIn != null){
+    	    arrayBuilder.insert(0, resultTotalIn);
+    	}
     	
-    	arrayBuilder.insert(0, resultTotalIn);
-    	arrayBuilder.insert(arrayBuilder.length(), resultTotalOut);
-    	
+    	if(resultTotalOut != null){
+    		arrayBuilder.insert(arrayBuilder.length(), resultTotalOut);
+    	}
     	return arrayBuilder.result();
     }    
         
@@ -1946,12 +1946,14 @@ public class PlainGraph implements Graph{
 	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));	    	
 	    	val largestVert = getMaximumVertexID();
 	    	
-	    	//Console.OUT.println("largestVert : " + largestVert);	    	
+	    	Console.OUT.println("largestVert : " + largestVert);	    	
 	    	
-	    	for(p:Place in Place.places()){
+	    	finish for(p:Place in Place.places()){
 	    		val rAdjListAtoB:Region = adjacencyListAtoB.dist.get(p);
 	    		
-	    		at(p){
+	    		if(rAdjListAtoB != null){
+	    		
+	    		at(p) async{
 	    			for(point:Point in rAdjListAtoB){
 	    				
 	    				//This optimization might be helpful for small network loaded to large graph space
@@ -1961,40 +1963,39 @@ public class PlainGraph implements Graph{
 	    				}
 	    				
 	    				if (adjacencyListAtoB(point).id != -1l){	
-	    						    					
-	    					curVertex()() = adjacencyListAtoB(point).id;
+	    					//curVertex()() = adjacencyListAtoB(point).id;
+	    					val myVal = adjacencyListAtoB(point).id;
 	    					
 	    					for(p2:Place in Place.places()){
 	    						
 	    						if(curMachine()()==p2.id){
-	    							val myVal = curVertex()();
+	    						//	val myVal = curVertex()();
 	    						
-	    						at(p2){
-	    							val rVertList:Region = uniqueVertexList.dist.get(p2);
-	    							val rVertCounter:Region = uniqueVertexCounter.dist.get(p2);
-	    							
-		    						for(point2:Point in rVertCounter){
-
-		    							if((uniqueVertexCounter(point2) < nv)){//There is more space there...
-		    								//Console.OUT.println("Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
-		    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
-		    								//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
-		    								uniqueVertexCounter(point2) += 1;
-		    							}else{
-	    									at (p) {curMachine()() = p2.id + 1;}
-	    									break;
-		    							}
+		    						at(p2){
+		    							//val rVertList:Region = uniqueVertexList.dist.get(p2);
+		    							val rVertCounter:Region = uniqueVertexCounter.dist.get(p2);
+		    							
+			    						for(point2:Point in rVertCounter){
+	
+			    							if((uniqueVertexCounter(point2) < nv)){//There is more space there...
+			    								Console.OUT.println("At : " + p2.id + " Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
+			    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
+			    								//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
+			    								uniqueVertexCounter(point2) += 1;
+			    							}else{
+		    									at (p) {curMachine()() = p2.id + 1;}
+		    									break;
+			    							}
+			    						}
 		    						}
+		    						break;//After finding the location need not to be in loop again
 	    						}
-	    						
 	    					}
-	    					}
-
 	    				}
-	    				
 	    			}	    			
 	    		}
 	    	} 
+	    	}
     }
     	
     	Console.OUT.println("Returning the list of unique vertices");
