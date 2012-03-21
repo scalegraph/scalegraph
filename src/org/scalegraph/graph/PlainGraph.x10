@@ -6,6 +6,7 @@ import x10.util.Pair;
 import x10.array.DistArray;
 import x10.util.ArrayList;
 import x10.util.StringBuilder;
+import x10.util.ArrayBuilder;
 
 import org.scalegraph.graph.GraphSizeCategory;
 import org.scalegraph.util.ScaleGraphMath;
@@ -1687,9 +1688,79 @@ public class PlainGraph implements Graph{
     	return resultTotal;
     }    
     
+    public def getNeighbours(val vertexID:Long):Array[Long]{
+    	val result2:Array[Array[Long]]=new Array[Array[Long]](1);
+    	
+    	var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    	val machine:Int = ScaleGraphMath.round(vertexID/v) as Int; 	
+    	
+    	val internal_vertex:Int = (vertexID % v) as Int;
+    	val p2:Place = Place.places()(machine);
+    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	var arrayBuilder:ArrayBuilder[Long] = new ArrayBuilder[Long]();
+    	var resultTotalOut:Array[Long] = null; 
+    	
+    	resultTotalOut = at(p2){
+    		var l:Array[PlainGraphRecord] = adjacencyListAtoB.getLocalPortion();
+    		val r:Region = l.region;
+    		var len:Int = r.size();
+
+    		if((l(pt) != null)&&(l(pt).id != -1l)){
+    			if(l(pt).edges != null){
+    				var lst:ArrayList[Long] = (l(pt).edges as ArrayList[Long]);
+    				if(lst.size() != 0){
+    					var resultFin:Array[Long] = new Array[Long](lst.size());
+    					
+    					var counter:Int = 0;
+    					for (item in lst){
+    						resultFin(counter) = item;
+    						counter++;	
+    					}
+    					
+    					return resultFin;
+    				}
+    			}
+    		}
+    		
+    		return null;
+    	};
+    	
+    	var resultTotalIn:Array[Long] = null; 
+    	
+    	resultTotalIn = at(p2){
+    		var l:Array[PlainGraphRecord] = adjacencyListBtoA.getLocalPortion();
+    		val r:Region = l.region;
+    		var len:Int = r.size();
+
+    		if((l(pt) != null)&&(l(pt).id != -1l)){
+    			if(l(pt).edges != null){
+    				var lst:ArrayList[Long] = (l(pt).edges as ArrayList[Long]);
+    				if(lst.size() != 0){
+    					var resultFin:Array[Long] = new Array[Long](lst.size());
+    					
+    					var counter:Int = 0;
+    					for (item in lst){
+    						resultFin(counter) = item;
+    						counter++;	
+    					}
+    					
+    					return resultFin;
+    				}
+    			}
+    		}
+    		
+    		return null;
+    	};
+    	
+    	
+    	arrayBuilder.insert(0, resultTotalIn);
+    	arrayBuilder.insert(arrayBuilder.length(), resultTotalOut);
+    	
+    	return arrayBuilder.result();
+    }    
+        
     
     public def getUnconnectedVertexCount():Long{
-    	//val result2:Array[Long]=new Array[Long](1);
     	var result:Long = 0L;
     	
     	if(notConnectedVertexCount == 0L){
@@ -1925,7 +1996,6 @@ public class PlainGraph implements Graph{
 	    		}
 	    	} 
     }
-
     	
     	Console.OUT.println("Returning the list of unique vertices");
     	
