@@ -23,7 +23,7 @@ public class TestSpectralClustering {
 		
 		val dsc = new DistSpectralClustering(graph);
 		val t2 = Timer.milliTime();
-		result = sc.run(2);
+		result = dsc.run(2);
 		val t3 = Timer.milliTime();
 		Console.OUT.println(result);
 		
