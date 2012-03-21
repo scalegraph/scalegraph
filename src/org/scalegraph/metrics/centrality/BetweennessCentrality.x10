@@ -39,8 +39,8 @@ public class BetweennessCentrality {
 	var globalDistanceMap: Array[IndexedMemoryChunk[Long]];
 	var globalGeodesicsMap: Array[IndexedMemoryChunk[Long]];
 	var globalTempScore: Array[IndexedMemoryChunk[Double]];
-	var globalPredecessorMap: Array[Array[Stack[Int]]];
-	var globalVertexStack: Array[Stack[Int]];
+	var globalPredecessorMap: Array[Array[IndexedMemoryStack[Int]]];
+	var globalVertexStack: Array[IndexedMemoryStack[Int]];
 
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
 		// Keep datafrom user to instance's memeber
@@ -326,12 +326,12 @@ public class BetweennessCentrality {
 			globalTempScore = new Array[IndexedMemoryChunk[Double]]
 				(ALLOC_SPACE, (i: Int) => IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId));
 			
-			globalPredecessorMap = new Array[Array[Stack[Int]]]
+			globalPredecessorMap = new Array[Array[IndexedMemoryStack[Int]]]
 				(ALLOC_SPACE, (i : Int) => 
-					new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]()));
+					new Array[IndexedMemoryStack[Int]](maximumVertexId, (i: Int) => new IndexedMemoryStack[Int]()));
 			
-			globalVertexStack = new Array[Stack[Int]]
-				(ALLOC_SPACE, (i: Int) => new Stack[Int]());
+			globalVertexStack = new Array[IndexedMemoryStack[Int]]
+				(ALLOC_SPACE, (i: Int) => new IndexedMemoryStack[Int]());
 			
 			for (i in data) {		
 				val v = data(i);
@@ -576,4 +576,31 @@ public class BetweennessCentrality {
 		var data: Array[Long];
 		var hit: Int = 0;
 	}
+	
+	protected static class IndexedMemoryStack[T] { 
+		
+		val storage = new GrowableIndexedMemoryChunk[T]();
+
+		
+		public def clear() {
+			storage.clear();
+		}
+		
+		public def push(t: T) {
+			storage.add(t);
+		}
+		
+		public def pop(): T {
+			
+			data: T = storage(storage.length() - 1);
+			storage.removeLast();
+			return data;
+		}
+		
+		public isEmpty() {
+			return storage.length() == 0;
+		}
+
+	}
+	
 }
