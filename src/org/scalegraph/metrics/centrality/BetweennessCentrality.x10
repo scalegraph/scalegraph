@@ -26,10 +26,9 @@ public class BetweennessCentrality {
 	
 	// var isEnableCache: Boolean = false;
 	
-	static val CACHE_INDEX: Int = 1;
-	static val CACHE_ENTRY_PERINDEX: Int = 10000;
+	var cacheSize: Int = 2000;
 	val ALLOC_SPACE = Runtime.MAX_THREADS;
-	val globalCaches: Array[Cache] = new Array[Cache](ALLOC_SPACE, (i: Int) => new Cache(CACHE_INDEX, CACHE_ENTRY_PERINDEX));
+	val globalCaches: Array[Cache];
 	val aquireSpaceLock: Lock = new Lock();
 	val freeSpaceAccessLock = new Lock();
 	val updateScoreLock: Lock = new Lock();
@@ -56,9 +55,10 @@ public class BetweennessCentrality {
 		// Unuse properties
 		this.plainGraph = null;
 		this.maximumVertexId = 0;
+		this.globalCaches = null;
 	}
 
-	protected def this(g: PlainGraph, nVertex: Long, maxVertexId: Long, isNormalize: Boolean) {
+	protected def this(g: PlainGraph, nVertex: Long, maxVertexId: Long, isNormalize: Boolean, cacheSz: Int) {
 		
 		this.plainGraph = g;
 		this.isNormalize = isNormalize;
@@ -68,7 +68,9 @@ public class BetweennessCentrality {
 		this.numVertex = nVertex as Int;
 		this.maximumVertexId = maxVertexId as Int + 1; // Array start at zero
 		this.betweennessScore = new Array[Double](this.maximumVertexId, 0.0D);
-		
+		this.cacheSize = cacheSz;
+		this.globalCaches = new Array[Cache](ALLOC_SPACE, (i: Int) => new Cache(cacheSz));
+
 		// Unuse properties
 		this.vertexIdAndIndexMap = null;
 		this.attributedGraph = null;
@@ -275,17 +277,24 @@ public class BetweennessCentrality {
 	
 	public static def run(g: PlainGraph, verticesToEstimate: Array[Long], isNormalize: Boolean) : Array[Pair[Long, Double]] {
 
-		return runInternal(g, verticesToEstimate, isNormalize);
+		return runInternal(g, verticesToEstimate, isNormalize, 20);
 
 	}
 	
-	public static def runInternal(g: PlainGraph, verticesToEstimate: Array[Long], isNormalize: Boolean): Array[Pair[Long, Double]] {
+	public static def run(g: PlainGraph, verticesToEstimate: Array[Long], isNormalize: Boolean, percentCache: Int) : Array[Pair[Long, Double]] {
+
+		return runInternal(g, verticesToEstimate, isNormalize, percentCache);
+
+	}
+	
+	public static def runInternal(g: PlainGraph, verticesToEstimate: Array[Long], isNormalize: Boolean, percentCache: Int): Array[Pair[Long, Double]] {
 		
 		val vertexCount = g.getVertexCount();
 		val maximumVertexId= g.getMaximumVertexID();
+		val cacheSize = ((percentCache / 100.0 * vertexCount)) as Int;
 		val betweennessCentrality: PlaceLocalHandle[BetweennessCentrality] 
 		= PlaceLocalHandle.make[BetweennessCentrality](Dist.makeUnique(), 
-				() => { new BetweennessCentrality(g, vertexCount, maximumVertexId, isNormalize) } );
+				() => { new BetweennessCentrality(g, vertexCount, maximumVertexId, isNormalize, cacheSize) } );
 		
 		finish {
 			for(p in Place.places()) {
@@ -496,7 +505,7 @@ public class BetweennessCentrality {
 		updateScoreLock.unlock();
 		
 		releaseSpaceId(spaceId);
-		Console.OUT.println("End for src: " + source + " On place: " + here.id);
+		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 	}
 	
 	/****************************************************************************
@@ -505,75 +514,94 @@ public class BetweennessCentrality {
 	
 	protected static class Cache {
 		
-		val records: Array[ArrayList[CacheRecord]];
-		val numIndex: Int;
-		val numEntry: Int;
-		val pt: Array[Int];
+		var numData: Int = 0;
+		val records: ArrayList[CacheRecord];
+		val size: Int;
+		val keyIndexMap: HashMap[Int, Int];
 
-		def this(nIndex: Int, nEntry: Int) {
-			this.numIndex = nIndex;
-			this.numEntry = nEntry;
-			this.pt = new Array[Int](this.numIndex, (i: Int) => 0);
-			records = new Array[ArrayList[CacheRecord]](nIndex, (i: Int) => new ArrayList[CacheRecord](nEntry));
+		def this(sz: Int) {
+			numData = 0;
+			size = sz;
 			
-			for(i in records) {
-				for(e in 0..(this.numEntry -1)) {
-					records(i)(e) = new CacheRecord();
-				}
+			if(size <= 0) {
+				records = null;
+				keyIndexMap = null;
+			} else {
+				records = new ArrayList[CacheRecord](size);
+				keyIndexMap = new HashMap[Int, Int](size);
+			}
+			
+			
+			for(i in 0..(size -1)) {
+				records(i) = new CacheRecord();
 			}
 		}
 		
-		public def size() = numIndex;
+		public def size() = size;
 		
-		public def getDataForKey(key: Int) : Array[Long]{
+		public def getIndexForKey(key: Int) {
 			
-			val loc = key % numIndex;
-			val r = records(loc);
+			if(numData <= 0)
+				return -1;
 			
-			if(pt(loc) <= 0)
-				return null;
+			// for(i in 0..(numData -1)) {
+			// 	val r = records(i);
+			// 	if(r.key == key) {
+			// 		return i;
+			// 	}
+			// }
 			
-			for(i in 0..(pt(loc) -1)) {
-				val e = records(loc)(i);
-				if(e.key == key) {
-					++e.hit;
-					return e.data;
-				}
+			if(keyIndexMap.containsKey(key)) {
+				return keyIndexMap(key).value;
 			}
-			return null;
+			
+			
+			return -1;
 		}
 		
 
 		public def update(key: Int, g: PlainGraph) {
 			
 			val dat = g.getOutNeighbours(key);
-			val loc = key % numIndex;
-			val r = records(loc);
-			
-			if(pt(loc) == numEntry) {
+
+			if(numData == size) {
 				// Cache full
-				r.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
-				pt(loc) = numEntry - numEntry / 3;
+				records.sort((u: CacheRecord, v: CacheRecord)=> v.hit.compareTo(u.hit));
+				numData = size - size / 3;
+				
+				keyIndexMap.clear();
+				for(i in 0..(numData-1)) {
+					records(i).hit = 0;
+					keyIndexMap.put(records(i).key, i);
+				}
 			}
 			
+			val index = numData;
+			val r = records(index);
+			r.key = key;
+			r.data = dat;
+			++r.hit;
+			++numData;
 			
-			val e = records(loc)(pt(loc));
-			e.key = key;
-			e.data = dat;
-			e.hit = 0;
-			pt(loc) += 1;
+			keyIndexMap.put(key, index);
 			
 			return dat;
 		}
 		
 		public operator this(key:Int, g:PlainGraph) {
 			
-			val d = getDataForKey(key);
-			if(d == null) {
-				val newData = update(key, g);
-				return newData;
+			// cache is disabled
+			if(size == 0) {
+				return g.getOutNeighbours(key);
 			}
-			return d;
+				
+			val i = getIndexForKey(key);
+			if(i == -1) {
+				val dat = update(key, g);
+				return dat;
+			}
+			val dat = records(i).data;
+			return dat;
 		}
 	}
 	
