@@ -22,7 +22,8 @@ public class TestEdgeListReader {
         
         //val testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-12-3628.dl");
         
-        val testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-16.dl");
+        //val testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-16.dl");
+        val testG:PlainGraph = reader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/mini_graph.dl");
         
         //var testG:PlainGraph = reader.loadFromFile("/nfs/data1/miyuru/twitter-kaist/newdata.dl");
         //var testG:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/newdata.dl");
@@ -47,14 +48,14 @@ public class TestEdgeListReader {
         	};
         }    */
         
-        for(p:Place in Place.places()){
+        finish for(p:Place in Place.places()){
         	val r:Region = uqverts.dist.get(p);
         	
         	at(p){
         		for(point:Point in r){
         			if(uqverts(point) != -1l){
         				Console.OUT.print(uqverts(point) + "-->");
-        			val re:Array[Long] = testG.getInNeighbours(uqverts(point));
+        			val re:Array[Long] = testG.getNeighbours(uqverts(point));
 
         			if(re != null){
         				for(item in re){

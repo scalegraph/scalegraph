@@ -1929,7 +1929,7 @@ public class PlainGraph implements Graph{
 	    		nvl = Math.ceil((actualTotalVertices/(Place.MAX_PLACES)) as Double) as Int; // Again we know that the number of vertices is an Int per place
 	    		
 	    		//Just add one more to make space in the unique vertices array
-	    		nvl += 1;
+	    		nvl += 10;
 	    		//Console.OUT.println("nv is : " + nvl);
 	    		
 	    		R1 = (1..Place.MAX_PLACES)*(1..1);
@@ -1978,7 +1978,7 @@ public class PlainGraph implements Graph{
 			    						for(point2:Point in rVertCounter){
 	
 			    							if((uniqueVertexCounter(point2) < nv)){//There is more space there...
-			    								Console.OUT.println("At : " + p2.id + " Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
+			    								//Console.OUT.println("At : " + p2.id + " Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
 			    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
 			    								//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
 			    								uniqueVertexCounter(point2) += 1;
