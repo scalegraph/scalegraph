@@ -25,17 +25,14 @@ public class DistSpectralClustering {
 	}
 	
 	/*
-	 * need: lengths of edges of an undirected graph
-	 * step 1: make a similarity matrix
-	 * step 2: make a degree matrix
-	 * step 3: make a Laplacian matrix
-	 * step 4: solve a generalized eigenvalue plobrem
-	 * step 5: apply k-means algorithm to eigenvectors
+	 * step 1: make a degree matrix and a Laplacian matrix
+	 * step 2: solve a generalized eigenvalue plobrem
+	 * step 3: apply k-means algorithm to eigenvectors
 	 */
 	public def run(nClusters:Int): ClusteringResult {
 		makeCorrespondenceBetweenIDandIDX();
 		
-		val l:DenseMatrix = getEigenvectors();  // step 1-4
+		val l:DenseMatrix = getEigenvectors();  // step 1,2
 		if(l == null){
 			return null;
 		}
@@ -126,7 +123,7 @@ public class DistSpectralClustering {
 		Console.OUT.println("start solving eigenvalue problem");
 		val nPoints = l.M;
 		val w = new Array[Double](nPoints);
-		val info = solveEigenvalueProblem(l, d, w);  // step 4
+		val info = solveEigenvalueProblem(l, d, w);
 		if(info == 0l){
 			Console.OUT.println("finished");
 		}else{
@@ -148,7 +145,7 @@ public class DistSpectralClustering {
 	private def kmeans(k:Int, points:DistArray[Vector]): DistArray[Int] {
 		val dim:Int = k;
 		val nPoints:Int = points.dist.region.size();
-		//val random = PlaceLocalandle.make[Random](Dist.makeUnique(), () => new Random(Timer.nanoTime()));
+		//val random = PlaceLocalandle.make[Random](Dist.makeUnique(), () => new Random(Timer.milliTime()));
 		val localCurClusters = PlaceLocalHandle.make[Array[Vector]](Dist.makeUnique(), () => new Array[Vector](k, (Int) => Vector.make(dim)));
 		val localNewClusters = PlaceLocalHandle.make[Array[Vector]](Dist.makeUnique(), () => new Array[Vector](k, (Int) => Vector.make(dim)));
 		val localClusterCounts = PlaceLocalHandle.make[Array[Int]](Dist.makeUnique(), () => new Array[Int](k, 0));
@@ -171,8 +168,6 @@ public class DistSpectralClustering {
 			curClusters(i).cellDiv(clusterCounts(i));
 			clusterCounts(i) = 0;  // reset counter
 		}
-		/* debug print */
-		//Console.OUT.println(result);
 		
 		for(iter in 1..iterations){
 			Console.OUT.println("iteration: " + iter);
@@ -224,9 +219,6 @@ public class DistSpectralClustering {
 				newClusters(i).cellDiv(clusterCounts(i));
 				clusterCounts(i) = 0;  // reset counter
 			}
-			
-			/* debug print */
-			//Console.OUT.println(result);
 			
 			/* test for convergence */
 			var b:Boolean = true;

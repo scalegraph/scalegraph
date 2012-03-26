@@ -26,7 +26,7 @@ public class TestSpectralClustering {
 		var result:ClusteringResult = sc.run(2);
 		val t1 = Timer.milliTime();
 		Console.OUT.println(result);
-		/*
+		
 		val dsc = new DistSpectralClustering(graph);
 		val t2 = Timer.milliTime();
 		result = dsc.run(2);
@@ -35,6 +35,5 @@ public class TestSpectralClustering {
 		
 		Console.OUT.println("elapsed time(single) = " + (t1 - t0));
 		Console.OUT.println("elapsed time(dist)   = " + (t3 - t2));
-		*/
 	}
 }

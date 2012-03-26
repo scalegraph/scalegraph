@@ -24,17 +24,14 @@ public class SpectralClustering {
 	}
 	
 	/*
-	 * need: lengths of edges of an undirected graph
-	 * step 1: make a similarity matrix
-	 * step 2: make a degree matrix
-	 * step 3: make a Laplacian matrix
-	 * step 4: solve a generalized eigenvalue plobrem
-	 * step 5: apply k-means algorithm to eigenvectors
+	 * step 1: make a degree matrix and a Laplacian matrix
+	 * step 2: solve a generalized eigenvalue plobrem
+	 * step 3: apply k-means algorithm to eigenvectors
 	 */
 	public def run(nClusters:Int): ClusteringResult {
 		makeCorrespondenceBetweenIDandIDX();
 		
-		val l:DenseMatrix = getEigenvectors();  // step 1-4
+		val l:DenseMatrix = getEigenvectors();  // step 1,2
 		if(l == null){
 			return null;
 		}
@@ -52,7 +49,7 @@ public class SpectralClustering {
 			}
 		}
 		
-		val resultArray:Array[Int] = kmeans(nClusters, points);  // step 5
+		val resultArray:Array[Int] = kmeans(nClusters, points);  // step 3
 		val result:ClusteringResult = makeClusteringResult(nClusters, resultArray);
 		
 		/*
@@ -73,14 +70,6 @@ public class SpectralClustering {
 		IDtoIDX = new HashMap[Long, Int](nVertices);
 		IDXtoID = new HashMap[Int, Long](nVertices);
 		Console.OUT.println("nVertices = " + nVertices);
-		
-		var tmp:Int = 0;
-		for(p in vertexList.dist.places()) {
-			for(i in vertexList.dist.get(p)){
-				if(at(p) vertexList(i) != -1l) tmp++;
-			}
-		}
-		Console.OUT.println("vertexList contains " + tmp + " vertices");
 		
 		var counter:Int = 0;
 		for(vpt in vertexList) {
@@ -126,7 +115,7 @@ public class SpectralClustering {
 		Console.OUT.println("start solving eigenvalue problem");
 		val nPoints = l.M;
 		val w = new Array[Double](nPoints);
-		val info = solveEigenvalueProblem(l, d, w);  // step 4
+		val info = solveEigenvalueProblem(l, d, w);
 		if(info == 0l){
 			Console.OUT.println("finished");
 		}else{
@@ -167,10 +156,6 @@ public class SpectralClustering {
 			curClusters(i).cellDiv(clusterCounts(i));
 			clusterCounts(i) = 0;  // reset counter
 		}
-		/* debug print */
-		/*for(i in result){
-			Console.OUT.println("" + i + points(i) + " -> [" + result(i) + "]" + curClusters(result(i)));
-		}*/
 		
 		for(iter in 1..iterations){
 			Console.OUT.println("iteration: " + iter);
@@ -197,11 +182,6 @@ public class SpectralClustering {
 				newClusters(i).cellDiv(clusterCounts(i));
 				clusterCounts(i) = 0;  // reset counter
 			}
-			
-			/* debug print */
-			/*for(i in result){
-				Console.OUT.println("" + i + points(i) + " -> [" + result(i) + "]" + newClusters(result(i)));
-			}*/
 			
 			/* test for convergence */
 			var b:Boolean = true;
