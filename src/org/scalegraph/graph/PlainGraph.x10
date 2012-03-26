@@ -1929,7 +1929,7 @@ public class PlainGraph implements Graph{
 	    		nvl = Math.ceil((actualTotalVertices/(Place.MAX_PLACES)) as Double) as Int; // Again we know that the number of vertices is an Int per place
 	    		
 	    		//Just add one more to make space in the unique vertices array
-	    		nvl += 10;
+	    		nvl += 1;
 	    		//Console.OUT.println("nv is : " + nvl);
 	    		
 	    		R1 = (1..Place.MAX_PLACES)*(1..1);
@@ -1953,7 +1953,7 @@ public class PlainGraph implements Graph{
 	    		
 	    		if(rAdjListAtoB != null){
 	    		
-	    		at(p) async{
+	    		at(p) {
 	    			for(point:Point in rAdjListAtoB){
 	    				
 	    				//This optimization might be helpful for small network loaded to large graph space
@@ -1988,7 +1988,6 @@ public class PlainGraph implements Graph{
 			    							}
 			    						}
 		    						}
-		    						break;//After finding the location need not to be in loop again
 	    						}
 	    					}
 	    				}
