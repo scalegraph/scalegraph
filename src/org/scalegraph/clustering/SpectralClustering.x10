@@ -74,6 +74,14 @@ public class SpectralClustering {
 		IDXtoID = new HashMap[Int, Long](nVertices);
 		Console.OUT.println("nVertices = " + nVertices);
 		
+		var tmp:Int = 0;
+		for(p in vertexList.dist.places()) {
+			for(i in vertexList.dist.get(p)){
+				if(at(p) vertexList(i) != -1l) tmp++;
+			}
+		}
+		Console.OUT.println("vertexList contains " + tmp + " vertices");
+		
 		var counter:Int = 0;
 		for(vpt in vertexList) {
 			val vertexID:Long = at(vertexList.dist(vpt)) vertexList(vpt);
