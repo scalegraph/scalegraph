@@ -8,6 +8,7 @@ import x10.util.ArrayList;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
 import org.scalegraph.clustering.SpectralClustering;
+import org.scalegraph.clustering.DistSpectralClustering;
 import org.scalegraph.clustering.ClusteringResult;
 
 public class RandomWalk {
@@ -21,8 +22,8 @@ public class RandomWalk {
     private var Q1inv:DenseMatrix;
     
     static private val c = 0.85;
-    static private val t = 3;
-    static private val k = 4;
+    static private val t = 50;
+    static private val k = 50;
 
     private class DecomposeResult {
         public val W1:DenseMatrix;
@@ -62,13 +63,18 @@ public class RandomWalk {
                 val region = (vertexList.dist | p).region;
                 for (i in region) {
                     val id = vertexList(i);
+                    if (id == -1l) {
+                        continue;
+                    }
                     val neighbours = graph.getOutNeighbours(id);
                     val idx = idToIdxMap(id)();
-                    for (neighbour in neighbours) {
-                        val nIdx = idToIdxMap(neighbours(neighbour))();
-                        if (!(result.W1(idx, nIdx) > 0 ||
-                              result.W2(idx, nIdx) > 0)) {
-                            throw new Error();
+                    if (neighbours != null) {
+                        for (neighbour in neighbours) {
+                            val nIdx = idToIdxMap(neighbours(neighbour))();
+                            if (!(result.W1(idx, nIdx) > 0 ||
+                                  result.W2(idx, nIdx) > 0)) {
+                                throw new Error();
+                            }
                         }
                     }
                 }
@@ -105,23 +111,28 @@ public class RandomWalk {
        calculate pre-computation stage
      **/
     public def run() {
+        Console.OUT.println("Decompose graph");
         val Ws:DecomposeResult = decomposeGraph(graph);
+        Console.OUT.println("inverse W1");
         val Q1inv = inverseW1(Ws.W1, Ws.result);
         val W2 = Ws.W2;
         this.idToIdxMap = Ws.idToIdxMap;
         this.idxToIdMap = Ws.idxToIdMap;
         testDecompose(Ws);
         testInverseW1(Q1inv, Ws.W1);
+        Console.OUT.println("low rank aod");
         val W2Aod:Array[DenseMatrix] = lowRankAod(W2);
         val U = W2Aod(0);
         val Sinv = W2Aod(1);
         val V = W2Aod(2);
+        Console.OUT.println("calculate L");
         val L = calculateL(U, Sinv, V, Q1inv);
         testLowRankAod(U, Sinv, V, W2);
         this.U = U;
         this.V = V;
         this.L = L;
         this.Q1inv = Q1inv;
+        Console.OUT.println("end");
     }
 
     /**
@@ -138,6 +149,9 @@ public class RandomWalk {
         val Q1 = I - c * W1;
         val Q1inv = new DenseMatrix(Q1.M, Q1.N);
         for (range in clusterRange) {
+            if (range.first == range.second) {
+                continue;
+            }
             val size = range.second - range.first;
             val q1 = new DenseMatrix(size, size);
             copySubset(Q1, range.first, range.first,
@@ -162,16 +176,18 @@ public class RandomWalk {
     }
     
     private def decomposeGraph(graph:PlainGraph) {
-        val clustering = new SpectralClustering(graph);
+        val clustering = new DistSpectralClustering(graph);
         val result = clustering.run(k);
         Console.OUT.println(result);
-        val clusters = result.getAllClusters();
+
         var cnt:Int = 0;
-        val idToIdxMap = GlobalRef[HashMap[Long, Int]](new HashMap[Long, Int]());
-        val idxToIdMap = GlobalRef[HashMap[Int, Long]](new HashMap[Int, Long]());
+        val idToIdxMap = new HashMap[Long, Int]();
+        val idxToIdMap = new HashMap[Int, Long]();
         val W1 = GlobalRef[DenseMatrix](new DenseMatrix(nVertex, nVertex));
         val W2 = GlobalRef[DenseMatrix](new DenseMatrix(nVertex, nVertex));
+        val clusters = result.getAllClusters();
 
+        Console.OUT.println("create cluster range");
         val clusterRange:ArrayList[Pair[Int, Int]] =
             new ArrayList[Pair[Int, Int]]();
         for (key in clusters) {
@@ -179,25 +195,29 @@ public class RandomWalk {
             val tmp = cnt;
             for (j in vertices) {
                 val vertex = vertices(j);
-                idToIdxMap().put(vertex, cnt);
-                idxToIdMap().put(cnt, vertex);
+                idToIdxMap.put(vertex, cnt);
+                idxToIdMap.put(cnt, vertex);
                 cnt++;
             }
             clusterRange.add(new Pair[Int, Int](tmp, cnt));
         }
         
+        Console.OUT.println("create matrix");        
         val vertexList = graph.getVertexList();
         for (p in Place.places()) {
             at (p) {
-                val r = (vertexList.dist | p).region;
+                val r = vertexList.dist.get(p);
                 for (i in r) {
                     val nodeId = vertexList(i);
-                    val neighbours = graph.getOutNeighbours(nodeId);
-                    val nodeIdx = idToIdxMap()(nodeId)();
+                    if (nodeId == -1l) {
+                        continue;
+                    }
+                    val neighbours:Array[Long] = graph.getOutNeighbours(nodeId);
+                    val nodeIdx = idToIdxMap(nodeId)();
                     if (neighbours != null && neighbours.size != 0) {
                         for (j in neighbours) {
                             val neighbour = neighbours(j);
-                            val neighbourIdx = idToIdxMap()(neighbour)();
+                            val neighbourIdx = idToIdxMap(neighbour)();
                             val prob = 1.0 / neighbours.size;
                             if (result.getCluster(nodeId) ==
                                 result.getCluster(neighbour)) {
@@ -213,7 +233,7 @@ public class RandomWalk {
                     } else {
                         for (j in 0..(nVertex - 1)) {
                             val prob = 1.0 / nVertex;
-                            val neighbour = idxToIdMap()(j)();
+                            val neighbour = idxToIdMap(j)();
                             if (result.getCluster(nodeId) ==
                                 result.getCluster(neighbour)) {
                                 at (W1) {
@@ -229,9 +249,9 @@ public class RandomWalk {
                 }
             }
         }
-        
+
         return new DecomposeResult(W1(), W2(), clusterRange,
-                                   idToIdxMap(), idxToIdMap());
+                                   idToIdxMap, idxToIdMap);
     }
     
     /**
@@ -333,7 +353,7 @@ public class RandomWalk {
      **/
     private def clusteringMatrix(matrix:DenseMatrix) {
         val graph = convertMatrixToGraph(matrix);
-        val clustering = new SpectralClustering(graph);
+        val clustering = new DistSpectralClustering(graph);
         val result = clustering.run(t);
         Console.OUT.println(result);
         val U:DenseMatrix = new DenseMatrix(nVertex, t);

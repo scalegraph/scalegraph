@@ -5,8 +5,10 @@ import org.scalegraph.graph.GraphSizeCategory;
 import org.scalegraph.io.ScatteredEdgeListReader;
 import org.scalegraph.communities.RandomWalk;
 import org.scalegraph.communities.LAPACK;
+import org.scalegraph.io.EdgeListReader;
 import x10.matrix.DenseMatrix;
 import x10.util.HashMap;
+import x10.util.Pair;
 
 public class TestRandomWalk {
     private static def graphSetUp():PlainGraph {
@@ -30,17 +32,16 @@ public class TestRandomWalk {
         return graph;
     }
 
-    private static graphSetUpTsubame():PlainGraph {
-        val reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
-        val graph =
-            reader.
-            loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale12-scattered");
-        return graph;
+    private static def graphSetUpTsubame():PlainGraph {
+        val reader:EdgeListReader = new EdgeListReader();
+        return reader.
+            loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
     }
     
     public static def main(Array[String]) {
         Console.OUT.println("Start Random Walk with Restart Test");
         val graph = graphSetUpTsubame();
+        //val graph = graphSetUp();
 
         val result:DistArray[Long] = graph.getVertexList();
         
@@ -50,18 +51,22 @@ public class TestRandomWalk {
         Console.OUT.println("----------Start Query Stage----------");
         Console.OUT.println(rwr.query(4));
         Console.OUT.println("----------Start OnTheFly method----------");
-        iterateRandomWalk(graph, 3);
+        iterateRandomWalk(graph, 4);
         Console.OUT.println("----------Start PreComputational method----------");
-        preComputationRandomWalk(graph, 3);
+        preComputationRandomWalk(graph, 4);
         Console.OUT.println("----------End Test----------");
     }
 
     private static def preComputationRandomWalk(graph:PlainGraph, id:Int) {
         val nVertex:Int = graph.getVertexCount() as Int;
-        val matrix:DenseMatrix = convertGraphToMatrix(graph);
+        val result:Pair[DenseMatrix, HashMap[Long, Int]] =
+            convertGraphToMatrix(graph);
+        val matrix:DenseMatrix = result.first;
+        val idToIdxMap:HashMap[Long, Int] = result.second;
+        val idx = idToIdxMap(id)();
         var ei:DenseMatrix = new DenseMatrix(nVertex, 1);
         val c = 0.85;
-        ei(id, 0) = 1.0;
+        ei(idx, 0) = 1.0;
         var Q:DenseMatrix = new DenseMatrix(nVertex, nVertex);
         for (var i:Int = 0; i < nVertex; i++) {
             Q(i, i) = 1;
@@ -73,12 +78,17 @@ public class TestRandomWalk {
         ri *= (1 - c);
         ri.print();
     }
+    
     private static def iterateRandomWalk(graph:PlainGraph, id:Int) {        
         val nVertex:Int = graph.getVertexCount() as Int;
-        val matrix:DenseMatrix = convertGraphToMatrix(graph);
+        val result:Pair[DenseMatrix, HashMap[Long, Int]] =
+            convertGraphToMatrix(graph);
+        val matrix:DenseMatrix = result.first;
+        val idToIdxMap:HashMap[Long, Int] = result.second;
+        val idx = idToIdxMap(id)();
         val ei:DenseMatrix = new DenseMatrix(nVertex, 1);
         val c = 0.85;
-        ei(id, 0) = 1.0;
+        ei(idx, 0) = 1.0;
         var vector:DenseMatrix = new DenseMatrix(nVertex, 1);
         vector(id, 0) = 1.0;
         while (true) {
@@ -98,7 +108,7 @@ public class TestRandomWalk {
         return (v - u).norm() < 0.0001;
     }
     
-    private static def convertGraphToMatrix(graph:PlainGraph):DenseMatrix {
+    private static def convertGraphToMatrix(graph:PlainGraph) {
         val nVertex = graph.getVertexCount();
         val globalMatrix =
             GlobalRef[DenseMatrix](new DenseMatrix(nVertex as Int, nVertex as Int));
@@ -115,8 +125,12 @@ public class TestRandomWalk {
                 val r = (vertexList.dist | p).region;
                 at (p) {
                     for (i in r) {
+                        val nodeId = vertexList(i);
+                        if (nodeId == -1l) {
+                            continue;
+                        }
                         at (globalMap) {
-                            globalMap().put(vertexList(i), globalCnt().cnt);
+                            globalMap().put(nodeId, globalCnt().cnt);
                             at (globalCnt) {
                                 globalCnt().cnt += 1;
                             }
@@ -135,19 +149,22 @@ public class TestRandomWalk {
                 val r = (vertexList.dist | p).region;
                 for (i in r) {
                     val nodeId = vertexList(i);
+                    if (nodeId == -1l) {
+                        continue;
+                    }
                     val neighbours = graph.getOutNeighbours(nodeId);
                     if (neighbours != null && neighbours.size != 0) {
                         for (j in neighbours) {
                             at (globalMatrix) {
-                                globalMatrix()(globalMap()(neighbours(j))(),
-                                               globalMap()(nodeId)()) =
+                                globalMatrix()(idToIdxMap(neighbours(j))(),
+                                               idToIdxMap(nodeId)()) =
                                     1.0 / neighbours.size;
                             }
                         }
                     } else {
                         for (j in 0..(nVertex - 1)) {
                             at (globalMatrix) {
-                                globalMatrix()(j as Int, globalMap()(nodeId)())
+                                globalMatrix()(j as Int, idToIdxMap(nodeId)())
                                     = 1.0 / nVertex;
                             }
                         }
@@ -155,6 +172,7 @@ public class TestRandomWalk {
                 }
             }
         }
-        return globalMatrix();
+        return new Pair[DenseMatrix, HashMap[Long, Int]]
+            (globalMatrix(), idToIdxMap);
     }
 }
