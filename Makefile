@@ -12,7 +12,7 @@ X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/
 CLASSPATH=$(X10_HOME)
 
 #X10 runtime environment variables
-X10_NPLACES=64
+X10_NPLACES=4
 X10_HOSTFILE=machines.txt
 
 APP_DIR=/nfs/home/miyuru/workspace/ScaleGraph
@@ -472,7 +472,7 @@ test_gml:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_gml.jar \
+	-classpath $(GML_DIST)/lib/native_mpi_gml.jar \
 	-x10lib $(GML_DIST)/native_mpi_gml.properties \
 	src/test/scalegraph/clustering/TestGML.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10;
@@ -490,7 +490,7 @@ test_clustering:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_gml.jar \
+	-classpath $(GML_DIST)/lib/native_mpi_gml.jar \
 	-x10lib $(GML_DIST)/native_mpi_gml.properties \
 	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
@@ -548,7 +548,7 @@ test_randomwalk:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_gml.jar \
+	-classpath $(GML_DIST)/lib/native_mpi_gml.jar \
 	-x10lib $(GML_DIST)/native_mpi_gml.properties \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/communities/LAPACK.x10 \
