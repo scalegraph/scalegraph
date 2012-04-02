@@ -16,7 +16,7 @@ public class TestSpectralClustering {
 		
 		//val graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/scalegraph/data/scale-14-5900.dl");
 		//val graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/scalegraph/data/scale-12-3628.dl");
-		val graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/scalegraph/data/scale-8.dl");
+		val graph:PlainGraph = reader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
 		//val graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/ogata/data/mini_graph.dl");
 		
 		//val graph:PlainGraph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/twitter-100");

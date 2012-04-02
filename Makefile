@@ -472,8 +472,8 @@ test_gml:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_mpi_gml.jar \
-	-x10lib $(GML_DIST)/native_mpi_gml.properties \
+	-classpath $(GML_DIST)/lib/native_gml.jar \
+	-x10lib $(GML_DIST)/native_gml.properties \
 	src/test/scalegraph/clustering/TestGML.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10;
 	
@@ -490,8 +490,8 @@ test_clustering:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_mpi_gml.jar \
-	-x10lib $(GML_DIST)/native_mpi_gml.properties \
+	-classpath $(GML_DIST)/lib/native_gml.jar \
+	-x10lib $(GML_DIST)/native_gml.properties \
 	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
@@ -548,8 +548,8 @@ test_randomwalk:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_mpi_gml.jar \
-	-x10lib $(GML_DIST)/native_mpi_gml.properties \
+	-classpath $(GML_DIST)/lib/native_gml.jar \
+	-x10lib $(GML_DIST)/native_gml.properties \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/communities/LAPACK.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
