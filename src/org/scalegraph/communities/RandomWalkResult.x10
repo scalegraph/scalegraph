@@ -17,11 +17,19 @@ public class RandomWalkResult {
         return score(idToIdxMap(id)(), 0);
     }
 
+    public def getResultMatrix() {
+        val result:DenseMatrix = new DenseMatrix(idToIdxMap.size(), 1);
+        for (key in idToIdxMap.keySet()) {
+            val idx = idToIdxMap(key)();
+            result(idx, 0) = score(idx, 0);
+        }
+    }
+    
     public def toString() {
         var str:String = "";
         for (key in idToIdxMap.keySet()) {
             val idx = idToIdxMap(key)();
-            str = str + "" + idx + "        [ " + score(idx, 0) + " ]\n";
+            str = str + key + "        [ " + score(idx, 0) + " ]\n";
         }
         return str;
     }

@@ -22,8 +22,8 @@ public class RandomWalk {
     private var Q1inv:DenseMatrix;
     
     static private val c = 0.85;
-    static private val t = 50;
-    static private val k = 50;
+    static private val t = 100;
+    static private val k = 100;
 
     private class DecomposeResult {
         public val W1:DenseMatrix;
@@ -90,7 +90,7 @@ public class RandomWalk {
         val Q1 = I - c * W1;
         val _I = new DenseMatrix(nVertex, nVertex);
         _I.mult(Q1, Q1inv);
-        _I.print();
+        //_I.print();
         if ((_I - I).norm() > 0.001) {
             throw new Error();
         }
@@ -103,8 +103,9 @@ public class RandomWalk {
         SV.mult(S, V);
         val USV = new DenseMatrix(nVertex, nVertex);
         USV.mult(U, SV);
-        W2.print();
-        USV.print();
+        //W2.print();
+        //USV.print();
+        Console.OUT.printf("norm = %f\n", (W2-USV).norm());
     }
     
     /**
@@ -155,7 +156,7 @@ public class RandomWalk {
                     copySubset(Q1, range.first, range.first,
                                q1, 0, 0, size, size);
                     val q1inv = LAPACK.inverseDenseMatrix(q1);
-                    q1inv.print();
+                    // q1inv.print();
                     copySubset(q1inv, 0, 0,
                                Q1inv, range.first, range.first, size, size);
                 }
@@ -362,14 +363,14 @@ public class RandomWalk {
                 U(j, col) += matrix(j, i);
             }
         }
-        U.print();
+        // U.print();
         return U;
     }
     
     private def convertMatrixToGraph(matrix:DenseMatrix) {
-        val graph:PlainGraph = new PlainGraph(GraphSizeCategory.SMALL);
+        val graph:PlainGraph = new PlainGraph(GraphSizeCategory.MEDEUM);
         Console.OUT.println("convert matrix to graph");
-        matrix.print();
+        // matrix.print();
         for (var i:Int = 1; i <= matrix.N; i++) {
             graph.addVertex(i.toString());
         }
@@ -377,7 +378,6 @@ public class RandomWalk {
             for (var j:Int = 0; j < matrix.N; j++) {
                 if (matrix(i, j) > 0) {
                     val edge = (j + 1).toString() + " " + (i + 1);
-                    Console.OUT.println(edge);
                     graph.addEdge(edge);
                 }
             }
