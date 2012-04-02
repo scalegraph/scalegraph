@@ -50,11 +50,23 @@ public class TestRandomWalk {
         Console.OUT.println("----------Start Pre-compute stage----------");
         rwr.run();
         Console.OUT.println("----------Start Query Stage----------");
-        Console.OUT.println(rwr.query(4));
+        val rwrResult = rwr.query(4);
+        Console.OUT.println(rwrResult);
         Console.OUT.println("----------Start OnTheFly method----------");
-        iterateRandomWalk(graph, 4);
+        val iterateResult = iterateRandomWalk(graph, 4);
+        val idToIdxMap = iterateResult.first;
+        val matrix = iterateResult.second;
         Console.OUT.println("----------Start PreComputational method----------");
         preComputationRandomWalk(graph, 4);
+
+        for (key in idToIdxMap.keySet()) {
+            Console.OUT.printf("%d: %f - %f = %f\n", key,
+                               rwrResult.getScore(key),
+                               matrix(idToIdxMap(key)()), 
+                               Math.abs(rwrResult.getScore(key) -
+                                        matrix(idToIdxMap(key)())));
+        }
+
         Console.OUT.println("----------End Test----------");
     }
 
@@ -103,10 +115,11 @@ public class TestRandomWalk {
             vector = newVector;
         }
         vector.print();
+        return Pair[HashMap[Long, Int], DenseMatrix](idToIdxMap, vector);
     }
 
     private static def end(v:DenseMatrix, u:DenseMatrix) {
-        return (v - u).norm() < 0.0001;
+        return (v - u).norm() < 0.0000001;
     }
     
     private static def convertGraphToMatrix(graph:PlainGraph) {

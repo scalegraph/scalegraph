@@ -22,8 +22,8 @@ public class RandomWalk {
     private var Q1inv:DenseMatrix;
     
     static private val c = 0.85;
-    static private val t = 100;
-    static private val k = 100;
+    static private val t = 50;
+    static private val k = 50;
 
     private class DecomposeResult {
         public val W1:DenseMatrix;
@@ -71,8 +71,8 @@ public class RandomWalk {
                     if (neighbours != null) {
                         for (neighbour in neighbours) {
                             val nIdx = idToIdxMap(neighbours(neighbour))();
-                            if (!(result.W1(idx, nIdx) > 0 ||
-                                  result.W2(idx, nIdx) > 0)) {
+                            if (!(result.W1(nIdx, idx) > 0 ||
+                                  result.W2(nIdx, idx) > 0)) {
                                 throw new Error();
                             }
                         }
@@ -202,7 +202,7 @@ public class RandomWalk {
             clusterRange.add(new Pair[Int, Int](tmp, cnt));
         }
         
-        Console.OUT.println("create matrix");        
+        Console.OUT.println("create matrix");    
         val vertexList = graph.getVertexList();
         for (p in Place.places()) {
             at (p) {
@@ -222,11 +222,11 @@ public class RandomWalk {
                             if (result.getCluster(nodeId) ==
                                 result.getCluster(neighbour)) {
                                 at (W1) {
-                                    W1()(nodeIdx, neighbourIdx) = prob;
+                                    W1()(neighbourIdx, nodeIdx) = prob;
                                 }
                             } else {
                                 at (W2) {
-                                    W2()(nodeIdx, neighbourIdx) = prob;
+                                    W2()(neighbourIdx, nodeIdx) = prob;
                                 }
                             }
                         }
@@ -237,11 +237,11 @@ public class RandomWalk {
                             if (result.getCluster(nodeId) ==
                                 result.getCluster(neighbour)) {
                                 at (W1) {
-                                    W1()(nodeIdx, j) = prob;
+                                    W1()(j, nodeIdx) = prob;
                                 }
                             } else {
                                 at (W2) {
-                                    W2()(nodeIdx, j) = prob;
+                                    W2()(j, nodeIdx) = prob;
                                 }
                             }
                         }
@@ -368,7 +368,7 @@ public class RandomWalk {
     }
     
     private def convertMatrixToGraph(matrix:DenseMatrix) {
-        val graph:PlainGraph = new PlainGraph(GraphSizeCategory.MEDEUM);
+        val graph:PlainGraph = new PlainGraph(GraphSizeCategory.MEDIUM);
         Console.OUT.println("convert matrix to graph");
         // matrix.print();
         for (var i:Int = 1; i <= matrix.N; i++) {
