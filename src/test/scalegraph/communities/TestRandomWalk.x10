@@ -36,7 +36,7 @@ public class TestRandomWalk {
         val reader:EdgeListReader = new EdgeListReader();
         return reader.
             //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-        	  loadFromFile("test_clustering/scale-8.dl");
+        	  loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
     }
     
     public static def main(Array[String]) {

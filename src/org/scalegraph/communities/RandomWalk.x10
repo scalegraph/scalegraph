@@ -148,18 +148,17 @@ public class RandomWalk {
         }
         val Q1 = I - c * W1;
         val Q1inv = new DenseMatrix(Q1.M, Q1.N);
-        for (range in clusterRange) {
-            if (range.first == range.second) {
-                continue;
-            }
-            val size = range.second - range.first;
-            val q1 = new DenseMatrix(size, size);
-            copySubset(Q1, range.first, range.first,
-                       q1, 0, 0, size, size);
-            val q1inv = LAPACK.inverseDenseMatrix(q1);
-            q1inv.print();
-            copySubset(q1inv, 0, 0,
-                       Q1inv, range.first, range.first, size, size);
+        finish for (range in clusterRange) async {
+                if (range.first != range.second) {
+                    val size = range.second - range.first;
+                    val q1 = new DenseMatrix(size, size);
+                    copySubset(Q1, range.first, range.first,
+                               q1, 0, 0, size, size);
+                    val q1inv = LAPACK.inverseDenseMatrix(q1);
+                    q1inv.print();
+                    copySubset(q1inv, 0, 0,
+                               Q1inv, range.first, range.first, size, size);
+                }
         }
         return Q1inv;
     }
