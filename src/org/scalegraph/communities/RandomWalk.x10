@@ -21,9 +21,10 @@ public class RandomWalk {
     private var L:DenseMatrix;
     private var Q1inv:DenseMatrix;
     
-    static private val c = 0.85;
-    static private val t = 50;
-    static private val k = 50;
+    private val c = 0.85;
+    private val t = 80;
+    private val k = 50;
+    private var nCluster:Int;
 
     private class DecomposeResult {
         public val W1:DenseMatrix;
@@ -50,9 +51,6 @@ public class RandomWalk {
         this.graph = graph;
         this.nVertex = graph.getVertexCount() as Int;
         this.idToIdxMap = new HashMap[Long, Int]();
-        U = new DenseMatrix(nVertex, t);
-        V = new DenseMatrix(t, nVertex);
-        L = new DenseMatrix(t, t);
         Q1inv = new DenseMatrix(nVertex, nVertex);
     }
 
@@ -99,7 +97,7 @@ public class RandomWalk {
     private def testLowRankAod(U:DenseMatrix, Sinv:DenseMatrix, V:DenseMatrix,
                                W2:DenseMatrix) {
         val S = LAPACK.inverseDenseMatrix(Sinv);
-        val SV = new DenseMatrix(t, nVertex);
+        val SV = new DenseMatrix(nCluster, nVertex);
         SV.mult(S, V);
         val USV = new DenseMatrix(nVertex, nVertex);
         USV.mult(U, SV);
@@ -260,13 +258,16 @@ public class RandomWalk {
     **/
     private def lowRankAod(W2:DenseMatrix) {
         // calculate U
-        U = clusteringMatrix(W2);
-
+        val clusteringResult = clusteringMatrix(W2);
+        U = clusteringResult.first;
+        nCluster = clusteringResult.second;
+        
         // S^(-1) = (trans(U) * U)
-        val Sinv = new DenseMatrix(t, t);
+        val Sinv = new DenseMatrix(nCluster, nCluster);
         Sinv.transMult(U, U);
 
         // V = trans(U) * W
+        val V = new DenseMatrix(nCluster, nVertex);
         V.transMult(U, W2);
 
         val result:Array[DenseMatrix] = new Array[DenseMatrix](3);
@@ -278,9 +279,9 @@ public class RandomWalk {
 
     private def calculateL(U:DenseMatrix, Sinv:DenseMatrix,
                            V:DenseMatrix, Q1inv:DenseMatrix) {
-        val Q1invU = new DenseMatrix(nVertex, t);
+        val Q1invU = new DenseMatrix(nVertex, nCluster);
         Q1invU.mult(Q1inv, U);
-        val VQ1invU = new DenseMatrix(t, t);
+        val VQ1invU = new DenseMatrix(nCluster, nCluster);
         VQ1invU.mult(V, Q1invU);
         val Linv = Sinv - c * VQ1invU;
         return LAPACK.inverseDenseMatrix(Linv);
@@ -356,15 +357,26 @@ public class RandomWalk {
         val clustering = new DistSpectralClustering(graph);
         val result = clustering.run(t);
         Console.OUT.println(result);
-        val U:DenseMatrix = new DenseMatrix(nVertex, t);
+        val clusters = result.getAllClusters();
+        var nCluster:Int = 0;
+        val clusterToIdx = new HashMap[Int, Int]();
+        for (cluster in clusters) {
+            if (result.getVertices(cluster).size != 0) {
+                clusterToIdx.put(cluster, nCluster);
+                nCluster++;
+            }
+        }
+        
+        val U:DenseMatrix = new DenseMatrix(nVertex, nCluster);
         for (var i:Int = 0; i < nVertex; i++) {
-            val col = result.getCluster((i + 1) as Long);
+            val cluster = result.getCluster((i + 1) as Long);
+            val col = clusterToIdx(cluster)();
             for (var j:Int = 0; j < nVertex; j++) {
                 U(j, col) += matrix(j, i);
             }
         }
         // U.print();
-        return U;
+        return new Pair[DenseMatrix, Int](U, nCluster);
     }
     
     private def convertMatrixToGraph(matrix:DenseMatrix) {
@@ -395,9 +407,9 @@ public class RandomWalk {
         // result = (1 - c) * (Q1^(-1) * ei + c * Q1^(-1) * U * L * V * Q1^(-1) * ei)
         val Q1invE1 = new DenseMatrix(nVertex, 1);
         Q1invE1.mult(Q1inv, ei);
-        val VQ1invE1 = new DenseMatrix(t, 1);
+        val VQ1invE1 = new DenseMatrix(nCluster, 1);
         VQ1invE1.mult(V, Q1invE1);
-        val LVQ1invE1 = new DenseMatrix(t, 1);
+        val LVQ1invE1 = new DenseMatrix(nCluster, 1);
         LVQ1invE1.mult(L, VQ1invE1);
         val ULVQ1invE1 = new DenseMatrix(nVertex, 1);
         ULVQ1invE1.mult(U, LVQ1invE1);
