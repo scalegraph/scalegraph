@@ -550,10 +550,12 @@ test_randomwalk:
 	-cxx-postarg $(ATLAS_LIB) \
 	-classpath $(GML_DIST)/lib/native_gml.jar \
 	-x10lib $(GML_DIST)/native_gml.properties \
+	src/org/scalegraph/communities/RandomWalk.x10 \
+	src/org/scalegraph/communities/RandomWalkResult.x10 \
+	src/test/scalegraph/communities/TestRandomWalk.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/communities/LAPACK.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
-	src/org/scalegraph/communities/RandomWalk.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
@@ -563,8 +565,6 @@ test_randomwalk:
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10 \
-	src/org/scalegraph/communities/RandomWalkResult.x10 \
-	src/test/scalegraph/communities/TestRandomWalk.x10 \
 	src/org/scalegraph/io/EdgeListReader.x10; 
 
 	

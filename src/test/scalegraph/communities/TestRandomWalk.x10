@@ -36,7 +36,7 @@ public class TestRandomWalk {
         val reader:EdgeListReader = new EdgeListReader();
         return reader.
             //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-        	  loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
+            loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-12.dl");
     }
     
     public static def main(Array[String]) {
@@ -56,15 +56,12 @@ public class TestRandomWalk {
         val iterateResult = iterateRandomWalk(graph, 4);
         val idToIdxMap = iterateResult.first;
         val matrix = iterateResult.second;
-        Console.OUT.println("----------Start PreComputational method----------");
-        preComputationRandomWalk(graph, 4);
-
         for (key in idToIdxMap.keySet()) {
             Console.OUT.printf("%d: %f - %f = %f\n", key,
                                rwrResult.getScore(key),
-                               matrix(idToIdxMap(key)()), 
+                               matrix(idToIdxMap(key)(), 0), 
                                Math.abs(rwrResult.getScore(key) -
-                                        matrix(idToIdxMap(key)())));
+                                        matrix(idToIdxMap(key)(), 0)));
         }
 
         Console.OUT.println("----------End Test----------");

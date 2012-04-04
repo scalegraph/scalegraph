@@ -357,22 +357,30 @@ public class RandomWalk {
         val clustering = new DistSpectralClustering(graph);
         val result = clustering.run(t);
         Console.OUT.println(result);
+
         val clusters = result.getAllClusters();
-        var nCluster:Int = 0;
         val clusterToIdx = new HashMap[Int, Int]();
+        val sumArray = new ArrayList[DenseMatrix]();
         for (cluster in clusters) {
-            if (result.getVertices(cluster).size != 0) {
-                clusterToIdx.put(cluster, nCluster);
-                nCluster++;
+            val inClusterNode = result.getVertices(cluster);
+            if (inClusterNode.size != 0) {
+                val sum = DenseMatrix.make(nVertex, 1);
+                for (node in inClusterNode) {
+                    for (var i:Int = 0; i < nVertex; i++) {
+                        sum(i, 0) += matrix(i, (inClusterNode(node) - 1) as Int);
+                    }
+                }
+                if (sum.norm() > 0.0000001) {
+                    sumArray.add(sum);
+                }
             }
         }
-        
-        val U:DenseMatrix = new DenseMatrix(nVertex, nCluster);
-        for (var i:Int = 0; i < nVertex; i++) {
-            val cluster = result.getCluster((i + 1) as Long);
-            val col = clusterToIdx(cluster)();
+
+        val nCluster = sumArray.size();
+        val U:DenseMatrix = DenseMatrix.make(nVertex, nCluster);
+        for (var i:Int = 0; i < nCluster; i++) {
             for (var j:Int = 0; j < nVertex; j++) {
-                U(j, col) += matrix(j, i);
+                U(j, i) = sumArray(i)(j, 0);
             }
         }
         // U.print();
