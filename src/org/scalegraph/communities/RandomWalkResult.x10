@@ -3,12 +3,13 @@ package org.scalegraph.communities;
 import x10.util.HashMap;
 import x10.util.ArrayList;
 import x10.matrix.DenseMatrix;
+import x10.matrix.dist.DistDenseMatrix;
 
 public class RandomWalkResult {
     private val idToIdxMap:HashMap[Long, Int];
-    private val score:DenseMatrix;
+    private val score:DistDenseMatrix;
 
-    public def this(idToIdxMap:HashMap[Long, Int], score:DenseMatrix) {
+    public def this(idToIdxMap:HashMap[Long, Int], score:DistDenseMatrix) {
         this.idToIdxMap = idToIdxMap;
         this.score = score;
     }

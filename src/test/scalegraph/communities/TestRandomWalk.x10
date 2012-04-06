@@ -36,12 +36,12 @@ public class TestRandomWalk {
         val reader:EdgeListReader = new EdgeListReader();
         return reader.
             //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-            loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-12.dl");
+            loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
     }
     
     public static def main(Array[String]) {
         Console.OUT.println("Start Random Walk with Restart Test");
-        val graph = graphSetUpTsubame();
+         val graph = graphSetUpTsubame();
         //val graph = graphSetUp();
 
         val result:DistArray[Long] = graph.getVertexList();
@@ -51,6 +51,28 @@ public class TestRandomWalk {
         rwr.run();
         Console.OUT.println("----------Start Query Stage----------");
         val rwrResult = rwr.query(4);
+        // val onePlaceRwrResult = rwr.queryOnePlace(4);
+        /*
+        val current = here;
+        for (p in Place.places()) {
+            at (p) {
+                val r = result.dist.get(p);
+                for (i in r) {
+                    val nodeId = result(i);
+                    if (nodeId < 0l) {
+                        continue;
+                    }
+                    at (current) {
+                        Console.OUT.printf("%d: %f - %f = %f\n", nodeId,
+                                           rwrResult.getScore(nodeId),
+                                           onePlaceRwrResult.getScore(nodeId), 
+                                           Math.abs(rwrResult.getScore(nodeId) -
+                                                    onePlaceRwrResult.getScore(nodeId)));
+                    }
+                }
+            }
+        }
+        */
         Console.OUT.println(rwrResult);
         Console.OUT.println("----------Start OnTheFly method----------");
         val iterateResult = iterateRandomWalk(graph, 4);
