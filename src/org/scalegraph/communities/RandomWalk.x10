@@ -5,6 +5,7 @@ import x10.matrix.DenseMatrix;
 import x10.util.HashMap;
 import x10.util.Pair;
 import x10.util.ArrayList;
+import x10.util.Timer;
 import x10.matrix.dist.DistDenseMatrix;
 import x10.matrix.block.Grid;
 import x10.lang.Math;
@@ -57,6 +58,10 @@ public class RandomWalk {
     }
     
     private def testDecompose(result:DecomposeResult) {
+        val W1 = result.W1;
+        val W2 = result.W2;
+        val idToIdxMap = result.idToIdxMap;
+        val idxToIdMap = result.idxToIdMap;
         val vertexList = graph.getVertexList();
         for (p in Place.places()) {
             at (p) {
@@ -83,18 +88,29 @@ public class RandomWalk {
     }
 
 
-    public def testInverseW1(Q1inv:DistDenseMatrix, W1:DistDenseMatrix) {
+    public def testInverseW1(Q1inv:DistDenseMatrix, W1:DenseMatrix) {
+        val gridQ1 = Grid.make(nVertex, nVertex);
+        val Q1 = DistDenseMatrix.make(gridQ1);
+        for (var i:Int = 0; i < W1.M; i++) {
+            for (var j:Int = 0; j < W1.N; j++) {
+                if (i == j) {
+                    Q1(i, j) = 1.0 - c * W1(i, j);
+                } else {
+                    Q1(i, j) = - c * W1(i, j);
+                }
+            }
+        }
         val gridI = Grid.make(nVertex, nVertex);
         val I = DistDenseMatrix.make(gridI);
-        for (var i:Int = 0; i < nVertex; i++) {
+        for (var i:Int = 0; i < I.M; i++) {
             I(i, i) = 1.0;
         }
-        val Q1 = I - c * W1;
         val grid_I = Grid.make(nVertex, nVertex);
         val _I = DistDenseMatrix.make(grid_I);
         _I.mult(Q1, Q1inv, false);
-        val d = norm(I, _I);
+        val d = oldnorm(I, _I);
         //_I.print();
+        Console.OUT.printf("norm = %f\n", d);
         if (d > 0.001) {
             throw new Error();
         }
@@ -117,16 +133,22 @@ public class RandomWalk {
     }
 
     private def convertDistToOnePlace(matrix:DistDenseMatrix) {
+        Console.OUT.println("Start convertDistToOnePlace");
+        val startTime = Timer.milliTime();
         val matrixOnePlace = DenseMatrix.make(matrix.M, matrix.N);
         for (var i:Int = 0; i < matrix.M; i++) {
             for (var j:Int = 0; j < matrix.N; j++) {
                 matrixOnePlace(i, j) = matrix(i, j);
             }
         }
+        Console.OUT.println("End convertDistToOnePlace");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return matrixOnePlace;
     }
 
     private def convertOnePlaceToDist(matrix:DenseMatrix) {
+        Console.OUT.println("Start convertOnePlaceToDist");
+        val startTime = Timer.milliTime();
         val grid  = Grid.make(matrix.M, matrix.N);
         val matrixDist = DistDenseMatrix.make(grid);
         for (var i:Int = 0; i < matrix.M; i++) {
@@ -134,10 +156,32 @@ public class RandomWalk {
                 matrixDist(i, j) = matrix(i, j);
             }
         }
+        Console.OUT.println("End convertOnePlaceToDist");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return matrixDist;
     }
 
+    private def oldnorm(A:Matrix, B:Matrix) {
+        Console.OUT.println("Start convertOnePlaceToDist");
+        val startTime = Timer.milliTime();
+        var sum:Double = 0.0;
+        val M = Math.min(A.M, B.M);
+        val N = Math.min(A.N, B.N);
+        for (var i:Int = 0; i < M; i++) {
+            for (var j:Int = 0; j < N; j++) {
+                val d = A(i, j) - B(i, j);
+                sum += d * d;
+            }
+        }
+        Console.OUT.println("End convertOnePlaceToDist");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
+        return sum;
+    }
+
+    
     private def norm(A:Matrix, B:Matrix) {
+        Console.OUT.println("Start convertOnePlaceToDist");
+        val startTime = Timer.milliTime();
         var sum:Double = 0.0;
         val M = Math.min(A.M, B.M);
         val N = Math.min(A.N, B.N);
@@ -147,6 +191,8 @@ public class RandomWalk {
                 sum += Math.abs(d);
             }
         }
+        Console.OUT.println("End convertOnePlaceToDist");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return sum;
     }
     
@@ -154,27 +200,31 @@ public class RandomWalk {
        calculate pre-computation stage
     **/
     public def run() {
-        Console.OUT.println("Decompose graph");
+        Console.OUT.println("Start pre-compute stage");
+        val startTime = Timer.milliTime();
         val Ws:DecomposeResult = decomposeGraph(graph);
-        Console.OUT.println("inverse W1");
+        // testDecompose(Ws);
+        val _W1 = new DenseMatrix(Ws.W1.M, Ws.W1.N);
+        copySubset(Ws.W1, 0, 0, _W1, 0, 0, Ws.W1.M, Ws.W1.N);
+        // testCopySubset(Ws.W1, 0, 0, _W1, 0, 0, Ws.W1.M, Ws.W1.N);
         val Q1inv = inverseW1(Ws.W1, Ws.result);
         val W2 = Ws.W2;
         this.idToIdxMap = Ws.idToIdxMap;
         this.idxToIdMap = Ws.idxToIdMap;
-        //testDecompose(Ws);
-        //testInverseW1(Q1inv, Ws.W1);
-        Console.OUT.println("low rank aod");
+
+        // testInverseW1(Q1inv, _W1);
         val W2Aod:Array[DistDenseMatrix] = lowRankAod(W2);
         val U = W2Aod(0);
         val Sinv = W2Aod(1);
         val V = W2Aod(2);
-        Console.OUT.println("calculate L");
         val L = calculateL(U, Sinv, V, Q1inv);
         //testLowRankAod(U, Sinv, V, W2);
         this.U = U;
         this.V = V;
         this.L = L;
         this.Q1inv = Q1inv;
+        val time = (Timer.milliTime() - startTime) / 1000.0;
+        Console.OUT.printf("time = %f\n", time);
         Console.OUT.println("end");
     }
 
@@ -186,41 +236,176 @@ public class RandomWalk {
     **/
     private def inverseW1(W1:DistDenseMatrix,
                           clusterRange:ArrayList[Pair[Int, Int]]) {
-        val gridI = Grid.make(W1.M, W1.N);
-        val I = DistDenseMatrix.make(gridI);
-        for (var i:Int = 0; i < I.M; i++) {
-            I(i, i) = 1;
-        }
-        val Q1 = I - c * W1;
-        val gridQ1inv = Grid.make(Q1.M, Q1.N);
-        val Q1inv = DistDenseMatrix.make(gridQ1inv);
-        finish for (range in clusterRange) async {
-                if (range.first != range.second) {
-                    val size = range.second - range.first;
-                    val q1 = new DenseMatrix(size, size);
-                    copySubset(Q1, range.first, range.first,
+        Console.OUT.println("Start inverseW1");
+        val startTime = Timer.milliTime();
+        //        finish for (range in clusterRange) async {
+        for (range in clusterRange) {
+            if (range.first != range.second) {
+                val size = range.second - range.first;
+                val q1 = new DenseMatrix(size, size);
+                copySubset(W1, range.first, range.first,
+                           q1, 0, 0, size, size);
+                /*
+                testCopySubset(W1, range.first, range.first,
                                q1, 0, 0, size, size);
-                    val q1inv = LAPACK.inverseDenseMatrix(q1);
-                    // q1inv.print();
-                    copySubset(q1inv, 0, 0,
-                               Q1inv, range.first, range.first, size, size);
+                */
+                for (var i:Int = 0; i < q1.M; i++) {
+                    for (var j:Int = 0; j < q1.N; j++) {
+                        if (i == j) {
+                            q1(i, j) = 1.0 - c * q1(i, j);
+                        } else {
+                            q1(i, j) = - c * q1(i, j);
+                        }
+                    }
                 }
+                val q1inv = LAPACK.inverseDenseMatrix(q1);
+                // q1inv.print();
+                copySubset(q1inv, 0, 0,
+                           W1, range.first, range.first, size, size);
+                /*
+                testCopySubset(q1inv, 0, 0,
+                               W1, range.first, range.first, size, size);
+                */
             }
-        return Q1inv;
+        }
+        Console.OUT.println("End inverseW1");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
+        return W1;
     }
 
+    private def testCopySubset(src:Matrix, srcRowOffset:Int, srcColOffset:Int,
+                           dst:Matrix, dstRowOffset:Int, dstColOffset:Int,
+                           rowCnt:Int, colCnt:Int) {
+        for (var i:Int = 0; i < rowCnt; i++) {
+            for (var j:Int = 0; j < colCnt; j++) {
+                val d = Math.abs(dst(dstRowOffset + i, dstColOffset + j) -
+                                 src(srcRowOffset + i, srcColOffset + j));
+                Console.OUT.printf("d = %f\n", d);
+                if (d > 0.000001) {
+                    throw new Error();
+                }
+            }
+        }
+    }
+
+    
     private def copySubset(src:Matrix, srcRowOffset:Int, srcColOffset:Int,
                            dst:Matrix, dstRowOffset:Int, dstColOffset:Int,
                            rowCnt:Int, colCnt:Int) {
+        Console.OUT.println("Start copySubset");
+        val startTime = Timer.milliTime();
         for (var i:Int = 0; i < rowCnt; i++) {
             for (var j:Int = 0; j < colCnt; j++) {
                 dst(dstRowOffset + i, dstColOffset + j) =
                     src(srcRowOffset + i, srcColOffset + j);
             }
         }
+        Console.OUT.println("End copySubset");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
     }
+
     
+    private def copySubset(src:DistDenseMatrix, srcRowOffset:Int, srcColOffset:Int,
+                           dst:DenseMatrix, dstRowOffset:Int, dstColOffset:Int,
+                           rowCnt:Int, colCnt:Int) {
+        val grid = src.grid;
+        val upLeftInfo = grid.find(srcRowOffset, srcColOffset);
+        val upLeftRowId = upLeftInfo(0);
+        val upLeftColId = upLeftInfo(1);
+        val downRightInfo = grid.find(srcRowOffset + rowCnt - 1, srcColOffset + colCnt - 1);
+        val downRightRowId = downRightInfo(0);
+        val downRightColId = downRightInfo(1);
+        var srcRowIdx:Int = srcRowOffset;
+        var srcColIdx:Int = srcColOffset;
+        var dstRowIdx:Int = dstRowOffset;
+        var dstColIdx:Int = dstColOffset;
+        var rowCpSize:Int = 0;
+        var colCpSize:Int = 0;
+        for (var rowId:Int = upLeftRowId; rowId <= downRightRowId; rowId++) {
+            for (var colId:Int = upLeftColId; colId <= downRightColId; colId++) {
+                val info = grid.find(srcRowIdx, srcColIdx);
+                val subRowBlockId = info(0);
+                val subColBlockId = info(1);
+                val subRowIdx = info(2);
+                val subColIdx = info(3);
+                val subMatrix = src.getBlock(rowId, colId).getMatrix();
+                val subRowCnt = Math.min(grid.rowBs(rowId) - subRowIdx,
+                                         rowCnt - rowCpSize);
+                val subColCnt = Math.min(grid.colBs(colId) - subColIdx,
+                                         colCnt - colCpSize);
+                copySubset(subMatrix, subRowIdx, subColIdx,
+                           dst, dstRowIdx, dstColIdx,
+                           subRowCnt, subColCnt);
+                if (colId < downRightColId) {
+                    srcColIdx += subColCnt;
+                    dstColIdx += subColCnt;
+                    colCpSize += subColCnt;
+                } else {
+                    srcColIdx = srcColOffset;
+                    dstColIdx = dstColOffset;
+                    colCpSize = 0;
+                    srcRowIdx += subRowCnt;
+                    dstRowIdx += subRowCnt;
+                    rowCpSize += subRowCnt;
+                }
+            }
+        }
+    }
+
+    
+    private def copySubset(src:DenseMatrix, srcRowOffset:Int, srcColOffset:Int,
+                           dst:DistDenseMatrix, dstRowOffset:Int, dstColOffset:Int,
+                           rowCnt:Int, colCnt:Int) {
+        val grid = dst.grid;
+        val upLeftInfo = grid.find(dstRowOffset, dstColOffset);
+        val upLeftRowId = upLeftInfo(0);
+        val upLeftColId = upLeftInfo(1);
+        val downRightInfo = grid.find(dstRowOffset + rowCnt - 1, dstColOffset + colCnt - 1);
+        val downRightRowId = downRightInfo(0);
+        val downRightColId = downRightInfo(1);
+        var srcRowIdx:Int = srcRowOffset;
+        var srcColIdx:Int = srcColOffset;
+        var dstRowIdx:Int = dstRowOffset;
+        var dstColIdx:Int = dstColOffset;
+        var rowCpSize:Int = 0;
+        var colCpSize:Int = 0;
+        for (var rowId:Int = upLeftRowId; rowId <= downRightRowId; rowId++) {
+            for (var colId:Int = upLeftColId; colId <= downRightColId; colId++) {
+                val info = grid.find(dstRowIdx, dstColIdx);
+                val subRowBlockId = info(0);
+                val subColBlockId = info(1);
+                //                val subId = grid.getBlockId(rowId, colId);
+                val subId = grid.getBlockId(subRowBlockId, subColBlockId);
+                val subRowIdx = info(2);
+                val subColIdx = info(3);
+                val subMatrix = dst.getBlock(subRowBlockId, subColBlockId).getMatrix();
+                val subRowCnt = Math.min(grid.rowBs(rowId) - subRowIdx,
+                                         rowCnt - rowCpSize);
+                val subColCnt = Math.min(grid.colBs(colId) - subColIdx,
+                                         colCnt - colCpSize);
+                copySubset(src, srcRowIdx, srcColIdx, 
+                           subMatrix, subRowIdx, subColIdx,
+                           subRowCnt, subColCnt);
+                dst.setBlock(subId, subMatrix);
+                if (colId < downRightColId) {
+                    srcColIdx += subColCnt;
+                    dstColIdx += subColCnt;
+                    colCpSize += subColCnt;
+                } else {
+                    srcColIdx = srcColOffset;
+                    dstColIdx = dstColOffset;
+                    colCpSize = 0;
+                    srcRowIdx += subRowCnt;
+                    dstRowIdx += subRowCnt;
+                    rowCpSize += subRowCnt;
+                }
+            }
+        }
+    }
+
     private def decomposeGraph(graph:PlainGraph) {
+        Console.OUT.println("Start decomposeGraph");
+        val startTime = Timer.milliTime();
         val clustering = new DistSpectralClustering(graph);
         val result = clustering.run(k);
         Console.OUT.println(result);
@@ -230,8 +415,8 @@ public class RandomWalk {
         val idxToIdMap = new HashMap[Int, Long]();
         val grid1 = Grid.make(nVertex, nVertex);
         val grid2 = Grid.make(nVertex, nVertex);
-        val W1 = GlobalRef[DistDenseMatrix](DistDenseMatrix.make(grid1));
-        val W2 = GlobalRef[DistDenseMatrix](DistDenseMatrix.make(grid2));
+        val W1 = DistDenseMatrix.make(grid1);
+        val W2 = DistDenseMatrix.make(grid2);
         val clusters = result.getAllClusters();
 
         Console.OUT.println("create cluster range");
@@ -248,56 +433,149 @@ public class RandomWalk {
             }
             clusterRange.add(new Pair[Int, Int](tmp, cnt));
         }
-        
-        Console.OUT.println("create matrix");    
-        val vertexList = graph.getVertexList();
-        for (p in Place.places()) {
-            at (p) {
-                val r = vertexList.dist.get(p);
-                for (i in r) {
-                    val nodeId = vertexList(i);
-                    if (nodeId == -1l) {
-                        continue;
-                    }
-                    val neighbours:Array[Long] = graph.getOutNeighbours(nodeId);
-                    val nodeIdx = idToIdxMap(nodeId)();
+
+        Console.OUT.println("create matrix");
+        var leftColIdx:Int = 0;
+        var upRowIdx:Int = 0;
+        val grid = W1.grid;
+        for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
+            for (var colId:Int = 0; colId < grid.numColBlocks; colId++) {
+                val rowSize = grid.rowBs(rowId);
+                val colSize = grid.colBs(colId);
+                val block1 = W1.getBlock(rowId, colId);
+                val subMatrix1 = block1.getMatrix();
+                val block2 = W2.getBlock(rowId, colId);
+                val subMatrix2 = block2.getMatrix();
+                val w1Id = grid.getBlockId(rowId, colId);
+                val w2Id = grid.getBlockId(rowId, colId);
+                for (var colIdx:Int = 0; colIdx < colSize; colIdx++) {
+                    val wColIdx = colIdx + leftColIdx;
+                    val nodeId = idxToIdMap(wColIdx)();
+                    val neighbours = graph.getOutNeighbours(nodeId);
                     if (neighbours != null && neighbours.size != 0) {
-                        for (j in neighbours) {
-                            val neighbour = neighbours(j);
-                            val neighbourIdx = idToIdxMap(neighbour)();
-                            val prob = 1.0 / neighbours.size;
+                        val prob = 1.0 / neighbours.size;
+                        for (i in neighbours) {
+                            val neighbourId = neighbours(i);
+                            val neighbourIdx = idToIdxMap(neighbourId)();
+                            if (!(upRowIdx <= neighbourIdx &&
+                                  neighbourIdx < upRowIdx + rowSize)) {
+                                continue;
+                            }
                             if (result.getCluster(nodeId) ==
-                                result.getCluster(neighbour)) {
-                                at (W1) {
-                                    W1()(neighbourIdx, nodeIdx) = prob;
-                                }
+                                result.getCluster(neighbourId)) {
+                                subMatrix1(neighbourIdx - upRowIdx, colIdx) = prob;;
                             } else {
-                                at (W2) {
-                                    W2()(neighbourIdx, nodeIdx) = prob;
-                                }
+                                subMatrix2(neighbourIdx - upRowIdx, colIdx) = prob;
                             }
                         }
                     } else {
-                        for (j in 0..(nVertex - 1)) {
-                            val prob = 1.0 / nVertex;
-                            val neighbour = idxToIdMap(j)();
+                        val prob = 1.0 / nVertex;
+                        for (var wRowIdx:Int = upRowIdx; wRowIdx < upRowIdx + rowSize;
+                             wRowIdx++) {
+                            val rowIdx = wRowIdx - leftColIdx;
+                            val neighbourId = idxToIdMap(wRowIdx)();
                             if (result.getCluster(nodeId) ==
-                                result.getCluster(neighbour)) {
-                                at (W1) {
-                                    W1()(j, nodeIdx) = prob;
-                                }
+                                result.getCluster(neighbourId)) {
+                                subMatrix1(rowIdx, colIdx) = prob;;
                             } else {
-                                at (W2) {
-                                    W2()(j, nodeIdx) = prob;
-                                }
+                                subMatrix2(rowIdx, colIdx) = prob;
                             }
                         }
                     }
                 }
+                W1.setBlock(w1Id, subMatrix1);
+                W2.setBlock(w2Id, subMatrix2);
+                if (colId < grid.numColBlocks - 1) {
+                    leftColIdx += colSize;
+                } else {
+                    leftColIdx = 0;
+                    upRowIdx += rowSize;
+                }
             }
         }
+        
+        /*
+        for (nodeId in idToIdxMap.keySet()) {
+            Console.OUT.printf("nodeId = %d\n", nodeId);
+            val nodeIdx = idToIdxMap(nodeId)();
+            val neighbours = graph.getOutNeighbours(nodeId);
+            if (neighbours != null && neighbours.size != 0) {
+                for (i in neighbours) {
+                    val neighbourId = neighbours(i);
+                    val neighbourIdx = idToIdxMap(neighbourId)();
+                    val prob = 1.0 / neighbours.size;
+                    if (result.getCluster(nodeId) ==
+                        result.getCluster(neighbourId)) {
+                        W1(neighbourIdx, nodeIdx) = prob;
+                    } else {
+                        W2(neighbourIdx, nodeIdx) = prob;
+                    }
+                }
+            } else {
+                for (var neighbourIdx:Int = 0;
+                     neighbourIdx < nVertex - 1; neighbourIdx++) {
+                    val prob = 1.0 / nVertex;
+                    val neighbour = idxToIdMap(neighbourIdx)();
+                    if (result.getCluster(nodeId) ==
+                        result.getCluster(neighbour)) {
+                        W1(neighbourIdx, nodeIdx) = prob;
+                    } else {
+                        W2(neighbourIdx, nodeIdx) = prob;
+                    }
+                }
+            }
+        }
+        
 
-        return new DecomposeResult(W1(), W2(), clusterRange,
+          val vertexList = graph.getVertexList();
+          for (p in Place.places()) {
+          at (p) {
+          val r = vertexList.dist.get(p);
+          for (i in r) {
+          val nodeId = vertexList(i);
+          if (nodeId == -1l) {
+          continue;
+          }
+          val neighbours:Array[Long] = graph.getOutNeighbours(nodeId);
+          val nodeIdx = idToIdxMap(nodeId)();
+          if (neighbours != null && neighbours.size != 0) {
+          for (j in neighbours) {
+          val neighbour = neighbours(j);
+          val neighbourIdx = idToIdxMap(neighbour)();
+          val prob = 1.0 / neighbours.size;
+          if (result.getCluster(nodeId) ==
+          result.getCluster(neighbour)) {
+          at (W1) {
+          W1()(neighbourIdx, nodeIdx) = prob;
+          }
+          } else {
+          at (W2) {
+          W2()(neighbourIdx, nodeIdx) = prob;
+          }
+          }
+          }
+          } else {
+          for (j in 0..(nVertex - 1)) {
+          val prob = 1.0 / nVertex;
+          val neighbour = idxToIdMap(j)();
+          if (result.getCluster(nodeId) ==
+          result.getCluster(neighbour)) {
+          at (W1) {
+          W1()(j, nodeIdx) = prob;
+          }
+          } else {
+          at (W2) {
+          W2()(j, nodeIdx) = prob;
+          }
+          }
+          }
+          }
+          }
+          }
+          } */
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
+        Console.OUT.println("end decomposeGraph");
+        return new DecomposeResult(W1, W2, clusterRange,
                                    idToIdxMap, idxToIdMap);
     }
     
@@ -306,6 +584,8 @@ public class RandomWalk {
        @return result of Array which has U, S, V(W2 = U * S * V)
     **/
     private def lowRankAod(W2:DistDenseMatrix) {
+        Console.OUT.println("Start LowRankAod");
+        val startTime = Timer.milliTime();
         // calculate U
         val clusteringResult = clusteringMatrix(W2);
         U = clusteringResult.first;
@@ -326,23 +606,49 @@ public class RandomWalk {
         result(0) = U;
         result(1) = Sinv;
         result(2) = V;
+        Console.OUT.println("End LowRankAod");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return result;
     }
 
+    public def transMatrix(matrix:DistDenseMatrix) {
+        Console.OUT.println("Start transMatrix");
+        val startTime = Timer.milliTime();
+        val grid = Grid.make(matrix.N, matrix.M);
+        val result = DistDenseMatrix.make(grid);
+        val gridE = Grid.make(matrix.N, matrix.N);
+        val E = DistDenseMatrix.make(gridE);
+        for (var i:Int = 0; i < E.N; i++) {
+            E(i, i) = 1.0;
+        }
+        result.multTrans(E, matrix, false);
+        Console.OUT.println("End transMatrix");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
+        return result;
+    }
+
+    /*
     private def transMatrix(matrix:DistDenseMatrix) {
+        Console.OUT.println("Start transMatrix");
+        val startTime = Timer.milliTime();
         val grid = Grid.make(matrix.N, matrix.M);
         val transMatrix = DistDenseMatrix.make(grid);
-
+        
         for (var i:Int = 0; i < matrix.M; i++) {
             for (var j:Int = 0; j < matrix.N; j++) {
                 transMatrix(j, i) = matrix(i, j);
             }   
         }
+        Console.OUT.println("End transMatrix");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return transMatrix;
     }
+    */
     
     private def calculateL(U:DistDenseMatrix, Sinv:DistDenseMatrix,
                            V:DistDenseMatrix, Q1inv:DistDenseMatrix) {
+        Console.OUT.println("Start calculateL");
+        val startTime = Timer.milliTime();
         val gridQ1invU = Grid.make(nVertex, nCluster);
         val Q1invU = DistDenseMatrix.make(gridQ1invU);
         Q1invU.mult(Q1inv, U, false);
@@ -373,6 +679,8 @@ public class RandomWalk {
           }
         */
         val L = convertOnePlaceToDist(LOnePlace);
+        Console.OUT.println("End calculateL");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return L;
     }
 
@@ -405,35 +713,31 @@ public class RandomWalk {
             }
         }
         
-        for (i in globalMap().keySet()) {
-            Console.OUT.printf("%d -> %d\n", i, globalMap()(i)());
-        }
-        
-        for (p in Place.places()) {
-            at (p) {
-                val r = (vertexList.dist | p).region;
-                for (i in r) {
-                    val nodeId = vertexList(i);
-                    val neighbours = graph.getOutNeighbours(nodeId);
-                    if (neighbours != null && neighbours.size != 0) {
-                        for (j in neighbours) {
-                            at (globalMatrix) {
-                                globalMatrix()(globalMap()(neighbours(j))(),
-                                               globalMap()(nodeId)()) =
-                                    1.0 / neighbours.size;
+        finish for (p in Place.places()) async {
+                at (p) {
+                    val r = (vertexList.dist | p).region;
+                    for (i in r) {
+                        val nodeId = vertexList(i);
+                        val neighbours = graph.getOutNeighbours(nodeId);
+                        if (neighbours != null && neighbours.size != 0) {
+                            for (j in neighbours) {
+                                at (globalMatrix) {
+                                    globalMatrix()(globalMap()(neighbours(j))(),
+                                                   globalMap()(nodeId)()) =
+                                        1.0 / neighbours.size;
+                                }
                             }
-                        }
-                    } else {
-                        for (j in 0..(nVertex - 1)) {
-                            at (globalMatrix) {
-                                globalMatrix()(j as Int, globalMap()(nodeId)())
-                                    = 1.0 / nVertex;
+                        } else {
+                            for (j in 0..(nVertex - 1)) {
+                                at (globalMatrix) {
+                                    globalMatrix()(j as Int, globalMap()(nodeId)())
+                                        = 1.0 / nVertex;
+                                }
                             }
                         }
                     }
                 }
             }
-        }
         return globalMatrix();
     }
 
@@ -442,6 +746,8 @@ public class RandomWalk {
        @return U
     **/
     private def clusteringMatrix(matrix:DistDenseMatrix) {
+        Console.OUT.println("Start clusteringMatrix");
+        val startTime = Timer.milliTime();
         val graph = convertMatrixToGraph(matrix);
         val clustering = new DistSpectralClustering(graph);
         val result = clustering.run(t);
@@ -450,41 +756,132 @@ public class RandomWalk {
         val clusters = result.getAllClusters();
         val clusterToIdx = new HashMap[Int, Int]();
         val sumArray = new ArrayList[DenseMatrix]();
-        for (cluster in clusters) {
-            val inClusterNode = result.getVertices(cluster);
-            if (inClusterNode.size != 0) {
-                val sum = DenseMatrix.make(nVertex, 1);
-                for (node in inClusterNode) {
-                    for (var i:Int = 0; i < nVertex; i++) {
-                        sum(i, 0) += matrix(i, (inClusterNode(node) - 1) as Int);
+
+        Console.OUT.println("Start make sumArray");
+        {
+            val grid = matrix.grid;
+            for (cluster in clusters) {
+                val inClusterNode = result.getVertices(cluster);
+                if (inClusterNode.size != 0) {
+                    val sum = DenseMatrix.make(nVertex, 1);
+                    for (node in inClusterNode) {
+                        var upRowIdx:Int = 0;
+                        val colIdx = (inClusterNode(node) - 1) as Int;
+                        for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
+                            val info = grid.find(upRowIdx, colIdx);
+                            val rowBlockId = info(0);
+                            val colBlockId = info(1);
+                            val subRowIdx = info(2);
+                            val subColIdx = info(3);
+                            val subMatrix = matrix.getBlock(rowBlockId, colBlockId);
+                            val rowSize = grid.rowBs(rowBlockId);
+                            val colSize = grid.colBs(colBlockId);
+                            for (var i:Int = 0; i < rowSize; i++) {
+                                sum(upRowIdx + i, 0) += subMatrix(i, subColIdx);
+                            }
+                            upRowIdx += rowSize;
+                        }
                     }
-                }
-                if (sum.norm() > 0.000001) {
-                    sumArray.add(sum);
+                    /* test code
+                    for (var i:Int = 0; i < nVertex; i++) {
+                        var s:Double = 0.0;
+                        for (node in inClusterNode) {
+                            s += matrix(i, (inClusterNode(node) - 1) as Int);
+                        }
+                        if (Math.abs(sum(i, 0) - s) > 0.0000001) {
+                            Console.OUT.printf("d = %f\n", Math.abs(sum(i, 0) - s));
+                            throw new Error();
+                        }
+                    }
+                    */
+                    if (sum.norm() > 0.000001) {
+                        sumArray.add(sum);
+                    }
                 }
             }
         }
 
+        Console.OUT.println("Start make U");
         val nCluster = sumArray.size();
         val gridU = Grid.make(nVertex, nCluster);
         val U:DistDenseMatrix = DistDenseMatrix.make(gridU);
+        val grid = U.grid;
+        var upRowIdx:Int = 0;
+        var leftColIdx:Int = 0;
+        for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
+            for (var colId:Int = 0; colId < grid.numColBlocks; colId++) {
+                val subMatrix = U.getBlock(rowId, colId).getMatrix();
+                val rowSize = grid.rowBs(rowId);
+                val colSize = grid.colBs(colId);
+                val subId = grid.getBlockId(rowId, colId);
+                for (var i:Int = 0; i < rowSize; i++) {
+                    for (var j:Int = 0; j < colSize; j++) {
+                        val rowIdx = i + upRowIdx;
+                        val colIdx = j + leftColIdx;
+                        subMatrix(i, j) = sumArray(colIdx)(rowIdx, 0);
+                    }
+                }
+                U.setBlock(subId, subMatrix);
+                if (colId < grid.numColBlocks - 1) {
+                    leftColIdx += colSize;
+                } else {
+                    leftColIdx = 0;
+                    upRowIdx += rowSize;
+                }
+            }
+        }
+                 
+        /*
         for (var i:Int = 0; i < nCluster; i++) {
             for (var j:Int = 0; j < nVertex; j++) {
                 U(j, i) = sumArray(i)(j, 0);
             }
         }
-        
-        // U.print();
+        */
+        Console.OUT.println("End clusteringMatrix");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return new Pair[DistDenseMatrix, Int](U, nCluster);
     }
     
     private def convertMatrixToGraph(matrix:DistDenseMatrix) {
+        Console.OUT.println("Start convertMatrixToGraph");
+        val startTime = Timer.milliTime();
         val graph:PlainGraph = new PlainGraph(GraphSizeCategory.MEDIUM);
         Console.OUT.println("convert matrix to graph");
         // matrix.print();
         for (var i:Int = 1; i <= matrix.N; i++) {
             graph.addVertex(i.toString());
         }
+
+        val grid = matrix.grid;
+        var leftColIdx:Int = 0;
+        var upRowIdx:Int = 0;
+        for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
+            for (var colId:Int = 0; colId < grid.numColBlocks; colId++) {
+                val rowSize = grid.rowBs(rowId);
+                val colSize = grid.colBs(colId);
+                val subId = grid.getBlockId(rowId, colId);
+                val subMatrix = matrix.getBlock(rowId, colId).getMatrix();
+                for (var i:Int = 0; i < subMatrix.M; i++) {
+                    for (var j:Int = 0; j < subMatrix.N; j++) {
+                        if (subMatrix(i, j) > 0) {
+                            val rowIdx = i + upRowIdx;
+                            val colIdx = j + leftColIdx;
+                            val edge = (rowIdx + 1).toString() + " " +
+                                (colIdx + 1).toString();
+                            graph.addEdge(edge);
+                        }
+                    }
+                }
+                if (colId < grid.numColBlocks - 1) {
+                    leftColIdx += colSize;
+                } else {
+                    leftColIdx = 0;
+                    upRowIdx += rowSize;
+                }
+            }
+        }
+        /*
         for (var i:Int = 0; i < matrix.M; i++) {
             for (var j:Int = 0; j < matrix.N; j++) {
                 if (matrix(i, j) > 0) {
@@ -493,6 +890,9 @@ public class RandomWalk {
                 }
             }
         }
+        */
+        Console.OUT.println("End convertMatrixToGraph");
+        Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return graph;
     }
     
@@ -501,6 +901,8 @@ public class RandomWalk {
        @return DenseMatrix RWR score
     **/
     public def query(id:Long) {
+        Console.OUT.println("Start query");
+        val startTime = Timer.milliTime();
         Console.OUT.println("calculate ei");
         val nRowBlock = Q1inv.grid.numRowBlocks;
         val gridei = Grid.makeMaxRow(nVertex, 1,
@@ -545,6 +947,9 @@ public class RandomWalk {
         
         Console.OUT.println("calculate result");
         val result = (1 - c) * (Q1invE1 + c * Q1invULVQ1invE1);
+        val time = (Timer.milliTime() - startTime) / 1000.0;
+        Console.OUT.println("End query");
+        Console.OUT.printf("time = %f\n", time);
         return new RandomWalkResult(idToIdxMap, result);
     }
 
