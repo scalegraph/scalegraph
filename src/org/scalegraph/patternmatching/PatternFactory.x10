@@ -3,6 +3,7 @@ package org.scalegraph.patternmatching;
 import x10.util.ArrayList;
 import x10.util.Pair;
 import x10.util.HashMap;
+import x10.util.HashSet;
 import x10.util.Map;
 import x10.util.Set;
 import x10.lang.Iterator;
@@ -10,8 +11,8 @@ import x10.lang.Iterator;
 
 
 public class PatternFactory {
-	private _d:DataBase;
-
+	private var _d:DataBase=null;
+	private val iso:Isomorphism = new Isomorphism();
 	
 	public def this(var d:DataBase){
 		_d = d;
@@ -58,10 +59,10 @@ public class PatternFactory {
 		
 		if (pat.size() == 0) {
 			var eim:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = _d.get_all_edge_info();
-			var cit:Iterator[Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]]] = eim.entries().iterator();
+			val cit:Iterator[Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]]] = eim.entries().iterator();
 			
 			while (cit.hasNext()) {
-				x:Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]] = cit.next();
+				val x:Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]] = cit.next();
 				var p:Pattern = make_single_edge_pattern(x.getKey().get_srcl(), x.getKey().get_destl(), x.getKey().get_el());
 				super_patterns.add(p);
 			}
@@ -72,7 +73,7 @@ public class PatternFactory {
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
-			var nbrs:Set[Pair[Int,Int]]=_d.get_neighbors(src_v);
+			var nbrs:HashSet[Pair[Int,Int]]=_d.get_neighbors(src_v);
 				// about nbrs element of first is destination label and second is edeg label
 			
 			
@@ -151,34 +152,54 @@ public class PatternFactory {
 				}// finish join backedge
 			}// finish extension about one vertex in this pattern
 		}// finish extension about all vartex in this pattern
-		/*
-		 * // sometimes few neighbors are actually unique, need to check that
-		 * var codes:Set[String];
-		 * i = 0;
-		 * while (i < super_patterns.size()) {
-		 * check_isomorphism(super_patterns(i));
-		 * var cc_str:String = super_patterns[i].get_canonical_code().to_string();
-		 * pair<set<std::string>::iterator, bool> ret_val = codes.insert(cc_str);
-		 * if (ret_val.second == false) {
-		 * delete super_patterns[i];
-		 * super_patterns.erase(super_patterns.begin()+i);
-		 * }
-		 * else 
-		 * i++;
-		 * }
-		 */
+		
+		 // sometimes few neighbors are actually unique, need to check that
+		 var codes:HashSet[String] = new HashSet[String]();
+		 var i:Int = 0;
+		 while (i < super_patterns.size()) {
+			 iso.check_isomorphism(super_patterns(i));
+			 var cc_str:String = super_patterns(i).get_canonical_code().to_string();
+		 
+			 
+			
+			 
+			 if (codes.add(cc_str) == false) {
+				 super_patterns.removeAt(i);
+			 }
+			 else {
+				 i++;
+			 }
+		 }
 	}
 	
 	
 	public def get_sub_patterns(val pat:Pattern,var sub_patterns:ArrayList[Pattern]){
 		// if pattern size is too small the pattern don't have sub pattern
 		if (pat.size() <= 2) {
+			// it has no sub puttern
+			// if want to use null pattern,please implement
 			return;
 		}
 		pat.find_removable_edges();
 		val re:ArrayList[Pair[Int,Int]] = pat.get_removable_edges();
+		var codes:HashSet[String] = new HashSet[String]();
 		
-		//< not be implemented
+		
+		for(var i:Int = 0;i < re.size();i++){
+			var sub_pat:Pattern = pattern_with_edge_removed(pat,re(i).first,re(i).second);
+			iso.check_isomorphism(sub_pat);
+			var cc_str:String = sub_pat.get_canonical_code().to_string();
+			
+			
+			if(codes.add(cc_str) == false){
+				sub_patterns.add(sub_pat);
+			}	
+		}
+	}
+	
+	public def pattern_with_edge_removed(var p:Pattern,var a:Int,var b:Int):Pattern{
+		var clone:Pattern = p.clone();
+		return null;
 	}
 	
 	public def get_super_degree(var pat:Pattern):Int{
@@ -197,7 +218,7 @@ public class PatternFactory {
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices and counting
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
-			var nbrs:Set[Pair[Int,Int]]=_d.get_neighbors(src_v);
+			var nbrs:HashSet[Pair[Int,Int]]=_d.get_neighbors(src_v);
 			// about nbrs element of first is destination label and second is edeg label
 			
 			

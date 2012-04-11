@@ -6,16 +6,16 @@ import x10.util.Pair;
 
 
 public class Pattern {
-	private var _matrix:AdjMatrix = null;
+	private var _matrix:FullLabelAdjMatrix = null;
 	private var _sup_ok:Int = 0; //!< 0=exact, +1: Super-Set of exact VAT, -1: Sub-Set of exact VAT
 	private var _is_frequent:Boolean = false;
 	private var _code_known:Boolean = false;
 	private var _status_known:Boolean = false;
 	private var _vat:ArrayList[Int] = new ArrayList[Int]();//!< contains the graph ids that has at least these edges
 	private var _edges:ArrayList[EdgePattern] = new ArrayList[EdgePattern](); //!< store edge pattern of all edges
-	private var _removable_edges:ArrayList[Pair[Int, Int]];  //!< removing these edges keeps the pattern connected
-	//CAN_CODE _canonical_code;// modify after how to implemente cannonical_code 
-
+	private var _removable_edges:ArrayList[Pair[Int, Int]];  //!< removing these edges keeps the pattern connected. represented in two vertces id.
+	private var _canonical_code:Canonicalcode;// modify after how to implemente cannonical_code 
+	private var _removable_edge_known:Boolean = false;
 	
 	
 	public def this(){
@@ -27,7 +27,7 @@ public class Pattern {
 	}
 	
 	public def this(var labels:ArrayList[Int]){
-		_matrix = new AdjMatrix(labels);
+		_matrix = new FullLabelAdjMatrix(labels);
 		_sup_ok = -1;
 		_is_frequent = false;
 		_code_known = false;
@@ -35,15 +35,26 @@ public class Pattern {
 	}
 	
 	
-	public def add_edge(var i:Int,var j:Int,var e:Int){
-		// not implemennted
+	public def add_edge(var i:Int,var j:Int,var e:Int):void{
+		_matrix.addEdge(i,j,e);
+		var v1:Int = _matrix.getLabel(i);
+		var v2:Int = _matrix.getLabel(j);
+		var edge:EdgePattern = null;
+		if(v1 < v2){
+			edge = new EdgePattern(v1,v2,e);
+		}
+		else{
+			edge = new EdgePattern(v2,v1,e);
+		}
+		_edges.add(edge);
+		_sup_ok = 1;  // super-set of exact VAT
 	}
 	
 	
-	public def get_matrix():AdjMatrix{
+	public def get_matrix():FullLabelAdjMatrix{
 		return _matrix;
 	}
-	public def set_matrix(var matrix:AdjMatrix){
+	public def set_matrix(var matrix:FullLabelAdjMatrix){
 		_matrix = matrix;
 	}
 	
@@ -93,7 +104,12 @@ public class Pattern {
 		_edges = edges;
 	}
 	
-	
+	public def get_canonical_code():Canonicalcode{
+		return _canonical_code;
+	}
+	public def set_canonical_code(var canonical_code:Canonicalcode){
+		_canonical_code = canonical_code;
+	}
 	
 	public def set_freq(){
 		_sup_ok=0;
@@ -102,13 +118,18 @@ public class Pattern {
 	
 	public def size():Int{
 		if (_matrix != null)
-			return _matrix.size();
+			return _matrix.getSize();
 			else
 				return 0;
 	}
 	
 	public def label(var i:Int) {
-		return _matrix.label(i);
+		return _matrix.getLabel(i);
+	}
+	
+	
+	public def get_edge_label(var i:Int,var j:Int):Int{
+		return _matrix.getEdgeLabel(i,j);
 	}
 	
 	public def edge_counter(var e:EdgePattern):Int{//counting how many edges same to parameter in this graph pattern
@@ -123,33 +144,61 @@ public class Pattern {
 	}
 	
 	public def add_vertex(var v:Int):Int{
-		return _matrix.add_vertex(v);
+		return _matrix.addVertex(v);
 	}
 	
 	public def join_vat(var p:Pattern){// join the new edge pattern
 		// not implemennted yet
+		var out_vector:ArrayList[Int] = new ArrayList[Int]();
+		for(var i:Int = 0;i < _vat.size();i++){
+			for(var j:Int = 0;j < p.get_vat().size();j++){
+				if(_vat(i).equals(p.get_vat()(j))){
+					out_vector.add(_vat(i));
+				}
+			}
+		}
+		
+		_vat = out_vector;
 	}
 	
 	public def get_vids_for_this_label(var label:Int,var ret_val:ArrayList[Int]):void{
 		// get id of vertices that have the label
-		//not implemented yet
+		ret_val = _matrix.getVerticesFromLabel(label);
 	}
 	
 	
-	public def edge_exist(var i:Int,var j:Int):Boolean{// use id of two vertices tocheck existance of edge
-		// not implemented yet
-		return true;// need modify
+	public def edge_exist(var i:Int,var j:Int):Boolean{// use id of two vertices to check existance of edge
+		if(_matrix(i,j) == 0){
+			return false;
+		}
+		else{
+			return true;
+		}
 	}
 	
 	
-	public def find_removable_edges():void{
+	public def find_removable_edges():Int{
 		// find removable edges and remember
+		if (_removable_edge_known == true) return _removable_edges.size();
+	
+		for (var i:Int = 0;i < _matrix.getSize();i++) {
+			for(var j:Int = 0;j < i;j++){
+				if(_matrix(i,j) == 1){
+					var edge:Pair[Int,Int] = Pair(i,j);
+					if (! _matrix.isEssentialEdge(i,j)) {
+						// cout << "edge (" << edge.first << "," << edge.second << ") is removable\n";
+						_removable_edges.add(edge); 
+					}
+				}
+			}
+		}
+		_removable_edge_known = true;
+		return _removable_edges.size();
 	}
 	
 	public def get_removable_edges():ArrayList[Pair[Int,Int]]{
 		// return removable edes
-		// not implemented yet
-		return null;//need modify
+		return _removable_edges;
 	}
 	
 	public def clone():Pattern{

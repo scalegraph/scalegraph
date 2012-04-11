@@ -1,9 +1,9 @@
 package org.scalegraph.patternmatching;
 
 public class EdgePattern {
-	private var _srcl:Int;// source vertex label 
-	private var _destl:Int;// destination vertex label
-	private var _el:Int;// edge label
+	private var _srcl:Int = 0;// source vertex label 
+	private var _destl:Int = 0;// destination vertex label
+	private var _el:Int = 0;// edge label
 	
 	
 	public def this (var srcl:Int,var destl:Int,var el:Int){
@@ -24,16 +24,5 @@ public class EdgePattern {
 		return _el;
 	}
 	
-	public def equals(var ep:EdgePattern){
-		if(_srcl == ep.get_srcl() 
-				&& _destl == ep.get_destl()
-				&& _el == ep.get_el()){
-			return true;
-			
-		}
-		else{
-			return false;
-		}
-				
-	}
+	
 }

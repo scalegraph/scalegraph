@@ -6,9 +6,9 @@ import x10.util.ArrayList;
 /**
  * adjacency matrix class for graph with labeled vertex
  */
-public class AdjMatrix[V_T] extends SqrSymMatrix {
-	
-	public val vlabel:ArrayList[V_T];
+public class AdjMatrix extends SqrSymMatrix {
+
+	public val vlabel:ArrayList[Int];
 	//private var edgeCount:Int;
 	
 	/**
@@ -16,10 +16,10 @@ public class AdjMatrix[V_T] extends SqrSymMatrix {
 	 */
 	public def this(n:Int){
 		super(n);
-		this.vlabel = new ArrayList[V_T](n);
+		this.vlabel = new ArrayList[Int](n);
 	}
 	
-	public def this(labels:ArrayList[V_T]){
+	public def this(labels:ArrayList[Int]){
 		this(labels.size());
 		this.vlabel = labels.clone();
 	}
@@ -27,7 +27,7 @@ public class AdjMatrix[V_T] extends SqrSymMatrix {
 	/**
 	 * getter and setter
 	 */
-	public def getLabel(v:Int): V_T {
+	public def getLabel(v:Int): Int {
 		/*if(0 <= v && v < this.vlabel.size()){
 			return vlabel(v);
 		}else{
@@ -38,7 +38,7 @@ public class AdjMatrix[V_T] extends SqrSymMatrix {
 	}
 	
 	/* called from only 1 place */
-	public def setLabel(v:Int, l:V_T): void {
+	public def setLabel(v:Int, l:Int): void {
 		if(0 <= v && v < this.vlabel.size()){
 			vlabel(v) = l;
 		}else{
@@ -61,20 +61,20 @@ public class AdjMatrix[V_T] extends SqrSymMatrix {
 	 * return vertices whose label is l
 	 */
 	/* called from only 1 place */
-	public def getVerticesFromLabel(l:V_T): Array[Int](1) {
-		val builder = new ArrayBuilder[Int]();
+	public def getVerticesFromLabel(l:Int): ArrayList[Int] {
+		val ret_val = new ArrayList[Int]();
 		for(var i:Int = 0; i < this.vlabel.size(); i++){
 			if(vlabel(i).equals(l)){
-				builder.add(i);
+				ret_val.add(i);
 			}
 		}
-		return builder.result();
+		return ret_val;
 	}
 	
 	/**
 	 * add a new vertex
 	 */	
-	public def addVertex(l:V_T): Int {
+	public def addVertex(l:Int): Int {
 		val ret = this.addVertex();
 		this.vlabel.add(l);
 		return ret;

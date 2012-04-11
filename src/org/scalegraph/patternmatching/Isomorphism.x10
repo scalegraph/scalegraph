@@ -295,17 +295,49 @@ public class Isomorphism {
 						curr_fwd_cid--;
 					}
 					
-										
-					
-					
-					
+					if(covered_edges(idx).contains(new FiveTuple(g_src_id, g_dest_id, g_src_lbl, g_e_lbl, g_dest_lbl)) == false &&
+							covered_edges(idx).contains(new FiveTuple(g_dest_id, g_src_id, g_dest_lbl, g_e_lbl, g_src_lbl)) == false) {		
+						var new_tuple:FiveTuple = new FiveTuple(last_vid, c_dest_id, g_src_lbl, g_e_lbl, g_dest_lbl);
+						
+						cand_edges.add(new_tuple);
+					}
+					else{
+						// if need, print out debug code
+					}	
 				}
 			}
 			
 			
-			
-			
-		}while(false);
+			// No extensions can be made from this node.
+			if(cand_edges.size() == 0) {
+				// TODO: This process can be speeded up by passing a set of vertices
+				// for which all the out_edges have been explored.
+				last_vid--;
+				
+				if(last_vid == -1) {  // All vertices have been explored but still no candidates.
+					return false;
+				} else {
+					g_src_id=new_codes(idx).gid(last_vid);
+					g_src_lbl = cand_pat.label(g_src_id);
+				}
+			}
+		}while(cand_edges.size() == 0 && last_vid > -1);
+		
+		
+		// sort candidate edges
+		for(var i:Int = 0; i < (cand_edges.size()-1);i++){
+			for(var j:Int = i + 1;j < cand_edges.size();j++){
+				if (cand_edges(i) < cand_edges(j)){
+					var s:FiveTuple = cand_edges(j);
+					cand_edges(j) = cand_edges(i);
+					cand_edges(i) = s;
+				}
+			}
+		}
+		
+		
+		
+		
 		
 		
 		// not implemented yet

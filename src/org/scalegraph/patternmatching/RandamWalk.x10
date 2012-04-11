@@ -6,14 +6,17 @@ import x10.util.Random;
 import x10.util.Timer;
 import x10.util.ArrayList;
 import x10.util.HashMap;
+import x10.util.Box;
+
 
 public class RandamWalk {// random walk on pattern space
 
-	private var _maxiter:Int;
-	private var _last:Pattern;//<! store last node of the random walk.
-	private var _pf:PatternFactory;
-	private var _node_map:HashMap[String,LatticeNode];//<! store all lattice node.
-	
+	private var _maxiter:Int = 0;
+	private var _last:Pattern = null;//<! store last node of the random walk.
+	private var _pf:PatternFactory = null;
+	private var _node_map:HashMap[String,LatticeNode] = new HashMap[String,LatticeNode]();//<! store all lattice node.
+	private var _iso:Isomorphism = new Isomorphism();
+	private var _freq_cnt:HashMap[String,Int] = new HashMap[String,Int]();// key is CanonicalCode represented in String,and value is frequency.
 	
 	public def this(var d:DataBase,var iter:Int){
 		_last = null;
@@ -24,8 +27,8 @@ public class RandamWalk {// random walk on pattern space
 	public def initialize():LatticeNode{//make new Lattice Node contains the graph pattern that is consist of only one frequent edge, before walk
 		var p:Pattern = _pf.get_one_random_one_edge_frequent_pattern();
 		
-		/*const typename PAT::CAN_CODE& cc = check_isomorphism(p);
-		p->set_canonical_code(cc);*/
+		var cc:Canonicalcode = _iso.check_isomorphism(p);
+		p.set_canonical_code(cc);
 		if (p.get_is_frequent()==false) {
 			assert(false):("ERROR:this pattern is infrquent\n");
 		}
@@ -46,8 +49,6 @@ public class RandamWalk {// random walk on pattern space
 			
 			var p:Pattern = current.getpattern();
 			if(iter >= _maxiter){ //if iter over the maxiter that was designate, then finish.
-			
-				
 				return 1;
 			}
 			
@@ -55,10 +56,21 @@ public class RandamWalk {// random walk on pattern space
 			
 			if(step >= 10){ // assuming after 10 steps, the walk mixes to uniformity
 				iter++;
+				var cc:String = p.get_canonical_code().to_string();
+				var freq:Box[Int] = _freq_cnt.get(cc);
+				if (freq != null){
+					val x:Int = freq.value + 1;
+					_freq_cnt.remove(cc);
+					_freq_cnt.put(cc,x);
+				}
+				else{
+					_freq_cnt.put(cc,1);
+				}
 				
 			}
 			
 			var next:LatticeNode = getnext(current);
+			_last = p;
 			current = next;
 			step++;
 			
@@ -113,19 +125,17 @@ public class RandamWalk {// random walk on pattern space
 			n.getneighbors().add(ln);
 			n.getneighbor_prob().add(prob);
 			
-			/*const typename PAT::CAN_CODE& cc = check_isomorphism(one_neighbor);
-			one_neighbor->set_canonical_code(cc);*/
+			var cc:Canonicalcode = _iso.check_isomorphism(p);
+			one_neighbor.set_canonical_code(cc);
 		}
 		n.setis_processed(true);
 	}
 
 	
 	private def create_lattice_node(var p:Pattern):LatticeNode{
-		/*const typename PAT::CAN_CODE& cc = check_isomorphism(p);
-		p->set_canonical_code(cc);
-		std::string min_dfs_cc = cc.to_string();*/
-		var min_dfs_cc:String = "s"; // defined temporarily to avoid error in coding
-
+		var cc:Canonicalcode = _iso.check_isomorphism(p);
+		p.set_canonical_code(cc);
+		var min_dfs_cc:String = cc.to_string(); // defined temporarily to avoid error in coding
 		var node:LatticeNode = exists(min_dfs_cc);
 		if (node == null) {  // new pattern
 			node = new LatticeNode(p);
