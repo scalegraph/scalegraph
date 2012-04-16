@@ -464,18 +464,19 @@ test_lapack:
 
 #Test 21
 # For some reason, LAPACK libraries and LAPACK.x10 is needed to use GML library.
+#	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
+	-cxx-postarg $(F2C_LIB) \
+	src/org/scalegraph/clustering/LAPACK.x10;
 test_gml:
 	@echo "----------- Compile GML Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg $(CLAPACK_LIB) \
-	-cxx-postarg $(CBLAS_LIB) \
-	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
+	-cxx-postarg -lgfortran \
 	-classpath $(GML_DIST)/lib/native_gml.jar \
 	-x10lib $(GML_DIST)/native_gml.properties \
-	src/test/scalegraph/clustering/TestGML.x10 \
-	src/org/scalegraph/clustering/LAPACK.x10;
+	src/test/scalegraph/clustering/TestGML.x10;
 	
 	@echo "----------- Launch GML Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
@@ -572,6 +573,30 @@ test_randomwalk:
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
+#Test 25
+test_scalapack:
+	@echo "----------- Compile ScaLAPACK Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-cxx-postarg -L/nfs/home/ogata/developments/SCALAPACK \
+	-cxx-postarg -L/nfs/home/ogata/developments/BLACS/LIB \
+	-cxx-postarg -L/nfs/home/ogata/developments/lapack-3.4.0 \
+	-cxx-postarg -lscalapack \
+	-cxx-postarg -lblacs \
+	-cxx-postarg -lblacsCinit \
+	-cxx-postarg -lblacsF77init \
+	-cxx-postarg -lblacs \
+	-cxx-postarg -llapack \
+	-cxx-postarg -lblas \
+	-cxx-postarg -lgfortran \
+	src/test/scalegraph/clustering/TestScaLAPACK.x10 \
+	src/org/scalegraph/clustering/ScaLAPACK.x10 \
+	src/org/scalegraph/clustering/BLACS.x10 \
+	src/org/scalegraph/clustering/MPI.x10;
+	
+	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
+	X10_NTHREADS=1 /nfs/home/ogata/developments/mpich2/bin/mpirun -np $(X10_NPLACES) -f ~/machinefile $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
 	
 	
 help:
@@ -627,6 +652,8 @@ help:
 	@echo 'test_pattern : Test Graph Pattern Matching'
 	#Test 24
 	@echo 'test_randomwalk : Test Random walk with restart'
+	#Test 25
+	@echo 'test_scalapack : Test ScaLAPACK'
 	@echo 'clean : To clean the build'
 	@echo '---------------------------------';
 
