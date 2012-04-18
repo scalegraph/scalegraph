@@ -595,7 +595,7 @@ test_scalapack:
 	src/org/scalegraph/clustering/MPI.x10;
 	
 	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
-	X10_NTHREADS=1 /nfs/home/ogata/developments/mpich2/bin/mpirun -np $(X10_NPLACES) -f ~/machinefile $(OUTPUT)/Testscalegraph;
+	X10_NTHREADS=1 /nfs/home/ogata/developments/mpich2/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 	
 	
