@@ -662,8 +662,7 @@ public class RandomWalk {
 
         val clusters = result.getAllClusters();
         val clusterToIdx = new HashMap[Int, Int]();
-        // val sumArray = new ArrayList[DistDenseMatrix]();
-        var nCol:Int = 0;
+        val sumArray = new ArrayList[DistDenseMatrix]();
         Console.OUT.println("Start make sumArray");
         {
             val grid = matrix.grid;
@@ -692,13 +691,12 @@ public class RandomWalk {
                     }
                     */
                     if (norm(sum) > 0.00001) {
-                        //sumArray.add(sum);
-                        nCol++;
+                        sumArray.add(sum);
                     }
                 }
             }
         }
-        val sumArray:DistArray[DenseMatrix] = DistArray[DenseMatrix].make(Dist.make(Region(0, nCol - 1)));
+
         Console.OUT.println("Start make U");
         val nCluster = sumArray.size();
         val gridU = Grid.make(nVertex, nCluster);
