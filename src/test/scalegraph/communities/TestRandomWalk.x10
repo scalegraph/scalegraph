@@ -49,11 +49,21 @@ public class TestRandomWalk {
 
         val rwr:RandomWalk = new RandomWalk(graph);
         Console.OUT.println("----------Start Pre-compute stage----------");
-        rwr.run();
+        {
+            val startTime = Timer.milliTime();
+            rwr.run();
+            Console.OUT.printf("pre-compute stage time = %f\n",
+                                (Timer.milliTime() - startTime) / 1000.0);
+        }
+        
         Console.OUT.println("----------Start Query Stage----------");
+        val startTime = Timer.milliTime();
         val rwrResult = rwr.query(4);
+        Console.OUT.printf("query stage time = %f\n",
+                            (Timer.milliTime() - startTime) / 1000.0);
 
         Console.OUT.println(rwrResult);
+        /*
         Console.OUT.println("----------Start OnTheFly method----------");
         val iterateResult = iterateRandomWalk(graph, 4);
         val idToIdxMap = iterateResult.first;
@@ -65,7 +75,7 @@ public class TestRandomWalk {
                                Math.abs(rwrResult.getScore(key) -
                                         matrix(idToIdxMap(key)(), 0)));
         }
-
+        */
         Console.OUT.println("----------End Test----------");
     }
 
