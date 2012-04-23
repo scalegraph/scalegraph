@@ -14,14 +14,21 @@ import x10.matrix.dist.DistDenseMatrix;
 
 import org.scalegraph.graph.PlainGraph;
 
-public class DistSpectralClustering {
+public class DistSpectralClustering implements Clustering {
 	
-	private var graph:PlainGraph;
-	private var IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
-	private var IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
+	private val graph:PlainGraph;
+	private val nClusters:Int;
+	private val nVertices:Int;
+	private val IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
+	private val IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
 	
-	public def this(g:PlainGraph){
+	public def this(g:PlainGraph, nc:Int){
 		graph = g;
+		nClusters = nc;
+		nVertices = graph.getVertexCount() as Int;
+		IDtoIDX = new HashMap[Long, Int](nVertices);
+		IDXtoID = new HashMap[Int, Long](nVertices);
+		Console.OUT.println("nVertices = " + nVertices);
 	}
 	
 	/*
@@ -29,7 +36,7 @@ public class DistSpectralClustering {
 	 * step 2: solve a generalized eigenvalue plobrem
 	 * step 3: apply k-means algorithm to eigenvectors
 	 */
-	public def run(nClusters:Int): ClusteringResult {
+	public def run(): ClusteringResult {
 		makeCorrespondenceBetweenIDandIDX();
 		
 		val l:DenseMatrix = getEigenvectors();  // step 1,2
@@ -45,9 +52,8 @@ public class DistSpectralClustering {
 		val points = DistArray.make[Vector](Dist.makeBlock(0..(nPoints-1)), (Point) => Vector.make(nClusters));
 		finish for(p in points.dist.places()) async at(p) {
 			for([i] in points.dist.get(p)){
-				//Console.OUT.println("point: [" + i + "]");
 				for(var j:Int = 0; j < nClusters; j++){
-					points(i)(j) = l(i, j + 1);
+					points(i)(j) = l(i, l.N - j - 1);
 				}
 			}
 		}
@@ -56,7 +62,8 @@ public class DistSpectralClustering {
 		val result:ClusteringResult = makeClusteringResult(nClusters, resultArray);
 		
 		/*
-		val p:Printer = new Printer(new FileWriter(new File("/data0/t2gsuzumuralab/ogata/Developments/ScaleGraph/result.txt")));
+		//val p:Printer = new Printer(new FileWriter(new File("/data0/t2gsuzumuralab/ogata/Developments/ScaleGraph/result.txt")));
+		val p:Printer = new Printer(new FileWriter(new File("/nfs/home/ogata/workspace/ScaleGraph/result.txt")));
 		p.printf("%d %d\n", nPoints, nClusters);
 		for([i] in points){
 			p.printf("%d %lf %lf\n", result.getCluster(IDXtoID.get(i)()), points(i)(0), points(i)(1));
@@ -68,12 +75,7 @@ public class DistSpectralClustering {
 	}
 	
 	private def makeCorrespondenceBetweenIDandIDX(): void {
-		val nVertices:Int = graph.getVertexCount() as Int;
 		val vertexList:DistArray[Long] = graph.getVertexList();
-		IDtoIDX = new HashMap[Long, Int](nVertices);
-		IDXtoID = new HashMap[Int, Long](nVertices);
-		Console.OUT.println("nVertices = " + nVertices);
-		
 		val globalIDtoIDX = GlobalRef[HashMap[Long, Int]](IDtoIDX);
 		val globalIDXtoID = GlobalRef[HashMap[Int, Long]](IDXtoID);
 		var counter:Int = 0;

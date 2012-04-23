@@ -13,14 +13,21 @@ import x10.matrix.Vector;
 
 import org.scalegraph.graph.PlainGraph;
 
-public class SpectralClustering {
+public class SpectralClustering implements Clustering {
 	
-	private var graph:PlainGraph;
-	private var IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
-	private var IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
+	private val graph:PlainGraph;
+	private val nClusters:Int;
+	private val nVertices:Int;
+	private val IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
+	private val IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
 	
-	public def this(g:PlainGraph){
+	public def this(g:PlainGraph, nc:Int){
 		graph = g;
+		nClusters = nc;
+		nVertices = graph.getVertexCount() as Int;
+		IDtoIDX = new HashMap[Long, Int](nVertices);
+		IDXtoID = new HashMap[Int, Long](nVertices);
+		Console.OUT.println("nVertices = " + nVertices);
 	}
 	
 	/*
@@ -28,7 +35,7 @@ public class SpectralClustering {
 	 * step 2: solve a generalized eigenvalue plobrem
 	 * step 3: apply k-means algorithm to eigenvectors
 	 */
-	public def run(nClusters:Int): ClusteringResult {
+	public def run(): ClusteringResult {
 		makeCorrespondenceBetweenIDandIDX();
 		
 		val l:DenseMatrix = getEigenvectors();  // step 1,2
@@ -45,7 +52,7 @@ public class SpectralClustering {
 		for(var i:Int = 0; i < nPoints; i++){
 			points(i) = Vector.make(nClusters);
 			for(var j:Int = 0; j < nClusters; j++){
-				points(i)(j) = l(i, j + 1);
+				points(i)(j) = l(i, l.N - j - 1);
 			}
 		}
 		
@@ -53,7 +60,8 @@ public class SpectralClustering {
 		val result:ClusteringResult = makeClusteringResult(nClusters, resultArray);
 		
 		/*
-		val p:Printer = new Printer(new FileWriter(new File("/data0/t2gsuzumuralab/ogata/Developments/ScaleGraph/result.txt")));
+		//val p:Printer = new Printer(new FileWriter(new File("/data0/t2gsuzumuralab/ogata/Developments/ScaleGraph/result.txt")));
+		val p:Printer = new Printer(new FileWriter(new File("/nfs/home/ogata/workspace/ScaleGraph/result.txt")));
 		p.printf("%d %d\n", nPoints, nClusters);
 		for([i] in points){
 			p.printf("%d %lf %lf\n", result.getCluster(IDXtoID.get(i)()), points(i)(0), points(i)(1));
@@ -65,12 +73,7 @@ public class SpectralClustering {
 	}
 	
 	private def makeCorrespondenceBetweenIDandIDX(): void {
-		val nVertices:Int = graph.getVertexCount() as Int;
 		val vertexList:DistArray[Long] = graph.getVertexList();
-		IDtoIDX = new HashMap[Long, Int](nVertices);
-		IDXtoID = new HashMap[Int, Long](nVertices);
-		Console.OUT.println("nVertices = " + nVertices);
-		
 		var counter:Int = 0;
 		for(vpt in vertexList) {
 			val vertexID:Long = at(vertexList.dist(vpt)) vertexList(vpt);
