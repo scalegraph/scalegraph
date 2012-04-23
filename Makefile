@@ -494,6 +494,7 @@ test_clustering:
 	-classpath $(GML_DIST)/lib/native_gml.jar \
 	-x10lib $(GML_DIST)/native_gml.properties \
 	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
+	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
@@ -574,15 +575,15 @@ test_randomwalk:
 	@echo "----------- Test Completed ---------------------------------";
 
 #Test 25
-test_scalapack:
-	@echo "----------- Compile ScaLAPACK Tester --------------------------";
-	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-x10rt mpi \
-	-cxx-postarg /nfs/home/ogata/developments/SCALAPACK/libscalapack.a \
-	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacs_MPI-LINUX-1.a \
+#	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacs_MPI-LINUX-1.a \
 	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacsCinit_MPI-LINUX-1.a \
 	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacsF77init_MPI-LINUX-1.a \
-	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacs_MPI-LINUX-1.a \
+	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacs_MPI-LINUX-1.a
+test_scalapack:
+	@echo "----------- Compile ScaLAPACK Tester --------------------------";
+	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-cxx-postarg /nfs/home/ogata/developments/scalapack-2.0.1/libscalapack.a \
 	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/liblapack.a \
 	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/libblas.a \
 	-cxx-postarg -lgfortran \
@@ -592,7 +593,7 @@ test_scalapack:
 	src/org/scalegraph/clustering/MPI.x10;
 	
 	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
-	OMP_NUM_THREADS=1 X10_NTHREADS=1 /nfs/home/ogata/developments/mpich2/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	OMP_NUM_THREADS=1 X10_NTHREADS=2 /usr/global/openmpi/bin/mpirun -np $(X10_NPLACES) -machinefile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 	
 	
