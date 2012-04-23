@@ -397,8 +397,8 @@ public class RandomWalk {
     private def decomposeGraph(graph:PlainGraph) {
         Console.OUT.println("Start decomposeGraph");
         val startTime = Timer.milliTime();
-        val clustering = new DistSpectralClustering(graph);
-        val result = clustering.run(k);
+        val clustering = new DistSpectralClustering(graph, k);
+        val result = clustering.run();
         Console.OUT.println(result);
 
         var cnt:Int = 0;
@@ -654,8 +654,8 @@ public class RandomWalk {
         val graph = convertMatrixToGraph(matrix);
         Console.OUT.println("start dist spectral clustering");
         val distStartTime = Timer.milliTime();
-        val clustering = new DistSpectralClustering(graph);
-        val result = clustering.run(t);
+        val clustering = new DistSpectralClustering(graph, t);
+        val result = clustering.run();
         Console.OUT.printf("end dist spectral clustering, time = %f\n",
                            (Timer.milliTime() - startTime) / 1000.0);
         Console.OUT.println(result);

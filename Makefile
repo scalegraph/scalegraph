@@ -563,6 +563,7 @@ test_randomwalk:
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
