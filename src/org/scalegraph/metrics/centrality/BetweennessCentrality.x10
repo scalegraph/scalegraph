@@ -41,6 +41,7 @@ public class BetweennessCentrality {
 	var globalTempScore: Array[IndexedMemoryChunk[Double]];
 	var globalPredecessorMap: Array[Array[IndexedMemoryStack[Int]]];
 	var globalVertexStack: Array[IndexedMemoryStack[Int]];
+	val neighborMap: HashMap[Long, Array[Long]];
 
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
 		// Keep datafrom user to instance's memeber
@@ -56,6 +57,7 @@ public class BetweennessCentrality {
 		this.plainGraph = null;
 		this.maximumVertexId = 0;
 		this.globalCaches = null;
+		this.neighborMap = null;
 	}
 
 	protected def this(g: PlainGraph, nVertex: Long, maxVertexId: Long, isNormalize: Boolean, cacheSz: Int) {
@@ -74,6 +76,8 @@ public class BetweennessCentrality {
 		// Unuse properties
 		this.vertexIdAndIndexMap = null;
 		this.attributedGraph = null;
+		this.neighborMap = new HashMap[Long, Array[Long]](numVertex);
+	
 		
 	}
     /****************************************************************************
@@ -300,6 +304,7 @@ public class BetweennessCentrality {
 			for(p in Place.places()) {
 				at (p) async {
 					Team.WORLD.barrier(here.id);
+					betweennessCentrality().makeNeighbourMap();
 					betweennessCentrality().calculateOnPlainGraph();
 				}
 			}
@@ -316,12 +321,37 @@ public class BetweennessCentrality {
 		return arrayBuilder.result();
 	}
 	
+	protected def makeNeighbourMap() {
+		val distVertexList:DistArray[Long] = plainGraph.getVertexList();
+		finish {
+			for(p:Place in Place.places()){
+				
+					val dat = at(p) {distVertexList.getLocalPortion()};
+					
+						for (i in dat) {
+							val actor = dat(i);
+							if(actor >= 0L) {
+								val n = plainGraph.getOutNeighbours(actor);
+								neighborMap.put(actor, n);
+								Console.OUT.println("Add  neighbor " + actor);
+							}
+						}
+					
+				
+			}
+		}
+	}
+	
 	protected def calculateOnPlainGraph() {
+		
+		
 		
 		finish {
 			val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
 			val data = distVertexList.getLocalPortion();
 			var counter: Int = 0;
+			
+			
 			
 			// Init share space
 			globalTraverseQ = new Array[ArrayList[Int]]
@@ -346,8 +376,9 @@ public class BetweennessCentrality {
 			for (i in data) {		
 				val v = data(i);
 				if(v >= 0) {
-					val spaceId = acquireSpaceId();
-					async doBfsOnPlainGraph(spaceId, v);
+					//val spaceId = acquireSpaceId();
+					Console.OUT.println("Run for source " + v);
+					async doBfsOnPlainGraph( v);
 				}
 				
 			}
@@ -417,16 +448,23 @@ public class BetweennessCentrality {
 		freeSpace(spaceId) = true;
 	}
 	
-	protected def doBfsOnPlainGraph(spaceId: Int, vertexId: Long) {
+	protected def doBfsOnPlainGraph( vertexId: Long) {
 
-		val traverseQ  = globalTraverseQ(spaceId);
-		val distanceMap = globalDistanceMap(spaceId);
-		val geodesicsMap = globalGeodesicsMap(spaceId);
-		val tempScore =  globalTempScore(spaceId);
-		val predecessorMap = globalPredecessorMap(spaceId);
-		val vertexStack = globalVertexStack(spaceId);
-		val cache = globalCaches(spaceId);
+		// val traverseQ  = globalTraverseQ(spaceId);
+		// val distanceMap = globalDistanceMap(spaceId);
+		// val geodesicsMap = globalGeodesicsMap(spaceId);
+		// val tempScore =  globalTempScore(spaceId);
+		// val predecessorMap = globalPredecessorMap(spaceId);
+		// val vertexStack = globalVertexStack(spaceId);
+		// val cache = globalCaches(spaceId);
 		
+		val traverseQ: ArrayList[Int] = new ArrayList[Int]();
+		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);;
+		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
+		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
+		val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
+		val vertexStack: Stack[Int] = new Stack[Int]();
+		// val cache = new Cache(this.cacheSize);
 		
 		// Cleare previous data
 		finish {
@@ -454,8 +492,14 @@ public class BetweennessCentrality {
 			val actor: int = traverseQ.removeFirst();
 			var  neighbors: Array[Long] = null;
 
-			Runtime.probe();
-			neighbors = getNeighBours(cache, actor);
+			// Runtime.probe();
+			// neighbors = getNeighBours(cache, actor);
+			// neighbors = this.plainGraph.getOutNeighbours(actor);
+			if(neighborMap.containsKey(actor)) {
+				neighbors = neighborMap.get(actor).value;
+			} else {
+				Console.OUT.println("Cant find the neighbor of node " + actor);
+			}
 
 			vertexStack.push(actor);
 			
@@ -475,6 +519,10 @@ public class BetweennessCentrality {
 					// Found this node first time
 					geodesicsMap(neighbor) += geodesicsMap(actor);
 					distanceMap(neighbor) = distanceMap(actor) + 1;
+					
+					// if(distanceMap(neighbor) > 50)
+					// 	continue;
+					
 					traverseQ.add(neighbor);
 					predecessorMap(neighbor).push(actor);
 				}
@@ -504,8 +552,8 @@ public class BetweennessCentrality {
 			}
 		updateScoreLock.unlock();
 		
-		releaseSpaceId(spaceId);
-		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
+		// releaseSpaceId(spaceId);
+		Console.OUT.println("End for src: " + source + " On place: " + here.id);
 	}
 	
 	/****************************************************************************
