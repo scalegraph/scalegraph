@@ -1,6 +1,7 @@
 package org.scalegraph.patternmatching; 
 import x10.util.ArrayList;
 import x10.util.Pair;
+import x10.util.Box;
 import x10.util.HashMap;
 import x10.util.HashSet;
 
@@ -335,23 +336,160 @@ public class Isomorphism {
 			}
 		}
 		
+		var z:Int = 0;
+		// Insert all the back edges.
+		for(; z<cand_edges.size();z++){
+			// The second condition in the && is present since we assign
+			// negative weights to potential fwd edges.
+			if((cand_edges(z)._j < cand_edges(z)._i) && cand_edges(z)._j >= 0) {
+				new_codes(idx).append(cand_edges(z));
+				
+				var src_id:Int = new_codes(idx).gid(cand_edges(z)._i);
+				var dest_id:Int = new_codes(idx).gid(cand_edges(z)._j);
+				covered_edges(idx).add(new FiveTuple(src_id, dest_id, cand_edges(z)._li, 
+						cand_edges(z)._lij, cand_edges(z)._lj));
+
+			}
+			else{
+				break;
+			}
+		}
 		
+		// No forward edges.
+		if(z == cand_edges.size()) {
+			return true;
+		}
 		
+		// For each minimal (after the sorting) forward edge that is 
+		// identical, create a new canonical_code and insert it into 
+		// new_codes.
 		
+		var first_fwd:Int = z;
+		var first:Boolean = true;
+		var new_code_copy:Canonicalcode = new_codes(idx).clone();
+		var cov_edges_copy:HashSet[FiveTuple] = covered_edges(idx).clone();
 		
-		
-		// not implemented yet
-		assert(false):"not implemented yet";
-		return false;
+		do {
+			
+			// First of the identical fwd edges.
+			if(first) {
+
+				var cc_it:FiveTuple = new_codes(idx).getCode().getLast();
+				var is_last_fwd2:Boolean=(cc_it._i<cc_it._j);    // denotes, if last edge in new_code was a fwd edge
+				var c_last_vid:Int=(is_last_fwd2)? cc_it._j: cc_it._i;        // vid to which edge shall be added  
+
+				var c_new_dest_id:Int = c_last_vid+1; // Assign an id to the forward edge.
+				var g_new_dest_id:Int = -1, g_new_src_id:Int = -1;
+				g_new_src_id = new_codes(idx).gid(cand_edges(z)._i);
+
+				var itr:Box[Int] = cid_gid_map.get(cand_edges(z)._j);
+				if (itr != null){
+					g_new_dest_id = itr.value;
+				}
+				else{
+						Console.OUT.println( "Could not find " + cand_edges(z)._j + " in cid_gid_map.");
+				}
+				new_codes(idx).append(new FiveTuple(cand_edges(z)._i, c_new_dest_id, cand_edges(z)._li,
+						cand_edges(z)._lij, cand_edges(z)._lj), 
+						g_new_src_id, g_new_dest_id);
+
+				covered_edges(idx).add(new FiveTuple(g_new_src_id, g_new_dest_id, cand_edges(z)._li,
+						cand_edges(z)._lij, cand_edges(z)._lj));
+			
+				// The first fwd edge is inserted, subsequent insertions
+				// will require inserting a new member into new_codes.
+				first=false;
+
+			} else {
+				// This is the second (and onward) identical fwd edges.
+				// For this one we need to add a new member to new_codes and 
+				// likewise to covered_edges.
+				
+				// Copy the original new_codes and the covered_edges.
+				var new_code_cand:Canonicalcode = new_code_copy.clone();
+				var cov_edges_cand:HashSet[FiveTuple] = cov_edges_copy;
+
+				// TODO: Can take these few lines out of the if..else.
+				var cc_it:FiveTuple = new_codes(idx).getCode().getLast();
+				var is_last_fwd2:Boolean=(cc_it._i<cc_it._j);    // denotes, if last edge in new_code was a fwd edge
+				var c_last_vid:Int=(is_last_fwd2)? cc_it._j: cc_it._i;        // vid to which edge shall be added  
+
+				
+				var c_new_dest_id:Int = c_last_vid+1; // Assign an id to the forward edge.
+				var g_new_dest_id:Int = -1, g_new_src_id:Int = -1;
+				g_new_src_id = new_codes(idx).gid(cand_edges(z)._i);
+				var itr:Box[Int] = cid_gid_map.get(cand_edges(z)._j);
+				
+				if(itr != null){
+					g_new_dest_id = itr.value;
+				}
+				else{
+					// if need print the debug code
+				}
+
+				new_code_cand.append(new FiveTuple(cand_edges(z)._i, c_new_dest_id, cand_edges(z)._li,
+						cand_edges(z)._lij, cand_edges(z)._lj),
+						g_new_src_id, g_new_dest_id);
+
+				cov_edges_cand.add(new FiveTuple(g_new_src_id, g_new_dest_id, cand_edges(z)._li,
+						cand_edges(z)._lij, cand_edges(z)._lj));
+
+				// Birth of more new codes. Add to new_codes and covered_edges.
+				new_codes.add(new_code_cand);
+
+				covered_edges.add(cov_edges_cand);
+			}
+			
+			z++;
+			
+		} while(z < cand_edges.size() && cand_edges(z) == cand_edges(first_fwd));
+			
+		return true;
 	}
 	
-	/*
-	private def check_minimality(var new_codes:ArrayList[Canonicalcode],var covered_edges:ArrayList[ArrayList[FiveTuple]]){
+	
+	private def check_minimality(var new_codes:ArrayList[Canonicalcode],var covered_edges:ArrayList[HashSet[FiveTuple]]){
+	
+		for(var i:Int=0; i < new_codes.size()-1; i++) {
+			for(var j:Int=i+1; j < new_codes.size();) {
+
+				if(new_codes(i) < new_codes(j)) {
+
+					// j is not the last element, so copy
+					// the last element to j. In effect 
+					// deleting the thing at index j.
+					if(j != new_codes.size()-1) {
+						var cc:Canonicalcode = new_codes.getLast();
+						var ft:HashSet[FiveTuple] = covered_edges.getLast();
+
+						new_codes(j) = cc;
+						covered_edges(j) = ft;
+					} else {
+						new_codes.removeLast();
+						covered_edges.removeLast();
+					}
+
+				} else if(new_codes(j) < new_codes(i)) {
+
+					var cc:Canonicalcode = new_codes.getLast();
+					var ft:HashSet[FiveTuple] = covered_edges.getLast();
+
+					new_codes(i) = cc;
+					covered_edges(i) = ft;
+
+					new_codes.removeLast();
+					covered_edges.removeLast();
+
+					j = i+1;
+
+				} else {
+					j++;
+				}
+			}
+		}
+		
 		assert(false):"not implemented yet";
 	   // not implemented yet
-		
-		
 	}
-	 * */
 	
 }
