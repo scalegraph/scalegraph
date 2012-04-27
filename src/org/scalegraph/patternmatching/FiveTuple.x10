@@ -3,11 +3,11 @@ package org.scalegraph.patternmatching;
 public class FiveTuple {
 	// FiveTuple is an expression of edge
 	
-	protected var _i:Int = 0;// source id in matrix
-	protected var _j:Int = 0;// destination id in matrix
-	protected var _li:Int = 0;// vertex lbael of source
-	protected var _lj:Int = 0;// vertex label of destination
-	protected var _lij:Int = 0;// edge label
+	protected val _i:Int;// source id in matrix
+	protected val _j:Int;// destination id in matrix
+	protected val _li:Int;// vertex lbael of source
+	protected val _lj:Int;// vertex label of destination
+	protected val _lij:Int;// edge label
 	
 	public def this(var i:Int,var j:Int,var li:Int,var lj:Int,var lij:Int){
 		_i=i;
