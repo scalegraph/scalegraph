@@ -295,7 +295,7 @@ public class BetweennessCentrality {
 		finish {
 			for(p in Place.places()) {
 				at (p) async {
-					Team.WORLD.barrier(here.id);
+					
 					betweennessCentrality().makeNeighbourMap();
 					betweennessCentrality().calculateOnPlainGraph();
 				}
@@ -328,6 +328,8 @@ public class BetweennessCentrality {
 								// Console.OUT.println("Add  neighbor " + actor);
 							}
 						}
+					
+				
 			}
 		}
 	}
@@ -337,7 +339,7 @@ public class BetweennessCentrality {
 		finish {
 			
 			val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
-			val localVertices  = distVertexList.getLocalPortion();
+			val localVertices : Array[Long]{self.rank == 1} = distVertexList.getLocalPortion();
 			val numLocalVertices: Int = localVertices.size;
 			val numThreads = Runtime.NTHREADS;
 			val chunkSize = numLocalVertices / numThreads;
@@ -345,50 +347,44 @@ public class BetweennessCentrality {
 			
 			var startIndex: Int = 0;
 			
-			Console.OUT.println("Data Size:" + numLocalVertices);
-			Console.OUT.println("Chunk size: " + chunkSize);
-			Console.OUT.println("Remainder size: " + remainder);
-			
+			// Console.OUT.println("Data Size:" + numLocalVertices);
+			// Console.OUT.println("Chunk size: " + chunkSize);
+			// Console.OUT.println("Remainder size: " + remainder);
 			
 			for(threadId in 0..(numThreads -1 )) {
-				var endIndex: Int = startIndex + chunkSize - 1;
-				if(threadId < remainder) {
-					endIndex += 1;
-				}
 				
-				val start: Int = startIndex;
-				val end: Int = endIndex;
-			
-				// async doBfsOnPlainGraph(start..end, localVertices);
-				val f = (r: IntRange, d:Array[Long]{self.rank ==1})=> {
-					for(i in r) {
-						val v = d(i);
-						if(v >= 0L)
-							Console.OUT.println("vertex: " + v);
-					}
-					return 1;};
-				
-				f(start..end, localVertices);
-				Console.OUT.println("Place: " + here.id + " Start size: " + start + "End: " + end);
-				startIndex = endIndex + 1;
-				
-				// number of threads more than tasks
-				if(startIndex == numLocalVertices) {
-					break;
-				}
+				// var endIndex: Int = startIndex + chunkSize - 1;
+				// 
+				// if(threadId < remainder) {
+				// 	endIndex += 1;
+				// }
+				// 
+				// val start = startIndex;
+				// val end = endIndex;
+				// async doBfsOnPlainGraph(start, end, localVertices);
+				// // Console.OUT.println("Start size: " + start + "End: " + end);
+				// startIndex = endIndex + 1;
+				// 
+				// // Tasks are less than number of threads
+				// if(startIndex == numLocalVertices) {
+				// 	break;
+				// }
+				async doBfsOnPlainGraph(threadId, numThreads, localVertices);
 			}
 			
-			// for (i in 0..(localVertices.size -1 )) {		
-			// 	val v = localVertices(i);
-			// 	// if(v >= 0) {
-			// 	// 	async doBfsOnPlainGraph(i,i, localVertices);
-			// 	// }
+			// for (i in data) {		
+			// 	val v = data(i);
+			// 	if(v >= 0) {
+			// 		//val spaceId = acquireSpaceId();
+			// 		Console.OUT.println("Run for source " + v);
+			// 		async doBfsOnPlainGraph( v);
+			// 	}
 			// 	
 			// }
 			
-			Console.OUT.println("***************************");
-			Console.OUT.println("Reaching finish:" + here.id);
-			Console.OUT.println("***************************");
+			// Console.OUT.println("***************************");
+			// Console.OUT.println("Reaching finish:" + here.id);
+			// Console.OUT.println("***************************");
 		}
 		Console.OUT.println("***************************");
 		Console.OUT.println("Run for all source vertex" + here.id);
@@ -415,7 +411,7 @@ public class BetweennessCentrality {
 		Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 	}
 	
-	protected def doBfsOnPlainGraph( indexRange: IntRange, localVertices: Array[Long]{self.rank == 1}) {
+	protected def doBfsOnPlainGraph( threadId: Int, numThreads: Int, localVertices: Array[Long]{self.rank == 1}) {
 
 		
 		val traverseQ: ArrayList[Int] = new ArrayList[Int]();
@@ -425,7 +421,39 @@ public class BetweennessCentrality {
 		val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
 		val vertexStack: Stack[Int] = new Stack[Int]();
 		
-		for(v in indexRange) {
+		
+		/*
+		 * localVertices can be accessed properly by Point only
+		 * Iterate over localVertices and process only assigned vertices
+		 */
+		var indexCount: Int = 0;
+		for(index in localVertices) {
+			
+			if((++indexCount) % numThreads != threadId) {
+				continue;
+			}
+			
+			// Get source vertex
+			val source: Int = localVertices(index) as Int;
+			
+			if(source < 0) {
+				// Source maybe -1 to indicate end of array
+				continue;
+			}
+			
+			if(source >= maximumVertexId) {
+				throw new Exception("Vertex Id more than maximumVertexId");
+				// Console.OUT.println("Big Vertex id found -- P: " + here.id + " : sourc: " +source);
+			}
+			// if(indexCount < startIndex)
+			// {
+			// 	indexCount++;
+			// 	continue;
+			// }
+			// 
+			// if(indexCount > endIndex)
+			// 	break;
+			
 			
 			// Clear Previous Data
 		 	distanceMap.clear(0, maximumVertexId);
@@ -439,20 +467,18 @@ public class BetweennessCentrality {
 			traverseQ.clear();
 			vertexStack.clear();
 			
-			// Get source vertex
-			val source: Int = localVertices(v) as Int;
 			distanceMap(source) = 0L;
 			geodesicsMap(source) = 1L;
 			
 			traverseQ.add(source);
-			
+			Runtime.probe();
 			// Traverse the graph
 			while(!traverseQ.isEmpty()) {
 				
 				val actor: int = traverseQ.removeFirst();
 				var neighbors: Array[Long] = null;
 	
-				// Runtime.probe();
+				
 				// neighbors = getNeighBours(cache, actor);
 				// neighbors = this.plainGraph.getOutNeighbours(actor);
 				if(neighborMap.containsKey(actor)) {
@@ -513,7 +539,7 @@ public class BetweennessCentrality {
 				}
 			updateScoreLock.unlock();
 			
-			Console.OUT.println("End for src: " + source + " On place: " + here.id);
+			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 		}
 	}
 	
