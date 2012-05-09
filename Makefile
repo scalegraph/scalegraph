@@ -582,7 +582,7 @@ test_randomwalk:
 	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacs_MPI-LINUX-1.a
 test_scalapack:
 	@echo "----------- Compile ScaLAPACK Tester --------------------------";
-	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-x10rt mpi \
 	-cxx-postarg /nfs/home/ogata/developments/scalapack-2.0.1/libscalapack.a \
 	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/liblapack.a \
@@ -594,7 +594,36 @@ test_scalapack:
 	src/org/scalegraph/clustering/MPI.x10;
 	
 	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
-	OMP_NUM_THREADS=1 X10_NTHREADS=2 /usr/global/openmpi/bin/mpirun -np $(X10_NPLACES) -machinefile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	X10_NTHREADS=32 /nfs/home/ogata/developments/openmpi-1.4.5/bin/mpirun -x X10RT_MPI_THREAD_MULTIPLE=true -np $(X10_NPLACES) -host sc01 $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
+	
+#Test 26
+test_mpiclustering:
+	@echo "----------- Compile MPI Spectral Clustering Tester --------------------------";
+	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-cxx-postarg /nfs/home/ogata/developments/scalapack-2.0.1/libscalapack.a \
+	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/liblapack.a \
+	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/libblas.a \
+	-cxx-postarg -lgfortran \
+	src/test/scalegraph/clustering/TestMPISpectralClustering.x10 \
+	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
+	src/org/scalegraph/clustering/ClusteringResult.x10 \
+	src/org/scalegraph/clustering/Vector.x10 \
+	src/org/scalegraph/clustering/ScaLAPACK.x10 \
+	src/org/scalegraph/clustering/BLACS.x10 \
+	src/org/scalegraph/clustering/MPI.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10;
+	
+	@echo "----------- Launch MPI Spectral Clustering Tester ---------------------------";
+	X10_NTHREADS=8 /nfs/home/ogata/developments/openmpi-1.4.5/bin/mpirun -x X10RT_MPI_THREAD_MULTIPLE=true -np $(X10_NPLACES) -host sc01 $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 	
 	
