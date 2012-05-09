@@ -11,14 +11,23 @@ public class ScaLAPACK {
 	@Native("c++", "sl_init(&#ictxt, #nprow, #npcol)")
 	public native static def slInit(ictxt:Int, nprow:Int, npcol:Int): void;
 	
+	public static def slInit(ictxt:Cell[Int], nprow:Int, npcol:Int): void {
+		var tmp:Int = -1;
+		slInit(tmp, nprow, npcol);
+		ictxt() = tmp;
+	}
+	
 	@Native("c++", "numroc(#n, #nb, #iproc, #isrcproc, #nprocs)")
 	public native static def numroc(n:Int, nb:Int, iproc:Int, isrcproc:Int, nprocs:Int): Int;
 	
 	@Native("c++", "descinit((#desc)->raw()->raw(), #m, #n, #mb, #nb, #irsrc, #icsrc, #ictxt, #lld, &(#info))")
-	public native static def descinit(desc:Array[Int](1), m:Int, n:Int, mb:Int, nb:Int, irsrc:Int, icsrc:Int, ictxt:Int, lld:Int, info:Int): void;
+	public native static def descInit(desc:Array[Int](1), m:Int, n:Int, mb:Int, nb:Int, irsrc:Int, icsrc:Int, ictxt:Int, lld:Int, info:Int): void;
 	
 	@Native("c++", "pdelset((#a)->raw()->raw(), #ia, #ja, (#desca)->raw()->raw(), #alpha)")
 	public native static def pdelset(a:Array[Double](1), ia:Int, ja:Int, desca:Array[Int](1), alpha:Double): void;
+	
+	@Native("c++", "pdelget(#scope, #top, &(#alpha), (#a)->raw()->raw(), #ia, #ja, (#desca)->raw()->raw())")
+	public native static def pdelget(scope:Char, top:Char, alpha:Double, a:Array[Double](1), ia:Int, ja:Int, desca:Array[Int](1)): void;
 	
 	@Native("c++", "pdsygvx(#ibtype, #jobz, #range, #uplo, #n, #a->raw()->raw(), #ia, #ja, #desca->raw()->raw(), #b->raw()->raw(), #ib, #jb, #descb->raw()->raw(), #vl, #vu, #il, #iu, #abstol, &#m, &#nz, #w->raw()->raw(), #orfac, #z->raw()->raw(), #iz, #jz, #descz->raw()->raw(), #work->raw()->raw(), #lwork, #iwork->raw()->raw(), #liwork, #ifail->raw()->raw(), #iclustr->raw()->raw(), #gap->raw()->raw(), &#info)")
 	public native static def pdsygvx(ibtype:Int, jobz:Char, range:Char, uplo:Char, n:Int,

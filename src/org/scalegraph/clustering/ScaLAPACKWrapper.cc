@@ -6,6 +6,7 @@ extern "C" {
 	void descinit_(int*, const int*, const int*, const int*, const int*,
 			const int*, const int*, const int*, const int*, int*);
 	void pdelset_(double*, const int*, const int*, const int*, const double*);
+	void pdelget_(const char*, const char*, double*, double*, const int*, const int*, const int*);
 	void pdsygvx_(const int*, const char*, const char*, const char*, const int*,
 			double*, const int*, const int*, const int*, double*,
 			const int*, const int*, const int*, const double*, const double*,
@@ -30,6 +31,10 @@ void descinit(int *desc, const int m, const int n, const int mb, const int nb,
 
 void pdelset(double *a, const int ia, const int ja, const int *desca, const double alpha){
 	pdelset_(a, &ia, &ja, desca, &alpha);
+}
+
+void pdelget(const x10_char scope, const x10_char top, double *alpha, double *a, const int ia, const int ja, const int *desca){
+	pdelget_((char *)&scope.v, (char *)&top.v, alpha, a, &ia, &ja, desca);
 }
 
 void pdsygvx(const int ibtype, const x10_char jobz, const x10_char range, const x10_char uplo, const int n,

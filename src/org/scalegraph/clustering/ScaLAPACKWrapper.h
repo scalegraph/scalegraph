@@ -5,6 +5,7 @@ long numroc(const int n, const int nb, const int iproc, const int isrcproc, cons
 void descinit(int *desc, const int m, const int n, const int mb, const int nb,
 		const int irsrc, const int icsrc, const int ictxt, const int lld, int *info);
 void pdelset(double *a, const int ia, const int ja, const int *desca, const double alpha);
+void pdelget(const x10_char scope, const x10_char top, double *alpha, double *a, const int ia, const int ja, const int *desca);
 void pdsygvx(const int ibtype, const x10_char jobz, const x10_char range, const x10_char uplo, const int n,
 		double *a, const int ia, const int ja, const int *desca, double *b,
 		const int ib, const int jb, const int *descb, const double vl, const double vu,

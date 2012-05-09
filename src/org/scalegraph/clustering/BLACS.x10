@@ -24,6 +24,14 @@ public class BLACS {
 	@Native("c++", "blacs_gridinfo(#ictxt, #nprow, #npcol, &#myrow, &#mycol)")
 	public native static def gridInfo(ictxt:Int, nprow:Int, npcol:Int, myrow:Int, mycol:Int): void;
 	
+	public static def gridInfo(ictxt:Int, nprow:Int, npcol:Int, myrow:Cell[Int], mycol:Cell[Int]): void {
+		var tmprow:Int = -1;
+		var tmpcol:Int = -1;
+		gridInfo(ictxt, nprow, npcol, tmprow, tmpcol);
+		myrow() = tmprow;
+		mycol() = tmpcol;
+	}
+	
 	@Native("c++", "blacs_gridexit(#ictxt)")
 	public native static def gridExit(ictxt:Int): void;
 	
