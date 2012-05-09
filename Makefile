@@ -582,8 +582,9 @@ test_randomwalk:
 	-cxx-postarg /nfs/home/ogata/developments/BLACS/LIB/blacs_MPI-LINUX-1.a
 test_scalapack:
 	@echo "----------- Compile ScaLAPACK Tester --------------------------";
-	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-x10rt mpi \
+	-post /nfs/home/ogata/developments/openmpi-1.4.5/bin/mpic++ \
 	-cxx-postarg /nfs/home/ogata/developments/scalapack-2.0.1/libscalapack.a \
 	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/liblapack.a \
 	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/libblas.a \
@@ -594,7 +595,7 @@ test_scalapack:
 	src/org/scalegraph/clustering/MPI.x10;
 	
 	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
-	X10_NTHREADS=32 /nfs/home/ogata/developments/openmpi-1.4.5/bin/mpirun -x X10RT_MPI_THREAD_MULTIPLE=true -np $(X10_NPLACES) -host sc01 $(OUTPUT)/Testscalegraph;
+	X10_NTHREADS=8 /nfs/home/ogata/developments/openmpi-1.4.5/bin/mpirun -x X10RT_MPI_THREAD_MULTIPLE=true -np $(X10_NPLACES) -host sc01 $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 	
 #Test 26
@@ -602,6 +603,7 @@ test_mpiclustering:
 	@echo "----------- Compile MPI Spectral Clustering Tester --------------------------";
 	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-x10rt mpi \
+	-post /nfs/home/ogata/developments/openmpi-1.4.5/bin/mpic++ \
 	-cxx-postarg /nfs/home/ogata/developments/scalapack-2.0.1/libscalapack.a \
 	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/liblapack.a \
 	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/libblas.a \
