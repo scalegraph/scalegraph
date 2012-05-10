@@ -314,22 +314,21 @@ public class BetweennessCentrality {
 	}
 	
 	protected def makeNeighbourMap() {
+		
 		val distVertexList:DistArray[Long] = plainGraph.getVertexList();
 		finish {
 			for(p:Place in Place.places()){
 				
-					val dat = at(p) {distVertexList.getLocalPortion()};
-					
-						for (i in dat) {
-							val actor = dat(i);
-							if(actor >= 0L) {
-								val n = plainGraph.getOutNeighbours(actor);
-								neighborMap.put(actor, n);
-								// Console.OUT.println("Add  neighbor " + actor);
-							}
-						}
-					
+				val dat = at(p) {distVertexList.getLocalPortion()};
 				
+				for (i in dat) {
+					val actor = dat(i);
+					if(actor >= 0L) {
+						val n = plainGraph.getOutNeighbours(actor);
+						neighborMap.put(actor, n);
+						// Console.OUT.println("Add  neighbor " + actor);
+					}
+				}
 			}
 		}
 	}
@@ -339,7 +338,7 @@ public class BetweennessCentrality {
 		finish {
 			
 			val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
-			val localVertices : Array[Long]{self.rank == 1} = distVertexList.getLocalPortion();
+			val localVertices = distVertexList.getLocalPortion();
 			val numLocalVertices: Int = localVertices.size;
 			val numThreads = Runtime.NTHREADS;
 			val chunkSize = numLocalVertices / numThreads;
@@ -347,44 +346,10 @@ public class BetweennessCentrality {
 			
 			var startIndex: Int = 0;
 			
-			// Console.OUT.println("Data Size:" + numLocalVertices);
-			// Console.OUT.println("Chunk size: " + chunkSize);
-			// Console.OUT.println("Remainder size: " + remainder);
-			
 			for(threadId in 0..(numThreads -1 )) {
-				
-				// var endIndex: Int = startIndex + chunkSize - 1;
-				// 
-				// if(threadId < remainder) {
-				// 	endIndex += 1;
-				// }
-				// 
-				// val start = startIndex;
-				// val end = endIndex;
-				// async doBfsOnPlainGraph(start, end, localVertices);
-				// // Console.OUT.println("Start size: " + start + "End: " + end);
-				// startIndex = endIndex + 1;
-				// 
-				// // Tasks are less than number of threads
-				// if(startIndex == numLocalVertices) {
-				// 	break;
-				// }
 				async doBfsOnPlainGraph(threadId, numThreads, localVertices);
 			}
 			
-			// for (i in data) {		
-			// 	val v = data(i);
-			// 	if(v >= 0) {
-			// 		//val spaceId = acquireSpaceId();
-			// 		Console.OUT.println("Run for source " + v);
-			// 		async doBfsOnPlainGraph( v);
-			// 	}
-			// 	
-			// }
-			
-			// Console.OUT.println("***************************");
-			// Console.OUT.println("Reaching finish:" + here.id);
-			// Console.OUT.println("***************************");
 		}
 		Console.OUT.println("***************************");
 		Console.OUT.println("Run for all source vertex" + here.id);
@@ -411,8 +376,7 @@ public class BetweennessCentrality {
 		Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 	}
 	
-	protected def doBfsOnPlainGraph( threadId: Int, numThreads: Int, localVertices: Array[Long]{self.rank == 1}) {
-
+	protected def doBfsOnPlainGraph( threadId: Int, numThreads: Int, localVertices: Array[Long]) {
 		
 		val traverseQ: ArrayList[Int] = new ArrayList[Int]();
 		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);;
@@ -420,7 +384,6 @@ public class BetweennessCentrality {
 		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
 		val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
 		val vertexStack: Stack[Int] = new Stack[Int]();
-		
 		
 		/*
 		 * localVertices can be accessed properly by Point only
@@ -443,17 +406,7 @@ public class BetweennessCentrality {
 			
 			if(source >= maximumVertexId) {
 				throw new Exception("Vertex Id more than maximumVertexId");
-				// Console.OUT.println("Big Vertex id found -- P: " + here.id + " : sourc: " +source);
 			}
-			// if(indexCount < startIndex)
-			// {
-			// 	indexCount++;
-			// 	continue;
-			// }
-			// 
-			// if(indexCount > endIndex)
-			// 	break;
-			
 			
 			// Clear Previous Data
 		 	distanceMap.clear(0, maximumVertexId);
@@ -472,6 +425,7 @@ public class BetweennessCentrality {
 			
 			traverseQ.add(source);
 			Runtime.probe();
+			
 			// Traverse the graph
 			while(!traverseQ.isEmpty()) {
 				
