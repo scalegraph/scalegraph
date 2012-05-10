@@ -11,31 +11,31 @@ import org.scalegraph.graph.PlainGraph;
 public class MPISpectralClustering implements Clustering {
 	
 	/* clustering information */
-	val graph:PlainGraph;
-	val nClusters:Int;
-	val nVertices:Int;
-	val IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
-	val IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
-	val vertexList:DistArray[Long];
-	val neighbourList:DistArray[Pair[Int, Array[Int]]];
+	private val graph:PlainGraph;
+	private val nClusters:Int;
+	private val nVertices:Int;
+	private val IDtoIDX:HashMap[Long, Int];  // ID is vertex ID PlainGraph has
+	private val IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
+	private val vertexList:DistArray[Long];
+	private val neighbourList:DistArray[Pair[Int, Array[Int]]];
 	
 	/* global ref */
-	val gGraph:GlobalRef[PlainGraph];
-	val gIDtoIDX:GlobalRef[HashMap[Long, Int]];
-	val gIDXtoID:GlobalRef[HashMap[Int, Long]];
+	private val gGraph:GlobalRef[PlainGraph];
+	private val gIDtoIDX:GlobalRef[HashMap[Long, Int]];
+	private val gIDXtoID:GlobalRef[HashMap[Int, Long]];
 
 	/* MPI global information */
-	val size:Int;
-	val nprow:Int;
-	val npcol:Int;
-	val mb:Int;
-	val nb:Int;
-	val globalRow:Int;
-	val globalCol:Int;
+	private val size:Int;
+	private val nprow:Int;
+	private val npcol:Int;
+	private val mb:Int;
+	private val nb:Int;
+	private val globalRow:Int;
+	private val globalCol:Int;
 	
-	val points:DistArray[Vector](1);
+	private val points:DistArray[Vector](1);
 	
-	val barrier = DistArray.make[Int](Dist.makeUnique(), 0);
+	//val barrier = DistArray.make[Int](Dist.makeUnique(), 0);
 	
 	/* MPI local information */
 	/*
@@ -92,7 +92,9 @@ public class MPISpectralClustering implements Clustering {
 	
 	public def run(): ClusteringResult {
 		makeCorrespondenceBetweenIDandIDX();
+		Console.OUT.println("IDandIDX finished");
 		makeNeighbourList();
+		Console.OUT.println("neighbourList finished");
 		/*
 		for(p in neighbourList.dist.places()) at(p) {
 			for(npt in neighbourList.dist.get(p)){
@@ -129,6 +131,7 @@ public class MPISpectralClustering implements Clustering {
 				
 				var info:Int = -1;
 				ScaLAPACK.descInit(desc, globalRow, globalCol, mb, nb, 0, 0, ictxt, Math.max(1, localRow), info);
+				if(rank == 0) Console.OUT.println(desc);
 				
 				/* make degree matrix and Laplacian matrix */
 				val gMatrixD = GlobalRef(matrixD);
@@ -218,7 +221,7 @@ public class MPISpectralClustering implements Clustering {
 				work = new Array[Double](lwork);
 				iwork = new Array[Int](liwork);
 				
-				if(rank == 0) Console.OUT.println("start solving eigenvalue problem");
+				if(rank == 0) Console.OUT.println("solving eigenvalue problem");
 				
 				ScaLAPACK.pdsygvx(1, 'V', 'I', 'U', globalRow,  matrixL, 1, 1, desc, matrixD,
 						1, 1, desc, 0.0, 0.0, nVertices - nClusters + 1, nVertices, 0.0, m, nz,
@@ -243,6 +246,7 @@ public class MPISpectralClustering implements Clustering {
 						}
 					}
 				}
+				if(rank == 0) Console.OUT.println("making points finished");
 				
 				BLACS.gridExit(ictxt);
 			} // end if(myrow >= 0 && mycol >= 0)
@@ -288,24 +292,25 @@ public class MPISpectralClustering implements Clustering {
 	
 	private def makeNeighbourList(): void {
 		//Console.OUT.println("check");
-		finish for(p in vertexList.dist.places()) async at(p) {
+		finish for(p in vertexList.dist.places()) async {
 			for(vpt in vertexList.dist.get(p)){
-				val vertexID:Long = vertexList(vpt);
+				val vertexID:Long = at(p) vertexList(vpt);
 				if(vertexID == -1l) continue;
-				val vertexIDX:Int = at(gIDtoIDX) gIDtoIDX().get(vertexID)();
-				val outNeighboursID = at(gGraph) gGraph().getOutNeighbours(vertexID);
-				val inNeighboursID = at(gGraph) gGraph().getInNeighbours(vertexID);
-				val ab = new ArrayBuilder[Int]();
+				val vertexIDX:Int = IDtoIDX.get(vertexID)();
+				val outNeighboursID = graph.getOutNeighbours(vertexID);
+				val inNeighboursID = graph.getInNeighbours(vertexID);
+				val builder = new ArrayBuilder[Int]();
+				val gBuilder = GlobalRef(builder);
 				if(outNeighboursID != null){
-					val outNeighboursIDX = outNeighboursID.map((l:Long) => at(gIDtoIDX) gIDtoIDX().get(l)());
-					ab.insert(0, outNeighboursIDX);
+					val outNeighboursIDX = outNeighboursID.map((l:Long) => IDtoIDX.get(l)());
+					builder.insert(0, outNeighboursIDX);
 				}
 				if(inNeighboursID != null){
-					val inNeighboursIDX = inNeighboursID.map((l:Long) => at(gIDtoIDX) gIDtoIDX().get(l)());
-					ab.insert(0, inNeighboursIDX);
+					val inNeighboursIDX = inNeighboursID.map((l:Long) => IDtoIDX.get(l)());
+					builder.insert(0, inNeighboursIDX);
 				}
 				
-				neighbourList(vpt) = Pair[Int, Array[Int]](vertexIDX, ab.result());
+				at(p) neighbourList(vpt) = Pair[Int, Array[Int]](vertexIDX, at(gBuilder) gBuilder().result());
 				//Console.OUT.println("check loop " + vpt);
 			}
 		}
