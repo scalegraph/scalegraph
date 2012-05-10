@@ -5,48 +5,56 @@ import x10.util.ArrayList;
 import org.scalegraph.io.GMLReader;
 import org.scalegraph.io.GMLEntry;
 import org.scalegraph.graph.AttributedGraph;
-import test.scalegraph.graph.AttributedGraphMock;
+
 
 
 public class TestGMLReader {
 	
 	public static def main(args: Array[String]) {
+		
 		var graph: AttributedGraph;
 		
 		// Test node, edge with string attribute and integer attribute
 		Console.OUT.println("-------------gml_reader_t1.gml-----------");
 		graph = GMLReader.loadFromFile("/nfs/data1/scalegraph/GML/gml_reader_t1.gml");
-		AttributedGraphMock.printVertexList(graph);
-		AttributedGraphMock.printEdgeList(graph);
+		graph.printAllTab();
 		
 		// String, integer and real number attribute
 		Console.OUT.println("-------------gml_reader_t2.gml-----------");
 		graph = GMLReader.loadFromFile("/nfs/data1/scalegraph/GML/gml_reader_t2.gml");
-		AttributedGraphMock.printVertexList(graph);
-		AttributedGraphMock.printEdgeList(graph);
+		
+		val p = new printer(0);
+		// p.printGraph(graph);
+		graph.printAllTab();
 	}
 	
-	protected static def printGMLEntryList(list: ArrayList[GMLEntry], level: Int) {
+	// Inner class inherites from AttributedGraph
+	public static class printer extends AttributedGraph {
 		
-		var i: Int = 0;
-		for(;i < level; i++) {
-			Console.OUT.print("    ");
+		protected def this(sizeCategory: Short) {
+			
+			// Call parent class's constructor
+			super(sizeCategory);
 		}
 		
-		for(n in list) {
-			Console.OUT.print("*KEY*" + n.getKey());
-			if(n.isList()) {
-				Console.OUT.println("*VALUE* (list)");
-				printGMLEntryList(n.getList(), level + 1);
-			} else {
-				Console.OUT.println("*VALUE* : " + n.getValue());
+		protected def printGraph(g: AttributedGraph) {
+			
+			Console.OUT.println("Vertex list");
+			
+			val vertexTab = g.vertexTab;
+			var visitCount: Int = 0;
+			
+			for(i in vertexTab) {
+				
+				val vertexId = vertexTab(i)(0);
+				if(vertexId == -1L)
+					continue;
+				
+				Console.OUT.printf("[%ld]", vertexId);
 			}
 		}
-		
+	
 	}
 	
-    public def this() {
-       
-    }
-    
 }
+
