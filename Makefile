@@ -15,7 +15,7 @@ CLASSPATH=$(X10_HOME)
 X10_NPLACES=4
 X10_HOSTFILE=machines.txt
 
-APP_DIR=/nfs/home/miyuru/workspace/ScaleGraph
+APP_DIR=/nfs/home/charuwat/workspace/ScaleGraph
 OUTPUT=./bin
 
 INTERM=./out
@@ -125,9 +125,9 @@ test_gml_reader:
 	src/org/scalegraph/graph/CharAttribute.x10 \
 	src/org/scalegraph/graph/DateAttribute.x10 \
 	src/org/scalegraph/graph/AttributeSchema.x10 \
-	src/org/scalegraph/util/Date.x10 \
-	src/test/scalegraph/graph/AttributedGraphMock.x10;
-	
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/util/Date.x10 ;
+		
 	@echo "----------- Launch GML Reader Tester -----------------";
 	#$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostlist $(X10_HOSTLIST) $(OUTPUT)/TestGMLReader;
 	$(X10_HOME)/bin/X10Launcher $(OUTPUT)/Testscalegraph;
