@@ -116,10 +116,10 @@ public class Vertex implements Comparable[Vertex], CustomSerialization {
 		// Print attribute
 		if(this.attributes != null) {
 			var firstAttribute: Boolean = true;
-			s.add("; ");
+			
 			for( i in attributes) {
+				s.add("; ");
 				s.add(attributes(i).toString());
-				
 			}
 		}
 		s.add("]");
