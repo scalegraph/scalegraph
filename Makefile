@@ -558,8 +558,9 @@ test_randomwalk:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_gml.jar \
-	-x10lib $(GML_DIST)/native_gml.properties \
+	-cxx-postarg -lgfortran \
+	-classpath $(GML_DIST)/$(GML_JAR) \
+	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/org/scalegraph/communities/RandomWalk.x10 \
 	src/org/scalegraph/communities/RandomWalkResult.x10 \
 	src/test/scalegraph/communities/TestRandomWalk.x10 \
