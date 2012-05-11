@@ -693,6 +693,72 @@ public class AttributedGraph  implements Graph {
 		return vertexList;
 	}
 	
+	public def getEdgesByVertexId(vertexId: Long): ArrayList[Edge] {
+		val edgeList = new ArrayList[Edge]();
+		val index: Int = vertexId as Int;
+		val inEdgeList = vertexTab(index)(1) as ArrayList[Int];
+		val outEdgeList = vertexTab(index)(2) as ArrayList[Int];
+		 
+		
+		
+		// inEdge
+		for(id in inEdgeList) {
+			
+			// Get Src vertex
+			val srcId = edgeTab(id)(1);
+			val srcAttributeRecord = vertexAttrTab(srcId);			
+			val srcAttr = attributeRecordToAttributes(srcAttributeRecord, vertexAttrIdNameMap);
+			val srcVertex = new Vertex(srcAttr);
+			srcVertex.internalId = srcId;
+			
+			// Get Dst vertex
+			val dstId = edgeTab(id)(2);
+			val dstAttributeRecord = vertexAttrTab(dstId);			
+			val dstAttr = attributeRecordToAttributes(dstAttributeRecord, vertexAttrIdNameMap);
+			val dstVertex = new Vertex(dstAttr);
+			dstVertex.internalId = dstId;
+			
+			// Get Edge
+			val edgeAttributeRecord = edgeAttrTab(id);
+			val edgeAttribute = attributeRecordToAttributes(edgeAttributeRecord, edgeAttrIdNameMap);
+			val e = new Edge(srcVertex, dstVertex, edgeAttribute.toArray());
+			
+			edgeList.add(e);
+		}
+		
+		
+		// Outedge
+		for(id in outEdgeList) {
+			
+			if(inEdgeList.contains(id)) {
+				continue;
+			}
+			
+			// Get Src vertex
+			val srcId = edgeTab(id)(1);
+			val srcAttributeRecord = vertexAttrTab(srcId);			
+			val srcAttr = attributeRecordToAttributes(srcAttributeRecord, vertexAttrIdNameMap);
+			val srcVertex = new Vertex(srcAttr);
+			srcVertex.internalId = srcId;
+			
+			// Get Dst vertex
+			val dstId = edgeTab(id)(2);
+			val dstAttributeRecord = vertexAttrTab(dstId);			
+			val dstAttr = attributeRecordToAttributes(dstAttributeRecord, vertexAttrIdNameMap);
+			val dstVertex = new Vertex(dstAttr);
+			dstVertex.internalId = dstId;
+			
+			// Get Edge
+			val edgeAttributeRecord = edgeAttrTab(id);
+			val edgeAttribute = attributeRecordToAttributes(edgeAttributeRecord, edgeAttrIdNameMap);
+			val e = new Edge(srcVertex, dstVertex, edgeAttribute.toArray());
+			
+			edgeList.add(e);
+		}
+		
+		return edgeList;
+	}
+	
 	public def addEdge(var o:Object):Int {
 		
 		val edge = o as Edge;
