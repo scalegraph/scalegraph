@@ -2,51 +2,47 @@
 # This is the Makefile for Testing the scalegraph packages
 #############################################################
 
+#================================= Fixed Settings ============================================
 #Export the number of threads
 export X10_NTHREADS=10
 export X10_STATIC_THREADS=true
 export X10_NO_STEALS=false
 
-#Set the X10_HOME and class path
-X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
-CLASSPATH=$(X10_HOME)
-
 #X10 runtime environment variables
-X10_NPLACES=4
-X10_HOSTFILE=machines.txt
+X10_NPLACES = 4
+X10_HOSTFILE = machines.txt
+X10_NTHERADS = 10
 
-APP_DIR=/nfs/home/miyuru/workspace/ScaleGraph
-OUTPUT=./bin
+OUTPUT = ./bin
 
-INTERM=./out
+INTERM =./out
+
+#================================= Environment Dependent Settings ============================================
+#Set the X10_HOME and class path
+X10_HOME = temp
+CLASSPATH = $(X10_HOME)
+
+APP_DIR = temp
 
 #Set MPI Home
-MPI_HOME=/work0/t2gsuzumuralab/scalegraph/mpich2-1.4
-
+MPI_HOME = temp
 
 #Set the LAPACK, BLAS, F2C locations
-CLAPACK_LIB =  /work0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lapack_LINUX.a
-CBLAS_LIB = /work0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/blas_LINUX.a
-F2C_LIB = /work0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a
+CLAPACK_LIB = temp
+CBLAS_LIB = temp
+F2C_LIB = temp
 
-ATLAS_LAPACK_LIB = /work0/t2gsuzumuralab/scalegraph/atlas/lib/libf77blas.a
-ATLAS_LIB = /work0/t2gsuzumuralab/scalegraph/atlas/lib/libatlas.a
+ATLAS_LAPACK_LIB = temp
+ATLAS_LIB = temp
 
-#CLAPACK_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/lapack_LINUX.a
-#CBLAS_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/blas_LINUX.a
-#F2C_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a
-
-#ATLAS_LAPACK_LIB = /nfs/data1/scalegraph/ATLAS/lib/libf77blas.a
-#ATLAS_LIB = /nfs/data1/scalegraph/ATLAS/lib/libatlas.a
+#SCALAPACK location
+SCALAPACK = temp
 
 #Location of the GML Library
-#GML_DIST = /nfs/data1/scalegraph/X10_runtime/x10.gml
-#GML_PROPS = native_gml.properties
-#GML_JAR = lib/native_gml.jar
+GML_DIST = temp
+GML_PROPS = temp
+GML_JAR = temp
 
-GML_DIST = /work0/t2gsuzumuralab/scalegraph/x10-runtimes/x10.gml
-GML_PROPS = native_gml.properties
-GML_JAR = lib/native_gml.jar
 #For MPI
 #GML_PROPS = native_mpi_gml.properties
 #GML_JAR = lib/native_mpi_gml.jar
@@ -355,7 +351,7 @@ test_math:
 	@echo "----------- Compile scalegraphMath Tester -----------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/util/TestscalegraphMath.x10 \
-	src/org/scalegraph/util/scalegraphMath.x10;
+	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	@echo "----------- Launch scalegraphMath Tester -----------";
 	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
@@ -468,6 +464,7 @@ test_lapack:
 	-cxx-postarg $(CLAPACK_LIB) \
 	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg $(F2C_LIB) \
+	-cxx-postarg -lgfortran \
 	src/test/scalegraph/clustering/TestLAPACK.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10;
 	
@@ -480,8 +477,8 @@ test_lapack:
 test_gml:
 	@echo "----------- Compile GML Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg /work0/t2gsuzumuralab/scalegraph/lapack-3.4.0/liblapack.a \
-	-cxx-postarg /work0/t2gsuzumuralab/scalegraph/lapack-3.4.0/librefblas.a \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg -lgfortran \
 	-classpath $(GML_DIST)/$(GML_JAR) \
 	-x10lib $(GML_DIST)/$(GML_PROPS) \
@@ -507,6 +504,7 @@ test_clustering:
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
+	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
@@ -590,12 +588,11 @@ test_scalapack:
 	@echo "----------- Compile ScaLAPACK Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-x10rt mpi \
-	-post /nfs/data0/miyuru/software/mpich2-1.4/bin/mpic++ \
-	-cxx-postarg /nfs/data1/scalegraph/scalapack-1.8.0/libscalapack.a \
-	-cxx-postarg /nfs/data1/scalegraph/CLAPACK-3.2.1/lapack_LINUX.a \
-	-cxx-postarg /nfs/data1/scalegraph/CLAPACK-3.2.1/blas_LINUX.a \
+	-post $(MPI_HOME)/bin/mpic++ \
+	-cxx-postarg $(SCALAPACK) \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg -lgfortran \
-	-cxx-postarg -lifcore \
 	src/test/scalegraph/clustering/TestScaLAPACK.x10 \
 	src/org/scalegraph/clustering/ScaLAPACK.x10 \
 	src/org/scalegraph/clustering/BLACS.x10 \
