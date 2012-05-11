@@ -15,28 +15,41 @@ CLASSPATH=$(X10_HOME)
 X10_NPLACES=4
 X10_HOSTFILE=machines.txt
 
-APP_DIR=/nfs/home/charuwat/workspace/ScaleGraph
+APP_DIR=/nfs/home/miyuru/workspace/ScaleGraph
 OUTPUT=./bin
 
 INTERM=./out
 
+#Set MPI Home
+MPI_HOME=/work0/t2gsuzumuralab/scalegraph/mpich2-1.4
+
+
 #Set the LAPACK, BLAS, F2C locations
-#CLAPACK_LIB =  /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/lapack_LINUX.a
-#CBLAS_LIB = /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lib/blas_LINUX.a
-#F2C_LIB = /data0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a
+CLAPACK_LIB =  /work0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/lapack_LINUX.a
+CBLAS_LIB = /work0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/blas_LINUX.a
+F2C_LIB = /work0/t2gsuzumuralab/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a
 
-#ATLAS_LAPACK_LIB = /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libf77blas.a
-#ATLAS_LIB = /data0/t2gsuzumuralab/scalegraph/ATLAS/lib/libatlas.a
+ATLAS_LAPACK_LIB = /work0/t2gsuzumuralab/scalegraph/atlas/lib/libf77blas.a
+ATLAS_LIB = /work0/t2gsuzumuralab/scalegraph/atlas/lib/libatlas.a
 
-CLAPACK_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/lapack_LINUX.a
-CBLAS_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/blas_LINUX.a
-F2C_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a
+#CLAPACK_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/lapack_LINUX.a
+#CBLAS_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/blas_LINUX.a
+#F2C_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a
 
-ATLAS_LAPACK_LIB = /nfs/data1/scalegraph/ATLAS/lib/libf77blas.a
-ATLAS_LIB = /nfs/data1/scalegraph/ATLAS/lib/libatlas.a
+#ATLAS_LAPACK_LIB = /nfs/data1/scalegraph/ATLAS/lib/libf77blas.a
+#ATLAS_LIB = /nfs/data1/scalegraph/ATLAS/lib/libatlas.a
 
 #Location of the GML Library
-GML_DIST = /nfs/data1/scalegraph/X10_runtime/x10.gml
+#GML_DIST = /nfs/data1/scalegraph/X10_runtime/x10.gml
+#GML_PROPS = native_gml.properties
+#GML_JAR = lib/native_gml.jar
+
+GML_DIST = /work0/t2gsuzumuralab/scalegraph/x10-runtimes/x10.gml
+GML_PROPS = native_gml.properties
+GML_JAR = lib/native_gml.jar
+#For MPI
+#GML_PROPS = native_mpi_gml.properties
+#GML_JAR = lib/native_mpi_gml.jar
 
 #Test 1
 test_attributed_graph:
@@ -464,22 +477,19 @@ test_lapack:
 
 #Test 21
 # For some reason, LAPACK libraries and LAPACK.x10 is needed to use GML library.
-#	-cxx-postarg $(CLAPACK_LIB) \
-	-cxx-postarg $(CBLAS_LIB) \
-	-cxx-postarg $(F2C_LIB) \
-	src/org/scalegraph/clustering/LAPACK.x10;
 test_gml:
 	@echo "----------- Compile GML Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg $(ATLAS_LAPACK_LIB) \
-	-cxx-postarg $(ATLAS_LIB) \
+	-cxx-postarg /work0/t2gsuzumuralab/scalegraph/lapack-3.4.0/liblapack.a \
+	-cxx-postarg /work0/t2gsuzumuralab/scalegraph/lapack-3.4.0/librefblas.a \
 	-cxx-postarg -lgfortran \
-	-classpath $(GML_DIST)/lib/native_gml.jar \
-	-x10lib $(GML_DIST)/native_gml.properties \
+	-classpath $(GML_DIST)/$(GML_JAR) \
+	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/test/scalegraph/clustering/TestGML.x10;
 	
 	@echo "----------- Launch GML Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+#for MPI	mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 #Test 22
@@ -491,8 +501,8 @@ test_clustering:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
-	-classpath $(GML_DIST)/lib/native_gml.jar \
-	-x10lib $(GML_DIST)/native_gml.properties \
+	-classpath $(GML_DIST)/$(GML_JAR) \
+	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
@@ -578,22 +588,26 @@ test_randomwalk:
 #Test 25
 test_scalapack:
 	@echo "----------- Compile ScaLAPACK Tester --------------------------";
-	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-x10rt mpi \
-	-post /nfs/home/ogata/developments/mpich2-1.4.1p1/bin/mpic++ \
-	-cxx-postarg /nfs/home/ogata/developments/scalapack-2.0.1/libscalapack.a \
-	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/liblapack.a \
-	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/libblas.a \
+	-post /nfs/data0/miyuru/software/mpich2-1.4/bin/mpic++ \
+	-cxx-postarg /nfs/data1/scalegraph/scalapack-1.8.0/libscalapack.a \
+	-cxx-postarg /nfs/data1/scalegraph/CLAPACK-3.2.1/lapack_LINUX.a \
+	-cxx-postarg /nfs/data1/scalegraph/CLAPACK-3.2.1/blas_LINUX.a \
 	-cxx-postarg -lgfortran \
+	-cxx-postarg -lifcore \
 	src/test/scalegraph/clustering/TestScaLAPACK.x10 \
 	src/org/scalegraph/clustering/ScaLAPACK.x10 \
 	src/org/scalegraph/clustering/BLACS.x10 \
 	src/org/scalegraph/clustering/MPI.x10;
 	
 	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
-	/nfs/home/ogata/developments/mpich2-1.4.1p1/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	$(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 	
+#	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
+#	X10_NTHREADS=1 /nfs/home/ogata/developments/mpich2/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+#	@echo "----------- Test Completed ---------------------------------";
 #Test 26
 test_mpiclustering:
 	@echo "----------- Compile MPI Spectral Clustering Tester --------------------------";
