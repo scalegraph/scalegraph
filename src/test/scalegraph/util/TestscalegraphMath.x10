@@ -5,7 +5,7 @@ import org.scalegraph.util.ScaleGraphMath;
 /**
  * This class tests IgraphX10Math
  */
-public class TestIgraphX10Math {
+public class TestscalegraphMath {
     /**
      * Default constructor 
      */
