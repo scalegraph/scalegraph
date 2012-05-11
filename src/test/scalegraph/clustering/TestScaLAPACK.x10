@@ -8,6 +8,7 @@ import org.scalegraph.clustering.ScaLAPACK;
 
 public class TestScaLAPACK {
     public static def main(args: Array[String]) {
+    	Console.OUT.println("hello");
     	val nprow = 2;
     	val npcol = 2;
     	val mb = 2;
