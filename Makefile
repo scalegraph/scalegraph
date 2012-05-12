@@ -498,13 +498,13 @@ test_clustering:
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
+	-cxx-postarg -lgfortran \
 	-classpath $(GML_DIST)/$(GML_JAR) \
 	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
 	src/org/scalegraph/clustering/SpectralClustering.x10 \
-	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/LAPACK.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
