@@ -24,19 +24,15 @@ public class BetweennessCentrality {
 	val numVertex: Int;
 	val maximumVertexId: Int;
 	
-	// var isEnableCache: Boolean = false;
-	
-	var cacheSize: Int = 2000;
-	val ALLOC_SPACE = Runtime.MAX_THREADS;
 	val aquireSpaceLock: Lock = new Lock();
 	val freeSpaceAccessLock = new Lock();
 	val updateScoreLock: Lock = new Lock();
 	
-	val freeSpace = new Array[Boolean](ALLOC_SPACE, (i : Int) => true);
+	val neighborMap: Array[Array[Long]];
+	var numProcessedSource: Long = 0;
+	var lastPrintThroughput: Long =  System.currentTimeMillis();
 	
-
-	val neighborMap: HashMap[Long, Array[Long]];
-
+	
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
 		// Keep datafrom user to instance's memeber
 		this.attributedGraph = g;
@@ -63,12 +59,11 @@ public class BetweennessCentrality {
 		this.numVertex = nVertex as Int;
 		this.maximumVertexId = maxVertexId as Int + 1; // Array start at zero
 		this.betweennessScore = new Array[Double](this.maximumVertexId, 0.0D);
-		this.cacheSize = cacheSz;
 
 		// Unuse properties
 		this.vertexIdAndIndexMap = null;
 		this.attributedGraph = null;
-		this.neighborMap = new HashMap[Long, Array[Long]](numVertex);
+		this.neighborMap = new Array[Array[Long]](maximumVertexId);
 	
 		
 	}
@@ -325,7 +320,7 @@ public class BetweennessCentrality {
 					val actor = dat(i);
 					if(actor >= 0L) {
 						val n = plainGraph.getOutNeighbours(actor);
-						neighborMap.put(actor, n);
+						neighborMap(actor as Int) = n;
 						// Console.OUT.println("Add  neighbor " + actor);
 					}
 				}
@@ -346,6 +341,7 @@ public class BetweennessCentrality {
 			
 			var startIndex: Int = 0;
 			
+			Console.OUT.println("Assigned-Vertex count: " + numLocalVertices);
 			for(threadId in 0..(numThreads -1 )) {
 				async doBfsOnPlainGraph(threadId, numThreads, localVertices);
 			}
@@ -424,7 +420,7 @@ public class BetweennessCentrality {
 			geodesicsMap(source) = 1L;
 			
 			traverseQ.add(source);
-			Runtime.probe();
+			// Runtime.probe();
 			
 			// Traverse the graph
 			while(!traverseQ.isEmpty()) {
@@ -432,14 +428,12 @@ public class BetweennessCentrality {
 				val actor: int = traverseQ.removeFirst();
 				var neighbors: Array[Long] = null;
 	
-				
-				// neighbors = getNeighBours(cache, actor);
-				// neighbors = this.plainGraph.getOutNeighbours(actor);
-				if(neighborMap.containsKey(actor)) {
-					neighbors = neighborMap.get(actor).value;
-				} else {
-					Console.OUT.println("Cant find the neighbor of node " + actor);
-				}
+				neighbors = neighborMap(actor as Int);
+				// if(neighborMap.containsKey(actor)) {
+				// 	neighbors = neighborMap.get(actor).value;
+				// } else {
+				// 	Console.OUT.println("Cant find the neighbor of node " + actor);
+				// }
 	
 				vertexStack.push(actor);
 				
@@ -491,6 +485,18 @@ public class BetweennessCentrality {
 						continue;
 					betweennessScore(i) += tempScore(i);
 				}
+				numProcessedSource++;
+				
+				// Print throuhgput every XX milliseconds
+				val now = System.currentTimeMillis();
+				val elapse = now - lastPrintThroughput;
+				if( elapse > 60000) {
+					val thr = numProcessedSource / ((elapse / 60000) as Double);
+					Console.OUT.println("Throughput (Processed Source/minute): " + thr);
+					lastPrintThroughput = now;
+					numProcessedSource = 0;
+				}
+				
 			updateScoreLock.unlock();
 			
 			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
