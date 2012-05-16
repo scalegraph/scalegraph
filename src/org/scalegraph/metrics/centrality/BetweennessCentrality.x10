@@ -378,8 +378,18 @@ public class BetweennessCentrality {
 		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);;
 		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
 		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
-		val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
-		val vertexStack: Stack[Int] = new Stack[Int]();
+		// val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
+		val predecessorMap = new Array[FixedVertexStack](maximumVertexId, 
+				(i: Int) => {
+					val n = neighborMap(i);
+					if(n == null) {
+						// Dummy stack
+						return new FixedVertexStack(1);
+					}
+					val numOutVertices = n.size;
+					return new FixedVertexStack(numOutVertices);
+				});
+		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
 		
 		/*
 		 * localVertices can be accessed properly by Point only
@@ -388,7 +398,7 @@ public class BetweennessCentrality {
 		var indexCount: Int = 0;
 		for(index in localVertices) {
 			
-			if((++indexCount) % numThreads != threadId) {
+			if((indexCount++) % numThreads != threadId) {
 				continue;
 			}
 			
@@ -500,6 +510,35 @@ public class BetweennessCentrality {
 			updateScoreLock.unlock();
 			
 			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
+		}
+	}
+		public static class FixedVertexStack {
+		val size: Int;
+		var storage: Array[Int];
+		var index: Int;
+		def this(size: Int) {
+			this.size = size;
+			this.storage = new Array[Int](size);
+			this.index = -1;
+		}
+		
+		public def pop(): Int {
+			 val result = storage(index);
+			 --index;
+			 return result;
+		}
+		
+		public def push(vertexId: Int) {
+			++index;
+			storage(index) = vertexId;
+		}
+		
+		public def clear() {
+			index = -1;
+		}
+		
+		public isEmpty() {
+			return index == -1;
 		}
 	}
 	
