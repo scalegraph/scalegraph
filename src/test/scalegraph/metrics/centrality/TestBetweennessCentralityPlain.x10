@@ -18,11 +18,13 @@ public class TestBetweennessCentralityPlain {
 		val params = new OptionsParser(args, null,
 				[Option("i", "", "Input file/folder"),
 				 Option("o", "", "Output file"),
-				 Option("c", "", "Percent Cache")]);
+				 Option("c", "", "Percent Cache"),
+				 Option("r", "", "Print result")]);
 
 		val inputPath = params("-i", "");
 		val outputPath = params("-o", "");
-		val percentCache = params("-c", 30);
+		val shouldPrintResult = params("-r");
+
 		if(inputPath == null || inputPath.equals("")) {
 			Console.OUT.println("Please enter file name");
 			return;
@@ -43,7 +45,7 @@ public class TestBetweennessCentralityPlain {
 			
 		// Determine input path
 		val inputFile  = new File(inputPath);
-				
+		val startLoadFile = System.currentTimeMillis();		
 		if(inputFile.isDirectory()) {
 			
 			Console.OUT.println("Load with ScatteredEdgeListReader");
@@ -56,12 +58,13 @@ public class TestBetweennessCentralityPlain {
 			graph = edgeListReader.loadFromFile(inputPath);
 			
 		}
+		val endLoadFile = System.currentTimeMillis();
+		val loadingElapse = (endLoadFile - startLoadFile) / 1000;
+		Console.OUT.println("Loading Elapse Time(s): " + loadingElapse);
 		
 		val distVertexList:DistArray[Long] = graph.getVertexList();
 		val vertexListBuilder: ArrayBuilder[Long] = new ArrayBuilder[Long]();
 		
-		// Console.OUT.println("Create vertex list...........");
-		// Console.IN.readChar();
 		
 		// Build an array of vertex to estimate
 		finish {
@@ -88,7 +91,7 @@ public class TestBetweennessCentralityPlain {
 		val buildEnd = System.currentTimeMillis();
 		
 		val calStart = System.currentTimeMillis();
-		val result = BetweennessCentrality.run(graph, vertexList, false, percentCache);
+		val result = BetweennessCentrality.run(graph, vertexList, false);
 		val calEnd = System.currentTimeMillis();
 		
 		val vertexCountStart = System.currentTimeMillis();
@@ -111,7 +114,7 @@ public class TestBetweennessCentralityPlain {
 					calEnd,
 					vertexCountStart,
 					vertexCountEnd,
-					percentCache);
+					true /* Always print result to file */);
 			printer.close();
 		} else {
 			showResult(Console.OUT,
@@ -125,7 +128,7 @@ public class TestBetweennessCentralityPlain {
 					         calEnd,
 					         vertexCountStart,
 					         vertexCountEnd,
-					         percentCache
+					         shouldPrintResult
 			);
 		}
 		
@@ -144,18 +147,20 @@ public class TestBetweennessCentralityPlain {
 			calEnd: Long,
 			vertexCountStart: Long,
 			vertexCountEnd: Long,
-			percentCache: Int
+			shouldPrintResult: Boolean
 			){
 		
-		for(i in result) {
-			var k: Long = result(i).first;
-			var v: Double = result(i).second;
-			
-			if(v == 0D)
-				continue;
-			
-			p.println("" + k + " = " + v);
-		}
+			if(shouldPrintResult){
+				for(i in result) {
+					var k: Long = result(i).first;
+					var v: Double = result(i).second;
+					
+					if(v == 0D)
+						continue;
+					
+					p.println("" + k + " = " + v);
+				}
+			}
 		
 		p.println("---------------------------------------------------------------------");
 		p.println("Input file : " + inputFile);
@@ -164,7 +169,6 @@ public class TestBetweennessCentralityPlain {
 		p.println("Time to BuildList (ms): " + (buildEnd - buildStart) );
 		p.println("Time to Cal (ms): " + (calEnd - calStart) );
 		p.println("Time to Count vertex (ms): " + (vertexCountEnd - vertexCountStart) );
-		p.println("Run with cache (%) : " + percentCache);
 		p.println("---------------------------------------------------------------------");
 		p.flush();
 	}
