@@ -1759,6 +1759,71 @@ public class PlainGraph implements Graph{
     	return arrayBuilder.result();
     }    
         
+    public def getInNeighboursCount(val vertexID:Long):Long{
+    	val result2:Array[Array[Long]]=new Array[Array[Long]](1);
+    	
+    	var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    	val machine:Int = ScaleGraphMath.round(vertexID/v) as Int; 	
+    	
+    	val internal_vertex:Int = (vertexID % v) as Int;
+    	val p2:Place = Place.places()(machine);
+    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	
+    	var resultTotal:Long = -1l; 
+    	
+    	resultTotal = at(p2){
+    		var l:Array[PlainGraphRecord] = adjacencyListBtoA.getLocalPortion();
+    		val r:Region = l.region;
+    		var len:Int = r.size();
+
+    		if((l(pt) != null)&&(l(pt).id != -1l)){
+    			if(l(pt).edges != null){
+    				return ((l(pt).edges.size()) as Long);
+    			}else{
+    				return -1l;
+    			}
+    		}
+    		
+    		return -1l;
+    	};
+    	
+    	return resultTotal;
+    }    
+    
+    public def getOutNeighboursCount(val vertexID:Long):Long{
+    	val result2:Array[Array[Long]]=new Array[Array[Long]](1);
+    	
+    	var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    	val machine:Int = ScaleGraphMath.round(vertexID/v) as Int; 	
+    	
+    	val internal_vertex:Int = (vertexID % v) as Int;
+    	val p2:Place = Place.places()(machine);
+    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	
+    	var resultTotal:Long = -1l; 
+    	
+    	resultTotal = at(p2){
+    		var l:Array[PlainGraphRecord] = adjacencyListAtoB.getLocalPortion();
+    		val r:Region = l.region;
+    		var len:Int = r.size();
+
+    		if((l(pt) != null)&&(l(pt).id != -1l)){
+    			if(l(pt).edges != null){
+    				return ((l(pt).edges.size()) as Long);
+    			}else{
+    				return -1l;
+    			}
+    		}
+    		
+    		return -1l;
+    	};
+    	
+    	return resultTotal;
+    } 
+    
+    public def getNeighboursCount(val vertexID:Long):Long{
+    	return getInNeighboursCount(vertexID) + getOutNeighboursCount(vertexID);
+    }
     
     public def getUnconnectedVertexCount():Long{
     	var result:Long = 0L;
