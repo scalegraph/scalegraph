@@ -213,5 +213,23 @@ public class Pattern {
 		return x;
 	}
 	
+	
+	public def is_super_pattern(var pat:Pattern):Boolean{
+		val mset:ArrayList[EdgePattern] = pat.get_edges();
+		var included:Boolean = true;
+		for (i in _edges){
+			if(mset.contains(i) == false){
+				included = false;
+				break;
+			}
+		}
+		
+		if (included == true) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
 
 }

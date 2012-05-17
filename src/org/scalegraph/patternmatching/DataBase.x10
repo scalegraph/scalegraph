@@ -83,6 +83,43 @@ public class DataBase {
 	}
 
 	public def get_exact_sup_optimal(var pat:Pattern):Boolean{
+		var sup_list:ArrayList[Int] = new ArrayList[Int]();
+		val its_vat:ArrayList[Int] = pat.get_vat();
+		for (it in its_vat) {
+			var database_pat:Pattern = _graph_store(it);
+			if (database_pat.is_super_pattern(pat) == false)  continue;
+			sup_list.add(it); 
+		}
+		
+		var max_sup_possible:Int = sup_list.size();
+		if (max_sup_possible < _minsup) return false;
+		
+		
+		var temp:ArrayList[Int] = new ArrayList[Int](sup_list.size());
+		for (var i:Int =0; i<max_sup_possible; i++) {
+			var database_pat:Pattern = _graph_store(sup_list(i));
+			var m:Matrix = new Matrix(pat.size(), database_pat.size());
+			
+	
+			(pat.get_matrix()).matcher((database_pat.get_matrix()),m);
+			var ret_val:Boolean = UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
+					m, false);
+			if (ret_val == false)  {
+				
+				var t:Int = max_sup_possible-1-i+temp.size();
+				if (t<_minsup) {
+					return false;
+				}
+			}
+			else {
+				temp.add(sup_list(i));  
+			}
+		}
+		pat.set_vat(temp); 
+		pat.set_sup_status(0);
+		pat.set_freq();
+		
+		
 		assert(false):"not implemented yet";
 		// not implemented yet
 		return true;// need to modify

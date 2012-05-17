@@ -7,7 +7,7 @@ import x10.util.Pair;
  * square symmetrical matrix class
  */
 public class SqrSymMatrix extends Matrix {
-	
+
 	/**
 	 * constructor
 	 */

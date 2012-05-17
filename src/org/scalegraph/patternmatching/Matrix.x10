@@ -8,9 +8,9 @@ import x10.util.StringBuilder;
  */
 public class Matrix {
 	
-	public var rows:Int;
-	public var cols:Int;
-	public val data:ArrayList[ArrayList[Int]];  // the list of rows
+	private var rows:Int; //row size
+	private var cols:Int; //cow size
+	private val data:ArrayList[ArrayList[Int]];  // the list of rows
 	
 	/**
 	 * constructor
@@ -139,4 +139,14 @@ public class Matrix {
 		}
 		this.cols++;
 	}
+	
+	public def rowset_empty(val i:Int):Boolean{
+		for(j in this.data(i)){
+			if (j != 0){
+				return false;
+			}
+		}
+		return true;
+	}
+	
 }
