@@ -29,6 +29,7 @@ public class BetweennessCentrality {
 	val updateScoreLock: Lock = new Lock();
 	
 	val neighborMap: Array[Array[Long]];
+	val inNeighbourCountMap: Array[Int];
 	var numProcessedSource: Long = 0;
 	var lastPrintThroughput: Long =  System.currentTimeMillis();
 	
@@ -47,6 +48,7 @@ public class BetweennessCentrality {
 		this.plainGraph = null;
 		this.maximumVertexId = 0;
 		this.neighborMap = null;
+		this.inNeighbourCountMap = null;
 	}
 
 	protected def this(g: PlainGraph, nVertex: Long, maxVertexId: Long, isNormalize: Boolean, cacheSz: Int) {
@@ -64,7 +66,7 @@ public class BetweennessCentrality {
 		this.vertexIdAndIndexMap = null;
 		this.attributedGraph = null;
 		this.neighborMap = new Array[Array[Long]](maximumVertexId);
-	
+		this.inNeighbourCountMap = new Array[Int](maximumVertexId);
 		
 	}
     /****************************************************************************
@@ -321,7 +323,7 @@ public class BetweennessCentrality {
 					if(actor >= 0L) {
 						val n = plainGraph.getOutNeighbours(actor);
 						neighborMap(actor as Int) = n;
-						// Console.OUT.println("Add  neighbor " + actor);
+						inNeighbourCountMap(actor as Int) = plainGraph.getInNeighboursCount(actor) as Int;
 					}
 				}
 			}
@@ -374,20 +376,22 @@ public class BetweennessCentrality {
 	
 	protected def doBfsOnPlainGraph( threadId: Int, numThreads: Int, localVertices: Array[Long]) {
 		
-		val traverseQ: ArrayList[Int] = new ArrayList[Int]();
+		val traverseQ: FixedVertexQueue = new FixedVertexQueue(maximumVertexId);
+		// val traverseQ: ArrayList[Int] = new ArrayList[Int]();
+		
 		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);;
 		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
 		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
 		// val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
 		val predecessorMap = new Array[FixedVertexStack](maximumVertexId, 
 				(i: Int) => {
-					val n = neighborMap(i);
-					if(n == null) {
+					val n = inNeighbourCountMap(i);
+					if(n == 0) {
 						// Dummy stack
 						return new FixedVertexStack(1);
 					}
-					val numOutVertices = n.size;
-					return new FixedVertexStack(numOutVertices);
+					
+					return new FixedVertexStack(n);
 				});
 		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
 		
@@ -512,10 +516,67 @@ public class BetweennessCentrality {
 			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 		}
 	}
-		public static class FixedVertexStack {
+	
+	public static class FixedVertexQueue {
+		var space: Int;
+		var count: Int;
+		var storage: Array[Int];
+		var index: Int;
+		var f:Int;
+		var r: Int;
+		
+		def this(space: Int) {
+			
+			this.space = space;
+			this.storage = new Array[Int](space);
+			f = 0;
+			r = 0;
+			count = 0;
+		}
+		
+		
+		public def add(vertexId: Int) {
+			
+			if(count >= space) {
+				// Overflow
+				throw new Exception("Data overflow");
+			}
+			
+			storage(r) = vertexId;
+			r = (r + 1) % space;
+			++count;
+		}
+		
+		public def removeFirst(): Int {
+			
+			if(count <= 0) {
+				// Overflow
+				throw new Exception("Data underflow");
+			}
+			
+			val data = storage(f);
+			f = (f + 1) % space;
+			--count;
+			return data;
+		}
+		
+		public def clear() {
+			f = 0;
+			r = 0;
+			count = 0;
+		}
+		
+		public def isEmpty() {
+			return count == 0;
+		}
+	}
+	
+	public static class FixedVertexStack {
+	
 		val size: Int;
 		var storage: Array[Int];
 		var index: Int;
+		
 		def this(size: Int) {
 			this.size = size;
 			this.storage = new Array[Int](size);
@@ -523,12 +584,18 @@ public class BetweennessCentrality {
 		}
 		
 		public def pop(): Int {
+			if(index <= -1)
+				throw new Exception("Stack underflow");
+			
 			 val result = storage(index);
 			 --index;
 			 return result;
 		}
 		
 		public def push(vertexId: Int) {
+			if(index >= size)
+				throw new Exception("Stack overflow");
+			
 			++index;
 			storage(index) = vertexId;
 		}
