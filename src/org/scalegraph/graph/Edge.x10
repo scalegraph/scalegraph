@@ -49,10 +49,10 @@ public class Edge implements Comparable[Edge]{
 	
 	public def this(from: Vertex,
 					to: Vertex,
-					attributes: Array[Attribute]) {
+					attributes: ArrayList[Attribute]) {
 		
 		this(from, to);
-		this.attributes = attributes;
+		this.attributes = attributes.toArray();
 	}
 	
 	/**
@@ -271,7 +271,7 @@ public class Edge implements Comparable[Edge]{
 		}
 		
 		// Create vertex with same attributes and also copy id
-		e = new Edge(this.from.clone(), this.to.clone(), newAttributes.toArray());
+		e = new Edge(this.from.clone(), this.to.clone(), newAttributes);
 		
 		return e;
 	}
