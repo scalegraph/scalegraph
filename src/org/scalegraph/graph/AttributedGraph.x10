@@ -140,10 +140,10 @@ public class AttributedGraph  implements Graph {
 		val AttributeColumns = vertexAttributeSchema.nameAndTypeMap.size();
 		val attrRecord: Array[Any] = new Array[Any](0..AttributeColumns);
 		val attributes: Array[Attribute] = inputVertex.getAttributes();
-		
+
 		var vertexId: Long = -1;
 		for(i in attributes) {
-			val a = attributes(i);
+			val a = attributes(i);		
 			val columnId = vertexAttrNameIdMap.get(a.getName()).value;
 			attrRecord(columnId) = a.getValue();
 			if(a.getName().equals("id")) {
@@ -152,10 +152,14 @@ public class AttributedGraph  implements Graph {
 			}
 		}
 		
+		//+Miyuru : For the moment the following block comment was added (May 19 2012)....
+		
 		if(vertexId == -1L) {
 			throw new UnsupportedOperationException(
 					"'id' attribute was not defined for "  + inputVertex);
 		}
+		
+		
 		// attrRecord(0) = -1;
 		
 		// if(nextVertexIndex == 0L) {
@@ -196,37 +200,30 @@ public class AttributedGraph  implements Graph {
 	}
 	
 	protected def getVertexIndex(comparedRecord: Array[Any]): Long {
-		
 		val R : Region = (0..(nextVertexIndex as Int - 1)) as Region(1);
 		val tempAttrTable = vertexAttrTab.restriction(R);
-
 		val localReduce = (inputData: Array[Any], eachCell: Array[Any]) => 
 			{
 				if(inputData(0) as Int >= 0)
 					return inputData;
-				
 				if(eachCell(0) == null)
 					return inputData;
-				
 				for(i in 1..(eachCell.size -1)) {
 					if(eachCell(i).equals(inputData(i)) == false) {
 						return inputData;
 					}
 				}
-				
 				 return eachCell;
 			};
-
 		val record: Array[Any] = tempAttrTable.reduce(localReduce, comparedRecord);
 		return record(0) as Int;
-
 	}
 	
 	protected def addVertexToTable(index: Int, attrRecord: Array[Any]) {
 		
 		val i = index;
 		val p = dist(i);
-		if(p == here) {
+		if(here.id == 0) {
 			
 			if(vertexTab(i) != null) {
 				throw new UnsupportedOperationException("Duplicated vertex for id: " + i);
@@ -258,13 +255,12 @@ public class AttributedGraph  implements Graph {
 	}
 	
 	public def addEdge(srcVertexId: Int, dstVertexId: Int, attributes: Array[Attribute]) {
-				
 		var edgeIndex: Int = 0;
 		atomic {
 			edgeIndex = nextEdgeId as Int;
 			++nextEdgeId;
 		}
-		
+				
 		if(edgeAttributeSchema == null) {
 			createEdgeAttributeSchemaFromAttributes(attributes);
 		} else {
@@ -274,10 +270,10 @@ public class AttributedGraph  implements Graph {
 						"Edge (" + srcVertexId + "," + dstVertexId + ") " + attributes + " does not follow Attribute schema");
 			}
 		}
-		
+				
 		val AttributeColumns = edgeAttributeSchema.nameAndTypeMap.size();
 		val attrRecord: Array[Any] = new Array[Any](0..AttributeColumns);
-		
+				
 		if(attributes != null) {
 			for(i in attributes) {
 				val a = attributes(i);
@@ -285,6 +281,7 @@ public class AttributedGraph  implements Graph {
 				attrRecord(columnId) = a.getValue();
 			}
 		}
+				
 		addEdgeToTable(edgeIndex as Int, srcVertexId, dstVertexId, attrRecord);
 	}
 	
@@ -492,6 +489,8 @@ public class AttributedGraph  implements Graph {
 		
 		// Clone and set
 		vertexAttributeSchema = schema.clone();
+		//+Miyuru : Just adding this call to initialization function for the moment...
+		initVertexAttributeSchema();
 	}
 	
 	/**
@@ -506,6 +505,8 @@ public class AttributedGraph  implements Graph {
 		
 		// Clone and set
 		edgeAttributeSchema = schema.clone();
+		//+Miyuru : For test
+		initEdgeAttributeSchema();
 	}
 	
 	/**
@@ -763,10 +764,8 @@ public class AttributedGraph  implements Graph {
 	}
 	
 	public def addEdge(var o:Object):Int {
-		
 		val edge = o as Edge;
 		
-
 		var intputEdgeAttributes: Array[Attribute] = edge.getAttributes();
 		
 		if(edgeAttributeSchema == null) {
@@ -778,11 +777,10 @@ public class AttributedGraph  implements Graph {
 						"Edge " + edge + " does not follow Attribute schema");
 			}
 		}
-		
+				
 		val from = edge.getFrom();
 		val to = edge.getTo();
 		
-
 		// Get vertex record for from-vertex
 		val FromAttribute = from.getAttributes();
 		val fromAttributeRecord = new Array[Any](0..vertexAttrNameIdMap.size());
@@ -791,13 +789,13 @@ public class AttributedGraph  implements Graph {
 			val columnId = vertexAttrNameIdMap.get(a.getName()).value;
 			fromAttributeRecord(columnId) = a.getValue();
 		}
-		
+				
 		val fromVertexIndex = getVertexIndex(fromAttributeRecord);
 		if(fromVertexIndex == -1L) {
 			// Vertex has not been added create one
 			throw new UnsupportedOperationException("Vertex '" + from + "' does not exist");
 		}
-		
+				
 		// Get vertex record for to-vertex
 		val toAttribute = to.getAttributes();
 		val toAttributeRecord = new Array[Any](0..vertexAttrNameIdMap.size());
@@ -823,12 +821,15 @@ public class AttributedGraph  implements Graph {
 				edgeAttrRecord(columnId) = a.getValue();
 			}
 		}
+		
 		var edgeIndex: Int;
 		atomic {
 			edgeIndex = nextEdgeId as Int;
 			++nextEdgeId;
 		}
+		
 		addEdgeToTable(edgeIndex, fromVertexIndex as Int, toVertexIndex as Int, edgeAttrRecord);
+		
 		return 1;
 	}
 
