@@ -397,20 +397,12 @@ public class BetweennessCentrality {
 		 * Create data structure for BC
 		 */
 		val traverseQ: FixedVertexQueue = new FixedVertexQueue(maximumVertexId);
-		// val traverseQ: ArrayList[Int] = new ArrayList[Int]()
-		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);;
+		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
 		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
 		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
-		// val predecessorMap = new Array[Stack[Int]](maximumVertexId, (i: Int) => new Stack[Int]());
 		val predecessorMap = new Array[FixedVertexStack](maximumVertexId, 
 				(i: Int) => {
-					val n = inNeighbourCountMap(i);
-					if(n == 0) {
-						// Dummy stack
-						return new FixedVertexStack(1);
-					}
-					
-					return new FixedVertexStack(n);
+					return new FixedVertexStack(inNeighbourCountMap(i));
 				});
 		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
 		
@@ -449,8 +441,8 @@ public class BetweennessCentrality {
 		 	tempScore.clear(0, maximumVertexId);
 		 	
 		 	
-			for(i in predecessorMap) {
-				 predecessorMap(i).clear();
+			for(i in 0..(predecessorMap.size-1)) {
+				predecessorMap(i).clear();
 			}
 			
 			traverseQ.clear();
@@ -462,36 +454,28 @@ public class BetweennessCentrality {
 			traverseQ.add(source);
 			// Runtime.probe();
 			
-			
 			var neighbor: Int;
 			var actor: int;
 			var neighbors: Array[Long]; 
+			
 			// Traverse the graph
 			while(!traverseQ.isEmpty()) {
 				
 				actor = traverseQ.removeFirst();
-				neighbors = null;
 	
 				neighbors = neighborMap(actor as Int);
-				// if(neighborMap.containsKey(actor)) {
-				// 	neighbors = neighborMap.get(actor).value;
-				// } else {
-				// 	Console.OUT.println("Cant find the neighbor of node " + actor);
-				// }
-	
 				vertexStack.push(actor);
 				
 				if(neighbors == null)
 					continue;
 				 
 				for(var i: Int = 0; i < neighbors.size; i++) {
+					
 					neighbor = neighbors(i) as Int;
 					
-					if(geodesicsMap(neighbor) == 0L) {
-						geodesicsMap(neighbor) += geodesicsMap(actor);
+					if(distanceMap(neighbor) == 0L) {
 						distanceMap(neighbor) = distanceMap(actor) + 1;
 						traverseQ.add(neighbor);
-						predecessorMap(neighbor).push(actor);
 					}
 					
 					if(distanceMap(neighbor) == distanceMap(actor) + 1) {
@@ -499,25 +483,6 @@ public class BetweennessCentrality {
 						predecessorMap(neighbor).push(actor);
 					}
 					
-					// if(geodesicsMap(neighbor) > 0) {
-					// 	// We found this node again, another shortest path
-					// 	if(distanceMap(neighbor) == distanceMap(actor) + 1) {
-					// 		geodesicsMap(neighbor) += geodesicsMap(actor);
-					// 		predecessorMap(neighbor).push(actor);
-					// 	}
-					// 	
-					// } else {
-					// 	// Found this node first time
-					// 	geodesicsMap(neighbor) += geodesicsMap(actor);
-					// 	distanceMap(neighbor) = distanceMap(actor) + 1;
-					// 	
-					// 	// Cutoff
-					// 	// if(distanceMap(neighbor) > 50)
-					// 	// 	continue;
-					// 	
-					// 	traverseQ.add(neighbor);
-					// 	predecessorMap(neighbor).push(actor);
-					// }
 				}
 			} // End of traversal
 			
@@ -578,10 +543,10 @@ public class BetweennessCentrality {
 		
 	}
 	
-	public static class FixedVertexQueue {
+	public class FixedVertexQueue {
 		var space: Int;
 		var count: Int;
-		var storage: Array[Int];
+		var storage: IndexedMemoryChunk[Int];
 		var index: Int;
 		var f:Int;
 		var r: Int;
@@ -589,7 +554,7 @@ public class BetweennessCentrality {
 		def this(space: Int) {
 			
 			this.space = space;
-			this.storage = new Array[Int](space);
+			this.storage = IndexedMemoryChunk.allocateZeroed[Int](space);
 			f = 0;
 			r = 0;
 			count = 0;
@@ -632,41 +597,37 @@ public class BetweennessCentrality {
 		}
 	}
 	
-	public static class FixedVertexStack {
+	public class FixedVertexStack {
 	
-		val size: Int;
-		var storage: Array[Int];
+		val storage: IndexedMemoryChunk[Int];
 		var index: Int;
 		
 		def this(size: Int) {
-			this.size = size;
-			this.storage = new Array[Int](size);
-			this.index = -1;
+			this.storage = IndexedMemoryChunk.allocateZeroed[Int](size);
+			this.index = 0;
 		}
 		
 		public def pop(): Int {
-			if(index <= -1)
+			if(index <= 0)
 				throw new Exception("Stack underflow");
-			
-			 val result = storage(index);
-			 --index;
-			 return result;
+
+			return storage(--index);
 		}
 		
 		public def push(vertexId: Int) {
-			if(index >= size)
-				throw new Exception("Stack overflow");
-			
-			++index;
+			if(index >= storage.length())
+				throw new Exception("Stack overflow size: " + storage.length() + " index: " + index );
+
 			storage(index) = vertexId;
+			++index;
 		}
 		
 		public def clear() {
-			index = -1;
+			index = 0;
 		}
 		
-		public isEmpty() {
-			return index == -1;
+		public def isEmpty() {
+			return index == 0;
 		}
 	}
 	
