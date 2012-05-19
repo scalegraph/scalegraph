@@ -22,14 +22,9 @@ x10aux::ref<x10::array::Array<x10aux::ref<x10::lang::String> > > DirectoryInfoDr
     char* workdir;
     string wdstr;
     stringstream ss;
-//    if((workdir = getcwd(NULL,128)) == NULL){
-//    	cerr << "Error getting the current working directory." << endl;
-//    }else{
-    	//ss << workdir;
-    	ss << path;
-    	ss << "/";
-    	wdstr = ss.str();
-    //}
+   	ss << path;
+   	ss << "/";
+   	wdstr = ss.str();
 
     stringstream ss2;
     for(int i=0;i < result.size(); i++){
@@ -52,4 +47,35 @@ x10aux::ref<x10::array::Array<x10aux::ref<x10::lang::String> > > DirectoryInfoDr
     }
 
     return stringArr;
+}
+
+x10_boolean DirectoryInfoDriver::exists(x10aux::ref<x10::lang::String> path){
+	DIR *dp;
+    dp = opendir(path->c_str());
+
+    if(dp != NULL){
+		(void) closedir(dp);
+		return true;
+    }else{
+    	return false;
+    }
+}
+
+x10_boolean DirectoryInfoDriver::makedir(x10aux::ref<x10::lang::String> path){
+	DIR *dp;
+    dp = opendir(path->c_str());
+
+    if(dp != NULL){
+		(void) closedir(dp);
+		return false;
+    }else{
+    	int status = -1;
+    	status = mkdir(path->c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+    	if(status == -1){
+    		return false;
+    	}else{
+    		return true;
+    	}
+    }
 }

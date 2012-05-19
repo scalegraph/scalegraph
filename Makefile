@@ -9,7 +9,7 @@ export X10_STATIC_THREADS=true
 export X10_NO_STEALS=false
 
 #X10 runtime environment variables
-X10_NPLACES = 1
+X10_NPLACES = 4
 X10_HOSTFILE = machines.txt
 X10_NTHERADS = 10
 
@@ -19,10 +19,10 @@ INTERM =./out
 
 #================================= Environment Dependent Settings ============================================
 #Set the X10_HOME and class path
-X10_HOME = ~/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
+X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
 CLASSPATH = $(X10_HOME)
 
-APP_DIR = /nfs/home/charuwat/workspace/ScaleGraph
+APP_DIR = /nfs/home/miyuru/workspace/ScaleGraph
 
 #Set MPI Home
 MPI_HOME = /nfs/data0/miyuru/software/mpich2-1.4
@@ -277,7 +277,7 @@ test_plain_graph :
 #Test 10
 test_edge_reader:
 	echo "----------- Testing EdgelistReader -----------";
-	$(X10_HOME)/bin/x10c++ -O -d $(INTERM) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -d $(INTERM) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/io/TestEdgeListReader.x10 \
 	src/org/scalegraph/io/EdgeListReader.x10 \
 	src/org/scalegraph/io/EdgeListWriter.x10 \
@@ -289,6 +289,7 @@ test_edge_reader:
 	
 	@echo "----------- Launch ScaleGraphRandom Tester -----------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	#$(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";
 
 #Test 11
@@ -540,13 +541,30 @@ test_pattern:
 	@echo "----------- Compile Graph Pattern Matching -----------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	src/test/scalegraph/patternmatching/TestPatternMatching.x10 \
+	src/test/scalegraph/patternmatching/FileSplitter.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/patternmatching/PatternMatching.x10 \
 	src/org/scalegraph/patternmatching/PatternMatchingResult.x10 \
-	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/AttributedGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
-	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/graph/Vertex.x10 \
+	src/org/scalegraph/graph/Edge.x10 \
+	src/org/scalegraph/graph/Attribute.x10 \
+	src/org/scalegraph/graph/StringAttribute.x10 \
+	src/org/scalegraph/graph/BooleanAttribute.x10 \
+	src/org/scalegraph/graph/ByteAttribute.x10 \
+	src/org/scalegraph/graph/ShortAttribute.x10 \
+	src/org/scalegraph/graph/IntAttribute.x10 \
+	src/org/scalegraph/graph/LongAttribute.x10 \
+	src/org/scalegraph/graph/FloatAttribute.x10 \
+	src/org/scalegraph/graph/DoubleAttribute.x10 \
+	src/org/scalegraph/graph/CharAttribute.x10 \
+	src/org/scalegraph/graph/DateAttribute.x10 \
+	src/org/scalegraph/graph/AttributeSchema.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
-	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/io/Reader.x10 \
+	src/org/scalegraph/io/WeightedGraphReader.x10 \
+	src/org/scalegraph/util/Date.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	
