@@ -37,7 +37,7 @@ public class TestRandomWalk {
         val reader:EdgeListReader = new EdgeListReader();
         return reader.
             //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-            loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-14.dl");
+            loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
     }
     
     public static def main(Array[String]) {
@@ -63,7 +63,6 @@ public class TestRandomWalk {
                             (Timer.milliTime() - startTime) / 1000.0);
 
         Console.OUT.println(rwrResult);
-        /*
         Console.OUT.println("----------Start OnTheFly method----------");
         val iterateResult = iterateRandomWalk(graph, 4);
         val idToIdxMap = iterateResult.first;
@@ -75,7 +74,6 @@ public class TestRandomWalk {
                                Math.abs(rwrResult.getScore(key) -
                                         matrix(idToIdxMap(key)(), 0)));
         }
-        */
         Console.OUT.println("----------End Test----------");
     }
 

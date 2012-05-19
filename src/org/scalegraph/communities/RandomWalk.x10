@@ -2,12 +2,12 @@ package org.scalegraph.communities;
 
 import x10.matrix.Matrix;
 import x10.matrix.DenseMatrix;
+import x10.matrix.dist.DistDenseMatrix;
+import x10.matrix.block.Grid;
 import x10.util.HashMap;
 import x10.util.Pair;
 import x10.util.ArrayList;
 import x10.util.Timer;
-import x10.matrix.dist.DistDenseMatrix;
-import x10.matrix.block.Grid;
 import x10.lang.Math;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
@@ -16,6 +16,13 @@ import org.scalegraph.clustering.DistSpectralClustering;
 import org.scalegraph.clustering.ClusteringResult;
 
 public class RandomWalk {
+    private class LongToIntMap {
+        private val map:DistArray[ArrayList[Int]];
+        public def this(n:Int) {
+            
+        }
+    }
+    
     private var graph:PlainGraph;
     private var nVertex:Int;
     private var idToIdxMap:HashMap[Long, Int];
@@ -89,7 +96,7 @@ public class RandomWalk {
 
 
     public def testInverseW1(Q1inv:DistDenseMatrix, W1:DenseMatrix) {
-        val gridQ1 = Grid.make(nVertex, nVertex);
+        val gridQ1 = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val Q1 = DistDenseMatrix.make(gridQ1);
         for (var i:Int = 0; i < W1.M; i++) {
             for (var j:Int = 0; j < W1.N; j++) {
@@ -100,12 +107,12 @@ public class RandomWalk {
                 }
             }
         }
-        val gridI = Grid.make(nVertex, nVertex);
+        val gridI = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val I = DistDenseMatrix.make(gridI);
         for (var i:Int = 0; i < I.M; i++) {
             I(i, i) = 1.0;
         }
-        val grid_I = Grid.make(nVertex, nVertex);
+        val grid_I = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val _I = DistDenseMatrix.make(grid_I);
         _I.mult(Q1, Q1inv, false);
         val d = oldnorm(I, _I);
@@ -121,10 +128,10 @@ public class RandomWalk {
         val SinvOnePlace = convertDistToOnePlace(Sinv);
         val SOnePlace = LAPACK.inverseDenseMatrix(SinvOnePlace);
         val S = convertOnePlaceToDist(SOnePlace);
-        val gridSV = Grid.make(nCluster, nVertex);
+        val gridSV = Grid.makeMaxRow(nCluster, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val SV = DistDenseMatrix.make(gridSV);
         SV.mult(S, V, false);
-        val gridUSV = Grid.make(nVertex, nVertex);
+        val gridUSV = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val USV = DistDenseMatrix.make(gridUSV);
         USV.mult(U, SV, false);
         //W2.print();
@@ -145,7 +152,7 @@ public class RandomWalk {
     private def convertOnePlaceToDist(matrix:DenseMatrix) {
         Console.OUT.println("Start convertOnePlaceToDist");
         val startTime = Timer.milliTime();
-        val grid  = Grid.make(matrix.M, matrix.N);
+        val grid  = Grid.makeMaxRow(matrix.M, matrix.N, Place.MAX_PLACES, Place.MAX_PLACES);
         val matrixDist = DistDenseMatrix.make(grid);
         copySubset(matrix, 0, 0, matrixDist, 0, 0, matrix.M, matrix.N);
         Console.OUT.println("End convertOnePlaceToDist");
@@ -230,7 +237,7 @@ public class RandomWalk {
                           clusterRange:ArrayList[Pair[Int, Int]]) {
         Console.OUT.println("Start inverseW1");
         val startTime = Timer.milliTime();
-        finish for (range in clusterRange) async {
+        for (range in clusterRange) {
             if (range.first != range.second) {
                 val size = range.second - range.first;
                 val q1 = new DenseMatrix(size, size);
@@ -404,8 +411,8 @@ public class RandomWalk {
         var cnt:Int = 0;
         val idToIdxMap = new HashMap[Long, Int]();
         val idxToIdMap = new HashMap[Int, Long]();
-        val grid1 = Grid.make(nVertex, nVertex);
-        val grid2 = Grid.make(nVertex, nVertex);
+        val grid1 = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
+        val grid2 = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val W1 = DistDenseMatrix.make(grid1);
         val W2 = DistDenseMatrix.make(grid2);
         val clusters = result.getAllClusters();
@@ -504,13 +511,13 @@ public class RandomWalk {
         nCluster = clusteringResult.second;
 
         // S^(-1) = (trans(U) * U)
-        val gridSinv = Grid.make(nCluster, nCluster);
+        val gridSinv = Grid.makeMaxRow(nCluster, nCluster, Place.MAX_PLACES, Place.MAX_PLACES);
         val Sinv = DistDenseMatrix.make(gridSinv);
         val UTrans = transMatrix(U);
         Sinv.mult(UTrans, U, false);
 
         // V = trans(U) * W
-        val gridV = Grid.make(nCluster, nVertex);
+        val gridV = Grid.makeMaxRow(nCluster, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val V = DistDenseMatrix.make(gridV);
         V.mult(UTrans, W2, false);
 
@@ -526,9 +533,9 @@ public class RandomWalk {
     public def transMatrix(matrix:DistDenseMatrix) {
         Console.OUT.println("Start transMatrix");
         val startTime = Timer.milliTime();
-        val grid = Grid.make(matrix.N, matrix.M);
+        val grid = Grid.makeMaxRow(matrix.N, matrix.M, Place.MAX_PLACES, Place.MAX_PLACES);
         val result = DistDenseMatrix.make(grid);
-        val gridE = Grid.make(matrix.N, matrix.N);
+        val gridE = Grid.makeMaxRow(matrix.N, matrix.N, Place.MAX_PLACES, Place.MAX_PLACES);
         val E = DistDenseMatrix.make(gridE);
         for (var i:Int = 0; i < E.N; i++) {
             E(i, i) = 1.0;
@@ -543,10 +550,10 @@ public class RandomWalk {
                            V:DistDenseMatrix, Q1inv:DistDenseMatrix) {
         Console.OUT.println("Start calculateL");
         val startTime = Timer.milliTime();
-        val gridQ1invU = Grid.make(nVertex, nCluster);
+        val gridQ1invU = Grid.makeMaxRow(nVertex, nCluster, Place.MAX_PLACES, Place.MAX_PLACES);
         val Q1invU = DistDenseMatrix.make(gridQ1invU);
         Q1invU.mult(Q1inv, U, false);
-        val gridVQ1invU = Grid.make(nCluster, nCluster);
+        val gridVQ1invU = Grid.makeMaxRow(nCluster, nCluster, Place.MAX_PLACES, Place.MAX_PLACES);
         val VQ1invU = DistDenseMatrix.make(gridVQ1invU);
         VQ1invU.mult(V, Q1invU, false);
         val Linv = Sinv - c * VQ1invU;
@@ -699,11 +706,12 @@ public class RandomWalk {
 
         Console.OUT.println("Start make U");
         val nCluster = sumArray.size();
-        val gridU = Grid.make(nVertex, nCluster);
+        val gridU = Grid.makeMaxRow(nVertex, nCluster, Place.MAX_PLACES, Place.MAX_PLACES);
         val U:DistDenseMatrix = DistDenseMatrix.make(gridU);
         val grid = U.grid;
         var upRowIdx:Int = 0;
         var leftColIdx:Int = 0;
+        
         for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
             for (var colId:Int = 0; colId < grid.numColBlocks; colId++) {
                 val subMatrix = U.getBlock(rowId, colId).getMatrix();
