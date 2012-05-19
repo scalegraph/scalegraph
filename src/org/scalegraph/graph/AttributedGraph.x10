@@ -33,14 +33,17 @@ public class AttributedGraph  implements Graph {
 	
 	protected val sizeCategory: Short;
 	
-	//val rooms: Int = 107374182;// 483647;
-	//val rooms: Int = 33554432; // 2^25
-	//val rooms: Int = 262144; // 2^15
-	//val rooms: Int = 32768; // 2^18
-	val rooms: Int = 650;
-	val R = 0..(rooms - 1);
+
+	val space: Int = 262144; // 2^18
+	val R = 0..(space - 1);
 	
 	var dist: Dist;
+	
+	public static def make(): AttributedGraph {
+		val g = new AttributedGraph(GraphSizeCategory.SMALL);
+		g.init();
+		return g;
+	}
 	
 	public static def make(sizeCategory: Short): AttributedGraph {
 		val g = new AttributedGraph(sizeCategory);
@@ -364,7 +367,7 @@ public class AttributedGraph  implements Graph {
 	
 	public def printVertex() {
 		
-		val R : Region = (0..(rooms as Int - 1)) as Region(1);
+		val R : Region = (0..(space as Int - 1)) as Region(1);
 		val vTab = vertexTab.restriction(R); 
 		
 		val localReduce = (inputData: Array[Any]) => 
@@ -495,7 +498,7 @@ public class AttributedGraph  implements Graph {
 	 * This method sets attribute schema for edges
 	 * @param schema - schema for edges
 	 */
-	public def setEdgeVertexSchema(schema: AttributeSchema) {
+	public def setEdgeAttributeSchema(schema: AttributeSchema) {
 		if(edgeAttributeSchema != null) {
 			// Schema has already set
 			throw new UnsupportedOperationException("Schema has already set");
