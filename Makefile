@@ -9,7 +9,7 @@ export X10_STATIC_THREADS=true
 export X10_NO_STEALS=false
 
 #X10 runtime environment variables
-X10_NPLACES = 4
+X10_NPLACES = 1
 X10_HOSTFILE = machines.txt
 X10_NTHERADS = 10
 
@@ -19,29 +19,29 @@ INTERM =./out
 
 #================================= Environment Dependent Settings ============================================
 #Set the X10_HOME and class path
-X10_HOME = temp
+X10_HOME = ~/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
 CLASSPATH = $(X10_HOME)
 
-APP_DIR = temp
+APP_DIR = /nfs/home/charuwat/workspace/ScaleGraph
 
 #Set MPI Home
-MPI_HOME = temp
+MPI_HOME = /nfs/data0/miyuru/software/mpich2-1.4
 
 #Set the LAPACK, BLAS, F2C locations
-CLAPACK_LIB = temp
-CBLAS_LIB = temp
-F2C_LIB = temp
+CLAPACK_LIB = /nfs/data1/scalegraph/lapack-3.4.0/liblapack.a
+CBLAS_LIB = /nfs/data1/scalegraph/lapack-3.4.0/libblas.a
+F2C_LIB = /nfs/data1/scalegraph/CLAPACK-3.2.1/F2CLIBS/libf2c.a
 
-ATLAS_LAPACK_LIB = temp
-ATLAS_LIB = temp
+ATLAS_LAPACK_LIB = /nfs/data1/scalegraph/ATLAS/lib/libf77blas.a
+ATLAS_LIB = /nfs/data1/scalegraph/ATLAS/lib/libatlas.a
 
 #SCALAPACK location
-SCALAPACK = temp
+SCALAPACK = /nfs/data1/scalegraph/scalapack-2.0.1/libscalapack.a
 
 #Location of the GML Library
-GML_DIST = temp
-GML_PROPS = temp
-GML_JAR = temp
+GML_DIST = /nfs/data1/scalegraph/X10_runtime/x10.gml
+GML_PROPS = native_gml.properties
+GML_JAR = lib/native_gml.jar
 
 #For MPI
 #GML_PROPS = native_mpi_gml.properties
@@ -68,6 +68,10 @@ test_attributed_graph:
 	src/org/scalegraph/graph/CharAttribute.x10 \
 	src/org/scalegraph/graph/DateAttribute.x10 \
 	src/org/scalegraph/graph/AttributeSchema.x10 \
+	src/org/scalegraph/io/GMLReader.x10 \
+	src/org/scalegraph/io/GMLEntry.x10 \
+	src/org/scalegraph/io/GMLToken.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/util/Date.x10 ;
 	
 	@echo "----------- Launch Attributed Graph Tester -----------";
@@ -416,11 +420,12 @@ test_edge_scat:
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";	
 
-#Test 19	
+#Test 19
 test_betweenness_centrality_plain:
-#	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -OPTIMIZE_COMMUNICATIONS=true -OPTIMIZE=true -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph 
+	
 	@echo "----------- Compile Betweenness Centrality Tester -----------";
-	$(X10_HOME)/bin/x10c++  -OPTIMIZE_COMMUNICATIONS=true -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-report postcompile=5 -x10rt mpi -v \
 	src/test/scalegraph/metrics/centrality/TestBetweennessCentralityPlain.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
