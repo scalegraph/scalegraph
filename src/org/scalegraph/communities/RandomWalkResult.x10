@@ -6,10 +6,10 @@ import x10.matrix.DenseMatrix;
 import x10.matrix.dist.DistDenseMatrix;
 
 public class RandomWalkResult {
-    private val idToIdxMap:HashMap[Long, Int];
+    private val idToIdxMap:LongToIntMap;
     private val score:DistDenseMatrix;
 
-    public def this(idToIdxMap:HashMap[Long, Int], score:DistDenseMatrix) {
+    public def this(idToIdxMap:LongToIntMap, score:DistDenseMatrix) {
         this.idToIdxMap = idToIdxMap;
         this.score = score;
     }
@@ -19,7 +19,7 @@ public class RandomWalkResult {
     }
 
     public def getResultMatrix() {
-        val result:DenseMatrix = new DenseMatrix(idToIdxMap.size(), 1);
+        val result:DenseMatrix = new DenseMatrix(score.M, 1);
         for (key in idToIdxMap.keySet()) {
             val idx = idToIdxMap(key)();
             result(idx, 0) = score(idx, 0);
@@ -30,7 +30,8 @@ public class RandomWalkResult {
         var str:String = "";
         for (key in idToIdxMap.keySet()) {
             val idx = idToIdxMap(key)();
-            str = str + key + "        [ " + score(idx, 0) + " ]\n";
+            Console.OUT.println(key.typeName());
+            str = str + idx + "        [ " + score(idx, 0) + " ]\n";
         }
         return str;
     }

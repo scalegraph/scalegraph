@@ -9,6 +9,7 @@ import x10.util.Pair;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.lang.Math;
+import x10.util.Set;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
 import org.scalegraph.clustering.SpectralClustering;
@@ -16,16 +17,9 @@ import org.scalegraph.clustering.DistSpectralClustering;
 import org.scalegraph.clustering.ClusteringResult;
 
 public class RandomWalk {
-    private class LongToIntMap {
-        private val map:DistArray[ArrayList[Int]];
-        public def this(n:Int) {
-            
-        }
-    }
-    
     private var graph:PlainGraph;
     private var nVertex:Int;
-    private var idToIdxMap:HashMap[Long, Int];
+    private var idToIdxMap:LongToIntMap;
     private var idxToIdMap:HashMap[Int, Long];
     private var U:DistDenseMatrix;
     private var V:DistDenseMatrix;
@@ -41,11 +35,11 @@ public class RandomWalk {
         public val W1:DistDenseMatrix;
         public val W2:DistDenseMatrix;
         public val result:ArrayList[Pair[Int, Int]];
-        public val idToIdxMap:HashMap[Long, Int];
+        public val idToIdxMap:LongToIntMap;
         public val idxToIdMap:HashMap[Int, Long];
         public def this(W1:DistDenseMatrix, W2:DistDenseMatrix,
                         result:ArrayList[Pair[Int, Int]],
-                        idToIdxMap:HashMap[Long, Int],
+                        idToIdxMap:LongToIntMap,
                         idxToIdMap:HashMap[Int, Long]) {
             this.W1 = W1;
             this.W2 = W2;
@@ -61,7 +55,7 @@ public class RandomWalk {
     public def this(graph:PlainGraph) {
         this.graph = graph;
         this.nVertex = graph.getVertexCount() as Int;
-        this.idToIdxMap = new HashMap[Long, Int]();
+        this.idToIdxMap = new LongToIntMap();
     }
     
     private def testDecompose(result:DecomposeResult) {
@@ -409,7 +403,7 @@ public class RandomWalk {
         Console.OUT.println(result);
 
         var cnt:Int = 0;
-        val idToIdxMap = new HashMap[Long, Int]();
+        val idToIdxMap = new LongToIntMap();
         val idxToIdMap = new HashMap[Int, Long]();
         val grid1 = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
         val grid2 = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
@@ -566,63 +560,6 @@ public class RandomWalk {
         Console.OUT.println("End calculateL");
         Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
         return L;
-    }
-
-    /**
-       @param PlainGraph
-       @return adjacency matrix which correspond to graph
-    **/
-    private def convertGraphToMatrix(graph:PlainGraph):DenseMatrix {
-        val globalMatrix =
-            GlobalRef[DenseMatrix](new DenseMatrix(nVertex as Int, nVertex as Int));
-        val globalMap = GlobalRef[HashMap[Long, Int]](idToIdxMap);
-        val vertexList = graph.getVertexList();
-        {
-            class Cnt {
-                public var cnt:Int = 0;
-            }
-            val globalCnt = GlobalRef[Cnt](new Cnt());
-            for (p in Place.places()) {
-                val r = (vertexList.dist | p).region;
-                at (p) {
-                    for (i in r) {
-                        at (globalMap) {
-                            globalMap().put(vertexList(i), globalCnt().cnt);
-                            at (globalCnt) {
-                                globalCnt().cnt += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        finish for (p in Place.places()) async {
-                at (p) {
-                    val r = (vertexList.dist | p).region;
-                    for (i in r) {
-                        val nodeId = vertexList(i);
-                        val neighbours = graph.getOutNeighbours(nodeId);
-                        if (neighbours != null && neighbours.size != 0) {
-                            for (j in neighbours) {
-                                at (globalMatrix) {
-                                    globalMatrix()(globalMap()(neighbours(j))(),
-                                                   globalMap()(nodeId)()) =
-                                        1.0 / neighbours.size;
-                                }
-                            }
-                        } else {
-                            for (j in 0..(nVertex - 1)) {
-                                at (globalMatrix) {
-                                    globalMatrix()(j as Int, globalMap()(nodeId)())
-                                        = 1.0 / nVertex;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        return globalMatrix();
     }
 
     private def norm(matrix:DistDenseMatrix) {
