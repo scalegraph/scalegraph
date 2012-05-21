@@ -1,9 +1,12 @@
 package test.scalegraph.patternmatching;
 
+import x10.util.ArrayList;
+
 import org.scalegraph.patternmatching.PatternMatching;
 import org.scalegraph.patternmatching.PatternMatchingResult;
 import org.scalegraph.io.WeightedGraphReader;
 import org.scalegraph.graph.Vertex;
+import org.scalegraph.graph.Edge;
 import org.scalegraph.graph.AttributedGraph;
 import org.scalegraph.util.DirectoryInfo;
 
@@ -27,6 +30,7 @@ public class TestPatternMatching {
     	splitter.split("/nfs/data1/scalegraph/data/pattern-dataset/GRAPH_large.dat", dataDir);
     	
     	var list:Array[String] = DirectoryInfo.listDirContents(dataDir);
+    	
     	for(item in list){
     		Console.OUT.println("Reading file : " + list(item));
     		var rdr:WeightedGraphReader = new WeightedGraphReader();
@@ -37,7 +41,16 @@ public class TestPatternMatching {
     		
     		for(item2 in vertArray){
     			Console.OUT.println(vertArray(item2).toString());
+    			
+    			var listOfEdges:Array[Edge] = attrib.getEdgesByVertexId(vertArray(item2).getAttribute("id").getValue() as Int).toArray();
+    			
+    			for(item3 in listOfEdges){
+    				Console.OUT.println(listOfEdges(item3).toString());
+    			}
     		}
+    		
+    		
+    		
     	}
     }
 }
