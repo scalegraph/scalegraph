@@ -427,6 +427,8 @@ test_betweenness_centrality_plain:
 	@echo "----------- Compile Betweenness Centrality Tester -----------";
 	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-report postcompile=5 -x10rt mpi -v \
+	-post $(MPI_HOME)/bin/mpic++ \
+	-cxx-postarg '-O3' \
 	src/test/scalegraph/metrics/centrality/TestBetweennessCentralityPlain.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
