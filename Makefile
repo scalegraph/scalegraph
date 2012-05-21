@@ -588,6 +588,7 @@ test_randomwalk:
 	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/org/scalegraph/communities/RandomWalk.x10 \
 	src/org/scalegraph/communities/RandomWalkResult.x10 \
+	src/org/scalegraph/communities/LongToIntMap.x10 \
 	src/test/scalegraph/communities/TestRandomWalk.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/communities/LAPACK.x10 \
@@ -661,7 +662,27 @@ test_mpiclustering:
 	@echo "----------- Launch MPI Spectral Clustering Tester ---------------------------";
 	X10_NTHREADS=16 /nfs/home/ogata/developments/mpich2-1.4.1p1/bin/mpirun -np $(X10_NPLACES) -host sc01,sc02,sc03,sc04 $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
+
+# Test 27
+test_pagerank:
+	@echo "----------- Compile Random Walk with Restart Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	src/test/scalegraph/metrics/centrality/TestPagerank.x10 \
+	src/org/scalegraph/metrics/centrality/Pagerank.x10 \
+	src/org/scalegraph/metrics/centrality/PagerankResult.x10 \
+	src/org/scalegraph/communities/LongToIntMap.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
 	
+	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
 	
 help:
 	@echo '---- scalegraph build help -------'
@@ -718,6 +739,8 @@ help:
 	@echo 'test_randomwalk : Test Random walk with restart'
 	#Test 25
 	@echo 'test_scalapack : Test ScaLAPACK'
+	#Test 27
+	@echo 'test_pagerank : Test Pagerank'
 	@echo 'clean : To clean the build'
 	@echo '---------------------------------';
 
