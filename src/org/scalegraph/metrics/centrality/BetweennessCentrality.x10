@@ -24,9 +24,7 @@ public class BetweennessCentrality {
 	val numVertex: Int;
 	val maximumVertexId: Int;
 	
-	val aquireSpaceLock: Lock = new Lock();
-	val freeSpaceAccessLock = new Lock();
-	val updateScoreLock: Lock = new Lock();
+	val updateScoreLock: IndexedMemoryChunk[Lock];
 	
 	val neighborMap: Array[Array[Long]];
 	val inNeighbourCountMap: Array[Int];
@@ -47,6 +45,7 @@ public class BetweennessCentrality {
 		this.maximumVertexId = 0;
 		this.neighborMap = null;
 		this.inNeighbourCountMap = null;
+		this.updateScoreLock = IndexedMemoryChunk.allocateZeroed[Lock](0);
 	}
 
 	protected def this(g: PlainGraph, nVertex: Long, maxVertexId: Long, isNormalize: Boolean, cacheSz: Int) {
@@ -59,12 +58,17 @@ public class BetweennessCentrality {
 		this.numVertex = nVertex as Int;
 		this.maximumVertexId = maxVertexId as Int + 1; // Array start at zero
 		this.betweennessScore = new Array[Double](this.maximumVertexId, 0.0D);
-
+		this.neighborMap = new Array[Array[Long]](maximumVertexId);
+		this.inNeighbourCountMap = new Array[Int](maximumVertexId);
+		this.updateScoreLock = IndexedMemoryChunk.allocateUninitialized[Lock](maximumVertexId/20);
+		
+		for(var i: Long = 0; i < this.updateScoreLock.length(); ++i) {
+			this.updateScoreLock(i) = new Lock();
+		}
 		// Unuse properties
 		this.vertexIdAndIndexMap = null;
 		this.attributedGraph = null;
-		this.neighborMap = new Array[Array[Long]](maximumVertexId);
-		this.inNeighbourCountMap = new Array[Int](maximumVertexId);
+		
 		
 	}
     /****************************************************************************
@@ -246,12 +250,13 @@ public class BetweennessCentrality {
 				}
 			}
 		}
-		updateScoreLock.lock();
-			for(i in 0..(betweennessScore.size -1)) {
-				betweennessScore(i) += tempScore(i);
-			}
-		
-		updateScoreLock.unlock();
+		// Todo: update updateScoreLock from object of leck to indexedMemoryChunk of lock 
+		// updateScoreLock.lock();
+		// 	for(i in 0..(betweennessScore.size -1)) {
+		// 		betweennessScore(i) += tempScore(i);
+		// 	}
+		// 
+		// updateScoreLock.unlock();
 		
 		Console.OUT.println("End for src: " + source);
 	}
@@ -406,8 +411,8 @@ public class BetweennessCentrality {
 				});
 		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
 		
-		allocationTime = System.currentTimeMillis() - allocationTime;
-		Console.OUT.println(here + ": Allocation time(ms): " + allocationTime);
+		// allocationTime = System.currentTimeMillis() - allocationTime;
+		// Console.OUT.println(here + ": Allocation time(ms): " + allocationTime);
 		
 		/*
 		 * localVertices can be accessed properly by Point only
@@ -437,6 +442,9 @@ public class BetweennessCentrality {
 			
 			// Clear Previous Data
 		 	distanceMap.clear(0, maximumVertexId);
+		 	for(var i: Int = 0; i < distanceMap.length() ; ++i)
+		 		distanceMap(i) = -1L;
+		 	
 		 	geodesicsMap.clear(0, maximumVertexId);
 		 	tempScore.clear(0, maximumVertexId);
 		 	
@@ -473,7 +481,7 @@ public class BetweennessCentrality {
 					
 					neighbor = neighbors(i) as Int;
 					
-					if(distanceMap(neighbor) == 0L) {
+					if(distanceMap(neighbor) == -1L) {
 						distanceMap(neighbor) = distanceMap(actor) + 1;
 						traverseQ.add(neighbor);
 					}
@@ -486,10 +494,10 @@ public class BetweennessCentrality {
 				}
 			} // End of traversal
 			
-			bfsTime = System.currentTimeMillis() - bfsTime;
-			sumBfsTime += bfsTime;
-			
-			backtrackTime = System.currentTimeMillis();
+			// bfsTime = System.currentTimeMillis() - bfsTime;
+			// sumBfsTime += bfsTime;
+			// 
+			// backtrackTime = System.currentTimeMillis();
 			
 			// Calculate score
 			while(!vertexStack.isEmpty()) {
@@ -506,32 +514,37 @@ public class BetweennessCentrality {
 				
 			}
 			
-			backtrackTime = System.currentTimeMillis() - backtrackTime;
-			sumBacktrackTime += backtrackTime;
-			
-			updateLocalScoreTime = System.currentTimeMillis();
-			updateScoreLock.lock();
-				for(i in 0..(betweennessScore.size-1)) {
-					if(i == source)
-						continue;
-					betweennessScore(i) += tempScore(i);
-				}
-				numProcessedSource++;
+			// backtrackTime = System.currentTimeMillis() - backtrackTime;
+			// sumBacktrackTime += backtrackTime;
+			// 
+			// updateLocalScoreTime = System.currentTimeMillis();
+			var zonelock: Lock;
+			for(i in 0..(betweennessScore.size-1)) {
+				if(i == source || tempScore(i) == 0D)
+					continue;
 				
-				// Print throuhgput every XX milliseconds
-				val now = System.currentTimeMillis();
-				val elapse = now - lastPrintThroughput;
-				if( elapse > 60000) {
-					val thr = numProcessedSource / ((elapse / 60000) as Double);
-					Console.OUT.println("Throughput (Processed Source/minute): " + thr);
-					lastPrintThroughput = now;
-					numProcessedSource = 0;
-				}
+				zonelock = updateScoreLock(i % updateScoreLock.length());
+				zonelock.lock();
+				betweennessScore(i) += tempScore(i);
+				zonelock.unlock();
+			}
+			// numProcessedSource++;
+			// 
+			// updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
+			// sumUpdateLocalScoreTime += updateLocalScoreTime;
+			// // Print throuhgput every XX milliseconds
+			// val now = System.currentTimeMillis();
+			// val elapse = now - lastPrintThroughput;
+			// if( elapse > 60000) {
+			// 	val thr = numProcessedSource / ((elapse / 60000) as Double);
+			// 	Console.OUT.println("Throughput (Processed Source/minute): " + thr);
+			// 	lastPrintThroughput = now;
+			// 	numProcessedSource = 0;
+			// }
 				
-			updateScoreLock.unlock();
 			
-			updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
-			sumUpdateLocalScoreTime += updateLocalScoreTime;
+			
+			
 			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 		}
 		
