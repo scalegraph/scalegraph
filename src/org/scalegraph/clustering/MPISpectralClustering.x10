@@ -316,7 +316,7 @@ public class MPISpectralClustering implements Clustering {
 		val newClusters = new Array[Vector](k, (Int) => Vector.make(dim));
 		val clusterCounts = new Array[Int](k, 0);
 		val result = DistArray.make[Int](points.dist);
-		val iterations = 50;
+		val iterations = 1000;
 		
 		/* initialize */
 		val random = new Random(Timer.milliTime());

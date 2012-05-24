@@ -139,7 +139,7 @@ public class DistSpectralClustering implements Clustering {
 	private def solveEigenvalueProblem(a:DenseMatrix{self.M==self.N}, b:DenseMatrix{self.M==self.N}, w:Array[Double](1)): Long {
 		val n = a.M;
 		val work = new Array[Double](n * n);
-		var info:Long = 0;
+		var info:Int = 0;
 		LAPACK.dsygvWrap(1, 'V', 'U', n, a.d, n, b.d, n, w, work, n * n, info);
 		return info;
 	}
@@ -155,7 +155,7 @@ public class DistSpectralClustering implements Clustering {
 		val newClusters = new Array[Vector](k, (Int) => Vector.make(dim));
 		val clusterCounts = new Array[Int](k, 0);
 		val result = DistArray.make[Int](points.dist);
-		val iterations = 50;
+		val iterations = 1000;
 		
 		/* initialize */
 		val random = new Random(Timer.milliTime());
