@@ -3,18 +3,18 @@ package test.scalegraph.clustering;
 import x10.util.Timer;
 
 import org.scalegraph.clustering.Clustering;
-import org.scalegraph.clustering.SpectralClustering;
-import org.scalegraph.clustering.TrueSpectralClustering;
+import org.scalegraph.clustering.MPISpectralClustering;
+//import org.scalegraph.clustering.SpectralClustering;
 import org.scalegraph.clustering.ClusteringResult;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.io.EdgeListReader;
 import org.scalegraph.io.ScatteredEdgeListReader;
 
-public class TestSpectralClustering {
+public class TestMPISpectralClustering {
 	public static def main(args: Array[String]) {
 		//val dir:String = "/nfs/data1/miyuru/Graph Data Sets/R-MAT/";
 		val dir:String = "/work0/t2gsuzumuralab/scalegraph/data/";
-		//val dir:String = "/nfs/home/ogata/workspace/ScaleGraph/data/";
+		//val dir:String = "/work0/t2gsuzumuralab/ogata/Developments/data/";
 		
 		val reader:EdgeListReader = new EdgeListReader();
 		//val reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
@@ -46,8 +46,7 @@ public class TestSpectralClustering {
 			Console.OUT.println("]");
 		}
 		*/
-		c = new SpectralClustering(graph, nClusters);
-		//c = new TrueSpectralClustering(graph, nClusters);
+		c = new MPISpectralClustering(graph, nClusters);
 		val t0 = Timer.milliTime();
 		var result:ClusteringResult = c.run();
 		val t1 = Timer.milliTime();

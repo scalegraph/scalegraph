@@ -13,3 +13,7 @@ void pdsygvx(const int ibtype, const x10_char jobz, const x10_char range, const 
 		double *w, const double orfac, double *z, const int iz, const int jz,
 		const int* descz, double *work, const int lwork, int *iwork, const int liwork,
 		int *ifail, int *iclustr, double *gap, int *info);
+void pdsyev(const x10_char jobz, const x10_char uplo, const int n,
+		double *a, const int ia, const int ja, const int *desca,
+		double *w, double *z, const int iz, const int jz, const int *descz,
+		double *work, const int lwork, int *info);

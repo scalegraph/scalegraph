@@ -500,7 +500,7 @@ test_gml:
 #Test 22
 test_clustering:
 	@echo "----------- Compile Spectral Clustering Tester --------------------------";
-	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-cxx-postarg $(CLAPACK_LIB) \
 	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg $(F2C_LIB) \
@@ -613,40 +613,42 @@ test_randomwalk:
 #Test 25
 test_scalapack:
 	@echo "----------- Compile ScaLAPACK Tester --------------------------";
-	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-x10rt mpi \
 	-post $(MPI_HOME)/bin/mpic++ \
 	-cxx-postarg $(SCALAPACK) \
 	-cxx-postarg $(CLAPACK_LIB) \
 	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg -lgfortran \
+	-cxx-postarg -lifcore \
+	-cxx-postarg -lifport \
 	src/test/scalegraph/clustering/TestScaLAPACK.x10 \
 	src/org/scalegraph/clustering/ScaLAPACK.x10 \
 	src/org/scalegraph/clustering/BLACS.x10 \
 	src/org/scalegraph/clustering/MPI.x10;
 	
 	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
-	$(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 	
-#	@echo "----------- Launch ScaLAPACK Tester ---------------------------";
-#	X10_NTHREADS=1 /nfs/home/ogata/developments/mpich2/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
-#	@echo "----------- Test Completed ---------------------------------";
 #Test 26
 test_mpiclustering:
 	@echo "----------- Compile MPI Spectral Clustering Tester --------------------------";
-	/nfs/home/ogata/developments/x10-2.2.2.2/x10.dist/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
 	-x10rt mpi \
-	-post /nfs/home/ogata/developments/mpich2-1.4.1p1/bin/mpic++ \
-	-cxx-postarg /nfs/home/ogata/developments/scalapack-2.0.1/libscalapack.a \
-	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/liblapack.a \
-	-cxx-postarg /nfs/home/ogata/developments/lapack-3.4.0/libblas.a \
+	-post $(MPI_HOME)/bin/mpic++ \
+	-cxx-postarg $(SCALAPACK) \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg -lgfortran \
-	src/test/scalegraph/clustering/TestSpectralClustering.x10 \
+	-cxx-postarg -lifcore \
+	-cxx-postarg -lifport \
+	src/test/scalegraph/clustering/TestMPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/Vector.x10 \
+	src/org/scalegraph/clustering/StopWatch.x10 \
 	src/org/scalegraph/clustering/ScaLAPACK.x10 \
 	src/org/scalegraph/clustering/BLACS.x10 \
 	src/org/scalegraph/clustering/MPI.x10 \
@@ -660,7 +662,7 @@ test_mpiclustering:
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	@echo "----------- Launch MPI Spectral Clustering Tester ---------------------------";
-	X10_NTHREADS=16 /nfs/home/ogata/developments/mpich2-1.4.1p1/bin/mpirun -np $(X10_NPLACES) -host sc01,sc02,sc03,sc04 $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_USE_HSAM=1 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 # Test 27

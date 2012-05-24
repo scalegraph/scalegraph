@@ -42,18 +42,33 @@ public class SpectralClustering implements Clustering {
 		if(l == null){
 			return null;
 		}
+		//Console.OUT.println(l);
 		
 		/*
 		 * copy eigenvectors to Array
 		 * Eigenvector which correspond to eigenvalue 0 is not used
 		 */
-		val nPoints = l.M;
+		/*val nPoints = l.M;
 		val points = new Array[Vector](nPoints);
 		for(var i:Int = 0; i < nPoints; i++){
 			points(i) = Vector.make(nClusters);
 			for(var j:Int = 0; j < nClusters; j++){
-				points(i)(j) = l(i, l.N - j - 1);
+				points(i)(j) = l(i, j);
 			}
+		}*/
+		val nPoints = nVertices;
+		val points = new Array[Vector](nVertices);
+		for(var i:Int = 0; i < nVertices; i++){
+			var sum:Double = 0.0;
+			points(i) = Vector.make(nClusters);
+			for(var j:Int = 0; j < nClusters; j++){
+				points(i)(j) = l(i, j);
+				sum += l(i, j);
+			}
+			for(var j:Int = 0; j < nClusters; j++){
+				points(i)(j) /= sum;
+			}
+			//Console.OUT.println(points(i));
 		}
 		
 		val resultArray:Array[Int] = kmeans(nClusters, points);  // step 3
@@ -119,7 +134,7 @@ public class SpectralClustering implements Clustering {
 		val nPoints = l.M;
 		val w = new Array[Double](nPoints);
 		val info = solveEigenvalueProblem(l, d, w);
-		if(info == 0l){
+		if(info == 0){
 			Console.OUT.println("finished");
 		}else{
 			Console.OUT.println("cannot solve eigenvalue problem");
@@ -129,10 +144,10 @@ public class SpectralClustering implements Clustering {
 		return l;
 	}
 	
-	private def solveEigenvalueProblem(a:DenseMatrix{self.M==self.N}, b:DenseMatrix{self.M==self.N}, w:Array[Double](1)): Long {
+	private def solveEigenvalueProblem(a:DenseMatrix{self.M==self.N}, b:DenseMatrix{self.M==self.N}, w:Array[Double](1)): Int {
 		val n = a.M;
 		val work = new Array[Double](n * n);
-		var info:Long = 0;
+		var info:Int = 0;
 		LAPACK.dsygvWrap(1, 'V', 'U', n, a.d, n, b.d, n, w, work, n * n, info);
 		return info;
 	}

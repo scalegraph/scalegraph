@@ -52,7 +52,10 @@ public class MPISpectralClustering implements Clustering {
 	val desc:PlaceLocalHandle[Array[Int](1)];
 	*/
 	
-	public def this(graph:PlainGraph, nClusters:Int, nprow:Int, npcol:Int, mb:Int, nb:Int){
+	public def this(graph:PlainGraph, nClusters:Int){
+		val grid:Pair[Int, Int] = makeProcessGrid(Place.MAX_PLACES);
+		Console.OUT.println("grid = " + grid);
+		
 		this.graph = graph;
 		this.nClusters = nClusters;
 		this.nVertices = graph.getVertexCount() as Int;
@@ -66,10 +69,10 @@ public class MPISpectralClustering implements Clustering {
 		this.gIDXtoID = GlobalRef[HashMap[Int, Long]](this.IDXtoID);
 		
 		this.size = MPI.getSize();
-		this.nprow = nprow;
-		this.npcol = npcol;
-		this.mb = mb;
-		this.nb = nb;
+		this.nprow = grid.first;
+		this.npcol = grid.second;
+		this.mb = 64;
+		this.nb = 64;
 		this.globalRow = nVertices;
 		this.globalCol = nVertices;
 		
@@ -91,10 +94,12 @@ public class MPISpectralClustering implements Clustering {
 	}
 	
 	public def run(): ClusteringResult {
+		val sw = new StopWatch();
+		sw.start();
 		makeCorrespondenceBetweenIDandIDX();
-		Console.OUT.println("IDandIDX finished");
+		Console.OUT.println("IDandIDX finished: " + sw.get());
 		makeNeighbourList();
-		Console.OUT.println("neighbourList finished");
+		Console.OUT.println("neighbourList finished: " + sw.get());
 		/*
 		for(p in neighbourList.dist.places()) at(p) {
 			for(npt in neighbourList.dist.get(p)){
@@ -158,6 +163,7 @@ public class MPISpectralClustering implements Clustering {
 						}
 					}
 				}
+				if(rank == 0) Console.OUT.println("make matrix finished: " + sw.get());
 				/* debug print */
 				/*
 				if(rank == 0){
@@ -169,35 +175,8 @@ public class MPISpectralClustering implements Clustering {
 					}
 				}
 				*/
-		//	}
-		//}
+				if(rank == 0) Console.OUT.println("solving eigenvalue problem");
 				
-				//Console.OUT.println("before barrier " + rank);
-				//BLACS.barrier(ictxt, 'A');
-				//Console.OUT.println("after barrier " + rank);
-				/*
-				Console.OUT.println("before barrier " + rank);
-				barrier(here.id) = 1;
-				if(rank == 0){
-					while(true){
-						var finished:boolean = true;
-						for(p in Place.places()){
-							val a = at(p) barrier(p.id);
-							if(a != 1) finished = false;
-						}
-						if(finished){
-							for(p in Place.places()) at(p) {
-								barrier(p.id) = 2;
-							}
-							break;
-						}
-					}
-				}else{
-					while(barrier(here.id) != 2);
-				}
-				*/
-		//finish for(place in Place.places()) async at(place) {
-		//	if(myrow >= 0 && mycol >= 0){
 				var m:Int = -1;
 				var nz:Int = -1;
 				val w = new Array[Double](globalRow);
@@ -211,7 +190,7 @@ public class MPISpectralClustering implements Clustering {
 				info = -1;
 				
 				ScaLAPACK.pdsygvx(1, 'V', 'I', 'U', globalRow,  matrixL, 1, 1, desc, matrixD,
-						1, 1, desc, 0.0, 0.0, nVertices - nClusters + 1, nVertices, 0.0, m, nz,
+						1, 1, desc, 0.0, 0.0, 1, nClusters, 0.0, m, nz,
 						w, 0.0, matrixZ, 1, 1,  desc, work, lwork, iwork, liwork,
 						ifail, iclustr, gap, info);
 				
@@ -221,14 +200,12 @@ public class MPISpectralClustering implements Clustering {
 				work = new Array[Double](lwork);
 				iwork = new Array[Int](liwork);
 				
-				if(rank == 0) Console.OUT.println("solving eigenvalue problem");
-				
 				ScaLAPACK.pdsygvx(1, 'V', 'I', 'U', globalRow,  matrixL, 1, 1, desc, matrixD,
-						1, 1, desc, 0.0, 0.0, nVertices - nClusters + 1, nVertices, 0.0, m, nz,
+						1, 1, desc, 0.0, 0.0, 1, nClusters, 0.0, m, nz,
 						w, 0.0, matrixZ, 1, 1,  desc, work, lwork, iwork, liwork,
 						ifail, iclustr, gap, info);
 				
-				if(rank == 0) Console.OUT.println("finished");
+				if(rank == 0) Console.OUT.println("finished: " + sw.get());
 				
 				if(rank == 0){
 					Console.OUT.println("pdsygvx: info = " + info);
@@ -246,7 +223,7 @@ public class MPISpectralClustering implements Clustering {
 						}
 					}
 				}
-				if(rank == 0) Console.OUT.println("making points finished");
+				if(rank == 0) Console.OUT.println("making points finished: " + sw.get());
 				
 				BLACS.gridExit(ictxt);
 			} // end if(myrow >= 0 && mycol >= 0)
@@ -262,7 +239,9 @@ public class MPISpectralClustering implements Clustering {
 		}
 		*/
 		val resultArray:DistArray[Int] = kmeans(nClusters, points);  // step 5
+		Console.OUT.println("kmeans finished: " + sw.get());
 		val result:ClusteringResult = makeClusteringResult(nClusters, resultArray);
+		Console.OUT.println("making result finished: " + sw.get());
 		
 		/*
 		//val p:Printer = new Printer(new FileWriter(new File("/data0/t2gsuzumuralab/ogata/Developments/ScaleGraph/result.txt")));
@@ -277,6 +256,15 @@ public class MPISpectralClustering implements Clustering {
 		return result;
 	}
 	
+	
+	private def makeProcessGrid(np:Int): Pair[Int, Int] {
+		for(var i:Int = Math.sqrt(np) as Int; i >= 1; i--){
+			if(np % i == 0){
+				return Pair[Int, Int](i, np / i);
+			}
+		}
+		return Pair[Int, Int](1, 1);
+	}
 	
 	private def makeCorrespondenceBetweenIDandIDX(): void {
 		var counter:Int = 0;
@@ -300,7 +288,6 @@ public class MPISpectralClustering implements Clustering {
 				val outNeighboursID = graph.getOutNeighbours(vertexID);
 				val inNeighboursID = graph.getInNeighbours(vertexID);
 				val builder = new ArrayBuilder[Int]();
-				val gBuilder = GlobalRef(builder);
 				if(outNeighboursID != null){
 					val outNeighboursIDX = outNeighboursID.map((l:Long) => IDtoIDX.get(l)());
 					builder.insert(0, outNeighboursIDX);
@@ -310,7 +297,8 @@ public class MPISpectralClustering implements Clustering {
 					builder.insert(0, inNeighboursIDX);
 				}
 				
-				at(p) neighbourList(vpt) = Pair[Int, Array[Int]](vertexIDX, at(gBuilder) gBuilder().result());
+				val result = builder.result();
+				at(p) neighbourList(vpt) = Pair[Int, Array[Int]](vertexIDX, result);
 				//Console.OUT.println("check loop " + vpt);
 			}
 		}
@@ -421,14 +409,12 @@ public class MPISpectralClustering implements Clustering {
 		val CtoV = new HashMap[Int, Array[Long]](nClusters);
 		val tmpLists = new Array[ArrayBuilder[Long]](nClusters, (Int) => new ArrayBuilder[Long]());
 		
-		finish for(p in array.dist.places()) async {
+		for(p in array.dist.places()){
 			for([i] in array.dist.get(p)){
 				val vertexID = IDXtoID(i)();
 				val clusterNum = at(p) array(i);
-				atomic {
-					VtoC.put(vertexID, clusterNum);
-					tmpLists(clusterNum).add(vertexID);
-				}
+				VtoC.put(vertexID, clusterNum);
+				tmpLists(clusterNum).add(vertexID);
 			}
 		}
 		for([i] in tmpLists){

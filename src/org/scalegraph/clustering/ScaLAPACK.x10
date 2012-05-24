@@ -37,4 +37,10 @@ public class ScaLAPACK {
 			w:Array[Double](1), orfac:Double, z:Array[Double](1), iz:Int, jz:Int,
 			descz:Array[Int](1), work:Array[Double](1), lwork:Int, iwork:Array[Int](1), liwork:Int,
 			ifail:Array[Int](1), iclustr:Array[Int](1), gap:Array[Double](1), info:Int): void;
+	
+	@Native("c++", "pdsyev(#jobz, #uplo, #n, #a->raw()->raw(), #ia, #ja, #desca->raw()->raw(), #w->raw()->raw(), #z->raw()->raw(), #iz, #jz, #descz->raw()->raw(), #work->raw()->raw(), #lwork, &#info)")
+	public native static def pdsyev(jobz:Char, uplo:Char, n:Int,
+			a:Array[Double](1), ia:Int, ja:Int, desca:Array[Int](1),
+			w:Array[Double](1), z:Array[Double](1), iz:Int, jz:Int, descz:Array[Int](1),
+			work:Array[Double](1), lwork:Int, info:Int): void;
 }

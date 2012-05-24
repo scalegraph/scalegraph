@@ -7,6 +7,7 @@ extern "C" {
 			const int*, const int*, const int*, const int*, int*);
 	void pdelset_(double*, const int*, const int*, const int*, const double*);
 	void pdelget_(const char*, const char*, double*, double*, const int*, const int*, const int*);
+	//void pdsymm_(const char*, const char*, );
 	void pdsygvx_(const int*, const char*, const char*, const char*, const int*,
 			double*, const int*, const int*, const int*, double*,
 			const int*, const int*, const int*, const double*, const double*,
@@ -14,6 +15,10 @@ extern "C" {
 			double*, const double*, double*, const int*, const int*,
 			const int*, double*, const int*, int*, const int*,
 			int*, int*, double*, int*);
+	void pdsyev_(const char*, const char*, const int*,
+			double*, const int*, const int*, const int*,
+			double*, double*, const int*, const int*, const int*,
+			double*, const int*, int*);
 }
 
 void sl_init(int *ictxt, int nprow, int npcol){
@@ -51,4 +56,14 @@ void pdsygvx(const int ibtype, const x10_char jobz, const x10_char range, const 
 			w, &orfac, z, &iz, &jz,
 			descz, work, &lwork, iwork, &liwork,
 			ifail, iclustr, gap, info);
+}
+
+void pdsyev(const x10_char jobz, const x10_char uplo, const int n,
+		double *a, const int ia, const int ja, const int *desca,
+		double *w, double *z, const int iz, const int jz, const int *descz,
+		double *work, const int lwork, int *info){
+	pdsyev_((char *)&jobz.v, (char *)&uplo.v, &n,
+			a, &ia, &ja, desca,
+			w, z, &iz, &jz, descz,
+			work, &lwork, info);
 }
