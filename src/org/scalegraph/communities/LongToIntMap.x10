@@ -3,6 +3,7 @@ package org.scalegraph.communities;
 import x10.util.HashMap;
 import x10.util.ArrayList;
 import x10.util.Set;
+import x10.lang.Math;
 import x10.array.Dist;
 import x10.array.DistArray;
 
@@ -16,7 +17,7 @@ public class LongToIntMap {
     }
 
     public def hash(key:Long):Int {
-        return (key % Place.MAX_PLACES) as Int;
+        return (Math.abs(key) % Place.MAX_PLACES) as Int;
     }
         
     public def put(key:Long, v:Int):Int {
@@ -29,8 +30,8 @@ public class LongToIntMap {
     }
 
     public operator this(key:Long) {
-        val h = hash(key);
-        return at (Place.place(h)) {map(h)(key)};
+      val h = hash(key);
+      return at (Place.place(h)) {map(h)(key)};
     }
 
     public def keySet() {

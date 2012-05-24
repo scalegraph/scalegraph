@@ -25,7 +25,7 @@ public class Pagerank {
     // initialize result vector
     for (i in R.region) {
       R(i) = 1.0 / nVertex;
-    }
+    } 
     var _R:Array[Double] = new Array[Double](nVertex);
 
     val setRN:HashSet[Long] = new HashSet[Long]();
@@ -37,28 +37,35 @@ public class Pagerank {
     val vertexList = graph.getVertexList();
     while (setRN.size() != 0) {
       for (p in Place.places()) {
-        val d = (vertexList.dist | p).region;
-        for (i in d) {
-          val node = at(p) {vertexList(i)};
-          val nodeIdx = idToIdxMap(node)();
-          if (setRC.contains(node)) {
-            _R(nodeIdx) = R(nodeIdx);
-          } else {
-            val neighbours = graph.getInNeighbours(node);
-            var score:Double = 0.0;
-            for (j in neighbours) {
-              val outDeg =
-                graph.getOutNeighbours(neighbours(j)).size;
-              if (outDeg != 0) {
-                score += R(idToIdxMap(neighbours(j))()) / (outDeg as Double);
-              } else {
-                score += R(idToIdxMap(neighbours(j))()) / (nVertex as Double);
+        at (p) {
+          val d = (vertexList.dist | p).region;
+          for (i in d) {
+            val node = at(p) {vertexList(i)};
+            val nodeIdx = idToIdxMap(node)();
+            if (setRC.contains(node)) {
+              val score = at (globalR) {globalR()(nodeIdx)};
+              at (global_R) {
+                global_R()(nodeIdx) = score;
               }
-            }
-            _R(nodeIdx) = score * alpha + (1.0 - alpha) / nVertex;
-            if (Math.abs(_R(nodeIdx) - R(nodeIdx)) < delta) {
-              setRN.remove(node);
-              setRC.add(node);
+            } else {
+              val neighbours = graph.getInNeighbours(node);
+              var score:Double = 0.0;
+              for (j in neighbours) {
+                val outDeg =
+                  graph.getOutNeighbours(neighbours(j)).size;
+                if (outDeg != 0) {
+                  score += (at (globalR) {globalR()(idToIdxMap(neighbours(j))())}) / (outDeg as Double);
+                } else {
+                  score += (at (globalR) {globalR()(idToIdxMap(neighbours(j))())}) / (nVertex as Double);
+                }
+              }
+              at (global_R) {
+                global_R()(nodeIdx) = score * alpha + (1.0 - alpha) / nVertex;
+              }
+              if (Math.abs(_R(nodeIdx) - R(nodeIdx)) < delta) {
+                setRN.remove(node);
+                setRC.add(node);
+              }
             }
           }
         }
@@ -90,20 +97,19 @@ public class Pagerank {
     for (p in Place.places()) {
       Console.OUT.printf("id = %d\n", p.id);
       val d = (vertexList.dist | p).region;
+      
       at (p) {
         for (i in d) {
           val vertex = vertexList(i);
           Console.OUT.println("a");
-          /*
           at (globalIdToIdxMap.home) {
             globalIdToIdxMap().put(vertex, globalCnt().cnt);
-            Console.OUT.println("c");
           }
-          */
           Console.OUT.println("b");
           at (globalIdxToIdMap.home) {
             globalIdxToIdMap().put(globalCnt().cnt, vertex);
           }
+          Console.OUT.println("c");
           at(globalCnt.home) {
             globalCnt().cnt++;
           }
