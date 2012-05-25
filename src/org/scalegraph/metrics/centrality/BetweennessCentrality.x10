@@ -25,6 +25,12 @@ public class BetweennessCentrality {
 	val maximumVertexId: Int;
 	
 	val updateScoreLock: IndexedMemoryChunk[Lock];
+	val updateTimeStatLock: Lock = new Lock();
+	var globalMakeMapTime: Long = 0;
+	var globalSpaceAllocTime: Long = 0;
+	var globalBfsTime: Long = 0;
+	var globalBacktrackTime: Long = 0;
+	var globalUpdateLocalTime: Long = 0;
 	
 	val neighborMap: Array[Array[Long]];
 	val inNeighbourCountMap: Array[Int];
@@ -340,20 +346,22 @@ public class BetweennessCentrality {
 	
 	protected def calculateOnPlainGraph() {
 		
+		val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
+		val localVertices = distVertexList.getLocalPortion();
+		val numLocalVertices: Int = localVertices.size;
+		val numThreads = Runtime.NTHREADS;
+		val chunkSize = numLocalVertices / numThreads;
+		val remainder = numLocalVertices % numThreads;
+		var startIndex: Int = 0;
+			
+		Console.OUT.println("Assigned-Vertex count: " + numLocalVertices);
+		
 		finish {
 			
-			val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
-			val localVertices = distVertexList.getLocalPortion();
-			val numLocalVertices: Int = localVertices.size;
-			val numThreads = Runtime.NTHREADS;
-			val chunkSize = numLocalVertices / numThreads;
-			val remainder = numLocalVertices % numThreads;
 			
-			var startIndex: Int = 0;
-			
-			Console.OUT.println("Assigned-Vertex count: " + numLocalVertices);
 			for(threadId in 0..(numThreads -1 )) {
-				async doBfsOnPlainGraph(threadId, numThreads, localVertices);
+				// Use n/20 cutoff
+				async doBfsOnPlainGraph(threadId, numThreads, this.numVertex/20, localVertices);
 			}
 			
 		}
@@ -379,13 +387,21 @@ public class BetweennessCentrality {
 			}
 		}
 		var time: Long = System.currentTimeMillis();
-		Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
+		if(Place.ALL_PLACES > 1) {
+			Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
+		}
 		time = System.currentTimeMillis() - time;
 		Console.OUT.println(here + ": Synch score time(ms): " + time);
 		
-		}
+		Console.OUT.println("All Allocation time(ms): " + globalSpaceAllocTime/numThreads);
+		Console.OUT.println("All BfsTime time(ms): " + globalBfsTime/numThreads);
+		Console.OUT.println("All Backtrack time(ms): " + globalBacktrackTime/numThreads);
+		Console.OUT.println("All UpdateLocalScore time(ms): " + globalUpdateLocalTime/numThreads);
+		
+		
+	}
 	
-	protected def doBfsOnPlainGraph( threadId: Int, numThreads: Int, localVertices: Array[Long]) {
+	protected def doBfsOnPlainGraph( threadId: Int, numThreads: Int, cutoff: Long, localVertices: Array[Long]) {
 		
 		var numProcessedSource: Long = 0;
 		var lastPrintThroughput: Long =  System.currentTimeMillis();
@@ -404,15 +420,18 @@ public class BetweennessCentrality {
 		val traverseQ: FixedVertexQueue = new FixedVertexQueue(maximumVertexId);
 		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
 		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
-		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
-		val predecessorMap = new Array[FixedVertexStack](maximumVertexId, 
-				(i: Int) => {
-					return new FixedVertexStack(inNeighbourCountMap(i));
-				});
 		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
+		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
+		val predecessorMap =  IndexedMemoryChunk.allocateUninitialized[FixedVertexStack](maximumVertexId); 
+				
+		for(i in 0..(predecessorMap.length()-1)) {
+			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
+		}
 		
-		// allocationTime = System.currentTimeMillis() - allocationTime;
-		// Console.OUT.println(here + ": Allocation time(ms): " + allocationTime);
+		allocationTime = System.currentTimeMillis() - allocationTime;
+		
+		if(cutoff < 0)
+			throw new Exception("Cutoff value should be equal or more than 0");
 		
 		/*
 		 * localVertices can be accessed properly by Point only
@@ -423,7 +442,7 @@ public class BetweennessCentrality {
 		for(index in localVertices) {
 			
 			bfsTime = System.currentTimeMillis();
-			
+		
 			if((indexCount++) % numThreads != threadId) {
 				continue;
 			}
@@ -449,7 +468,7 @@ public class BetweennessCentrality {
 		 	tempScore.clear(0, maximumVertexId);
 		 	
 		 	
-			for(i in 0..(predecessorMap.size-1)) {
+			for(i in 0..(predecessorMap.length()-1)) {
 				predecessorMap(i).clear();
 			}
 			
@@ -462,8 +481,8 @@ public class BetweennessCentrality {
 			traverseQ.add(source);
 			// Runtime.probe();
 			
-			var neighbor: Int;
-			var actor: int;
+			var neighbor: Long;
+			var actor: Long;
 			var neighbors: Array[Long]; 
 			
 			// Traverse the graph
@@ -479,11 +498,13 @@ public class BetweennessCentrality {
 				 
 				for(var i: Int = 0; i < neighbors.size; i++) {
 					
-					neighbor = neighbors(i) as Int;
+					neighbor = neighbors(i);
 					
 					if(distanceMap(neighbor) == -1L) {
 						distanceMap(neighbor) = distanceMap(actor) + 1;
-						traverseQ.add(neighbor);
+						
+						if(cutoff == 0L || distanceMap(neighbor) < cutoff)
+							traverseQ.add(neighbor);
 					}
 					
 					if(distanceMap(neighbor) == distanceMap(actor) + 1) {
@@ -494,10 +515,10 @@ public class BetweennessCentrality {
 				}
 			} // End of traversal
 			
-			// bfsTime = System.currentTimeMillis() - bfsTime;
-			// sumBfsTime += bfsTime;
-			// 
-			// backtrackTime = System.currentTimeMillis();
+			bfsTime = System.currentTimeMillis() - bfsTime;
+			sumBfsTime += bfsTime;
+			
+			backtrackTime = System.currentTimeMillis();
 			
 			// Calculate score
 			while(!vertexStack.isEmpty()) {
@@ -514,10 +535,10 @@ public class BetweennessCentrality {
 				
 			}
 			
-			// backtrackTime = System.currentTimeMillis() - backtrackTime;
-			// sumBacktrackTime += backtrackTime;
-			// 
-			// updateLocalScoreTime = System.currentTimeMillis();
+			backtrackTime = System.currentTimeMillis() - backtrackTime;
+			sumBacktrackTime += backtrackTime;
+			
+			updateLocalScoreTime = System.currentTimeMillis();
 			var zonelock: Lock;
 			for(i in 0..(betweennessScore.size-1)) {
 				if(i == source || tempScore(i) == 0D)
@@ -528,19 +549,20 @@ public class BetweennessCentrality {
 				betweennessScore(i) += tempScore(i);
 				zonelock.unlock();
 			}
-			// numProcessedSource++;
+			numProcessedSource++;
 			// 
-			// updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
-			// sumUpdateLocalScoreTime += updateLocalScoreTime;
+			updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
+			sumUpdateLocalScoreTime += updateLocalScoreTime;
+			
 			// // Print throuhgput every XX milliseconds
-			// val now = System.currentTimeMillis();
-			// val elapse = now - lastPrintThroughput;
-			// if( elapse > 60000) {
-			// 	val thr = numProcessedSource / ((elapse / 60000) as Double);
-			// 	Console.OUT.println("Throughput (Processed Source/minute): " + thr);
-			// 	lastPrintThroughput = now;
-			// 	numProcessedSource = 0;
-			// }
+			val now = System.currentTimeMillis();
+			val elapse = now - lastPrintThroughput;
+			if( elapse > 60000) {
+				val thr = numProcessedSource / ((elapse / 60000) as Double);
+				Console.OUT.println("Throughput (Processed Source/minute): " + thr);
+				lastPrintThroughput = now;
+				numProcessedSource = 0;
+			}
 				
 			
 			
@@ -549,32 +571,37 @@ public class BetweennessCentrality {
 		}
 		
 		// Print time info
-		Console.OUT.println(here + ":" + threadId + " sumBfsTime time(ms): " + sumBfsTime);
-		Console.OUT.println(here + ":" + threadId + " sumBacktrackTime neighbour time(ms): " + sumBacktrackTime);
-		Console.OUT.println(here + ":" + threadId + " sumUpdateLocalScoreTime time(ms): " + sumUpdateLocalScoreTime);
+		// Console.OUT.println(here + ":" + threadId + " sumBfsTime time(ms): " + sumBfsTime);
+		// Console.OUT.println(here + ":" + threadId + " sumBacktrackTime neighbour time(ms): " + sumBacktrackTime);
+		// Console.OUT.println(here + ":" + threadId + " sumUpdateLocalScoreTime time(ms): " + sumUpdateLocalScoreTime);
 		
-		
+		updateTimeStatLock.lock();
+		globalSpaceAllocTime += allocationTime;
+		globalBfsTime += sumBfsTime;
+		globalBacktrackTime += sumBacktrackTime;
+		globalUpdateLocalTime += sumUpdateLocalScoreTime;
+		updateTimeStatLock.unlock();
 	}
 	
 	public class FixedVertexQueue {
-		var space: Int;
-		var count: Int;
-		var storage: IndexedMemoryChunk[Int];
-		var index: Int;
-		var f:Int;
-		var r: Int;
+		var space: Long;
+		var count: Long;
+		var storage: IndexedMemoryChunk[Long];
+		var index: Long;
+		var f:Long;
+		var r: Long;
 		
-		def this(space: Int) {
+		def this(space: Long) {
 			
 			this.space = space;
-			this.storage = IndexedMemoryChunk.allocateZeroed[Int](space);
+			this.storage = IndexedMemoryChunk.allocateZeroed[Long](space);
 			f = 0;
 			r = 0;
 			count = 0;
 		}
 		
 		
-		public def add(vertexId: Int) {
+		public def add(vertexId: Long) {
 			
 			if(count >= space) {
 				// Overflow
@@ -586,7 +613,7 @@ public class BetweennessCentrality {
 			++count;
 		}
 		
-		public def removeFirst(): Int {
+		public def removeFirst(): Long {
 			
 			if(count <= 0) {
 				// Overflow
@@ -606,28 +633,28 @@ public class BetweennessCentrality {
 		}
 		
 		public def isEmpty() {
-			return count == 0;
+			return count == 0L;
 		}
 	}
 	
 	public class FixedVertexStack {
 	
-		val storage: IndexedMemoryChunk[Int];
-		var index: Int;
+		val storage: IndexedMemoryChunk[Long];
+		var index: Long;
 		
-		def this(size: Int) {
-			this.storage = IndexedMemoryChunk.allocateZeroed[Int](size);
+		def this(size: Long) {
+			this.storage = IndexedMemoryChunk.allocateZeroed[Long](size);
 			this.index = 0;
 		}
 		
-		public def pop(): Int {
+		public def pop(): Long {
 			if(index <= 0)
 				throw new Exception("Stack underflow");
 
 			return storage(--index);
 		}
 		
-		public def push(vertexId: Int) {
+		public def push(vertexId: Long) {
 			if(index >= storage.length())
 				throw new Exception("Stack overflow size: " + storage.length() + " index: " + index );
 
@@ -640,7 +667,7 @@ public class BetweennessCentrality {
 		}
 		
 		public def isEmpty() {
-			return index == 0;
+			return index == 0L;
 		}
 	}
 	
