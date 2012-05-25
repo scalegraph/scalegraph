@@ -21,7 +21,7 @@ public class Degree {
 		Console.OUT.println("Getting the In Degree");
 		
 		//val uqverts:DistArray[Long] = graph.getVertexList();
-		val uqverts:VertexArrays = graph.getVertexListDualArrays();
+		val uqverts:VertexArrays = graph.getVertexListDualArrays(4);
 		
 		Console.OUT.println("Got vertex lists");
 		
@@ -184,7 +184,7 @@ public class Degree {
 		Console.OUT.println("Getting the Out Degree");
 		
 		//val uqverts:DistArray[Long] = graph.getVertexList();
-		val uqverts:VertexArrays = graph.getVertexListDualArrays();
+		val uqverts:VertexArrays = graph.getVertexListDualArrays(4);
 		
 		Console.OUT.println("Got vertex list");
 		

@@ -1967,16 +1967,18 @@ public class PlainGraph implements Graph{
     /**
      * Returns the list of unique vertices from a graph
      * 
-     * @return a DistArray of vertices. The vertices are distributed among places evenly
-     * for efficient use of memory
+     * @param parallelism an integer specifying the level of parallelism. (E.g., 4)
+     * 
+     * @return a VertexArrays object containing two vertex lists. The first array's (preArray) vertices are distributed among places evenly
+     * for efficient use of memory. However, the second array (postArray) is located only on place 0.
      */
     
-    public def getVertexListDualArrays():VertexArrays{
+    public def getVertexListDualArrays(val parallelism:Int):VertexArrays{
     	var R1:Region = null;
     	var R2:Region = null;
     	var nvl:Int = 0;
     	val doneFill = GlobalRef[Cell[Int]](new Cell[Int](0));
-    	val NUM_BLOCKS = 4; //This many concurrent update thereads will work on creating the result vertexlist
+    	val NUM_BLOCKS = parallelism; //This many concurrent update thereads will work on creating the result vertexlist
     	var resVObj:VertexArrays = new VertexArrays();
     	
     	

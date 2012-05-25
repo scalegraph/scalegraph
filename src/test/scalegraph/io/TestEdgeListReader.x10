@@ -80,7 +80,7 @@ public class TestEdgeListReader {
         } 
         
         /*
-        val uqverts:VertexArrays = testG.getVertexListDualArrays();
+        val uqverts:VertexArrays = testG.getVertexListDualArrays(4);
         
         finish for(p:Place in Place.places()){
         	val r:Region = uqverts.preArray.dist.get(p);
