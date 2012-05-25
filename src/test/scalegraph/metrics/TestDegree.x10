@@ -7,7 +7,7 @@ import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.io.ScatteredEdgeListReader;
 import org.scalegraph.io.EdgeListReader;
 import org.scalegraph.metrics.Degree;
-import test.scalegraph.metrics.YahooAltavistaReader;
+//import test.scalegraph.metrics.YahooAltavistaReader;
 
 public class TestDegree {
 	
@@ -19,16 +19,18 @@ public class TestDegree {
 		
 		val startLoadingTime = System.currentTimeMillis();
 		//Console.OUT.println("Start loading at : " + System.currentTimeMillis());
-		var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-18-39322.dl");
+		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-18-39322.dl");
 		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-20-82792.dl");
-		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
+		//var graph:PlainGraph = reader.loadFromFile("/work0/t2gsuzumuralab/scalegraph/data/scale-8.dl");
 		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-12-3628.dl");
 		
 		//var graph:PlainGraph = reader.loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-16.dl");
 		
+		val graph:PlainGraph = reader.loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-20-82792.dl");
+		
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale12-scattered");
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale16-scattered");
-		
+		//graph = reader.loadFromDir("/nfs/data1/miyuru/twitter-kaist/twitter-100");
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale16-scattered");
 		
 		//graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scattered_twitter");

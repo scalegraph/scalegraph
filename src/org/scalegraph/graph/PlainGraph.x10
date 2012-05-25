@@ -31,6 +31,7 @@ public class PlainGraph implements Graph{
 	private var actualTotalVertices:Long = 0l;			//This is the total number of vertices
 	private var actualTotalEdges:Long = 0l;			//This is the total number of edges
 	private var uniqueVertexList:DistArray[Long] = null; //List of unique vertices
+	private var vertexArrays:VertexArrays = null;
 	private var uniqueVertexCounter:DistArray[Int] = null; //This array of integers keeps track of the unique vertices
 	private var VERTEX_CACHE_SIZE:Int = 20;
 	private var VERTEX_CACHE_DELWINDOW:Int = 5;
@@ -1759,6 +1760,7 @@ public class PlainGraph implements Graph{
     	return arrayBuilder.result();
     }    
         
+
     public def getInNeighboursCount(val vertexID:Long):Long{
     	val result2:Array[Array[Long]]=new Array[Array[Long]](1);
     	
@@ -1823,7 +1825,7 @@ public class PlainGraph implements Graph{
     
     public def getNeighboursCount(val vertexID:Long):Long{
     	return getInNeighboursCount(vertexID) + getOutNeighboursCount(vertexID);
-    }
+    }          
     
     public def getUnconnectedVertexCount():Long{
     	var result:Long = 0L;
@@ -1969,13 +1971,16 @@ public class PlainGraph implements Graph{
      * for efficient use of memory
      */
     
-    public def getVertexList():DistArray[Long]{
+    public def getVertexListDualArrays():VertexArrays{
     	var R1:Region = null;
     	var R2:Region = null;
     	var nvl:Int = 0;
     	val doneFill = GlobalRef[Cell[Int]](new Cell[Int](0));
+    	val NUM_BLOCKS = 4; //This many concurrent update thereads will work on creating the result vertexlist
+    	var resVObj:VertexArrays = new VertexArrays();
     	
-    	if(uniqueVertexList == null){    	
+    	
+    	if(vertexArrays == null){    	
 	    	if(actualTotalVertices == 0l){
 	    		actualTotalVertices = getVertexCount();
 	    	}
@@ -2005,68 +2010,254 @@ public class PlainGraph implements Graph{
 	    	var b:Dist = Dist.makeBlock(R2);
 	    	var b2:Dist = Dist.makeBlock(R1);
 
-	    	uniqueVertexList = DistArray.make[Long](b, -1l);
+	    	//uniqueVertexList = DistArray.make[Long](b, -1l);
+	    	uniqueVertexList = DistArray.make[Long](b, ((Point)=>-1l));
 	    	uniqueVertexCounter = DistArray.make[Int](b2, 0l);
 	    	
-	    	val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));	    	
+	    	//val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));	    	
 	    	val largestVert = getMaximumVertexID();
+	    	val vertCount = getVertexCount();
+	    	Console.OUT.println("vertex Count : " + vertCount);
 	    	
-	    	Console.OUT.println("largestVert : " + largestVert);	    	
+	    	val vertsPerBlockOrg:Long = Math.ceil(largestVert/NUM_BLOCKS) as Long + 1;
+	    	val vertsPerBlockNew:Long = Math.ceil(vertCount/NUM_BLOCKS) as Long + 1;
 	    	
-	    	finish for(p:Place in Place.places()){
-	    		val rAdjListAtoB:Region = adjacencyListAtoB.dist.get(p);
+	    	Console.OUT.println("vertsPerBlockOrg : " + vertsPerBlockOrg);
+	    	Console.OUT.println("vertsPerBlockNew : " + vertsPerBlockNew);
+	    	
+	    	val uniqueVertsPerMachine:Long = vertCount/Place.MAX_PLACES;
+	    		    	
+	    	val tempList:ArrayList[Long] = new ArrayList[Long]();
+	    	val retVals = new Array[GlobalRef[Cell[Long]]](NUM_BLOCKS);
+	    	
+	    	val specialList = at(Place.places()(0)) GlobalRef[Cell[ArrayList[Long]]](new Cell[ArrayList[Long]](new ArrayList[Long]()));
+	    	
+	    	var blockCounter:Int = 0;
+	    	
+	    	finish for(var i:Long =0; i < NUM_BLOCKS; i++){
+	    		retVals(blockCounter) = GlobalRef[Cell[Long]](new Cell[Long](0l));
+	    		blockCounter++;
 	    		
-	    		if(rAdjListAtoB != null){
+	    		val ii:Long = i;
+	    		async{
+	    		val startLocOrg = (ii * vertsPerBlockOrg); 
+	    		val endLocOrg = startLocOrg + vertsPerBlockOrg;
+	    		val startLocNew = (ii * vertsPerBlockNew); 
+	    		val endLocNew = startLocNew + vertsPerBlockNew;
+	    		var localVertCounter:Long = startLocNew;
+	    		Console.OUT.println("running thread : "+ii + " startLocOrg : " + startLocOrg + " endLocOrg : " + endLocOrg);
+	    		//val vertBuffSize = 100;
+	    		// val placeArr:Array[Array[Long]] = new Array[Array[Long]](Place.places().size());
+	    		// val buffCounter:Array[Int] = new Array[Int](Place.places().size());
+	    		// 
+	    		// for(var k:Int = 0; k < Place.places().size(); k++){
+	    		// 	placeArr(k) = new Array[Long](vertBuffSize);
+	    		// } 		
 	    		
-	    		at(p) {
-	    			for(point:Point in rAdjListAtoB){
+	    		finish for(var j:Long = startLocOrg; j < endLocOrg; j++ ){
+	    			//Here nVertices is the number of vertices per place
+	    			val machine:Int = (j/nVertices) as Int;
+	    			val inVert = j%nVertices;
+	    			
+	    			var retItm:PlainGraphRecord = null;
+	    			var retVal:Long = -1l;
+	    			
+	    			if(machine != 0){
+	    				val pt:Point = Point.make(machine + 1, (inVert as Int));
 	    				
-	    				//This optimization might be helpful for small network loaded to large graph space
-	    				if(point(1) > largestVert){
-	    					//Console.OUT.println("Before exit -> point(1) : " + point(1) + "largest vert " + largestVert);
-	    					break;
-	    				}
+		    			at(Place.places()(machine)){
+		    				var l:Array[PlainGraphRecord] = adjacencyListAtoB.getLocalPortion();
+		    				if((l(pt) != null)&&(l(pt).id != -1l)){
+		    					retVals(ii as Int)()() = l(pt).id;
+		    				}
+		    			}
+		    			
+		    			retVal = at(Place.places()(machine)){retVals(ii as Int)()() as Long};
+	    				//---Just ended
+	    				//Console.OUT.println("Calling...123");
+	    				// retVal = at(Place.places()(machine)){
+	    				// 	adjacencyListAtoB.getLocalPortion()(pt) == null ? -1l:adjacencyListAtoB.getLocalPortion()(pt).id as Long
+	    				// };
 	    				
-	    				if (adjacencyListAtoB(point).id != -1l){	
-	    					//curVertex()() = adjacencyListAtoB(point).id;
-	    					val myVal = adjacencyListAtoB(point).id;
+	    				Console.OUT.println("Thread "+ii + " retVal: " + retVal + " at : " + here.id);
+	    			}
+	    			else{
+//	    				Console.OUT.println("Thread "+ii);
+    					//retVals(ii as Int)()() = adjacencyListAtoB(1, (inVert+1) as Int).id;
+	//    				}
+	    //				retVal = retVals(ii as Int)()() as Long;
+	  //  				Console.OUT.println("Thread Done"+ii);
+	    				//Console.OUT.println("Thread "+ii+" calling");
+	    				//Console.OUT.println("inVert : " + inVert);
+	    				retVal = adjacencyListAtoB(1, (inVert+1) as Int).id;
+	    			}
+	    			
+	    			
+	    			if((retVal != -1L)&&(localVertCounter < endLocNew)){
+	    				val newMachine:Int = (localVertCounter/uniqueVertsPerMachine) as Int;
+	    				val cellLoc = (localVertCounter%uniqueVertsPerMachine as Int) + 1;
+	    					    				
+	    				val newRet = retVal;
+	    				
+	    				// if(buffCounter(here.id) < vertBuffSize){
+	    				// 	placeArr(here.id)(buffCounter(here.id)) = retVal;
+	    				// 	buffCounter(here.id)+=1;
+	    				// }else{
+	    				// 	
+	    				// }
+	    				
+	    				at(Place.places()(newMachine)){
+	    					val r:Region = uniqueVertexList.dist.get(here);
+	    					//Console.OUT.println("At " + here.id + "MAX Point : " + r.maxPoint());
+	    					//Console.OUT.println("cellLoc : " + cellLoc);
+	    					val p:Point = Point.make((here.id + 1), cellLoc as Int);
+	    					uniqueVertexList(p) = newRet;
 	    					
-	    					for(p2:Place in Place.places()){
-	    						
-	    						if(curMachine()()==p2.id){
-	    						//	val myVal = curVertex()();
-	    						
-		    						at(p2){
-		    							//val rVertList:Region = uniqueVertexList.dist.get(p2);
-		    							val rVertCounter:Region = uniqueVertexCounter.dist.get(p2);
-		    							
-			    						for(point2:Point in rVertCounter){
-	
-			    							if((uniqueVertexCounter(point2) < nv)){//There is more space there...
-			    								//Console.OUT.println("At : " + p2.id + " Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
-			    								uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
-			    								//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
-			    								uniqueVertexCounter(point2) += 1;
-			    							}else{
-		    									at (p) {curMachine()() = p2.id + 1;}
-		    									break;
-			    							}
-			    						}
-		    						}
-	    						}
-	    					}
+	    					// for(pt in r){	
+	    					// 	if(pt.coords()(1) == (cellLoc as Int)){
+	    					// 		uniqueVertexList(pt) = newRet;
+	    					// 		break;
+	    					// 	}
+	    					// } 
 	    				}
-	    			}	    			
+	    				
+	    				localVertCounter++;
+	    			}else if((retVal != -1L)&&(localVertCounter >= endLocNew)){
+	    				val newRet = retVal;
+	    				
+	    				at(specialList.home){
+	    					specialList()().add(newRet);
+	    				}
+	    				//Console.OUT.println("" +newRet+ " Added to special list");
+	    			}
 	    		}
-	    	} 
-	    	}
+	    		Console.OUT.println("Done running thread : "+ii);
+	    		}//end async
+	    	}//end for
+	    	
+	    	Console.OUT.println("Done populating the unique list...");
+	    	val specVal = at(specialList.home){ specialList()().size()};
+	    	
+	        Console.OUT.println("Special list have : " + specVal);
+	        
+	        Console.OUT.println("Returning the list of unique vertices");
+
+	        resVObj.preArray = uniqueVertexList;
+	        resVObj.postArray = at(Place.places()(0)){ return specialList()().toArray();}; 
+	        
+	        //Just cache the results for future use
+	        vertexArrays = vertexArrays;
+    }//end null check
+    	
+    	return resVObj;
     }
+     
+
+    /**
+     * Returns the list of unique vertices from a graph
+     * 
+     * @return a DistArray of vertices. The vertices are distributed among places evenly
+     * for efficient use of memory
+     */
+    
+    public def getVertexList():DistArray[Long]{
+    	var R1:Region = null;
+    	var R2:Region = null;
+    	var nvl:Int = 0;
+    	val doneFill = GlobalRef[Cell[Int]](new Cell[Int](0));
+    	
+    	if(uniqueVertexList == null){    	
+    		if(actualTotalVertices == 0l){
+    			actualTotalVertices = getVertexCount();
+    		}
+    		
+    		if(this.sizeCategory == GraphSizeCategory.SMALL){
+    			vertexIncrementFactor = this.sizeCategory;
+    			nvl = actualTotalVertices as Int; // Here we know that the total number of vertices is an Int
+    			R1 = (1..1)*(1..1);
+    			R2 = (1..1)*(1..nvl);	
+    		}else if((this.sizeCategory == GraphSizeCategory.LARGE) || (this.sizeCategory == GraphSizeCategory.MEDIUM)){
+    			vertexIncrementFactor = GraphSizeCategory.MEDIUM;
+    			nVertices = ScaleGraphMath.pow(2, vertexIncrementFactor as Int) as Int;
+    			totalVertices = Place.MAX_PLACES*nVertices as long;
+    			v = ScaleGraphMath.pow(2,sizeCategory);
+    			
+    			nvl = Math.ceil((actualTotalVertices/(Place.MAX_PLACES)) as Double) as Int; // Again we know that the number of vertices is an Int per place
+    			
+    			//Just add one more to make space in the unique vertices array
+    			nvl += 1;
+    			//Console.OUT.println("nv is : " + nvl);
+    			
+    			R1 = (1..Place.MAX_PLACES)*(1..1);
+    			R2 = (1..Place.MAX_PLACES)*(1..nvl);
+    		}
+    		
+    		val nv:Int = nvl;
+    		var b:Dist = Dist.makeBlock(R2);
+    		var b2:Dist = Dist.makeBlock(R1);
+
+    		uniqueVertexList = DistArray.make[Long](b, -1l);
+    		uniqueVertexCounter = DistArray.make[Int](b2, 0l);
+    		
+    		val refval = GlobalRef[Cell[boolean]](new Cell[boolean](false));	    	
+    		val largestVert = getMaximumVertexID();
+    		
+    		Console.OUT.println("largestVert : " + largestVert);	    	
+    		
+    		finish for(p:Place in Place.places()){
+    			val rAdjListAtoB:Region = adjacencyListAtoB.dist.get(p);
+    			
+    			if(rAdjListAtoB != null){
+    				
+    				at(p) {
+    					for(point:Point in rAdjListAtoB){
+    						
+    						//This optimization might be helpful for small network loaded to large graph space
+    						if(point(1) > largestVert){
+    							//Console.OUT.println("Before exit -> point(1) : " + point(1) + "largest vert " + largestVert);
+    							break;
+    						}
+    						
+    						if (adjacencyListAtoB(point).id != -1l){	
+    							//curVertex()() = adjacencyListAtoB(point).id;
+    							val myVal = adjacencyListAtoB(point).id;
+    							
+    							for(p2:Place in Place.places()){
+    								
+    								if(curMachine()()==p2.id){
+    									//	val myVal = curVertex()();
+    									
+    									at(p2){
+    										//val rVertList:Region = uniqueVertexList.dist.get(p2);
+    										val rVertCounter:Region = uniqueVertexCounter.dist.get(p2);
+    										
+    										for(point2:Point in rVertCounter){
+    											
+    											if((uniqueVertexCounter(point2) < nv)){//There is more space there...
+    												//Console.OUT.println("At : " + p2.id + " Now count : " + uniqueVertexCounter(point2) + " val is " + myVal);
+    												uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2) + 1)) = myVal;
+    												//uniqueVertexList((p2.id + 1), (uniqueVertexCounter(point2))) = myVal;
+    												uniqueVertexCounter(point2) += 1;
+    											}else{
+    												at (p) {curMachine()() = p2.id + 1;}
+    												break;
+    											}
+    										}
+    									}
+    								}
+    							}
+    						}
+    					}	    			
+    				}
+    			} 
+    		}
+    	}
     	
     	Console.OUT.println("Returning the list of unique vertices");
     	
     	return uniqueVertexList;
     }
-
+    
     public def getMaximumVertexID():Long{
     	val lvalue=at(Place.places()(0))largeV()();
     	
@@ -2097,6 +2288,7 @@ public class PlainGraph implements Graph{
 	    }
     }
 }
+      
 
 /**
  * This class supports the vertex caching mechanism.

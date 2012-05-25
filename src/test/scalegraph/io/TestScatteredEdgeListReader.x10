@@ -3,6 +3,7 @@ package test.scalegraph.io;
 import x10.util.StringBuilder;
 
 import org.scalegraph.graph.PlainGraph;
+import org.scalegraph.graph.VertexArrays;
 import org.scalegraph.io.ScatteredEdgeListReader;
 
 /**
@@ -18,14 +19,20 @@ public class TestScatteredEdgeListReader {
         
         //graph = reader.loadFromDir("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale12-scattered");
         
-        graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale12-scattered");
+        //graph = reader.loadFromDir("/data0/t2gsuzumuralab/miyuru/data/scale12-scattered");
+        graph = reader.loadFromDir("/nfs/data1/miyuru/twitter-kaist/twitter-10");
                 
-        var vcount:Long = graph.getVertexCount();
-        
-        Console.OUT.println("Total vertex count : " + vcount);
-        
-        // val uqverts:DistArray[Long] = graph.getVertexList();
+        // var vcount:Long = graph.getVertexCount();
         // 
+        // Console.OUT.println("Total vertex count : " + vcount);
+        
+        val startvlist = System.currentTimeMillis();
+        
+        //val uqverts:DistArray[Long] = graph.getVertexList();
+        val uqverts:VertexArrays = graph.getVertexListDualArrays();
+        
+        val endvlist = System.currentTimeMillis();
+        
         // for(p:Place in Place.places()){
         // 	val r:Region = uqverts.dist.get(p);
         // 	
@@ -36,13 +43,15 @@ public class TestScatteredEdgeListReader {
         // 	};
         // }         
         
-        var re:StringBuilder = new StringBuilder();
+        // var re:StringBuilder = new StringBuilder();
+        // 
+        // for(p:Place in Place.places()){
+        // 	re.add(graph.getEdgesAsString(p));
+        // }
         
-        for(p:Place in Place.places()){
-        	re.add(graph.getEdgesAsString(p));
-        }
+        //Console.OUT.println(re.toString());
         
-        Console.OUT.println(re.toString());
+        Console.OUT.println("Time to get vertex list (ms): " + (endvlist - startvlist) );
         
         Console.OUT.println("--------------------- End ScatteredEdgeListReader Test --------------------");
     }

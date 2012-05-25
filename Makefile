@@ -283,6 +283,7 @@ test_edge_reader:
 	src/org/scalegraph/io/EdgeListWriter.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10;
@@ -392,6 +393,7 @@ test_degree:
 	src/org/scalegraph/metrics/Degree.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
@@ -412,6 +414,7 @@ test_edge_scat:
 	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
