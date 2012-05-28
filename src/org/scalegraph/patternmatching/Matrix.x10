@@ -54,7 +54,7 @@ public class Matrix {
 	/**
 	 * return new matrix B, which is transposed matrix of A
 	 */
-	public static def transpose(a:Matrix): Matrix {
+	private static def transpose(a:Matrix): Matrix {
 		val b = new Matrix(a.cols, a.rows);
 		for(var i:Int = 0; i < a.rows; i++){
 			for(var j:Int = 0; j < a.cols; j++){
@@ -148,5 +148,16 @@ public class Matrix {
 		}
 		return true;
 	}
+	
+	public def neighbors(val i:Int, var ret_val:ArrayList[Int]) :void{
+		if (i > getRows()) {
+			assert(false):"ERROR: Matrix::Requesting degree of non-existent vertex";
+		}
+		for (var pos:Int = 0; pos < this.getCols(); pos++)
+			// if data(i)(pos) == 1, pos is neighbor of i.
+			if(data(i)(pos) == 1){
+				ret_val.add(pos);
+			}
+	}	
 	
 }

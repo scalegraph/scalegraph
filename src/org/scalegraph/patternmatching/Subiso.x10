@@ -6,7 +6,7 @@ public class Subiso {
 	
 	public def subgraph_iso_test(val A:SqrSymMatrix, val B:SqrSymMatrix, val M:Matrix):Boolean{
 		var E:Matrix = M * B;
-		var D:Matrix = Transpose (E);
+		var D:Matrix = E.transpose();
 		var C:Matrix = M * D;
 		for (var i:Int = 0; i < A.getSize(); i++) {
 			for (var j:Int = 0; j < A.getSize(); j++) 
@@ -47,11 +47,41 @@ public class Subiso {
 				}
 			}
 		}
-		assert(false):"not implemented yet";
 		return false;
 	}
 
 	public def UllMan_Refinement(val A:SqrSymMatrix, val B:SqrSymMatrix,var M:Matrix,var d:Int) {
+		var elim:Int = 0;
+		
+		for(var i:Int=d; i<A.size(); i++) {
+			var lst:ArrayList[Int] = new ArrayList[Int]();   // holds adjacent vertices of i in A
+			// in lst Int is unsigned
+			A.neighbors(i,lst);
+			var match_i:ArrayList[Int] = new ArrayList[Int]();              // holds the vertices in B that matches i
+			// in match_i Int is unsigned
+			M.neighbors(i, match_i);
+			for (var idx1:Int=0;idx1<lst.size(); idx1++) { // for each neighbors of i in A
+				var x:Int = lst(idx1);              // x is one neighbor of i in A
+				// x is unsigned
+				for (var idx2:Int=0; idx2<match_i.size(); idx2++) { // for each matching of i in B
+					var j:Int = match_i(idx2);
+					// j is unsigned
+					boost::dynamic_bitset<> res = M[x] & B[j];
+					if (res.none()) {
+						
+						M.set(i,j,0);
+						if (M.rowset_empty(i)) {
+							return true;
+						}
+						elim++;
+					}
+				}
+			}
+			if (elim==0) break;
+			else {elim=0;} 
+		}
+		return false;
+		
 		assert(false):"not implemented yet";
 		return false;
 	}
