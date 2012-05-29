@@ -348,20 +348,19 @@ public class BetweennessCentrality {
 		
 		val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
 		val localVertices = distVertexList.getLocalPortion();
-		val numLocalVertices: Int = localVertices.size;
-		val numThreads = Runtime.NTHREADS;
-		val chunkSize = numLocalVertices / numThreads;
-		val remainder = numLocalVertices % numThreads;
+		// val numParallelBfsTasks = Runtime.NTHREADS;
+		val numParallelBfsTasks = 6;
 		var startIndex: Int = 0;
-			
+		
+		val numLocalVertices: Int = localVertices.size;	
 		Console.OUT.println("Assigned-Vertex count: " + numLocalVertices);
 		
 		finish {
 			
 			
-			for(threadId in 0..(numThreads -1 )) {
+			for(taskId in 0..(numParallelBfsTasks -1 )) {
 				// Use n/20 cutoff
-				async doBfsOnPlainGraph(threadId, numThreads, this.numVertex/20, localVertices);
+				async doBfsOnPlainGraph(taskId, numParallelBfsTasks, this.numVertex/20, localVertices);
 			}
 			
 		}
@@ -393,15 +392,15 @@ public class BetweennessCentrality {
 		time = System.currentTimeMillis() - time;
 		Console.OUT.println(here + ": Synch score time(ms): " + time);
 		
-		Console.OUT.println("All Allocation time(ms): " + globalSpaceAllocTime/numThreads);
-		Console.OUT.println("All BfsTime time(ms): " + globalBfsTime/numThreads);
-		Console.OUT.println("All Backtrack time(ms): " + globalBacktrackTime/numThreads);
-		Console.OUT.println("All UpdateLocalScore time(ms): " + globalUpdateLocalTime/numThreads);
+		Console.OUT.println("All Allocation time(ms): " + globalSpaceAllocTime/numParallelBfsTasks);
+		Console.OUT.println("All BfsTime time(ms): " + globalBfsTime/numParallelBfsTasks);
+		Console.OUT.println("All Backtrack time(ms): " + globalBacktrackTime/numParallelBfsTasks);
+		Console.OUT.println("All UpdateLocalScore time(ms): " + globalUpdateLocalTime/numParallelBfsTasks);
 		
 		
 	}
 	
-	protected def doBfsOnPlainGraph( threadId: Int, numThreads: Int, cutoff: Long, localVertices: Array[Long]) {
+	protected def doBfsOnPlainGraph( taskId: Int, numParallelBfsTasks: Int, cutoff: Long, localVertices: Array[Long]) {
 		
 		var numProcessedSource: Long = 0;
 		var lastPrintThroughput: Long =  System.currentTimeMillis();
@@ -437,13 +436,14 @@ public class BetweennessCentrality {
 		 * localVertices can be accessed properly by Point only
 		 * Iterate over localVertices and process only assigned vertices
 		 */
-		
+		val l = new Lock();
+		val l2 = new Lock();
 		var indexCount: Int = 0;
 		for(index in localVertices) {
 			
 			bfsTime = System.currentTimeMillis();
 		
-			if((indexCount++) % numThreads != threadId) {
+			if((indexCount++) % numParallelBfsTasks != taskId) {
 				continue;
 			}
 			
@@ -496,24 +496,24 @@ public class BetweennessCentrality {
 				if(neighbors == null)
 					continue;
 				 
-				for(var i: Int = 0; i < neighbors.size; i++) {
+				for(var i: Int = 0; i < neighbors.size; ++i) {
 					
 					neighbor = neighbors(i);
+					val distanceFromSource = distanceMap(actor) + 1;
 					
 					if(distanceMap(neighbor) == -1L) {
-						distanceMap(neighbor) = distanceMap(actor) + 1;
-						
-						if(cutoff == 0L || distanceMap(neighbor) < cutoff)
+						distanceMap(neighbor) = distanceFromSource;
+						if(cutoff == 0L || distanceMap(neighbor) < cutoff) {
 							traverseQ.add(neighbor);
+						}
 					}
 					
-					if(distanceMap(neighbor) == distanceMap(actor) + 1) {
+					if(distanceMap(neighbor) == distanceFromSource) {
 						geodesicsMap(neighbor) += geodesicsMap(actor);
 						predecessorMap(neighbor).push(actor);
 					}
-					
 				}
-			} // End of traversal
+			}
 			
 			bfsTime = System.currentTimeMillis() - bfsTime;
 			sumBfsTime += bfsTime;
@@ -559,7 +559,7 @@ public class BetweennessCentrality {
 			val elapse = now - lastPrintThroughput;
 			if( elapse > 60000) {
 				val thr = numProcessedSource / ((elapse / 60000) as Double);
-				Console.OUT.println("Throughput (Processed Source/minute): " + thr);
+				Console.OUT.println(taskId + " Throughput (Processed Source/minute): " + thr);
 				lastPrintThroughput = now;
 				numProcessedSource = 0;
 			}
