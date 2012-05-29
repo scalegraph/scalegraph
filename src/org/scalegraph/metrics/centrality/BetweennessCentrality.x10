@@ -335,16 +335,17 @@ public class BetweennessCentrality {
 			for(p:Place in Place.places()){
 				
 				val dat = at(p) {distVertexList.getLocalPortion()};
-				
+				async {
 				for (i in dat) {
-					async {
+					// async {
 						val actor = dat(i);
 						if(actor >= 0L) {
 							val n = plainGraph.getOutNeighbours(actor);
 							neighborMap(actor as Int) = n;
 							inNeighbourCountMap(actor as Int) = plainGraph.getInNeighboursCount(actor) as Int;
-						}
+						// }
 					}
+				}
 				}
 			}
 		}
