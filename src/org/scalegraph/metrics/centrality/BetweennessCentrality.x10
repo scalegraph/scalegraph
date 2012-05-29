@@ -25,12 +25,13 @@ public class BetweennessCentrality {
 	val maximumVertexId: Int;
 	
 	val updateScoreLock: IndexedMemoryChunk[Lock];
-	val updateTimeStatLock: Lock = new Lock();
-	var globalMakeMapTime: Long = 0;
-	var globalSpaceAllocTime: Long = 0;
-	var globalBfsTime: Long = 0;
-	var globalBacktrackTime: Long = 0;
-	var globalUpdateLocalTime: Long = 0;
+	
+	// val updateTimeStatLock: Lock = new Lock();
+	// var globalMakeMapTime: Long = 0;
+	// var globalSpaceAllocTime: Long = 0;
+	// var globalBfsTime: Long = 0;
+	// var globalBacktrackTime: Long = 0;
+	// var globalUpdateLocalTime: Long = 0;
 	
 	val neighborMap: Array[Array[Long]];
 	val inNeighbourCountMap: Array[Int];
@@ -66,7 +67,7 @@ public class BetweennessCentrality {
 		this.betweennessScore = new Array[Double](this.maximumVertexId, 0.0D);
 		this.neighborMap = new Array[Array[Long]](maximumVertexId);
 		this.inNeighbourCountMap = new Array[Int](maximumVertexId);
-		this.updateScoreLock = IndexedMemoryChunk.allocateUninitialized[Lock](maximumVertexId/20);
+		this.updateScoreLock = IndexedMemoryChunk.allocateUninitialized[Lock](maximumVertexId);
 		
 		for(var i: Long = 0; i < this.updateScoreLock.length(); ++i) {
 			this.updateScoreLock(i) = new Lock();
@@ -291,6 +292,8 @@ public class BetweennessCentrality {
 	
 	public static def runInternal(g: PlainGraph, verticesToEstimate: Array[Long], isNormalize: Boolean, percentCache: Int): Array[Pair[Long, Double]] {
 		
+		var elapse: Long = System.currentTimeMillis();
+		
 		val vertexCount = g.getVertexCount();
 		val maximumVertexId= g.getMaximumVertexID();
 		val cacheSize = ((percentCache / 100.0 * vertexCount)) as Int;
@@ -303,10 +306,14 @@ public class BetweennessCentrality {
 				at (p) async {
 					
 					betweennessCentrality().makeNeighbourMap();
+					Team.WORLD.barrier(here.id);
 					betweennessCentrality().calculateOnPlainGraph();
 				}
 			}
 		}
+		elapse = System.currentTimeMillis() - elapse;
+		Console.OUT.println("---------------------------------------------------------------------");
+		Console.OUT.println("Elapse time(ms): " + elapse);
 		
 		// Make result pairs
 		val arrayBuilder: ArrayBuilder[Pair[Long, Double]] = new ArrayBuilder[Pair[Long, Double]]();
@@ -330,11 +337,13 @@ public class BetweennessCentrality {
 				val dat = at(p) {distVertexList.getLocalPortion()};
 				
 				for (i in dat) {
-					val actor = dat(i);
-					if(actor >= 0L) {
-						val n = plainGraph.getOutNeighbours(actor);
-						neighborMap(actor as Int) = n;
-						inNeighbourCountMap(actor as Int) = plainGraph.getInNeighboursCount(actor) as Int;
+					async {
+						val actor = dat(i);
+						if(actor >= 0L) {
+							val n = plainGraph.getOutNeighbours(actor);
+							neighborMap(actor as Int) = n;
+							inNeighbourCountMap(actor as Int) = plainGraph.getInNeighboursCount(actor) as Int;
+						}
 					}
 				}
 			}
@@ -348,8 +357,8 @@ public class BetweennessCentrality {
 		
 		val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
 		val localVertices = distVertexList.getLocalPortion();
-		// val numParallelBfsTasks = Runtime.NTHREADS;
-		val numParallelBfsTasks = 6;
+		val numParallelBfsTasks = Runtime.NTHREADS;
+		// val numParallelBfsTasks = 6;
 		var startIndex: Int = 0;
 		
 		val numLocalVertices: Int = localVertices.size;	
@@ -390,12 +399,12 @@ public class BetweennessCentrality {
 			Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 		}
 		time = System.currentTimeMillis() - time;
-		Console.OUT.println(here + ": Synch score time(ms): " + time);
+		// Console.OUT.println(here + ": Synch score time(ms): " + time);
 		
-		Console.OUT.println("All Allocation time(ms): " + globalSpaceAllocTime/numParallelBfsTasks);
-		Console.OUT.println("All BfsTime time(ms): " + globalBfsTime/numParallelBfsTasks);
-		Console.OUT.println("All Backtrack time(ms): " + globalBacktrackTime/numParallelBfsTasks);
-		Console.OUT.println("All UpdateLocalScore time(ms): " + globalUpdateLocalTime/numParallelBfsTasks);
+		// Console.OUT.println("All Allocation time(ms): " + globalSpaceAllocTime/numParallelBfsTasks);
+		// Console.OUT.println("All BfsTime time(ms): " + globalBfsTime/numParallelBfsTasks);
+		// Console.OUT.println("All Backtrack time(ms): " + globalBacktrackTime/numParallelBfsTasks);
+		// Console.OUT.println("All UpdateLocalScore time(ms): " + globalUpdateLocalTime/numParallelBfsTasks);
 		
 		
 	}
@@ -404,14 +413,14 @@ public class BetweennessCentrality {
 		
 		var numProcessedSource: Long = 0;
 		var lastPrintThroughput: Long =  System.currentTimeMillis();
-		var sumBfsTime: Long = 0;
-		var bfsTime: Long = 0;
-		var sumBacktrackTime: Long = 0;
-		var backtrackTime: Long = 0;
-		var updateLocalScoreTime: Long =0;
-		var sumUpdateLocalScoreTime: Long = 0;
+		// var sumBfsTime: Long = 0;
+		// var bfsTime: Long = 0;
+		// var sumBacktrackTime: Long = 0;
+		// var backtrackTime: Long = 0;
+		// var updateLocalScoreTime: Long =0;
+		// var sumUpdateLocalScoreTime: Long = 0;
 		
-		var allocationTime: Long = System.currentTimeMillis();
+		// var allocationTime: Long = System.currentTimeMillis();
 		
 		/**
 		 * Create data structure for BC
@@ -423,11 +432,11 @@ public class BetweennessCentrality {
 		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
 		val predecessorMap =  IndexedMemoryChunk.allocateUninitialized[FixedVertexStack](maximumVertexId); 
 				
-		for(i in 0..(predecessorMap.length()-1)) {
+		for(var i: Int = 0; i <predecessorMap.length(); ++i) {
 			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
 		}
 		
-		allocationTime = System.currentTimeMillis() - allocationTime;
+		// allocationTime = System.currentTimeMillis() - allocationTime;
 		
 		if(cutoff < 0)
 			throw new Exception("Cutoff value should be equal or more than 0");
@@ -436,19 +445,19 @@ public class BetweennessCentrality {
 		 * localVertices can be accessed properly by Point only
 		 * Iterate over localVertices and process only assigned vertices
 		 */
-		val l = new Lock();
-		val l2 = new Lock();
+		// val l = new Lock();
+		// val l2 = new Lock();
 		var indexCount: Int = 0;
 		for(index in localVertices) {
 			
-			bfsTime = System.currentTimeMillis();
+			// bfsTime = System.currentTimeMillis();
 		
 			if((indexCount++) % numParallelBfsTasks != taskId) {
 				continue;
 			}
 			
 			// Get source vertex
-			val source: Int = localVertices(index) as Int;
+			val source = localVertices(index);
 			
 			if(source < 0) {
 				// Source maybe -1 to indicate end of array
@@ -503,9 +512,9 @@ public class BetweennessCentrality {
 					
 					if(distanceMap(neighbor) == -1L) {
 						distanceMap(neighbor) = distanceFromSource;
-						if(cutoff == 0L || distanceMap(neighbor) < cutoff) {
+						// if(cutoff == 0L || distanceMap(neighbor) < cutoff) {
 							traverseQ.add(neighbor);
-						}
+						// }
 					}
 					
 					if(distanceMap(neighbor) == distanceFromSource) {
@@ -515,10 +524,10 @@ public class BetweennessCentrality {
 				}
 			}
 			
-			bfsTime = System.currentTimeMillis() - bfsTime;
-			sumBfsTime += bfsTime;
-			
-			backtrackTime = System.currentTimeMillis();
+			// bfsTime = System.currentTimeMillis() - bfsTime;
+			// sumBfsTime += bfsTime;
+			// 
+			// backtrackTime = System.currentTimeMillis();
 			
 			// Calculate score
 			while(!vertexStack.isEmpty()) {
@@ -535,52 +544,50 @@ public class BetweennessCentrality {
 				
 			}
 			
-			backtrackTime = System.currentTimeMillis() - backtrackTime;
-			sumBacktrackTime += backtrackTime;
+			// backtrackTime = System.currentTimeMillis() - backtrackTime;
+			// sumBacktrackTime += backtrackTime;
+			// 
+			// updateLocalScoreTime = System.currentTimeMillis();
 			
-			updateLocalScoreTime = System.currentTimeMillis();
-			var zonelock: Lock;
-			for(i in 0..(betweennessScore.size-1)) {
-				if(i == source || tempScore(i) == 0D)
+			for(var i: Long = 0; i < betweennessScore.size; ++i) {
+				val score = tempScore(i);
+				if( score == 0D || i == source)
 					continue;
-				
-				zonelock = updateScoreLock(i % updateScoreLock.length());
+		
+				val zonelock = updateScoreLock(i);
 				zonelock.lock();
-				betweennessScore(i) += tempScore(i);
+				betweennessScore(i as Int) += tempScore(i);
 				zonelock.unlock();
 			}
-			numProcessedSource++;
+			// numProcessedSource++;
 			// 
-			updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
-			sumUpdateLocalScoreTime += updateLocalScoreTime;
+			// updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
+			// sumUpdateLocalScoreTime += updateLocalScoreTime;
 			
 			// // Print throuhgput every XX milliseconds
-			val now = System.currentTimeMillis();
-			val elapse = now - lastPrintThroughput;
-			if( elapse > 60000) {
-				val thr = numProcessedSource / ((elapse / 60000) as Double);
-				Console.OUT.println(taskId + " Throughput (Processed Source/minute): " + thr);
-				lastPrintThroughput = now;
-				numProcessedSource = 0;
-			}
+			// val now = System.currentTimeMillis();
+			// val elapse = now - lastPrintThroughput;
+			// if( elapse > 60000) {
+			// 	val thr = numProcessedSource / ((elapse / 60000) as Double);
+			// 	Console.OUT.println(taskId + " Throughput (Processed Source/minute): " + thr);
+			// 	lastPrintThroughput = now;
+			// 	numProcessedSource = 0;
+			// }
 				
-			
-			
-			
 			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 		}
-		
+		// Console.OUT.println("Thread " + taskId + " has processed all assigned vertices");
 		// Print time info
 		// Console.OUT.println(here + ":" + threadId + " sumBfsTime time(ms): " + sumBfsTime);
 		// Console.OUT.println(here + ":" + threadId + " sumBacktrackTime neighbour time(ms): " + sumBacktrackTime);
 		// Console.OUT.println(here + ":" + threadId + " sumUpdateLocalScoreTime time(ms): " + sumUpdateLocalScoreTime);
 		
-		updateTimeStatLock.lock();
-		globalSpaceAllocTime += allocationTime;
-		globalBfsTime += sumBfsTime;
-		globalBacktrackTime += sumBacktrackTime;
-		globalUpdateLocalTime += sumUpdateLocalScoreTime;
-		updateTimeStatLock.unlock();
+		// updateTimeStatLock.lock();
+		// globalSpaceAllocTime += allocationTime;
+		// globalBfsTime += sumBfsTime;
+		// globalBacktrackTime += sumBacktrackTime;
+		// globalUpdateLocalTime += sumUpdateLocalScoreTime;
+		// updateTimeStatLock.unlock();
 	}
 	
 	public class FixedVertexQueue {
