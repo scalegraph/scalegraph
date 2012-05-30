@@ -15,6 +15,11 @@ public class PagerankResult {
     this.idxToIdMap = idxToIdMap;
   }
 
+  public def getScore(key:Long) {
+    val idx = idToIdxMap(key)();
+    return vector(idx);
+  } 
+  
   public def toString() {
     var str:String = "";
     for (key in idToIdxMap.keySet()) {

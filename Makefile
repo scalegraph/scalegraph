@@ -673,6 +673,14 @@ test_mpiclustering:
 test_pagerank:
 	@echo "----------- Compile Random Walk with Restart Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
+	-cxx-postarg $(F2C_LIB) \
+	-cxx-postarg $(ATLAS_LAPACK_LIB) \
+	-cxx-postarg $(ATLAS_LIB) \
+	-cxx-postarg -lgfortran \
+	-classpath $(GML_DIST)/$(GML_JAR) \
+	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/test/scalegraph/metrics/centrality/TestPagerank.x10 \
 	src/org/scalegraph/metrics/centrality/Pagerank.x10 \
 	src/org/scalegraph/metrics/centrality/PagerankResult.x10 \
