@@ -594,6 +594,7 @@ test_randomwalk:
 	src/org/scalegraph/communities/LongToIntMap.x10 \
 	src/test/scalegraph/communities/TestRandomWalk.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/communities/LAPACK.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10 \
@@ -678,6 +679,7 @@ test_pagerank:
 	src/org/scalegraph/communities/LongToIntMap.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
