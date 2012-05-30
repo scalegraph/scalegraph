@@ -485,7 +485,7 @@ public class PlainGraph implements Graph{
     		return -1;
     	}
     	
-    	val vertex:Long = Long.parse(e);
+    	val vertex:Long = Long.parse(e.trim());
     	
     	// if(isInVertexCache(vertex)){
     	// 	return -1;
@@ -581,7 +581,7 @@ public class PlainGraph implements Graph{
 	    								}
     								}
     							}else{
-    								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    								Console.OUT.println("Region r size : " + r.size() + " (" + pt(0) + "," + pt(1) + ") Not in the List...");
     							}
     							
     							if(r2.contains(pt)){
@@ -596,7 +596,7 @@ public class PlainGraph implements Graph{
 	    								// }
     								}
     							}else{
-    								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    								Console.OUT.println("Region r size : " + r.size() + "Region r2 size : " + r2.size() + "(" + pt(0) + "," + pt(1) + ") Not in the List...");
     							}
     							
 							};
@@ -637,7 +637,7 @@ public class PlainGraph implements Graph{
 	 								}
 	 								}
 	 							}else{
-	 								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+	 								Console.OUT.println("A-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
 	 							}
 	 							
 	 							flag = false;
@@ -659,7 +659,7 @@ public class PlainGraph implements Graph{
 	 								// }
 	 								}
 	 							}else{
-	 								Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+	 								Console.OUT.println("B-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
 	 							}
 	 							
 	 							
@@ -683,7 +683,7 @@ public class PlainGraph implements Graph{
     		return -1;
     	}
     	
-    	val vertex:Long = Long.parse(e);
+    	val vertex:Long = Long.parse(e.trim());
     	
     	// if(isInVertexCache(vertex)){
     	// 	return -1;
@@ -695,7 +695,7 @@ public class PlainGraph implements Graph{
     		return -1;
     	}
     	
-    	val vertex2:Long = Long.parse(v2);    	
+    	val vertex2:Long = Long.parse(v2.trim());    	
     	
     	val internal_vertex:Int;
     	val internal_vertex2:Int;
@@ -806,7 +806,7 @@ public class PlainGraph implements Graph{
     							}
     						}
     					}else{
-    						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    						Console.OUT.println("C-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     						//retval = -1;
     					}
     					    					
@@ -851,7 +851,7 @@ public class PlainGraph implements Graph{
     						}
     						
     					}else{
-    						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    						Console.OUT.println("D-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     					}    					
     					
     				}catch(ec:Exception){
@@ -894,7 +894,7 @@ public class PlainGraph implements Graph{
     						}
     					}
     				}else{
-    					Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    					Console.OUT.println("E-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     				}
     				
     			};
@@ -933,7 +933,7 @@ public class PlainGraph implements Graph{
     						}
     					}
     				}else{
-    					Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    					Console.OUT.println("F-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     				}    					
     				
     			}catch(ec:Exception){
@@ -958,7 +958,7 @@ public class PlainGraph implements Graph{
     		return -1;
     	}
     	
-    	val vertex:Long = Long.parse(e);
+    	val vertex:Long = Long.parse(e.trim());
     	
     	// if(isInVertexCache(vertex)){
     	// 	return -1;
@@ -970,7 +970,7 @@ public class PlainGraph implements Graph{
     		return -1;
     	}
     	
-    	val vertex2:Long = Long.parse(v2);    	
+    	val vertex2:Long = Long.parse(v2.trim());    	
     	
     	val internal_vertex:Int;
     	val internal_vertex2:Int;
@@ -1083,7 +1083,7 @@ public class PlainGraph implements Graph{
     							}
     						}
     					}else{
-    						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    						Console.OUT.println("G-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     					}
     					
     				};
@@ -1126,7 +1126,7 @@ public class PlainGraph implements Graph{
     						}
     						
     					}else{
-    						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    						Console.OUT.println("H-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     					}    					
     					
     				}catch(ec:Exception){
@@ -1142,7 +1142,7 @@ public class PlainGraph implements Graph{
     				at(p2){    
     					
     					val r:Region = adjacencyListBtoA.dist.get(p2);
-    					val pt:Point = Point.make(machine + 1, internal_vertex);
+    					val pt:Point = Point.make(machine2 + 1, internal_vertex);
     					
     					if(r.size()==0){
     						throw new UnsupportedOperationException("region does not have any data points");
@@ -1164,7 +1164,7 @@ public class PlainGraph implements Graph{
     							}
     						}
     					}else{
-    						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    						Console.OUT.println("I-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     					}
     				};
     				
@@ -1201,7 +1201,7 @@ public class PlainGraph implements Graph{
     						}
     						
     					}else{
-    						Console.OUT.println("(" + pt(0) + "," + pt(1) + ") Not in the List...");
+    						Console.OUT.println("J-->(" + pt(0) + "," + pt(1) + ") Not in the List...");
     					}    					
     					
     				}catch(ec:Exception){
@@ -1299,8 +1299,8 @@ public class PlainGraph implements Graph{
     	 var toT:Long = 0l;
     	 
     	 try{
-    	 	fromT = Long.parse(strArr(0));
-    	 	toT = Long.parse(strArr(1));
+    	 	fromT = Long.parse(strArr(0).trim());
+    	 	toT = Long.parse(strArr(1).trim());
     	 }catch(exe:NumberFormatException){
     		 Console.OUT.println("Error adding the edge : " + e);
     		 
@@ -2148,10 +2148,10 @@ public class PlainGraph implements Graph{
 	        resVObj.postArray = at(Place.places()(0)){ return specialList()().toArray();}; 
 	        
 	        //Just cache the results for future use
-	        vertexArrays = vertexArrays;
+	        vertexArrays = resVObj;
     }//end null check
     	
-    	return resVObj;
+    	return vertexArrays;
     }
      
 
