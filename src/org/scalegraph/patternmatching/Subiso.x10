@@ -53,7 +53,7 @@ public class Subiso {
 	public def UllMan_Refinement(val A:SqrSymMatrix, val B:SqrSymMatrix,var M:Matrix,var d:Int) {
 		var elim:Int = 0;
 		
-		for(var i:Int=d; i<A.size(); i++) {
+		for(var i:Int=d; i<A.getSize(); i++) {
 			var lst:ArrayList[Int] = new ArrayList[Int]();   // holds adjacent vertices of i in A
 			// in lst Int is unsigned
 			A.neighbors(i,lst);
@@ -66,10 +66,30 @@ public class Subiso {
 				for (var idx2:Int=0; idx2<match_i.size(); idx2++) { // for each matching of i in B
 					var j:Int = match_i(idx2);
 					// j is unsigned
-					boost::dynamic_bitset<> res = M[x] & B[j];
-					if (res.none()) {
+					var res:ArrayList[Int] = new ArrayList[Int](M(x).size());
+					if (M(x).size() != B(j).size()){
+						assert (false):"matrix M's rows size should equal to sqrmatrix B";
+					}
+					for(var k:Int = 0;k < M(x).size();k++){
+						if ((M(x)(k) != 0) && (B(j)(k) != 0)){
+							res(k) = 1;
+						}
+						else {
+							res(k) = 0;
+						}
+					}
+					
+					var isnone:Boolean = true;
+					for (var k:Int = 0; i<res.size();k++){
+						if(res(k) != 0){
+							isnone = false;
+							break;
+						}
+					}
+					
+					if (isnone == true) {
 						
-						M.set(i,j,0);
+						M(i)(j) = 0;
 						if (M.rowset_empty(i)) {
 							return true;
 						}
@@ -80,9 +100,7 @@ public class Subiso {
 			if (elim==0) break;
 			else {elim=0;} 
 		}
-		return false;
 		
-		assert(false):"not implemented yet";
 		return false;
 	}
 

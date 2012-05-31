@@ -37,6 +37,8 @@ public class Matrix {
 	
 	public operator this(r:Int, c:Int): Int = this.data(r)(c);
 	
+	public operator this(r:Int):ArrayList[Int] = this.data(r);// return this row set.
+	
 	public operator this(r:Int, c:Int) = (v:Int): Int {
 		this.data(r)(c) = v;
 		return v;
