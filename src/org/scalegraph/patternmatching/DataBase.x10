@@ -9,6 +9,7 @@ import x10.util.Random;
 import x10.util.Timer;
 import x10.util.Map;
 import x10.lang.Iterator;
+import org.scalegraph.graph.AttributedGraph;
 
 public class DataBase {
 
@@ -19,6 +20,31 @@ public class DataBase {
 		// about _edge_info, key is edgepattern and value is pair(list that stores graph number(id) that has the edge pattern same to the map key, max number of edge occurances in each graph)	
 	private var _graph_store:ArrayList[Pattern] = new ArrayList[Pattern]();  //!< store all the graph patterns
 	private var _minsup:Int = 0; //!< store minimum support
+	
+	
+	public def this(val attrglist:ArrayList[AttributedGraph]){
+		var pos:Int = 0;
+		var graph_no:Int = -1;
+		while (1) {
+			var local_map:Map[EdgePattern,Int];
+			var ret_val:Int = read_next(attrglist, pos, graph_no, local_map); 
+			vat_and_freq_update(local_map, graph_no);
+			if (ret_val == -1) break;
+		}
+		Console.out("total graph in database:" + _graph_store.size() + endl);
+	
+		assert(false):"not implemented yet";
+		
+	}
+	
+	private def read_next(var attrglist:ArrayList[AttributedGraph],var pos:Int,var graph_no:Int,var local_map:Map[EdgePattern,Int]){
+		
+	}
+	
+	private def vat_and_freq_update(var local_map:Map[EdgePattern,Int],var graph_no:Int){
+		
+	}
+	
 	
 	public def get_a_random_freq_edge():EdgePattern{
 		val total:Int = _edge_info.size();
