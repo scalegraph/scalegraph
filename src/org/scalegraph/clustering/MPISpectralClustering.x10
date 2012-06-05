@@ -1,6 +1,8 @@
 package org.scalegraph.clustering;
 
 import x10.util.ArrayBuilder;
+import x10.util.ArrayList;
+import x10.util.Box;
 import x10.util.HashMap;
 import x10.util.Pair;
 import x10.util.Random;
@@ -18,6 +20,7 @@ public class MPISpectralClustering implements Clustering {
 	private val IDXtoID:HashMap[Int, Long];  // IDX is index in matrix
 	private val vertexList:DistArray[Long];
 	private val neighbourList:DistArray[Pair[Int, Array[Int]]];
+	private val vertexInfo = new VertexInfo();
 	
 	/* global ref */
 	private val gGraph:GlobalRef[PlainGraph];
@@ -96,20 +99,18 @@ public class MPISpectralClustering implements Clustering {
 	public def run(): ClusteringResult {
 		val sw = new StopWatch();
 		sw.start();
-		makeCorrespondenceBetweenIDandIDX();
-		Console.OUT.println("IDandIDX finished: " + sw.get());
+		makeVertexInfo();
+		Console.OUT.println("makeVertexInfo finished: " + sw.get());
+		//Console.OUT.println(vertexInfo);
 		makeNeighbourList();
-		Console.OUT.println("neighbourList finished: " + sw.get());
-		/*
-		for(p in neighbourList.dist.places()) at(p) {
-			for(npt in neighbourList.dist.get(p)){
-				Console.OUT.println(neighbourList(npt));
-			}
-		}
-		*/
+		Console.OUT.println("makeNeighbourList finished: " + sw.get());
+		//Tool.print(neighbourList);
 		
 		finish for(place in Place.places()) async at(place) {
 			//rank()() = MPI.getRank();
+			
+			val lsw = new StopWatch();
+			lsw.start();
 			
 			val rank:Int = MPI.getRank();
 			var ictxt:Int = -1;
@@ -163,7 +164,7 @@ public class MPISpectralClustering implements Clustering {
 						}
 					}
 				}
-				if(rank == 0) Console.OUT.println("make matrix finished: " + sw.get());
+				if(rank == 0) Console.OUT.println("make matrix finished: " + lsw.get());
 				/* debug print */
 				/*
 				if(rank == 0){
@@ -205,7 +206,7 @@ public class MPISpectralClustering implements Clustering {
 						w, 0.0, matrixZ, 1, 1,  desc, work, lwork, iwork, liwork,
 						ifail, iclustr, gap, info);
 				
-				if(rank == 0) Console.OUT.println("finished: " + sw.get());
+				if(rank == 0) Console.OUT.println("finished: " + lsw.get());
 				
 				if(rank == 0){
 					Console.OUT.println("pdsygvx: info = " + info);
@@ -223,7 +224,7 @@ public class MPISpectralClustering implements Clustering {
 						}
 					}
 				}
-				if(rank == 0) Console.OUT.println("making points finished: " + sw.get());
+				if(rank == 0) Console.OUT.println("making points finished: " + lsw.get());
 				
 				BLACS.gridExit(ictxt);
 			} // end if(myrow >= 0 && mycol >= 0)
@@ -238,6 +239,7 @@ public class MPISpectralClustering implements Clustering {
 			}
 		}
 		*/
+		sw.start();
 		val resultArray:DistArray[Int] = kmeans(nClusters, points);  // step 5
 		Console.OUT.println("kmeans finished: " + sw.get());
 		val result:ClusteringResult = makeClusteringResult(nClusters, resultArray);
@@ -266,43 +268,119 @@ public class MPISpectralClustering implements Clustering {
 		return Pair[Int, Int](1, 1);
 	}
 	
-	private def makeCorrespondenceBetweenIDandIDX(): void {
-		var counter:Int = 0;
-		for(vpt in vertexList) {
-			val vertexID:Long = at(vertexList.dist(vpt)) vertexList(vpt);
-			if(vertexID != -1l){
-				IDtoIDX.put(vertexID, counter);
-				IDXtoID.put(counter, vertexID);
-				counter++;
+	private def makeVertexInfo(): void {
+		val offset = DistArray.make[Int](Dist.makeUnique(), 0);
+		for(var i:Int = 0; i < Place.MAX_PLACES - 1; i++){
+			val place = Place.FIRST_PLACE.next(i);
+			at(place){
+				val ofs = offset(here.id) + vertexList.dist.get(here).size();
+				at(here.next()){
+					offset(here.id) = ofs;
+				}
+			}
+		}
+		//Tool.print(offset);
+		
+		finish for(p in Place.places()) async at(p) {
+			var counter:Int = 0;
+			var first:Boolean = true;
+			for(vpt in vertexList.dist.get(p)){
+				val vertexID:Long = vertexList(vpt);
+				if(vertexID != -1l){
+					if(first){
+						val ofs = offset(here.id);
+						at(vertexInfo.parent){
+							vertexInfo.gMinID()(p.id) = vertexID;
+							vertexInfo.gMinIDX()(p.id) = ofs;
+						}
+						first = false;
+					}
+					vertexInfo.IDtoIDX(here.id).put(vertexID, offset(here.id) + counter);
+					vertexInfo.IDXtoID(here.id).put(offset(here.id) + counter, vertexID);
+					counter++;
+				}
 			}
 		}
 	}
 	
 	private def makeNeighbourList(): void {
 		//Console.OUT.println("check");
-		finish for(p in vertexList.dist.places()) async {
-			for(vpt in vertexList.dist.get(p)){
-				val vertexID:Long = at(p) vertexList(vpt);
+		finish for(p in vertexList.dist.places()) async at(p) {
+			val listArray = new Array[ArrayList[Long]](Place.MAX_PLACES, (Int) => new ArrayList[Long]());
+			val recvHash = new HashMap[Long, ArrayList[Point]]();
+			val tmpNeighbourList = new Array[Pair[Int, ArrayBuilder[Int]]](vertexList.dist.get(here), Pair[Int, ArrayBuilder[Int]](-1, null));
+			
+			for(vpt in vertexList.dist.get(here)){
+				val vertexID:Long = vertexList(vpt);
 				if(vertexID == -1l) continue;
-				val vertexIDX:Int = IDtoIDX.get(vertexID)();
+				val vertexIDXBox = vertexInfo.getIDXFromHere(vertexID);  // verbose
+				val vertexIDX = vertexIDXBox();
 				val outNeighboursID = graph.getOutNeighbours(vertexID);
 				val inNeighboursID = graph.getInNeighbours(vertexID);
-				val builder = new ArrayBuilder[Int]();
+				val builderID = new ArrayBuilder[Long]();
 				if(outNeighboursID != null){
-					val outNeighboursIDX = outNeighboursID.map((l:Long) => IDtoIDX.get(l)());
-					builder.insert(0, outNeighboursIDX);
+					builderID.insert(0, outNeighboursID);
 				}
 				if(inNeighboursID != null){
-					val inNeighboursIDX = inNeighboursID.map((l:Long) => IDtoIDX.get(l)());
-					builder.insert(0, inNeighboursIDX);
+					builderID.insert(0, inNeighboursID);
 				}
+				val neighboursID = builderID.result();
+				tmpNeighbourList(vpt) = Pair[Int, ArrayBuilder[Int]](vertexIDX, new ArrayBuilder[Int]());
 				
-				val result = builder.result();
-				at(p) neighbourList(vpt) = Pair[Int, Array[Int]](vertexIDX, result);
-				//Console.OUT.println("check loop " + vpt);
+				for(npt in neighboursID){
+					val neighbourID = neighboursID(npt);
+					listArray(vertexInfo.getPlaceID(neighbourID)).add(neighbourID);
+					val recvListBox:Box[ArrayList[Point]] = recvHash.get(neighbourID);
+					var recvList:ArrayList[Point];
+					if(recvListBox == null){
+						recvList = new ArrayList[Point]();
+					}else{
+						recvList = recvListBox();
+					}
+					recvList.add(vpt);
+					recvHash.put(neighbourID, recvList);
+				}
+			}
+			/*atomic {
+				Console.OUT.println(here + ": check1");
+				Console.OUT.println(listArray);
+				Tool.print(recvHash);
+			}*/
+			
+			for(place in Place.places()) {
+				val arrayID = listArray(place.id).toArray();
+				//atomic Console.OUT.println("request from " + here + " to " + place + ": " + arrayID);
+				val arrayIDX = at(place) {
+					val builder = new ArrayBuilder[Int]();
+					for(pt in arrayID){
+						val idxBox = vertexInfo.getIDXFromHere(arrayID(pt));
+						if(idxBox == null) Console.OUT.println("null");
+						builder.add(idxBox());
+					}
+					builder.result()
+				};
+				//Console.OUT.println(here + ": check1-1");
+				for(npt in arrayIDX) {
+					val listBox:Box[ArrayList[Point]] = recvHash.get(arrayID(npt));
+					if(listBox == null) continue;
+					val list = listBox();
+					for(vpt in list) {
+						tmpNeighbourList(vpt).second.add(arrayIDX(npt));
+					}
+				}
+			}
+			/*atomic {
+				Console.OUT.println(here + ": check2");
+				Console.OUT.println(tmpNeighbourList);
+			}*/
+			
+			for(pt in tmpNeighbourList) {
+				if(tmpNeighbourList(pt).first != -1){
+					neighbourList(pt) = Pair[Int, Array[Int]](tmpNeighbourList(pt).first, tmpNeighbourList(pt).second.result());
+				}
 			}
 		}
-		//Console.OUT.println("check end");
+		//Console.OUT.println(here + ": check end");
 	}
 	
 	private def kmeans(k:Int, points:DistArray[Vector]): DistArray[Int] {
@@ -411,7 +489,7 @@ public class MPISpectralClustering implements Clustering {
 		
 		for(p in array.dist.places()){
 			for([i] in array.dist.get(p)){
-				val vertexID = IDXtoID(i)();
+				val vertexID = vertexInfo.getID(i)();
 				val clusterNum = at(p) array(i);
 				VtoC.put(vertexID, clusterNum);
 				tmpLists(clusterNum).add(vertexID);

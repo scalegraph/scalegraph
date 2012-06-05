@@ -651,8 +651,10 @@ test_mpiclustering:
 	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
+	src/org/scalegraph/clustering/VertexInfo.x10 \
 	src/org/scalegraph/clustering/Vector.x10 \
 	src/org/scalegraph/clustering/StopWatch.x10 \
+	src/org/scalegraph/clustering/Tool.x10 \
 	src/org/scalegraph/clustering/ScaLAPACK.x10 \
 	src/org/scalegraph/clustering/BLACS.x10 \
 	src/org/scalegraph/clustering/MPI.x10 \
@@ -660,13 +662,14 @@ test_mpiclustering:
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/io/EdgeListReader.x10 \
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	@echo "----------- Launch MPI Spectral Clustering Tester ---------------------------";
-	MV2_ENABLE_AFFINITY=0 MV2_USE_HSAM=1 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 # Test 27
