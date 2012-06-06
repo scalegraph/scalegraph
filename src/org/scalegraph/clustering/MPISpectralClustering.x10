@@ -150,8 +150,8 @@ public class MPISpectralClustering implements Clustering {
 						val pair = neighbourList(pt);
 						val m = pair.first;
 						val neighbours = pair.second;
-						if(m == -1 || neighbours == null) continue;
-						val nNeighbours = neighbours.size;
+						if(m == -1) continue;
+						val nNeighbours = (neighbours == null) ? 0 : neighbours.size;
 						//Console.OUT.println(m + " " + neighbours + " " + nNeighbours);
 						
 						at(there){
@@ -329,7 +329,9 @@ public class MPISpectralClustering implements Clustering {
 				
 				for(npt in neighboursID){
 					val neighbourID = neighboursID(npt);
-					listArray(vertexInfo.getPlaceID(neighbourID)).add(neighbourID);
+					if(!listArray(vertexInfo.getPlaceID(neighbourID)).contains(neighbourID)){
+						listArray(vertexInfo.getPlaceID(neighbourID)).add(neighbourID);
+					}
 					val recvListBox:Box[ArrayList[Point]] = recvHash.get(neighbourID);
 					var recvList:ArrayList[Point];
 					if(recvListBox == null){
@@ -351,13 +353,13 @@ public class MPISpectralClustering implements Clustering {
 				val arrayID = listArray(place.id).toArray();
 				//atomic Console.OUT.println("request from " + here + " to " + place + ": " + arrayID);
 				val arrayIDX = at(place) {
-					val builder = new ArrayBuilder[Int]();
+					val result = new Array[Int](arrayID.region);
 					for(pt in arrayID){
 						val idxBox = vertexInfo.getIDXFromHere(arrayID(pt));
-						if(idxBox == null) Console.OUT.println("null");
-						builder.add(idxBox());
+						//if(idxBox == null) Console.OUT.println("null");
+						result(pt) = idxBox();
 					}
-					builder.result()
+					result
 				};
 				//Console.OUT.println(here + ": check1-1");
 				for(npt in arrayIDX) {
