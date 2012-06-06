@@ -9,7 +9,7 @@ export X10_STATIC_THREADS=true
 export X10_NO_STEALS=false
 
 #X10 runtime environment variables
-X10_NPLACES = 4
+X10_NPLACES = 3
 X10_HOSTFILE = machines.txt
 X10_NTHERADS = 10
 
@@ -22,7 +22,7 @@ INTERM =./out
 X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
 CLASSPATH = $(X10_HOME)
 
-APP_DIR = /nfs/home/miyuru/workspace/ScaleGraph
+APP_DIR = /nfs/home/charuwat/workspace/ScaleGraph
 
 #Set MPI Home
 MPI_HOME = /nfs/data0/miyuru/software/mpich2-1.4
@@ -429,13 +429,13 @@ test_betweenness_centrality_plain:
 	
 	@echo "----------- Compile Betweenness Centrality Tester -----------";
 	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-report postcompile=5 -x10rt mpi -v \
-	-post $(MPI_HOME)/bin/mpic++ \
+	-report postcompile=5 -x10rt sockets -v \
 	-cxx-postarg '-O3' \
 	src/test/scalegraph/metrics/centrality/TestBetweennessCentralityPlain.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
@@ -463,7 +463,9 @@ test_betweenness_centrality_plain:
 	src/org/scalegraph/io/GMLToken.x10;
 	
 	@echo "----------- Launch Betweenness Centrality Tester -----------";
-	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	#MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	#MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE)
 	@echo "----------- Test Completed ---------------------------------";
 
 
