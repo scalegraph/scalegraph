@@ -4,6 +4,8 @@ import x10.util.Box;
 import x10.util.HashMap;
 import x10.util.StringBuilder;
 
+import test.scalegraph.clustering.Tool;
+
 public class VertexInfo {
 	
 	val parent:Place = here;
