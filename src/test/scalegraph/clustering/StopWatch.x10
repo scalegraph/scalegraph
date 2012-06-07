@@ -1,4 +1,4 @@
-package org.scalegraph.clustering;
+package test.scalegraph.clustering;
 
 import x10.util.Timer;
 

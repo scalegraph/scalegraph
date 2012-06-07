@@ -8,6 +8,8 @@ import x10.util.Pair;
 import x10.util.Random;
 import x10.util.Timer;
 
+import test.scalegraph.clustering.StopWatch;
+import test.scalegraph.clustering.Tool;
 import org.scalegraph.graph.PlainGraph;
 
 public class MPISpectralClustering implements Clustering {
