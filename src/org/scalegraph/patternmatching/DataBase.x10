@@ -10,6 +10,8 @@ import x10.util.Timer;
 import x10.util.Map;
 import x10.lang.Iterator;
 import org.scalegraph.graph.AttributedGraph;
+import org.scalegraph.graph.Vertex;
+import org.scalegraph.graph.Edge;
 
 public class DataBase {
 
@@ -23,26 +25,66 @@ public class DataBase {
 	
 	
 	public def this(val attrglist:ArrayList[AttributedGraph]){
-		var pos:Int = 0;
 		var graph_no:Int = -1;
-		while (1) {
-			var local_map:Map[EdgePattern,Int];
-			var ret_val:Int = read_next(attrglist, pos, graph_no, local_map); 
+		while (true) {
+			var local_map:HashMap[EdgePattern,Int] = new HashMap[EdgePattern,Int]();
+			var ret_val:Int = read_next(attrglist, graph_no, local_map); 
 			vat_and_freq_update(local_map, graph_no);
 			if (ret_val == -1) break;
 		}
-		Console.out("total graph in database:" + _graph_store.size() + endl);
+		Console.OUT.println("total graph in database:" + _graph_store.size());
 	
 		assert(false):"not implemented yet";
 		
 	}
 	
-	private def read_next(var attrglist:ArrayList[AttributedGraph],var pos:Int,var graph_no:Int,var local_map:Map[EdgePattern,Int]){
+	private def read_next(val attrglist:ArrayList[AttributedGraph],var graph_no:Int,var local_map:HashMap[EdgePattern,Int]):Int{
 		
+		graph_no++;
+		
+		if(graph_no == attrglist.size() ){
+			return -1;
+		}
+		else if (attrglist(graph_no) == null){
+			return -1;
+		}
+		
+		
+		
+		// loading vertex label set from Attributed graph. 
+		var vertArray:Array[Vertex] = attrglist(graph_no).getVertexList();
+		var vlabels:ArrayList[Int] = new ArrayList[Int](vertArray.size);
+		for(var i:Int=0; i< vertArray.size;i++){
+			vlabels(i) = vertArray(i).getAttribute("id").getValue() as Int;
+		}
+		
+		//loading edge label set from Attributed graph and using them to make a graph pattern.
+		var pat:Pattern = new Pattern(vlabels);
+		for(item1 in vertArray){
+			var from:Vertex = vertArray(item1);
+			var listOfEdges:Array[Edge] = attrglist(graph_no).getEdgesByVertexId(from.getAttribute("id").getValue() as Int).toArray();
+			for(item2 in listOfEdges){
+				var to:Vertex = listOfEdges(item2).getTo();
+				
+				pat.add_edge(from.getAttribute("id").getValue() as Int,
+						to.getAttribute("id").getValue() as Int,
+						listOfEdges(item2).getAttribute("label") as Int);
+				if(from.getAttribute("label").getValue() as Int < to.getAttribute("label").getValue() as Int){
+					
+				}
+				else{
+					
+				}
+			}
+			
+		}
+		
+		assert(false):"not implemented yet";
+		return 1;
 	}
 	
-	private def vat_and_freq_update(var local_map:Map[EdgePattern,Int],var graph_no:Int){
-		
+	private def vat_and_freq_update(var local_map:HashMap[EdgePattern,Int],var graph_no:Int){
+		assert(false):"not implemented yet";
 	}
 	
 	
