@@ -703,6 +703,36 @@ test_pagerank:
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
+
+# Test 28
+test_matrixpagerank:
+	@echo "----------- Compile Random Walk with Restart Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
+	-cxx-postarg $(F2C_LIB) \
+	-cxx-postarg $(ATLAS_LAPACK_LIB) \
+	-cxx-postarg $(ATLAS_LIB) \
+	-cxx-postarg -lgfortran \
+	-classpath $(GML_DIST)/$(GML_JAR) \
+	-x10lib $(GML_DIST)/$(GML_PROPS) \
+	src/test/scalegraph/metrics/centrality/TestMatrixPagerank.x10 \
+	src/org/scalegraph/metrics/centrality/MatrixPagerank.x10 \
+	src/org/scalegraph/metrics/centrality/PagerankResult.x10 \
+	src/org/scalegraph/communities/LongToIntMap.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	
+	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
 	
 help:
 	@echo '---- scalegraph build help -------'
