@@ -650,13 +650,13 @@ test_mpiclustering:
 	-cxx-postarg -lifcore \
 	-cxx-postarg -lifport \
 	src/test/scalegraph/clustering/TestMPISpectralClustering.x10 \
+	src/test/scalegraph/clustering/StopWatch.x10 \
+	src/test/scalegraph/clustering/Tool.x10 \
 	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/VertexInfo.x10 \
 	src/org/scalegraph/clustering/Vector.x10 \
-	src/org/scalegraph/clustering/StopWatch.x10 \
-	src/org/scalegraph/clustering/Tool.x10 \
 	src/org/scalegraph/clustering/ScaLAPACK.x10 \
 	src/org/scalegraph/clustering/BLACS.x10 \
 	src/org/scalegraph/clustering/MPI.x10 \
