@@ -90,6 +90,10 @@ public class TestBetweennessCentralityPlain {
 		val vertexList = vertexListBuilder.result();
 		val buildEnd = System.currentTimeMillis();
 		
+		// for( i in vertexList) {
+		// 	Console.OUT.println("===> (" + vertexList(i) + ") == " + graph.getInNeighboursCount(vertexList(i)));
+		// }
+		
 		val calStart = System.currentTimeMillis();
 		val result = BetweennessCentrality.run(graph, vertexList, false);
 		val calEnd = System.currentTimeMillis();
@@ -165,10 +169,10 @@ public class TestBetweennessCentralityPlain {
 		p.println("---------------------------------------------------------------------");
 		p.println("Input file : " + inputFile);
 		p.println("Output file : " + outputFile);
-		p.println("Total vertex count : " + vcount);
-		p.println("Time to BuildList (ms): " + (buildEnd - buildStart) );
-		p.println("Time to Cal (ms): " + (calEnd - calStart) );
-		p.println("Time to Count vertex (ms): " + (vertexCountEnd - vertexCountStart) );
+		// p.println("Total vertex count : " + vcount);
+		// p.println("Time to BuildList (ms): " + (buildEnd - buildStart) );
+		// p.println("Time to Cal (ms): " + (calEnd - calStart) );
+		// p.println("Time to Count vertex (ms): " + (vertexCountEnd - vertexCountStart) );
 		p.println("---------------------------------------------------------------------");
 		p.flush();
 	}
