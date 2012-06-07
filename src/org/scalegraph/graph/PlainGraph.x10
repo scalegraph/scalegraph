@@ -24,7 +24,6 @@ public class PlainGraph implements Graph{
 	private var nVertices:Int = -1;
 	private var workerThreadCount:Int = 100;			//The number of threads that run simultaneously
 	private var totalVertices:Long = 0l;				//This is the supported number of vertices
-	private var edgeSplitSymbol:String = " ";
 	private var addedCountTemp:Int = 0;
 	private var v:Long = 0l;
 	private var largestReportedVertex:Long = 0l;
@@ -45,7 +44,9 @@ public class PlainGraph implements Graph{
 	private val largeV = new GlobalRef[Cell[Long]](new Cell[Long](0l));
 	private val curMachine = GlobalRef[Cell[Int]](new Cell[Int](0));
 	private val curVertex = GlobalRef[Cell[Long]](new Cell[Long](0));
-	//private val notConnectedVertexCount = new GlobalRef[Cell[Long]](new Cell[Long](0l));
+	private var edgeSplitSymbol:String = " ";			//This is the symbol used to separate two vertices from an edge
+	private var edgeSplitSymbolsList:Array[String] = [" ", ",", "\t"]; //This is the list of edge separators known to PlainGraph
+	private var foundEdgeSplitSymbol:Boolean = false;			//This flag is used to indicate that the Edge split symbol has been found
 	private var notConnectedVertexCount:Long = 0L;
 	
 	/**
@@ -1228,6 +1229,28 @@ public class PlainGraph implements Graph{
     	throw new UnsupportedOperationException("Not implemented.");
     }
     
+    /**
+     * This method is used to detect the type of edge split symbol used in an Edgelist stored on Disc.
+     * @param A sample edge to use during the detection
+     * @return true if the edge split symbol detection was successful. false otherwise
+     */
+    private def detectEdgeSplitSymbol(val e:String):Boolean{
+    	var result:Boolean = false;
+    	
+    	for(var i:Int = 0 ; i < edgeSplitSymbolsList.size; i++){
+    		var strArr:Array[String] = e.split(edgeSplitSymbolsList(i));
+    		
+    		if(strArr.size == 2){
+    			edgeSplitSymbol = edgeSplitSymbolsList(i);
+    			result = true;
+    			Console.OUT.println("Set the edge split symbol to : " + edgeSplitSymbol);
+    			break;
+    		}
+    	}  	
+    	
+    	return result;
+    }
+    
     
     public def addEdges(val edlst:Array[String]):void{
     	var s:Int = edlst.size;    	
@@ -1242,17 +1265,15 @@ public class PlainGraph implements Graph{
   			
     			val e:String = edlst(j);
     			
-    			var strArr:Array[String] = e.split(edgeSplitSymbol);
-
-    			if(strArr.size != 2){
-    				if(edgeSplitSymbol.equals(" ")){
-    					edgeSplitSymbol = "\t";
-    					strArr = e.split(edgeSplitSymbol);
-    				}else{
-    					edgeSplitSymbol = " ";
-    					strArr = e.split(edgeSplitSymbol);
+    			if(!foundEdgeSplitSymbol){
+    				foundEdgeSplitSymbol = detectEdgeSplitSymbol(e);
+    				
+    				if(!foundEdgeSplitSymbol){
+    					Console.OUT.println("Unknown edge split symbol.");
     				}
     			}
+    			
+    			var strArr:Array[String] = e.split(edgeSplitSymbol);
     			
     			if(strArr.size == 2){
     				
