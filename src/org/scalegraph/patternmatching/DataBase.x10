@@ -9,9 +9,11 @@ import x10.util.Random;
 import x10.util.Timer;
 import x10.util.Map;
 import x10.lang.Iterator;
+import x10.util.Set;
 import org.scalegraph.graph.AttributedGraph;
 import org.scalegraph.graph.Vertex;
 import org.scalegraph.graph.Edge;
+
 
 public class DataBase {
 
@@ -61,29 +63,51 @@ public class DataBase {
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
 		var pat:Pattern = new Pattern(vlabels);
 		for(item1 in vertArray){
-			var from:Vertex = vertArray(item1);
-			var listOfEdges:Array[Edge] = attrglist(graph_no).getEdgesByVertexId(from.getAttribute("id").getValue() as Int).toArray();
+			var fromId:Int = vertArray(item1).getAttribute("id").getValue() as Int;
+			var fromLabel:Int = vertArray(item1).getAttribute("label").getValue() as Int;
+			var listOfEdges:Array[Edge] = attrglist(graph_no).getEdgesByVertexId(fromId).toArray();
 			for(item2 in listOfEdges){
-				var to:Vertex = listOfEdges(item2).getTo();
+				var toId:Int = listOfEdges(item2).getTo().getAttribute("id").getValue() as Int;
+				var toLabel:Int =listOfEdges(item2).getTo().getAttribute("id").getValue() as Int;
+				var eLabel:Int = listOfEdges(item2).getAttribute("label").getValue() as Int;
 				
-				pat.add_edge(from.getAttribute("id").getValue() as Int,
-						to.getAttribute("id").getValue() as Int,
-						listOfEdges(item2).getAttribute("label") as Int);
-				if(from.getAttribute("label").getValue() as Int < to.getAttribute("label").getValue() as Int){
-					
+				pat.add_edge(fromId,toId,eLabel);
+				var e:EdgePattern = (fromLabel < toLabel)? new EdgePattern(fromLabel, toLabel, eLabel) : new EdgePattern(toLabel, fromLabel, eLabel);
+				
+				var s:Box[Int] = local_map.get(e);
+				if(s == null){
+					local_map.put(e,1);
 				}
 				else{
-					
+					local_map.put(e,s.value + 1);
 				}
 			}
 			
 		}
+		_graph_store.add(pat);
 		
-		assert(false):"not implemented yet";
 		return 1;
 	}
 	
-	private def vat_and_freq_update(var local_map:HashMap[EdgePattern,Int],var graph_no:Int){
+	private def vat_and_freq_update(var local:HashMap[EdgePattern,Int],var graph_no:Int){
+		var lentrylist:Set[Map.Entry[EdgePattern,Int]]=local.entries();
+		for(cit in lentrylist){
+			val ret:Boolean = _edge_info.containsKey(cit.getKey());
+			
+			if(ret == false){
+				var vat:ArrayList[Int] = new ArrayList[Int]();
+				vat.add(graph_no);
+				_edge_info.put(cit.getKey(), Pair(vat, cit.getValue()));
+			}
+			else{  // info about this edge exist
+				var info:Box[Pair[ArrayList[Int],Int]] = _edge_info.get(cit.getKey()); 
+				info.value.first.add(graph_no);
+				if (cit.getValue() > info.value.second) { // update max frequency of the edge pattern
+					_edge_info.put(cit.getKey(),Pair(info.value.first,cit.getValue()));
+				}
+				
+			}
+		}
 		assert(false):"not implemented yet";
 	}
 	
