@@ -17,20 +17,27 @@ public class MatrixPagerank {
   private val graph:PlainGraph;
   private val idToIdxMap:LongToIntMap;
   private val idxToIdMap:HashMap[Int, Long];
-  private val P:DistDenseMatrix;
+  private var P:DistDenseMatrix;
 
   public def this(graph:PlainGraph) {
     this.graph = graph;
     nVertex = graph.getVertexCount() as Int;
-    P = DistDenseMatrix.make(Grid.makeMaxRow(nVertex, nVertex,
-                                             Place.MAX_PLACES, Place.MAX_PLACES));
     idToIdxMap = new LongToIntMap();
     idxToIdMap = new HashMap[Int, Long]();
   }
   
   public def run() {
-    initialize();
-    return iteratePagerank();
+    {
+      val startTime = Timer.milliTime();
+      initialize();
+      Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) /1000);
+    }
+    {
+      val startTime = Timer.milliTime();
+      val res = iteratePagerank();
+      Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) /1000);
+      return new PagerankResult(res, idToIdxMap, idxToIdMap);
+    }
   }
 
   private def iteratePagerank() {
@@ -43,16 +50,13 @@ public class MatrixPagerank {
     v.init(1.0 / nVertex);
     
     while (true) {
+      val startTime = Timer.milliTime();
       var newVector:DistDenseMatrix =
         DistDenseMatrix.make(Grid.makeMaxRow(nVertex, 1,
                                              Place.MAX_PLACES, Place.MAX_PLACES));
       newVector.mult(P, vector, false);
-      newVector.scale(alpha);
-      val tereport:DistDenseMatrix =
-        DistDenseMatrix.make(Grid.makeMaxRow(nVertex, 1,
-                                             Place.MAX_PLACES, Place.MAX_PLACES));
-      tereport.mult(v, vector, false);
-      val tereportValue = tereport(0, 0);
+
+      val tereportValue = (1 - alpha) * tereport(vector);
       val tereportMatrix =
         DistDenseMatrix.make(Grid.makeMaxRow(nVertex, 1,
                                              Place.MAX_PLACES, Place.MAX_PLACES));
@@ -63,12 +67,27 @@ public class MatrixPagerank {
       } else {
         break;
       }
+      Console.OUT.printf("time = %f\n", (Timer.milliTime() - startTime) / 1000.0);
     }
     return vector;
   }
 
+  private def tereport(matrix:DistDenseMatrix) {
+    val grid = matrix.grid;
+    var sum:Double = 0.0;
+    for (var i:Int = 0; i < grid.rowBs.size; i++) {
+      val subMatrix = matrix.getBlock(i, 0).getMatrix();
+      for (var idx:Int = 0; idx < grid.rowBs(i); idx++) {
+        sum += subMatrix(idx, 0);
+      }
+    }
+    return sum / nVertex;
+  }
+
   private def end(A:DistDenseMatrix, B:DistDenseMatrix) {
-    return norm(A - B) < delta;
+    val d = norm(A - B);
+    Console.OUT.printf("delta = %f\n", d);
+    return d < delta;
   }
   
   private def norm(matrix:DistDenseMatrix) {
@@ -94,7 +113,7 @@ public class MatrixPagerank {
         }
       }
     }
-    return sum;
+    return Math.sqrt(sum);
   }
   
   private def initialize() {
@@ -130,13 +149,15 @@ public class MatrixPagerank {
 
     var leftColIdx:Int = 0;
     var upRowIdx:Int = 0;
-    val grid = P.grid;
+    val pp:DistDenseMatrix = DistDenseMatrix.make(
+      Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES));
+    val grid = pp.grid;
 
     for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
       for (var colId:Int = 0; colId < grid.numColBlocks; colId++) {
         val rowSize = grid.rowBs(rowId);
         val colSize = grid.colBs(colId);
-        val subMatrix = P.getBlock(rowId, colId).getMatrix();
+        val subMatrix = pp.getBlock(rowId, colId).getMatrix();
         val pId = grid.getBlockId(rowId, colId);
         for (var colIdx:Int = 0; colIdx < colSize; colIdx++) {
           val pColIdx = colIdx + leftColIdx;
@@ -151,7 +172,7 @@ public class MatrixPagerank {
               val neighbourIdx = idToIdxMap(neighbourId)();
 
               if (upRowIdx <= neighbourIdx &&
-                  neighbourIdx <= upRowIdx + rowSize) {
+                  neighbourIdx < upRowIdx + rowSize) {
                 val subIdx = neighbourIdx - upRowIdx;
                 subMatrix(subIdx, colIdx) = prob;
               }
@@ -163,8 +184,16 @@ public class MatrixPagerank {
             }
           }
         }
-        P.setBlock(pId, subMatrix);
+        if (colId < grid.numColBlocks - 1) {
+          leftColIdx += colSize;
+        } else {
+          leftColIdx = 0;
+          upRowIdx += rowSize;
+        }
+        pp.setBlock(pId, subMatrix);
       }
     }
+    P = pp.scale(alpha);
+    // P.print();
   }
 }

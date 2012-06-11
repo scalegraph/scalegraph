@@ -82,7 +82,7 @@ public class RandomWalk {
                       throw new Error();
                     }
             }
-          }
+         }
         }
       }
     }
