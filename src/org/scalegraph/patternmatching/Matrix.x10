@@ -8,9 +8,9 @@ import x10.util.StringBuilder;
  */
 public class Matrix {
 	
-	private var rows:Int; //row size
-	private var cols:Int; //cow size
-	private val data:ArrayList[ArrayList[Int]];  // the list of rows
+	protected var rows:Int; //row size
+	protected var cols:Int; //cow size
+	protected val data:ArrayList[ArrayList[Int]];  // the list of rows
 	
 	/**
 	 * constructor

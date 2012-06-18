@@ -175,8 +175,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 
 		var match_pair:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();
 		for (var i:Int = 0; i < size1; i++) {
-			if (M.rowset_cnt(i)  == 0) return;
-			if (M.rowset_cnt(i) == 1) continue;
+			if (M.getRowSetCount(i)  == 0) return;
+			if (M.getRowSetCount(i) == 1) continue;
 			var d1:Int = a.getDegree(i); // d1 > 0
 			for (var j:Int = 0; j < size2; j++) {
 				if (M(i,j) == 0) continue;
@@ -217,10 +217,24 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				neigh_degree2.add(d_n); 
 			}
 			
+			var isin:Boolean = true;
+			
+			for(x in neigh_degree1){
+				var s:Boolean = false;
+				for(y in neigh_degree2){
+					if(x.equals(y)){
+						s = true;
+						break;
+					}
+				}
+				if (s == false){
+					isin = false;
+					break;
+				}
+			}
 			
 			// first applying neighbor-label invariant
-			if (!includes (neigh_labels2.begin(), neigh_labels2.end(), neigh_labels1.begin(),
-					neigh_labels1.end())) {
+			if (isin == false) {
 				// cout << "(1) setting " << i << " " << j << " to 0\n";
 				M(i,j)=0;
 				continue;

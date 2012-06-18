@@ -28,19 +28,22 @@ public class DataBase {
 	
 	public def this(val attrglist:ArrayList[AttributedGraph]){
 		var graph_no:Int = -1;
+		var i:Int = 0;
+		
 		while (true) {
 			var local_map:HashMap[EdgePattern,Int] = new HashMap[EdgePattern,Int]();
-			var ret_val:Int = read_next(attrglist, graph_no, local_map); 
+			var ret_val:Int = this.read_next(attrglist, graph_no, local_map); 
 			vat_and_freq_update(local_map, graph_no);
 			if (ret_val == -1) break;
 		}
 		Console.OUT.println("total graph in database:" + _graph_store.size());
-	
-		assert(false):"not implemented yet";
 		
 	}
 	
 	private def read_next(val attrglist:ArrayList[AttributedGraph],var graph_no:Int,var local_map:HashMap[EdgePattern,Int]):Int{
+		
+		var debug:Int = 0;
+	
 		
 		graph_no++;
 		
@@ -52,7 +55,6 @@ public class DataBase {
 		}
 		
 		
-		
 		// loading vertex label set from Attributed graph. 
 		var vertArray:Array[Vertex] = attrglist(graph_no).getVertexList();
 		var vlabels:ArrayList[Int] = new ArrayList[Int](vertArray.size);
@@ -60,30 +62,54 @@ public class DataBase {
 			vlabels(i) = vertArray(i).getAttribute("id").getValue() as Int;
 		}
 		
+		
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
 		var pat:Pattern = new Pattern(vlabels);
+		
+		Console.OUT.println("b");
+		
 		for(item1 in vertArray){
 			var fromId:Int = vertArray(item1).getAttribute("id").getValue() as Int;
-			var fromLabel:Int = vertArray(item1).getAttribute("label").getValue() as Int;
+			Console.OUT.println("x");
+
+			var fromLabel:Int = vertArray(item1).getAttribute("vattrib2").getValue() as Int;
+			Console.OUT.println("y");
+
 			var listOfEdges:Array[Edge] = attrglist(graph_no).getEdgesByVertexId(fromId).toArray();
+			Console.OUT.println("z");
+
+			
 			for(item2 in listOfEdges){
 				var toId:Int = listOfEdges(item2).getTo().getAttribute("id").getValue() as Int;
-				var toLabel:Int =listOfEdges(item2).getTo().getAttribute("id").getValue() as Int;
-				var eLabel:Int = listOfEdges(item2).getAttribute("label").getValue() as Int;
-				
+				Console.OUT.println("s");
+
+				var toLabel:Int =listOfEdges(item2).getTo().getAttribute("vattrib2").getValue() as Int;
+				Console.OUT.println("t");
+
+				var eLabel:Int = listOfEdges(item2).getAttribute("eattrib1").getValue() as Int;
+				Console.OUT.println("u");
+
 				pat.add_edge(fromId,toId,eLabel);
 				var e:EdgePattern = (fromLabel < toLabel)? new EdgePattern(fromLabel, toLabel, eLabel) : new EdgePattern(toLabel, fromLabel, eLabel);
-				
+				Console.OUT.println("v");
+
 				var s:Box[Int] = local_map.get(e);
 				if(s == null){
 					local_map.put(e,1);
+					Console.OUT.println("w");
+
 				}
 				else{
 					local_map.put(e,s.value + 1);
+					Console.OUT.println("w2");
+
 				}
 			}
 			
 		}
+		
+		Console.OUT.println("a");
+		
 		_graph_store.add(pat);
 		
 		return 1;

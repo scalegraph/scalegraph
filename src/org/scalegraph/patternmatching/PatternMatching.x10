@@ -22,14 +22,14 @@ public class PatternMatching {
 		
 		
 		/* creating database and loading data */
-		try {
+		//try {
 			database = new DataBase(graph);
 			database.set_minsup(minsup);
-		}
-		catch(Exception){
+	//	}
+	/*	catch(Exception){
 			assert(false):"fail to construct database";
 		}
-		
+		*/
 		database.remove_infrequent_edges();
 		//database->print_database();
 		/* creating random_walk_manager and starting walk */

@@ -1,7 +1,7 @@
 package org.scalegraph.patternmatching;
 
 
-import org.scalegraph.graph.PlainGraph;
+
 import x10.util.Random;
 import x10.util.Timer;
 import x10.util.ArrayList;
