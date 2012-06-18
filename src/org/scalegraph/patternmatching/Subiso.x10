@@ -105,6 +105,7 @@ public class Subiso {
 	}
 
 
+
 	
 	
 	public def UllMan_backtracking(val A:FullLabelAdjMatrix, val B:FullLabelAdjMatrix , val M_minus1:Matrix, var all_iso:Boolean) {

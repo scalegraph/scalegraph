@@ -24,6 +24,8 @@ public class TestPatternMatching {
     	var obj:PatternMatching = new PatternMatching();
     	var result:PatternMatchingResult = obj.run(testG);*/
     	
+    	var obj:PatternMatching = new PatternMatching();
+    	
     	//This code segment splits the data provided by Al Hasan et al.
     	var dataDir:String = "./temp_graphs";
     	var splitter:FileSplitter = new FileSplitter(); 
@@ -31,11 +33,14 @@ public class TestPatternMatching {
     	
     	var list:Array[String] = DirectoryInfo.listDirContents(dataDir);
     	
+    	var graphlist:ArrayList[AttributedGraph] = new ArrayList[AttributedGraph]();
+    	
     	for(item in list){
     		Console.OUT.println("Reading file : " + list(item));
     		var rdr:WeightedGraphReader = new WeightedGraphReader();
     		var attrib:AttributedGraph = rdr.loadFromFile(list(item));
-    		
+    		graphlist.add(attrib);
+    		/*
     		//Just print the contents
     		var vertArray:Array[Vertex] = attrib.getVertexList();
     		
@@ -48,9 +53,10 @@ public class TestPatternMatching {
     				Console.OUT.println(listOfEdges(item3).toString());
     			}
     		}
-    		
-    		
+    		*/
     		
     	}
+    	
+    	obj.run(graphlist);
     }
 }

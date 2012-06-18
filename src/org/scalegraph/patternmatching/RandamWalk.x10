@@ -38,18 +38,18 @@ public class RandamWalk {// random walk on pattern space
 	}
 	
 	
-	public def walk(var current:LatticeNode,var iter:Int){
+	public def walk(var current:LatticeNode,var iter:Int):Boolean{
 		var step:Int = 1;
 	
 		while(true){
 			process_node(current);
 			if(current.getneighbors().size() == 0){// if current has no neighbors return and start over again.
-				return 0;
+				return false;
 			}
 			
 			var p:Pattern = current.getpattern();
 			if(iter >= _maxiter){ //if iter over the maxiter that was designate, then finish.
-				return 1;
+				return true;
 			}
 			
 			
@@ -111,6 +111,11 @@ public class RandamWalk {// random walk on pattern space
 		
 		val p:Pattern = n.getpattern();
 		assert(p.get_sup_ok() == 0);
+		
+		/*
+		cout << "Current pattern:\n";
+		cout << *p;
+		*/
 		
 		var neighbors:ArrayList[Pattern] = new ArrayList[Pattern]();
 		_pf.get_freq_super_patterns(p, neighbors);

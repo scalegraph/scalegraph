@@ -552,6 +552,20 @@ test_pattern:
 	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/patternmatching/PatternMatching.x10 \
 	src/org/scalegraph/patternmatching/PatternMatchingResult.x10 \
+	src/org/scalegraph/patternmatching/DataBase.x10 \
+	src/org/scalegraph/patternmatching/RandamWalk.x10 \
+	src/org/scalegraph/patternmatching/PatternFactory.x10 \
+	src/org/scalegraph/patternmatching/Pattern.x10 \
+	src/org/scalegraph/patternmatching/LatticeNode.x10 \
+	src/org/scalegraph/patternmatching/Isomorphism.x10 \
+	src/org/scalegraph/patternmatching/Canonicalcode.x10 \
+	src/org/scalegraph/patternmatching/FiveTuple.x10 \
+	src/org/scalegraph/patternmatching/EdgePattern.x10 \
+	src/org/scalegraph/patternmatching/Matrix.x10 \
+	src/org/scalegraph/patternmatching/SqrSymMatrix.x10 \
+	src/org/scalegraph/patternmatching/AdjMatrix.x10 \
+	src/org/scalegraph/patternmatching/FullLabelAdjMatrix.x10 \
+	src/org/scalegraph/patternmatching/Subiso.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/graph/Vertex.x10 \

@@ -24,7 +24,7 @@ public class DataBase {
 		// about _edge_info, key is edgepattern and value is pair(list that stores graph number(id) that has the edge pattern same to the map key, max number of edge occurances in each graph)	
 	private var _graph_store:ArrayList[Pattern] = new ArrayList[Pattern]();  //!< store all the graph patterns
 	private var _minsup:Int = 0; //!< store minimum support
-	
+	private val subiso:Subiso = new Subiso();
 	
 	public def this(val attrglist:ArrayList[AttributedGraph]){
 		var graph_no:Int = -1;
@@ -108,7 +108,54 @@ public class DataBase {
 				
 			}
 		}
-		assert(false):"not implemented yet";
+
+	}
+	
+	
+	public def set_minsup(val minsup:Int){
+		
+		if (minsup > _graph_store.size()) {	
+			assert(false):"minimum suppport is greater than database size; No pattern is frequent";
+		}
+		_minsup = minsup;
+	}
+
+	public def remove_infrequent_edges(){
+		// identifying infrquent edges
+		var entry:Set[Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]]] = _edge_info.entries();
+		for(cit in entry){
+			if(cit.getValue().first.size() < _minsup){
+				var e:EdgePattern = cit.getKey();
+				var vl1:Int = e.get_srcl();
+				var vl2:Int = e.get_destl();
+				var el:Int = e.get_el();
+				_edge_info.remove(e);
+				var it:Box[HashSet[Pair[Int,Int]]]=_ext_map.get(vl1);
+				if(it == null){
+					assert(false):"ERROR: this v-label should have been found";
+				}
+				var ngbr:HashSet[Pair[Int,Int]] = it.value;
+				var removed_cnt:Boolean = ngbr.remove(Pair(vl2,el));
+				if(removed_cnt == false){
+					assert(false):("ERROR: this edge (" + vl1 + "," + vl2 + "," + el + ") should have been found");
+				}
+				if(vl1 == vl2) continue;
+				it = _ext_map.get(vl2);
+				if(it == null){
+					assert(false):"ERROR: this v-label should have been found";
+				}
+				var ngbr2:HashSet[Pair[Int,Int]] = it.value;
+				removed_cnt = ngbr2.remove(Pair(vl1,el));
+				if(removed_cnt == false){
+					assert(false):("ERROR: this edge (" + vl1 + "," + vl2 + "," + el + ") should have been found");
+				}
+			}
+			else{
+				
+			}
+		}
+
+		Console.OUT.println("level one frequent:" + _edge_info.size());
 	}
 	
 	
@@ -187,6 +234,7 @@ public class DataBase {
 		if (max_sup_possible < _minsup) return false;
 		
 		
+	
 		var temp:ArrayList[Int] = new ArrayList[Int](sup_list.size());
 		for (var i:Int =0; i<max_sup_possible; i++) {
 			var database_pat:Pattern = _graph_store(sup_list(i));
@@ -194,7 +242,7 @@ public class DataBase {
 			
 	
 			(pat.get_matrix()).matcher((database_pat.get_matrix()),m);
-			var ret_val:Boolean = UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
+			var ret_val:Boolean = subiso.UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
 					m, false);
 			if (ret_val == false)  {
 				
@@ -212,8 +260,6 @@ public class DataBase {
 		pat.set_freq();
 		
 		
-		assert(false):"not implemented yet";
-		// not implemented yet
 		return true;// need to modify
 	}
 	
