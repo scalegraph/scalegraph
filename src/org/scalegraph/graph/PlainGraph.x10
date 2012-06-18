@@ -1809,7 +1809,7 @@ public class PlainGraph implements Graph{
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	val pt:Point = Point.make(machine + 1, (internal_vertex+1));
     	
     	var resultTotal:Long = -1l; 
     	
@@ -1840,7 +1840,7 @@ public class PlainGraph implements Graph{
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	val pt:Point = Point.make(machine + 1, (internal_vertex+1));
     	
     	var resultTotal:Long = -1l; 
     	
