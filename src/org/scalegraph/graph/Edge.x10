@@ -105,7 +105,7 @@ public class Edge implements Comparable[Edge]{
 		var len:Int = attributes.size;
 		
 		for(i in 0..(len-1) ){
-			if(attributes(i).getName() == name){
+			if(attributes(i).getName().equals(name)){
 				return attributes(i);
 			}
 		}
