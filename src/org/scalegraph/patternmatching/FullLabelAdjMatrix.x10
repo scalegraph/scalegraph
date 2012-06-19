@@ -13,7 +13,7 @@ import x10.lang.Iterator;
 public class FullLabelAdjMatrix extends AdjMatrix {
 	
 	//private val entity:AdjMatrix[V_T];
-	private val elabel:HashMap[Pair[Int, Int], Int];
+	private var elabel:HashMap[Pair[Int, Int], Int];
 	
 	/**
 	 * constructors
@@ -23,10 +23,14 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	//	elabel = null;
 	//}
 	
+	public def this(){
+		elabel = new HashMap[Pair[Int, Int], Int]();
+	}
+	
 	public def this(labels:ArrayList[Int]){
 		super(labels);
 		//entity = new AdjMatrix[V_T](labels);
-		elabel = null;
+		elabel = new HashMap[Pair[Int, Int], Int]();
 	}
 	
 	//public def this(m:FullLabelAdjMatrix[V_T, E_T]){

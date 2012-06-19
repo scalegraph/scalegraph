@@ -8,6 +8,10 @@ import x10.util.Pair;
  */
 public class SqrSymMatrix extends Matrix {
 
+	public def this(){
+		
+	}
+	
 	/**
 	 * constructor
 	 */

@@ -8,8 +8,12 @@ import x10.util.ArrayList;
  */
 public class AdjMatrix extends SqrSymMatrix {
 
-	public val vlabel:ArrayList[Int];
+	public var vlabel:ArrayList[Int];
 	//private var edgeCount:Int;
+	
+	public def this(){
+		vlabel = null;
+	}
 	
 	/**
 	 * constructor

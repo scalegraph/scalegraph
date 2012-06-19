@@ -19,7 +19,7 @@ public class Pattern {
 	
 	
 	public def this(){
-		_matrix = null;
+		_matrix = new FullLabelAdjMatrix(); //+Miyuru : Initialize the FullLabelAdjMatrix
 		_sup_ok = -1;
 		_is_frequent = false;
 		_code_known=false;
@@ -40,12 +40,14 @@ public class Pattern {
 		var v1:Int = _matrix.getLabel(i);
 		var v2:Int = _matrix.getLabel(j);
 		var edge:EdgePattern = null;
+
 		if(v1 < v2){
 			edge = new EdgePattern(v1,v2,e);
 		}
 		else{
 			edge = new EdgePattern(v2,v1,e);
 		}
+
 		_edges.add(edge);
 		_sup_ok = 1;  // super-set of exact VAT
 	}

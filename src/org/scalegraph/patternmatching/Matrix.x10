@@ -10,7 +10,11 @@ public class Matrix {
 	
 	protected var rows:Int; //row size
 	protected var cols:Int; //cow size
-	protected val data:ArrayList[ArrayList[Int]];  // the list of rows
+	protected var data:ArrayList[ArrayList[Int]];  // the list of rows
+	
+	public def this(){
+		data = null;
+	}
 	
 	/**
 	 * constructor

@@ -41,7 +41,6 @@ public class DataBase {
 	}
 	
 	private def read_next(val attrglist:ArrayList[AttributedGraph],var graph_no:Int,var local_map:HashMap[EdgePattern,Int]):Int{
-		
 		var debug:Int = 0;
 	
 		
@@ -58,10 +57,10 @@ public class DataBase {
 		// loading vertex label set from Attributed graph. 
 		var vertArray:Array[Vertex] = attrglist(graph_no).getVertexList();
 		var vlabels:ArrayList[Int] = new ArrayList[Int](vertArray.size);
+		
 		for(var i:Int=0; i< vertArray.size;i++){
 			vlabels(i) = vertArray(i).getAttribute("id").getValue() as Int;
 		}
-		
 		
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
 		var pat:Pattern = new Pattern(vlabels);
@@ -74,10 +73,15 @@ public class DataBase {
 
 			var fromLabel:Int = vertArray(item1).getAttribute("vattrib2").getValue() as Int;
 			Console.OUT.println("y");
-
+			
 			var listOfEdges:Array[Edge] = attrglist(graph_no).getEdgesByVertexId(fromId).toArray();
 			Console.OUT.println("z");
 
+			for(item2 in listOfEdges){
+				Console.OUT.print(listOfEdges(item2) + ",");
+			}
+			
+			Console.OUT.println();
 			
 			for(item2 in listOfEdges){
 				var toId:Int = listOfEdges(item2).getTo().getAttribute("id").getValue() as Int;
@@ -85,11 +89,13 @@ public class DataBase {
 
 				var toLabel:Int =listOfEdges(item2).getTo().getAttribute("vattrib2").getValue() as Int;
 				Console.OUT.println("t");
-
+				
 				var eLabel:Int = listOfEdges(item2).getAttribute("eattrib1").getValue() as Int;
+
 				Console.OUT.println("u");
 
 				pat.add_edge(fromId,toId,eLabel);
+				Console.OUT.println("w");
 				var e:EdgePattern = (fromLabel < toLabel)? new EdgePattern(fromLabel, toLabel, eLabel) : new EdgePattern(toLabel, fromLabel, eLabel);
 				Console.OUT.println("v");
 
