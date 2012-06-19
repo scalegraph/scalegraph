@@ -726,7 +726,7 @@ public class AttributedGraph  implements Graph {
 			val edgeAttributeRecord = edgeAttrTab(id);
 			val edgeAttribute = attributeRecordToAttributes(edgeAttributeRecord, edgeAttrIdNameMap);
 			val e = new Edge(srcVertex, dstVertex, edgeAttribute);
-			
+			e.internalId = edgeTab(id)(2);
 			edgeList.add(e);
 		}
 		
@@ -756,7 +756,7 @@ public class AttributedGraph  implements Graph {
 			val edgeAttributeRecord = edgeAttrTab(id);
 			val edgeAttribute = attributeRecordToAttributes(edgeAttributeRecord, edgeAttrIdNameMap);
 			val e = new Edge(srcVertex, dstVertex, edgeAttribute);
-			
+			e.internalId = edgeTab(id)(2);
 			edgeList.add(e);
 		}
 		
