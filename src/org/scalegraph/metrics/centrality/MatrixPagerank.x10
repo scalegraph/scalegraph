@@ -6,6 +6,10 @@ import x10.util.HashMap;
 import x10.util.Timer;
 import x10.matrix.dist.DistDenseMatrix;
 import x10.matrix.block.Grid;
+import x10.matrix.sparse.CompressArray;
+import x10.matrix.dist.DistSparseMatrix;
+import x10.array.DistArray;
+import x10.util.Pair;
 import org.scalegraph.communities.LongToIntMap;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.communities.LongToIntMap;
@@ -115,8 +119,8 @@ public class MatrixPagerank {
     }
     return Math.sqrt(sum);
   }
-  
-  private def initialize() {
+
+  private def initializeMap() {
     class Counter {
       public var cnt:Int;
     }
@@ -146,13 +150,63 @@ public class MatrixPagerank {
         }
       }
     }
+  }
 
+  private def numElements(grid:Grid) {
+    val vertexList = graph.getVertexList();
+    val numberArray = new Array[Int](0..(Place.MAX_PLACES - 1));
+    val globalNumberArray = new GlobalRef[Array[Int]](numberArray);
+    for (p in Place.places()) {
+      val r = (vertexList.dist | p).region;      
+      at (p) {
+        for (i in r) {
+          val vertex = vertexList(i);
+          if (vertex != -1l) {
+            val vertexIdx = idToIdxMap(vertex)();
+            val neighbours = graph.getOutNeighbours(vertex);
+            if (neighbours != null && neighbours.size > 0) {
+              for (j in neighbours) {
+                val neighbour = neighbours(j);
+                val neighbourIdx = idToIdxMap(neighbour)();
+                val ar = grid.find(neighbourIdx, vertexIdx);
+                val gridId = grid.getBlockId(ar(0), ar(1));
+                at (globalNumberArray) {
+                  globalNumberArray()(gridId) += 1;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return numberArray;
+  }
+  
+  private def initializeMatrix() {
+    {
+      val array = DistArray.make[CompressArray](Dist.makeUnique());
+      val grid = Grid.make(nVertex, nVertex);
+      val nNodes = numElements(grid);
+      for (p in Place.places()) {
+        at (p) {
+          array(p.id) = CompressArray.make(nNodes(p.id));
+        }
+      }
+      
+      val pp = DistSparseMatrix.make(grid, array);
+      for (p in Place.places()) {
+        at (p) {
+          Console.OUT.println(array(p.id));
+        }
+      }
+    }
+    
     var leftColIdx:Int = 0;
     var upRowIdx:Int = 0;
     val pp:DistDenseMatrix = DistDenseMatrix.make(
       Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES));
     val grid = pp.grid;
-
+  
     for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
       for (var colId:Int = 0; colId < grid.numColBlocks; colId++) {
         val rowSize = grid.rowBs(rowId);
@@ -195,5 +249,10 @@ public class MatrixPagerank {
     }
     P = pp.scale(alpha);
     // P.print();
+  }
+  
+  private def initialize() {
+    initializeMap();
+    initializeMatrix();
   }
 }
