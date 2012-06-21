@@ -36,15 +36,24 @@ public class Pattern {
 	
 	
 	public def add_edge(var i:Int,var j:Int,var e:Int):void{
+		Console.OUT.println("start");
 		_matrix.addEdge(i,j,e);
+		Console.OUT.println("edge added");
+
 		var v1:Int = _matrix.getLabel(i);
 		var v2:Int = _matrix.getLabel(j);
 		var edge:EdgePattern = null;
 
+		Console.OUT.println("v1:" + v1 + " v2:" + v2);
+		
 		if(v1 < v2){
+			Console.OUT.println("a");
+
 			edge = new EdgePattern(v1,v2,e);
 		}
 		else{
+			Console.OUT.println("b");
+
 			edge = new EdgePattern(v2,v1,e);
 		}
 

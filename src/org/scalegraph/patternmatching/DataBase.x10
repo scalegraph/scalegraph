@@ -65,27 +65,22 @@ public class DataBase {
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
 		var pat:Pattern = new Pattern(vlabels);
 		
-		Console.OUT.println("b");
+		
 		
 		for(item1 in vertArray){
 			var fromId:Int = vertArray(item1).getAttribute("id").getValue() as Int;
-			Console.OUT.println("x");
-
 			var fromLabel:Int = vertArray(item1).getAttribute("vattrib2").getValue() as Int;
-			Console.OUT.println("y");
-			
 			var listOfEdges:Array[Edge] = attrglist(graph_no).getEdgesByVertexId(fromId).toArray();
-			Console.OUT.println("z");
-
+			/* useful for debugging
 			for(item2 in listOfEdges){
 				Console.OUT.print(listOfEdges(item2) + ",");
 			}
-			
 			Console.OUT.println();
+			*/
+			
 			
 			for(item2 in listOfEdges){
 				var toId:Int = listOfEdges(item2).getTo().getAttribute("id").getValue() as Int;
-				Console.OUT.println("s");
 
 				var toLabel:Int =listOfEdges(item2).getTo().getAttribute("vattrib2").getValue() as Int;
 				Console.OUT.println("t");
@@ -95,7 +90,6 @@ public class DataBase {
 				Console.OUT.println("u");
 
 				pat.add_edge(fromId,toId,eLabel);
-				Console.OUT.println("w");
 				var e:EdgePattern = (fromLabel < toLabel)? new EdgePattern(fromLabel, toLabel, eLabel) : new EdgePattern(toLabel, fromLabel, eLabel);
 				Console.OUT.println("v");
 

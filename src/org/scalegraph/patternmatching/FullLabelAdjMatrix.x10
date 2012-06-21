@@ -59,8 +59,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		if(v1 == v2) return;
 		val key = (v1 < v2) ? Pair[Int, Int](v1, v2) : Pair[Int, Int](v2, v1);
 		val ret = this.elabel.put(key, e);
-		if(ret == null){
-			Console.OUT.println("error: FullLabelAdjMatrix.setEdgeLabel: edge label insertion failed");
+		if(ret != null){
+			assert(false):("error: FullLabelAdjMatrix.setEdgeLabel: edge label insertion failed");
 		}
 	}
 	
