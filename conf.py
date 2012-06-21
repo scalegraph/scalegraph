@@ -75,7 +75,7 @@ def updateNThreads(numThreads, staticstatus, steals):
 		result3 = True
 		bashrcConts += '\nexport X10_NO_STEALS=' + steals + '\n'		
 	
-	open(os.environ["HOME"] + '/.bashrc', 'w').write(str(bashrcConts))
+	open(os.environ["HOME"] + '/.bashrc', 'w+').write(str(bashrcConts))
 	
 	return (result or result2 or result3)
 
@@ -129,7 +129,7 @@ def updateLocalSettings(envname):
 		envNeedUpdate = updateNThreads(nthreads, staticstatus, steals)
 			
 		if(envNeedUpdate):
-			print bcolors.WARNING + 'Please reload the ssh environment variables to reflect X10_NTHERADS. \nRun the following command on your shell before running experiments.' + bcolors.ENDC
+			print bcolors.WARNING + 'Please reload the ssh environment variables to reflect X10_NTHREADS. \nRun the following command on your shell before running experiments.' + bcolors.ENDC
 			print '\nsource ~/.bashrc' 
 		
 		for line in open('./Makefile'):
@@ -187,7 +187,7 @@ def main(item):
 
 			for record in machinesList:
 				configEntry += record + '\n'	
-			open('./machines.txt', 'w').write(str(configEntry))
+			open('./machines.txt', 'w+').write(str(configEntry))
 		updateNPlaces()
 		updateLocalSettings('labcluster')
 	elif (splitinfo[1][0:2] == 't2'):
@@ -227,7 +227,7 @@ def main(item):
 		configEntry = ''
 		for item in hostList:
 			configEntry += item + '\n'
-		open('./machines.txt', 'w').write(str(configEntry))
+		open('./machines.txt', 'w+').write(str(configEntry))
 
 main(sys.argv[1:])
 
