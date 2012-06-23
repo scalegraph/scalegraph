@@ -37,13 +37,13 @@ public class TestMatrixPagerank {
     val reader:EdgeListReader = new EdgeListReader();
     return reader.
     //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-    loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
+    loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-14.dl");
   }
   
   public static def main(Array[String]) {
     Console.OUT.println("Start Random Walk with Restart Test");
     val graph = graphSetUpTsubame();
-    // val graph = graphSetUp();
+    //val graph = graphSetUp();
 
     val pagerank:MatrixPagerank = new MatrixPagerank(graph);
     Console.OUT.println("----------Start calculate rainking vector----------");

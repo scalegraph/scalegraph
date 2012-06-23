@@ -21,7 +21,7 @@ public class MatrixPagerank {
   private val graph:PlainGraph;
   private val idToIdxMap:LongToIntMap;
   private val idxToIdMap:HashMap[Int, Long];
-  private var P:DistDenseMatrix;
+  private var P:DistSparseMatrix;
 
   public def this(graph:PlainGraph) {
     this.graph = graph;
@@ -174,6 +174,60 @@ public class MatrixPagerank {
                   globalNumberArray()(gridId) += 1;
                 }
               }
+            } else {
+              val ar = grid.find(0 ,vertexIdx);
+              val colId = ar(1);
+              for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
+                val gridId = grid.getBlockId(rowId, colId);
+                val rowSize = grid.rowBs(rowId);
+                at (globalNumberArray) {
+                  globalNumberArray()(gridId) += rowSize;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    /* test code */
+    class Cnt {
+      public var cnt:Int = 0;
+    }
+    val cnt = GlobalRef[Cnt](new Cnt());
+    for (p in Place.places()) {
+      val r = (vertexList.dist | p).region;
+      at (p) {
+        for (i in r) {
+          val vertex = vertexList(i);
+          if (vertex != -1l) {
+            val neighbours = graph.getOutNeighbours(vertexList(i));
+            if (neighbours != null) {
+              at (cnt) {
+                cnt().cnt++;
+              }
+            }
+          }
+        }
+      }
+    }
+    var sum:Int = 0;
+    for (i in numberArray) {
+      Console.OUT.println(i);
+      sum += numberArray(i);
+    }
+    Console.OUT.printf("sum = %d\n", sum);
+    Console.OUT.printf("cnt = %d\n", cnt().cnt);
+
+    /*test code 2*/
+    for (p in Place.places()) {
+      val r = (vertexList.dist | p).region;
+      at (p) {
+        for (i in r) {
+          val vertex = vertexList(i);
+          if (vertex != -1l) {
+            val neighbours = graph.getOutNeighbours(vertex);
+            if (neighbours == null || neighbours.size == 0) {
+              Console.OUT.printf("%d\n", idToIdxMap(vertex)());
             }
           }
         }
@@ -181,26 +235,44 @@ public class MatrixPagerank {
     }
     return numberArray;
   }
-  
+
   private def initializeMatrix() {
-    {
-      val array = DistArray.make[CompressArray](Dist.makeUnique());
-      val grid = Grid.make(nVertex, nVertex);
-      val nNodes = numElements(grid);
-      for (p in Place.places()) {
-        at (p) {
-          array(p.id) = CompressArray.make(nNodes(p.id));
-        }
-      }
-      
-      val pp = DistSparseMatrix.make(grid, array);
-      for (p in Place.places()) {
-        at (p) {
-          Console.OUT.println(array(p.id));
-        }
+    val array = DistArray.make[CompressArray](Dist.makeUnique());
+    val grid = Grid.makeMaxRow(nVertex, nVertex,
+                               Place.MAX_PLACES, Place.MAX_PLACES);
+    val nNodes = numElements(grid);
+    for (p in Place.places()) {
+      at (p) {
+        array(p.id) = CompressArray.make(nNodes(p.id));
       }
     }
     
+    val pp = DistSparseMatrix.make(grid, array);
+    for (p in Place.places()) {
+      at (p) {
+        Console.OUT.println(array(p.id));
+      }
+    }
+    val init = (x:Int, y:Int)=>{
+      val nodeId = idxToIdMap(y)();
+      val neighbours = graph.getOutNeighbours(nodeId);
+      if (neighbours != null) {
+        for (i in neighbours) {
+          val n = neighbours(i);
+          if (x == idToIdxMap(n)()) {
+            return 1.0 / neighbours.size;
+          }
+        }
+      } else {
+        return 1.0 / nVertex;
+      }
+      return 0.0;
+    };
+    pp.init(init);
+    pp.print();
+    P = pp.scale(alpha);
+
+    /*    
     var leftColIdx:Int = 0;
     var upRowIdx:Int = 0;
     val pp:DistDenseMatrix = DistDenseMatrix.make(
@@ -249,6 +321,7 @@ public class MatrixPagerank {
     }
     P = pp.scale(alpha);
     // P.print();
+    */
   }
   
   private def initialize() {
