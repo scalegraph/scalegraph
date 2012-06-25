@@ -3,11 +3,13 @@ package org.scalegraph.metrics.centrality;
 import org.scalegraph.graph.*;
 import x10.util.*;
 import x10.lang.PlaceLocalHandle;
+import x10.lang.GlobalRef;
 import x10.array.Dist;
 import x10.util.concurrent.*;
 import x10.io.File;
 import x10.io.Printer;
 import x10.io.FileWriter;
+
 
 /**
  * 
@@ -38,6 +40,8 @@ public class BetweennessCentrality {
 	
 	transient val neighborMap: Array[Array[Long]];
 	transient val inNeighbourCountMap: Array[Long];
+	
+	transient var instanceHandler: GlobalRef[BetweennessCentrality];
 	
 	
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
@@ -305,18 +309,20 @@ public class BetweennessCentrality {
 				() => { new BetweennessCentrality(g, vertexCount, maximumVertexId, isNormalize, cacheSize) } );
 		
 		finish {
+			val bcInstanceAtZero = new GlobalRef(betweennessCentrality());
 			for(p in Place.places()) {
 				if(p == here) {
 					async {
+						
 						betweennessCentrality().makeNeighbourMap();
-						// Team.WORLD.barrier(here.id);
 						betweennessCentrality().calculateOnPlainGraph();
+
 					}
 				} else
 				at (p) async {
 					
+					betweennessCentrality().setInstanceHandler(bcInstanceAtZero);
 					betweennessCentrality().makeNeighbourMap();
-					// Team.WORLD.barrier(here.id);
 					betweennessCentrality().calculateOnPlainGraph();
 				}
 			}
@@ -372,7 +378,7 @@ public class BetweennessCentrality {
 		val distVertexList:DistArray[Long] = this.plainGraph.getVertexList();
 		val localVertices = distVertexList.getLocalPortion();
 		// val numParallelBfsTasks = Runtime.NTHREADS;
-		val numParallelBfsTasks = 12;
+		val numParallelBfsTasks = 7;
 		// var startIndex: Int = 0;
 		
 		val numLocalVertices: Int = localVertices.size;	
@@ -423,7 +429,8 @@ public class BetweennessCentrality {
 		// 
 		// var time: Long = System.currentTimeMillis();
 		if(Place.ALL_PLACES > 1) {
-			Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
+			synchronizeScore();
+			// Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 		}
 		// time = System.currentTimeMillis() - time;
 		// Console.OUT.println(here + ": Synch score time(ms): " + time);
@@ -834,6 +841,33 @@ public class BetweennessCentrality {
 
 		}
 
+	}
+	
+	protected def synchronizeScore() {
+		if(here.id != 0) {
+			sendScore();
+		}
+		
+		Team.WORLD.barrier(here.id);
+	}
+	
+	protected def sendScore(){
+		
+		val data = betweennessScore;
+		instanceHandler.evalAtHome((o: BetweennessCentrality) => {
+			atomic {
+				for(var i: Int = 0; i < o.betweennessScore.size; ++i) {
+					o.betweennessScore(i) += data(i);
+				}
+			}
+			return 0;
+			
+		});
+	}
+	
+	
+	protected def setInstanceHandler(handler: GlobalRef[BetweennessCentrality]) {
+		this.instanceHandler = handler;
 	}
 	
 	public class FixedVertexQueue {
