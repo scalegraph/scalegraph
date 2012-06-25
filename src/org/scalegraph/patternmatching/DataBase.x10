@@ -27,7 +27,7 @@ public class DataBase {
 	private val subiso:Subiso = new Subiso();
 	
 	public def this(val attrglist:ArrayList[AttributedGraph]){
-		var graph_no:Int = -1;
+		var graph_no:Int = 0;
 		var i:Int = 0;
 		
 		while (true) {
@@ -35,6 +35,7 @@ public class DataBase {
 			var ret_val:Int = this.read_next(attrglist, graph_no, local_map); 
 			vat_and_freq_update(local_map, graph_no);
 			if (ret_val == -1) break;
+			graph_no++;
 		}
 		Console.OUT.println("total graph in database:" + _graph_store.size());
 		
@@ -42,11 +43,9 @@ public class DataBase {
 	
 	private def read_next(val attrglist:ArrayList[AttributedGraph],var graph_no:Int,var local_map:HashMap[EdgePattern,Int]):Int{
 		var debug:Int = 0;
-	
+				
 		
-		graph_no++;
-		
-		if(graph_no == attrglist.size() ){
+		if(graph_no == attrglist.size()){
 			return -1;
 		}
 		else if (attrglist(graph_no) == null){

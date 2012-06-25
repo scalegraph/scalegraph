@@ -4,6 +4,7 @@ import x10.util.ArrayBuilder;
 import x10.util.ArrayList;
 import x10.util.HashMap;
 import x10.util.Map;
+import x10.util.Set;
 import x10.util.Pair;
 import x10.lang.Iterator;
 
@@ -71,9 +72,9 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		var v_pairs:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]](elabel.size());
 	 	var elabels:ArrayList[Int] = new ArrayList[Int](elabel.size());
 
-	 	val it:Iterator[Map.Entry[Pair[Int, Int], Int]] = elabel.entries().iterator();
-		while(it.hasNext()){
-			val x:Map.Entry[Pair[Int, Int], Int] = it.next();
+	 	val labelset:Set[Map.Entry[Pair[Int, Int], Int]] = elabel.entries();
+		for(it in labelset){
+			val x:Map.Entry[Pair[Int, Int], Int] = it;
 			var key:Pair[Int,Int] = x.getKey();
 			var el:Int = x.getValue();
 			if (key.first < v && key.second < v) {
@@ -93,7 +94,6 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			}
 			else {
 				assert(false):("ERROR: program should not come to this line");
-
 			}
 		}
 		elabel.clear() ;
