@@ -271,57 +271,6 @@ public class MatrixPagerank {
     pp.init(init);
     pp.print();
     P = pp.scale(alpha);
-
-    /*    
-    var leftColIdx:Int = 0;
-    var upRowIdx:Int = 0;
-    val pp:DistDenseMatrix = DistDenseMatrix.make(
-      Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES));
-    val grid = pp.grid;
-  
-    for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
-      for (var colId:Int = 0; colId < grid.numColBlocks; colId++) {
-        val rowSize = grid.rowBs(rowId);
-        val colSize = grid.colBs(colId);
-        val subMatrix = pp.getBlock(rowId, colId).getMatrix();
-        val pId = grid.getBlockId(rowId, colId);
-        for (var colIdx:Int = 0; colIdx < colSize; colIdx++) {
-          val pColIdx = colIdx + leftColIdx;
-          val nodeId = idxToIdMap(pColIdx)();
-          val neighbours = graph.getOutNeighbours(nodeId);
-
-          if (neighbours != null && neighbours.size != 0) {
-            val prob = 1.0 / neighbours.size;
-
-            for (i in neighbours) {
-              val neighbourId = neighbours(i);
-              val neighbourIdx = idToIdxMap(neighbourId)();
-
-              if (upRowIdx <= neighbourIdx &&
-                  neighbourIdx < upRowIdx + rowSize) {
-                val subIdx = neighbourIdx - upRowIdx;
-                subMatrix(subIdx, colIdx) = prob;
-              }
-            }
-          } else {
-            val prob = 1.0 / nVertex;
-            for (var subIdx:Int = 0; subIdx < rowSize; subIdx++) {
-              subMatrix(subIdx, colIdx) = prob;
-            }
-          }
-        }
-        if (colId < grid.numColBlocks - 1) {
-          leftColIdx += colSize;
-        } else {
-          leftColIdx = 0;
-          upRowIdx += rowSize;
-        }
-        pp.setBlock(pId, subMatrix);
-      }
-    }
-    P = pp.scale(alpha);
-    // P.print();
-    */
   }
   
   private def initialize() {
