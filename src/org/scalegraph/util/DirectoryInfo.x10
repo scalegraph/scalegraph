@@ -20,4 +20,9 @@ public class DirectoryInfo {
     //Create a directory. If the directory already exists or an error, return false
     @Native("c++", "DirectoryInfoDriver::makedir(#path)")
     public native static def mkdir(var path:String) : Boolean;
+    
+    //Delete a directory. If the directory could not be found or an error, return false
+    //This deletes the entire directory contents including its contents
+    @Native("c++", "DirectoryInfoDriver::remdir(#path)")
+    public native static def rmdir(var path:String) : Boolean;
 }

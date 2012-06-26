@@ -79,3 +79,27 @@ x10_boolean DirectoryInfoDriver::makedir(x10aux::ref<x10::lang::String> path){
     	}
     }
 }
+
+/**
+ *
+ * Note : While this method depends on the rm system call, it seems the best option to delete directories with contents
+ * since programatic methods will get issues with OS. E.g., Programatic deletion might say the dir does not exist while it is
+ * accessible from the OS. While rm is unix specific, since ScaleGraph is for UNIX systems there seems no issue of use of this
+ * system call to delete directories with content.
+ */
+
+x10_boolean DirectoryInfoDriver::remdir(x10aux::ref<x10::lang::String> path){
+	DIR *dp;
+    dp = opendir(path->c_str());
+
+    if(dp != NULL){
+    	stringstream ss;
+    	ss << "rm -rf ";
+    	ss << path;
+    	system(ss.str().c_str());
+    	return true;
+    }else{
+    	return false;
+    }
+
+}

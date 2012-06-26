@@ -11,9 +11,18 @@ public class FileSplitter {
     public def split(fileName: String, outDir: String){
     	if(DirectoryInfo.exists(outDir)){
     		Console.OUT.println("The sample data directory exists");
-    	}else{
-    		DirectoryInfo.mkdir(outDir);
-    	}    	
+    		val res = DirectoryInfo.rmdir(outDir);
+    		
+    		if(res){
+    			Console.OUT.println("Deleted sample data directory successfully.");
+    		}else{
+    			Console.OUT.println("Error : Could not remove.");
+    		}    		
+    	}
+
+    	DirectoryInfo.mkdir(outDir);
+    	    	
+    	
     	
     	var reader: FileReader = new FileReader(new File(fileName));
     	var line:String = "";
