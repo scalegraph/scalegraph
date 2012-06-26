@@ -1,7 +1,5 @@
 package org.scalegraph.graph;
 
-//import x10.matrix.dist.DistDenseMatrix;
-//import x10.matrix.block.Grid;
 import x10.util.Pair;
 import x10.array.DistArray;
 import x10.util.ArrayList;
@@ -515,7 +513,7 @@ public class PlainGraph implements Graph{
 	    		{
 	    			val r:Region = adjacencyListAtoB.dist.get(here);
 	    			val r2:Region = adjacencyListBtoA.dist.get(here);
-	    			val pt:Point = Point.make(1, internal_vertex);
+	    			val pt:Point = Point.make(1, (internal_vertex+1));
 
 	    			//var flag:Boolean = false;
 	    			
@@ -576,7 +574,7 @@ public class PlainGraph implements Graph{
 	    						val r:Region = adjacencyListAtoB.dist.get(p);
 	    						val r2:Region = adjacencyListBtoA.dist.get(p);
 	    						
-	    						val pt:Point = Point.make(machine + 1, internal_vertex);
+	    						val pt:Point = Point.make(machine + 1, (internal_vertex+1));
 	    						
 	    						if(r.size()==0){
 	    							throw new UnsupportedOperationException("region does not have any data points");
@@ -622,7 +620,7 @@ public class PlainGraph implements Graph{
 	 							val r2:Region = adjacencyListBtoA.dist.get(p);
 	 							
 	 							//val pt:Point = Point.make(machine + 1, internal_vertex + 1);
-	 							val pt:Point = Point.make(machine + 1, internal_vertex);
+	 							val pt:Point = Point.make(machine + 1, (internal_vertex + 1));
 	 							
 	 							if(r.size()==0){
 	 								throw new UnsupportedOperationException("region A->B does not have any data points");
@@ -727,7 +725,7 @@ public class PlainGraph implements Graph{
     			val r:Region = adjacencyListAtoB.dist.get(here);
     			val r2:Region = adjacencyListBtoA.dist.get(here);
     			
-    			val pt:Point = Point.make(1, internal_vertex + 1);
+    			val pt:Point = Point.make(1, (internal_vertex + 1));
     			
     			var flag:Boolean = false;
     			
@@ -1366,7 +1364,7 @@ public class PlainGraph implements Graph{
     		 val internal_vertex:Int = (from % v) as Int;
     		 
     		 val r:Region = adjacencyListAtoB.dist.get(here);
-    		 val pt:Point = Point.make(machine + 1, internal_vertex);
+    		 val pt:Point = Point.make(machine + 1, (internal_vertex+1));
 
     		 if(r.size()==0){
     			 throw new UnsupportedOperationException("region does not have any data points");
@@ -1405,7 +1403,7 @@ public class PlainGraph implements Graph{
     				 at(p){  
     					 try{
     					 val r:Region = adjacencyListAtoB.dist.get(p);
-    					 val pt:Point = Point.make(machine + 1, internal_vertex);
+    					 val pt:Point = Point.make(machine + 1, (internal_vertex+1));
 
     					 if(r.size()==0){
     						 throw new UnsupportedOperationException("region does not have any data points");
@@ -1434,7 +1432,7 @@ public class PlainGraph implements Graph{
     			 }else{
     				 try{
     				 val r:Region = adjacencyListAtoB.dist.get(p);
-    				 val pt:Point = Point.make(machine + 1, internal_vertex);
+    				 val pt:Point = Point.make(machine + 1, (internal_vertex+1));
 
     				 if(r == null){
     					 return -1;
@@ -1473,7 +1471,7 @@ public class PlainGraph implements Graph{
     		 if((machine2 != 0)||((machine2==0)&&(here.id != 0))){
     			 at(p2){    					 
     				 val r:Region = adjacencyListBtoA.dist.get(p2);
-    				 val pt:Point = Point.make(machine2 + 1, internal_vertex2);
+    				 val pt:Point = Point.make(machine2 + 1, (internal_vertex2+1));
 
     				 if(r.size()==0){
     					 throw new UnsupportedOperationException("region does not have any data points");
@@ -1498,7 +1496,7 @@ public class PlainGraph implements Graph{
     			 }
     		 }else {
     			 val r:Region = adjacencyListBtoA.dist.get(p2);
-    			 val pt:Point = Point.make(machine2 + 1, internal_vertex2);
+    			 val pt:Point = Point.make(machine2 + 1, (internal_vertex2+1));
 
     			 if(r == null){
     				 return -1;
@@ -1657,7 +1655,7 @@ public class PlainGraph implements Graph{
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	val pt:Point = Point.make(machine + 1, (internal_vertex+1));
     	
     	var resultTotal:Array[Long] = null; 
     	
@@ -1697,7 +1695,7 @@ public class PlainGraph implements Graph{
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	val pt:Point = Point.make(machine + 1, (internal_vertex+1));
     	
     	var resultTotal:Array[Long] = null; 
     	
@@ -1737,7 +1735,7 @@ public class PlainGraph implements Graph{
     	
     	val internal_vertex:Int = (vertexID % v) as Int;
     	val p2:Place = Place.places()(machine);
-    	val pt:Point = Point.make(machine + 1, internal_vertex);
+    	val pt:Point = Point.make(machine + 1, (internal_vertex+1));
     	var arrayBuilder:ArrayBuilder[Long] = new ArrayBuilder[Long]();
     	
     	var resultTotalOut:Array[Long] = null; 
@@ -2337,6 +2335,96 @@ public class PlainGraph implements Graph{
 	    		return lvalue;
 	    	}
 	    }
+    }
+    
+    /**
+     * Returns that fact whether two vertices are connected with each other or not.
+     * 
+     * @param vert1 - first vertex
+     * @param vert2 - second vertex
+     * @return True if the two vertices are adjacent in the graph
+     */
+    public def isAdjacent(val vert1:Long, val vert2:Long):Boolean{
+    	var result:Boolean = false;
+    	
+    	var v:Long = ScaleGraphMath.pow(2,sizeCategory);
+    	val machine:Int = ScaleGraphMath.round(vert1/v) as Int; 	
+    	
+    	val internal_vertex:Int = (vert1 % v) as Int;
+    	val p2:Place = Place.places()(machine);
+    	val pt:Point = Point.make(machine + 1, (internal_vertex+1));
+    	var arrayBuilder:ArrayBuilder[Long] = new ArrayBuilder[Long]();
+    	
+    	result = at(p2){
+    		var l:Array[PlainGraphRecord] = adjacencyListAtoB.getLocalPortion();
+
+    		if((l(pt) != null)&&(l(pt).id != -1l)){
+    			if(l(pt).edges != null){
+    				var lst:ArrayList[Long] = (l(pt).edges as ArrayList[Long]);
+    				if(lst.size() != 0){				
+    					    					
+    					for (item in lst){
+    						if(item == vert2){
+    							return true;
+    						}
+    					}
+    					
+    					return false;
+    				}
+    			}
+    		}
+    		
+    		return false;
+    	};
+    	
+//     	var resultTotalIn:Array[Long] = null; 
+//     	
+//     	resultTotalIn = at(p2){
+//     		var l:Array[PlainGraphRecord] = adjacencyListBtoA.getLocalPortion();
+// 
+//     		if((l(pt) != null)&&(l(pt).id != -1l)){
+//     			if(l(pt).edges != null){
+//     				var lst:ArrayList[Long] = (l(pt).edges as ArrayList[Long]);
+//     				if(lst.size() != 0){
+//     					var resultFin:Array[Long] = new Array[Long](lst.size());
+//     					
+//     					var counter:Int = 0;
+//     					for (item in lst){
+//     						resultFin(counter) = item;
+//     						counter++;	
+//     					}
+//     					
+//     					return resultFin;
+//     				}
+//     			}
+//     		}
+//     		
+//     		return null;
+//     	};
+    	
+    	result &= at(p2){
+    		var l:Array[PlainGraphRecord] = adjacencyListAtoB.getLocalPortion();
+
+    		if((l(pt) != null)&&(l(pt).id != -1l)){
+    			if(l(pt).edges != null){
+    				var lst:ArrayList[Long] = (l(pt).edges as ArrayList[Long]);
+    				if(lst.size() != 0){				
+    					
+    					for (item in lst){
+    						if(item == vert2){
+    							return true;
+    						}
+    					}
+    					
+    					return false;
+    				}
+    			}
+    		}
+    		
+    		return false;
+    	};    	
+    	
+    	return result;
     }
 }
       
