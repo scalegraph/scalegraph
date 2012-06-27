@@ -79,6 +79,7 @@ public class BetweennessCentrality {
 		for(var i: Long = 0; i < this.updateScoreLock.length(); ++i) {
 			this.updateScoreLock(i) = new Lock();
 		}
+		
 		// Unuse properties
 		this.vertexIdAndIndexMap = null;
 		this.attributedGraph = null;
@@ -427,13 +428,13 @@ public class BetweennessCentrality {
 		// Console.OUT.println("All Backtrack time(ms): " + globalBacktrackTime/numParallelBfsTasks);
 		// Console.OUT.println("All UpdateLocalScore time(ms): " + globalUpdateLocalTime/numParallelBfsTasks);
 		// 
-		// var time: Long = System.currentTimeMillis();
+		var time: Long = System.currentTimeMillis();
 		if(Place.ALL_PLACES > 1) {
 			synchronizeScore();
 			// Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
 		}
-		// time = System.currentTimeMillis() - time;
-		// Console.OUT.println(here + ": Synch score time(ms): " + time);
+		time = System.currentTimeMillis() - time;
+		Console.OUT.println(here + ": Synch score time(ms): " + time);
 
 	}
 	
@@ -477,8 +478,7 @@ public class BetweennessCentrality {
 		 * localVertices can be accessed properly by Point only
 		 * Iterate over localVertices and process only assigned vertices
 		 */
-		// val l = new Lock();
-		// val l2 = new Lock();
+		
 		var indexCount: Int = 0;
 		for(index in localVertices) {
 			
@@ -658,11 +658,6 @@ public class BetweennessCentrality {
 								(2, 
 								(i:Int) => new FixedVertexQueue(maximumVertexId / numTraverser))
 				});
-			// distributorQueue(0) = new Array[FixedVertexQueue](numTraverser, 
-			// 		(i:Int) => new FixedVertexQueue(maximumVertexId / numTraverser));
-			// 
-			// distributorQueue(1) = new Array[FixedVertexQueue](numTraverser, 
-			// 		(i:Int) => new FixedVertexQueue(maximumVertexId / numTraverser));
 		
 		for(var i: Int = 0; i <predecessorMap.length(); ++i) {
 			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
@@ -844,27 +839,21 @@ public class BetweennessCentrality {
 	}
 	
 	protected def synchronizeScore() {
+		
 		if(here.id != 0) {
-			sendScore();
+			val data = betweennessScore;
+			instanceHandler.evalAtHome((o: BetweennessCentrality) => {
+				atomic {
+					for(var i: Int = 0; i < o.betweennessScore.size; ++i) {
+						o.betweennessScore(i) += data(i);
+					}
+				}
+				return 0;
+			});
 		}
 		
 		Team.WORLD.barrier(here.id);
 	}
-	
-	protected def sendScore(){
-		
-		val data = betweennessScore;
-		instanceHandler.evalAtHome((o: BetweennessCentrality) => {
-			atomic {
-				for(var i: Int = 0; i < o.betweennessScore.size; ++i) {
-					o.betweennessScore(i) += data(i);
-				}
-			}
-			return 0;
-			
-		});
-	}
-	
 	
 	protected def setInstanceHandler(handler: GlobalRef[BetweennessCentrality]) {
 		this.instanceHandler = handler;
