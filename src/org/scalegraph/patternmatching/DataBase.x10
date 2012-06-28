@@ -52,13 +52,14 @@ public class DataBase {
 			return -1;
 		}
 		
+		//Console.OUT.println("loading graph no:" + graph_no);
 		
 		// loading vertex label set from Attributed graph. 
 		var vertArray:Array[Vertex] = attrglist(graph_no).getVertexList();
 		var vlabels:ArrayList[Int] = new ArrayList[Int](vertArray.size);
 		
 		for(var i:Int=0; i< vertArray.size;i++){
-			vlabels(i) = vertArray(i).getAttribute("id").getValue() as Int;
+			vlabels(i) = vertArray(i).getAttribute("vattrib2").getValue() as Int;
 		}
 		
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
@@ -82,27 +83,28 @@ public class DataBase {
 				var toId:Int = listOfEdges(item2).getTo().getAttribute("id").getValue() as Int;
 
 				var toLabel:Int =listOfEdges(item2).getTo().getAttribute("vattrib2").getValue() as Int;
-				Console.OUT.println("t");
 				
 				var eLabel:Int = listOfEdges(item2).getAttribute("eattrib1").getValue() as Int;
 
-				Console.OUT.println("u");
+				//Console.OUT.println("fromId:" + fromId + " fromLabel:" + fromLabel + " toId:" + toId + " toLabel:" + toLabel + " elabel:" + eLabel);
+				//Console.OUT.println(listOfEdges(item2).toString());
+				
+				if (fromId != toId){
+					// when get edgelist from Attributedgraph indicated source vatex id may included in toId 
+					pat.add_edge(fromId,toId,eLabel);
+					var e:EdgePattern = (fromLabel < toLabel)? new EdgePattern(fromLabel, toLabel, eLabel) : new EdgePattern(toLabel, fromLabel, eLabel);
 
-				pat.add_edge(fromId,toId,eLabel);
-				var e:EdgePattern = (fromLabel < toLabel)? new EdgePattern(fromLabel, toLabel, eLabel) : new EdgePattern(toLabel, fromLabel, eLabel);
-				Console.OUT.println("v");
+					var s:Box[Int] = local_map.get(e);
+					if(s == null){
+						local_map.put(e,1);
 
-				var s:Box[Int] = local_map.get(e);
-				if(s == null){
-					local_map.put(e,1);
-					Console.OUT.println("w");
-
+					}
+					else{
+						local_map.put(e,s.value + 1);
+					}
 				}
-				else{
-					local_map.put(e,s.value + 1);
-					Console.OUT.println("w2");
-
-				}
+				
+				
 			}
 			
 		}

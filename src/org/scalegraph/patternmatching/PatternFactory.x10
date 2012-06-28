@@ -11,17 +11,19 @@ import x10.lang.Iterator;
 
 
 public class PatternFactory {
-	private var _d:DataBase=null;
+	private var d:DataBase=null;
 	private val iso:Isomorphism = new Isomorphism();
 	
 	public def this(var d:DataBase){
-		_d = d;
+		this.d = d;
 	}
 	
 	
 	
 	public def get_one_random_one_edge_frequent_pattern():Pattern{
-		var edge:EdgePattern = _d.get_a_random_freq_edge();
+		Console.OUT.println("before get edge randomly");
+		var edge:EdgePattern = this.d.get_a_random_freq_edge();
+		Console.OUT.println("before make edge pattern form one random edge");
 		var cand_pat:Pattern = make_single_edge_pattern(edge.get_srcl(), edge.get_destl(),edge.get_el());
 		return cand_pat;
 	}
@@ -39,13 +41,13 @@ public class PatternFactory {
 		var p:Pattern = new Pattern(vlabels);
 		p.add_edge(0,1,el);
 		var edge:EdgePattern = new EdgePattern(srcl,destl,el);
-		var vat:ArrayList[Int] = _d.get_edge_vat(edge);
+		var vat:ArrayList[Int] = this.d.get_edge_vat(edge);
 		p.set_vat(vat);
 		p.set_sup_status(0);
-		var minsup:Int = _d.get_minsup();
+		var minsup:Int = this.d.get_minsup();
 		if (vat.size() >= minsup)
 			p.set_freq();
-		return null;
+		return p;
 	}
 	
 	
@@ -55,10 +57,10 @@ public class PatternFactory {
 		var cand_pat:Pattern = null;
 		
 		var this_edge:EdgePattern;
-		var minsup:Int = _d.get_minsup();
+		var minsup:Int = this.d.get_minsup();
 		
 		if (pat.size() == 0) {
-			var eim:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = _d.get_all_edge_info();
+			var eim:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
 			val cit:Iterator[Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]]] = eim.entries().iterator();
 			
 			while (cit.hasNext()) {
@@ -73,7 +75,7 @@ public class PatternFactory {
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
-			var nbrs:HashSet[Pair[Int,Int]]=_d.get_neighbors(src_v);
+			var nbrs:HashSet[Pair[Int,Int]]= this.d.get_neighbors(src_v);
 				// about nbrs element of first is destination label and second is edeg label
 			
 			
@@ -91,7 +93,7 @@ public class PatternFactory {
 					this_edge = new EdgePattern(dest_v,src_v,e_label);
 				}
 				var frequency:Int = pat.edge_counter(this_edge);
-				var max_freq:Int = _d.get_freq(this_edge);
+				var max_freq:Int = this.d.get_freq(this_edge);
 				if (frequency > max_freq) {
 					continue;
 				}
@@ -107,7 +109,7 @@ public class PatternFactory {
 					cand_pat = null;
 				}
 				else {
-					var freq:Boolean = _d.get_exact_sup_optimal(cand_pat);
+					var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 					if (freq == true) { // is the pattern frequent?
 						super_patterns.add(cand_pat);
 					}
@@ -139,7 +141,7 @@ public class PatternFactory {
 						cand_pat = null;
 					}
 					else {
-						var freq:Boolean = _d.get_exact_sup_optimal(cand_pat);
+						var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 						if (freq == true) { // is the pattern frequent?
 
 							super_patterns.add(cand_pat);
@@ -173,7 +175,7 @@ public class PatternFactory {
 	}
 	
 	
-	public def get_sub_patterns(val pat:Pattern,var sub_patterns:ArrayList[Pattern]){
+	public def get_sub_patterns(val pat:Pattern,var sub_patterns:ArrayList[Pattern]):void{
 		// if pattern size is too small the pattern don't have sub pattern
 		if (pat.size() <= 2) {
 			// it has no sub puttern
@@ -199,7 +201,7 @@ public class PatternFactory {
 	
 	public def pattern_with_edge_removed(var p:Pattern,var a:Int,var b:Int):Pattern{
 		var clone:Pattern = p.clone();
-		return null;
+		return clone;
 	}
 	
 	public def get_super_degree(var pat:Pattern):Int{
@@ -208,17 +210,17 @@ public class PatternFactory {
 		var ret_val:Int = 0;
 		
 		var this_edge:EdgePattern;
-		var minsup:Int = _d.get_minsup();
+		var minsup:Int = this.d.get_minsup();
 		
 		if (pat.size() == 0) {
-			var eim:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = _d.get_all_edge_info();
+			var eim:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
 			return eim.size();
 		}
 		
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices and counting
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
-			var nbrs:HashSet[Pair[Int,Int]]=_d.get_neighbors(src_v);
+			var nbrs:HashSet[Pair[Int,Int]] = this.d.get_neighbors(src_v);
 			// about nbrs element of first is destination label and second is edeg label
 			
 			
@@ -236,7 +238,7 @@ public class PatternFactory {
 					this_edge = new EdgePattern(dest_v,src_v,e_label);
 				}
 				var frequency:Int = pat.edge_counter(this_edge);
-				var max_freq:Int = _d.get_freq(this_edge);
+				var max_freq:Int = this.d.get_freq(this_edge);
 				if (frequency > max_freq) {
 					continue;
 				}
@@ -252,7 +254,7 @@ public class PatternFactory {
 					cand_pat = null;
 				}
 				else {
-					var freq:Boolean = _d.get_exact_sup_optimal(cand_pat);
+					var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 					if (freq == true) { // is the pattern frequent?
 						cand_pat = null;
 						ret_val++;
@@ -285,7 +287,7 @@ public class PatternFactory {
 						cand_pat = null;	
 					}	
 					else {
-						var freq:Boolean = _d.get_exact_sup_optimal(cand_pat);
+						var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 						if (freq == true) { // is the pattern frequent
 							cand_pat = null;;
 							ret_val++;
