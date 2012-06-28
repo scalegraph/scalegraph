@@ -25,7 +25,8 @@ public class BetweennessCentrality {
 	
 	// Common properties
 	transient val isNormalize: Boolean;
-	transient val betweennessScore: Array[Double];
+	// transient val betweennessScore: Array[Double];
+	transient val betweennessScore: IndexedMemoryChunk[Double];
 	transient val numVertex: Long;
 	transient val maximumVertexId: Long;
 	
@@ -41,7 +42,8 @@ public class BetweennessCentrality {
 	transient val neighborMap: Array[Array[Long]];
 	transient val inNeighbourCountMap: Array[Long];
 	
-	transient var instanceHandler: GlobalRef[BetweennessCentrality];
+	transient var firstPlaceInstance: GlobalRef[BetweennessCentrality];
+	transient var syncScoreLock: Lock = new Lock();
 	
 	
 	protected def this(g: AttributedGraph, inputVertexIdAndIndexMap: HashMap[Long, Int], isNormalize: Boolean) {
@@ -51,7 +53,8 @@ public class BetweennessCentrality {
 		
 		// Initialize data
 		this.numVertex = this.attributedGraph.getVertexCount() as Int;
-		this.betweennessScore = new Array[Double](numVertex as Int, 0.0D);
+		// this.betweennessScore = new Array[Double](numVertex as Int, 0.0D);
+		this.betweennessScore = IndexedMemoryChunk.allocateZeroed[Double](numVertex);
 		this.vertexIdAndIndexMap = inputVertexIdAndIndexMap;
 		
 		// Unuse properties
@@ -71,7 +74,8 @@ public class BetweennessCentrality {
 		
 		this.numVertex = nVertex as Int;
 		this.maximumVertexId = maxVertexId as Int + 1; // Array start at zero
-		this.betweennessScore = new Array[Double](this.maximumVertexId as Int, 0.0D);
+		// this.betweennessScore = new Array[Double](this.maximumVertexId as Int, 0.0D);
+		this.betweennessScore = IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
 		this.neighborMap = new Array[Array[Long]](maximumVertexId as Int);
 		this.inNeighbourCountMap = new Array[Long](maximumVertexId as Int);
 		this.updateScoreLock = IndexedMemoryChunk.allocateUninitialized[Lock](maximumVertexId);
@@ -158,29 +162,29 @@ public class BetweennessCentrality {
 			});
 		}
 		// if undirected graph divide by 2
-		if(this.attributedGraph.isDirected() == false) {
-			
-			if(this.isNormalize) {
-				// Undirected and normalize
-				for(i in betweennessScore) {
-					betweennessScore(i) /= ((numVertex -1) * (numVertex - 2)) as Double;
-				}
-			} else {
-				// Undirected only
-				for(i in betweennessScore) {
-					betweennessScore(i) /= 2.0D;
-				}
-			}
-		} else {
-			if(this.isNormalize) {
-				// Directed and normalize
-				for(i in betweennessScore) {
-					betweennessScore(i)  /= (numVertex -1) * (numVertex - 2);
-				}
-			}
-		}
-		
-		Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, numVertex as Int, Team.ADD);
+		// if(this.attributedGraph.isDirected() == false) {
+		// 	
+		// 	if(this.isNormalize) {
+		// 		// Undirected and normalize
+		// 		for(i in betweennessScore) {
+		// 			betweennessScore(i) /= ((numVertex -1) * (numVertex - 2)) as Double;
+		// 		}
+		// 	} else {
+		// 		// Undirected only
+		// 		for(i in betweennessScore) {
+		// 			betweennessScore(i) /= 2.0D;
+		// 		}
+		// 	}
+		// } else {
+		// 	if(this.isNormalize) {
+		// 		// Directed and normalize
+		// 		for(i in betweennessScore) {
+		// 			betweennessScore(i)  /= (numVertex -1) * (numVertex - 2);
+		// 		}
+		// 	}
+		// }
+		// 
+		// Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, numVertex as Int, Team.ADD);
 	}
 
 	public def getIndex(v: Vertex): Int {
@@ -310,19 +314,23 @@ public class BetweennessCentrality {
 				() => { new BetweennessCentrality(g, vertexCount, maximumVertexId, isNormalize, cacheSize) } );
 		
 		finish {
-			val bcInstanceAtZero = new GlobalRef(betweennessCentrality());
+			val firstPlaceInstance = new GlobalRef(betweennessCentrality());
 			for(p in Place.places()) {
 				if(p == here) {
 					async {
 						
 						betweennessCentrality().makeNeighbourMap();
+						
+						// Force first place to lock score array
+						// prevent other places altering betweennessScore array during first place runing BC
+						betweennessCentrality().syncScoreLock.lock();
 						betweennessCentrality().calculateOnPlainGraph();
 
 					}
 				} else
 				at (p) async {
 					
-					betweennessCentrality().setInstanceHandler(bcInstanceAtZero);
+					betweennessCentrality().setInstanceHandler(firstPlaceInstance);
 					betweennessCentrality().makeNeighbourMap();
 					betweennessCentrality().calculateOnPlainGraph();
 				}
@@ -336,7 +344,7 @@ public class BetweennessCentrality {
 		val arrayBuilder: ArrayBuilder[Pair[Long, Double]] = new ArrayBuilder[Pair[Long, Double]]();
 		for(i in verticesToEstimate) {
 			val v = verticesToEstimate(i);
-			val score = betweennessCentrality().betweennessScore(verticesToEstimate(i) as Int);
+			val score = betweennessCentrality().betweennessScore(verticesToEstimate(i));
 			val p: Pair[Long, Double] = new Pair[Long, Double](v, score);
 			arrayBuilder.add(p);
 		}
@@ -411,15 +419,29 @@ public class BetweennessCentrality {
 			
 			if(this.isNormalize) {
 				// Undirected and normalize
-				betweennessScore.map(betweennessScore, (a: Double) => a / (((numVertex - 1) * (numVertex - 2))) );
+				// betweennessScore.map(betweennessScore, (a: Double) => a / (((numVertex - 1) * (numVertex - 2))) );
+				val length = betweennessScore.length();
+				val divider = (numVertex - 1) * (numVertex - 2);
+				for(var i: Long = 0; i < length; ++i) {
+					betweennessScore(i) /= divider;
+				}
 			} else {
 				// Undirected only
-				betweennessScore.map(betweennessScore, (a: Double) => a / 2 );
+				// betweennessScore.map(betweennessScore, (a: Double) => a / 2 );
+				val length = betweennessScore.length();
+				for(var i: Long = 0; i < length; ++i) {
+					betweennessScore(i) /= 2;
+				}
 			}
 		} else {
 			if(this.isNormalize) {
 				// Directed and normalize
-				betweennessScore.map(betweennessScore, (a: Double) => a / ((numVertex -1) * (numVertex - 2)) );
+				// betweennessScore.map(betweennessScore, (a: Double) => a / ((numVertex -1) * (numVertex - 2)) );
+				val length = betweennessScore.length();
+				val divider = (numVertex - 1) * (numVertex - 2);
+				for(var i: Long = 0; i < length; ++i) {
+					betweennessScore(i) /= divider;
+				}
 			}
 		}
 		
@@ -590,15 +612,15 @@ public class BetweennessCentrality {
 			// sumBacktrackTime += backtrackTime;
 			
 			// updateLocalScoreTime = System.currentTimeMillis();
-			
-			for(var i: Long = 0; i < betweennessScore.size; ++i) {
+			val length = betweennessScore.length();
+			for(var i: Long = 0; i < length; ++i) {
 				val score = tempScore(i);
 				if( score == 0D || i == source)
 					continue;
 		
 				val zonelock = updateScoreLock(i);
 				zonelock.lock();
-				betweennessScore(i as Int) += tempScore(i);
+				betweennessScore(i) += tempScore(i);
 				zonelock.unlock();
 			}
 			numProcessedSource++;
@@ -811,15 +833,15 @@ public class BetweennessCentrality {
 				
 			}
 			
-			
-			for(var i: Long = 0; i < betweennessScore.size; ++i) {
+			val length = betweennessScore.length();
+			for(var i: Long = 0; i < length ; ++i) {
 				val score = tempScore(i);
 				if( score == 0D || i == source)
 					continue;
 				
 				val zonelock = updateScoreLock(i);
 				zonelock.lock();
-				betweennessScore(i as Int) += tempScore(i);
+				betweennessScore(i) += tempScore(i);
 				zonelock.unlock();
 			}
 			
@@ -840,14 +862,20 @@ public class BetweennessCentrality {
 	
 	protected def synchronizeScore() {
 		
+		if(here.id == 0) {
+			// First place releases betweennessScoreFirst
+			syncScoreLock.unlock();
+		}
+		
 		if(here.id != 0) {
 			val data = betweennessScore;
-			instanceHandler.evalAtHome((o: BetweennessCentrality) => {
-				atomic {
-					for(var i: Int = 0; i < o.betweennessScore.size; ++i) {
+			firstPlaceInstance.evalAtHome((o: BetweennessCentrality) => {
+				o.syncScoreLock.lock();
+					val length = o.betweennessScore.length();
+					for(var i: Long = 0; i < length; ++i) {
 						o.betweennessScore(i) += data(i);
 					}
-				}
+				o.syncScoreLock.unlock();
 				return 0;
 			});
 		}
@@ -856,7 +884,7 @@ public class BetweennessCentrality {
 	}
 	
 	protected def setInstanceHandler(handler: GlobalRef[BetweennessCentrality]) {
-		this.instanceHandler = handler;
+		this.firstPlaceInstance = handler;
 	}
 	
 	public class FixedVertexQueue {
