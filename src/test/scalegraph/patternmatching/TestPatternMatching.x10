@@ -28,9 +28,13 @@ public class TestPatternMatching {
     	
     	//This code segment splits the data provided by Al Hasan et al.
     	var dataDir:String = "./temp_graphs";
+    	//var dataDir:String = "/work0/t2gsuzumuralab/ou/scalegraph/temp_graphs";
     	var splitter:FileSplitter = new FileSplitter(); 
-    	splitter.split("/nfs/data1/scalegraph/data/pattern-dataset/GRAPH_large.dat", dataDir);
-    	
+    	//splitter.split("/nfs/data1/scalegraph/data/pattern-dataset/GRAPH_large.dat", dataDir);
+    	//splitter.split("/nfs/data1/scalegraph/data/pattern-dataset/GRAPH_int_toy2.data", dataDir);
+    	splitter.split("/work0/t2gsuzumuralab/scalegraph/data/GRAPH_int_toy2.data", dataDir);
+
+
     	var list:Array[String] = DirectoryInfo.listDirContents(dataDir);
     	
     	var graphlist:ArrayList[AttributedGraph] = new ArrayList[AttributedGraph]();
@@ -39,7 +43,9 @@ public class TestPatternMatching {
     		Console.OUT.println("Reading file : " + list(item));
     		var rdr:WeightedGraphReader = new WeightedGraphReader();
     		var attrib:AttributedGraph = rdr.loadFromFile(list(item));
+    		
     		graphlist.add(attrib);
+    		
     		/*
     		//Just print the contents
     		var vertArray:Array[Vertex] = attrib.getVertexList();
@@ -58,5 +64,6 @@ public class TestPatternMatching {
     	}
     	
     	obj.run(graphlist);
+    	
     }
 }
