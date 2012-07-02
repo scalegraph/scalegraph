@@ -108,9 +108,6 @@ public class DataBase {
 			}
 			
 		}
-		
-		Console.OUT.println("a");
-		
 		_graph_store.add(pat);
 		
 		return 1;
@@ -218,7 +215,10 @@ public class DataBase {
 	
 	
 	public def get_edge_vat(var edge:EdgePattern):ArrayList[Int]{
+		Console.OUT.println("get edge vat method");
 		var x:Box[Pair[ArrayList[Int],Int]] = _edge_info.get(edge);
+		assert(x!=null);
+		Console.OUT.println(x.value);
 		if(x != null){
 			return x.value.first;
 		}

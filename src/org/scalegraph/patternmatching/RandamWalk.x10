@@ -25,13 +25,18 @@ public class RandamWalk {// random walk on pattern space
 	}
 	
 	public def initialize():LatticeNode{//make new Lattice Node contains the graph pattern that is consist of only one frequent edge, before walk
+
 		var p:Pattern = _pf.get_one_random_one_edge_frequent_pattern();
+
 		
 		var cc:Canonicalcode = _iso.check_isomorphism(p);
+		
 		p.set_canonical_code(cc);
+		
 		if (p.get_is_frequent()==false) {
 			assert(false):("ERROR:this pattern is infrquent\n");
 		}
+		
 		var ln:LatticeNode = create_lattice_node(p);
 		process_node(ln);
 		return ln;

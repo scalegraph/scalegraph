@@ -25,28 +25,41 @@ public class PatternFactory {
 		var edge:EdgePattern = this.d.get_a_random_freq_edge();
 		Console.OUT.println("before make edge pattern form one random edge");
 		var cand_pat:Pattern = make_single_edge_pattern(edge.get_srcl(), edge.get_destl(),edge.get_el());
+		Console.OUT.println("complete to get one random edge");
 		return cand_pat;
 	}
 	
 	public def make_single_edge_pattern(var srcl:Int,var destl:Int,var el:Int):Pattern{
-		var vlabels:ArrayList[Int] = new ArrayList[Int]();
+		var vlabels:ArrayList[Int] = new ArrayList[Int](2);
 		if (srcl < destl) { 
+			Console.OUT.println("srcl < dest");
 			vlabels.add(srcl);
 			vlabels.add(destl);
 		}
 		else {
+			Console.OUT.println("dest <= srcl");
 			vlabels.add(destl);
 			vlabels.add(srcl);
 		}
+		
+		Console.OUT.println("make new pattern");
 		var p:Pattern = new Pattern(vlabels);
+		Console.OUT.println("add edge");
 		p.add_edge(0,1,el);
-		var edge:EdgePattern = new EdgePattern(srcl,destl,el);
-		var vat:ArrayList[Int] = this.d.get_edge_vat(edge);
+		Console.OUT.println("make new edge pattern");
+		var edge:EdgePattern = new EdgePattern(vlabels(0),vlabels(1),el);
+		Console.OUT.println("complete make new edge pattern");
+		val vat:ArrayList[Int] = this.d.get_edge_vat(edge);
+		assert(vat != null):"failure to get edge vat";
 		p.set_vat(vat);
 		p.set_sup_status(0);
+		Console.OUT.println("set minsup");
 		var minsup:Int = this.d.get_minsup();
-		if (vat.size() >= minsup)
+		Console.OUT.println("check the pattern is frequent or not");
+		if (vat.size() >= minsup){
 			p.set_freq();
+		}
+		Console.OUT.println("complete make single edge pattern");
 		return p;
 	}
 	
