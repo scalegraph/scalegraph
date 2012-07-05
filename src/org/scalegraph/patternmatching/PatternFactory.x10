@@ -21,11 +21,11 @@ public class PatternFactory {
 	
 	
 	public def get_one_random_one_edge_frequent_pattern():Pattern{
-		Console.OUT.println("before get edge randomly");
-		var edge:EdgePattern = this.d.get_a_random_freq_edge();
-		Console.OUT.println("before make edge pattern form one random edge");
-		var cand_pat:Pattern = make_single_edge_pattern(edge.get_srcl(), edge.get_destl(),edge.get_el());
-		Console.OUT.println("complete to get one random edge");
+		//Console.OUT.println("before get edge randomly");
+		var edge:Pair[Pair[Int,Int],Int] = this.d.get_a_random_freq_edge();
+		//Console.OUT.println("before make edge pattern from one random edge");
+		var cand_pat:Pattern = make_single_edge_pattern(edge.first.first, edge.first.second,edge.second);
+		//Console.OUT.println("complete to get one random edge");
 		return cand_pat;
 	}
 	
@@ -42,24 +42,24 @@ public class PatternFactory {
 			vlabels.add(srcl);
 		}
 		
-		Console.OUT.println("make new pattern");
+		//Console.OUT.println("make new pattern");
 		var p:Pattern = new Pattern(vlabels);
-		Console.OUT.println("add edge");
+		//Console.OUT.println("add edge");
 		p.add_edge(0,1,el);
-		Console.OUT.println("make new edge pattern");
-		var edge:EdgePattern = new EdgePattern(vlabels(0),vlabels(1),el);
-		Console.OUT.println("complete make new edge pattern");
+		//Console.OUT.println("make new edge pattern");
+		var edge:Pair[Pair[Int,Int],Int] = new Pair(Pair(vlabels(0),vlabels(1)),el);
+		//Console.OUT.println("complete make new edge pattern");
 		val vat:ArrayList[Int] = this.d.get_edge_vat(edge);
 		assert(vat != null):"failure to get edge vat";
 		p.set_vat(vat);
 		p.set_sup_status(0);
-		Console.OUT.println("set minsup");
+		//Console.OUT.println("set minsup");
 		var minsup:Int = this.d.get_minsup();
-		Console.OUT.println("check the pattern is frequent or not");
+		//Console.OUT.println("check the pattern is frequent or not");
 		if (vat.size() >= minsup){
 			p.set_freq();
 		}
-		Console.OUT.println("complete make single edge pattern");
+		//Console.OUT.println("complete to make single edge pattern");
 		return p;
 	}
 	
@@ -69,16 +69,16 @@ public class PatternFactory {
 		var edge:Pattern = null;
 		var cand_pat:Pattern = null;
 		
-		var this_edge:EdgePattern;
+		var this_edge:Pair[Pair[Int,Int],Int];
 		var minsup:Int = this.d.get_minsup();
 		
 		if (pat.size() == 0) {
-			var eim:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
-			val cit:Iterator[Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]]] = eim.entries().iterator();
+			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
+			val cit:Iterator[Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]] = eim.entries().iterator();
 			
 			while (cit.hasNext()) {
-				val x:Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]] = cit.next();
-				var p:Pattern = make_single_edge_pattern(x.getKey().get_srcl(), x.getKey().get_destl(), x.getKey().get_el());
+				val x:Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = cit.next();
+				var p:Pattern = make_single_edge_pattern(x.getKey().first.first, x.getKey().first.second, x.getKey().second);
 				super_patterns.add(p);
 			}
 			return;
@@ -100,10 +100,10 @@ public class PatternFactory {
 				var e_label:Int = x.second;
 				
 				if (src_v < dest_v){
-					this_edge = new EdgePattern(src_v,src_v,e_label);
+					this_edge = new Pair(Pair(src_v,src_v),e_label);
 				}
 				else {
-					this_edge = new EdgePattern(dest_v,src_v,e_label);
+					this_edge = new Pair(Pair(dest_v,src_v),e_label);
 				}
 				var frequency:Int = pat.edge_counter(this_edge);
 				var max_freq:Int = this.d.get_freq(this_edge);
@@ -222,11 +222,11 @@ public class PatternFactory {
 		var cand_pat:Pattern = null;
 		var ret_val:Int = 0;
 		
-		var this_edge:EdgePattern;
+		var this_edge:Pair[Pair[Int,Int],Int];
 		var minsup:Int = this.d.get_minsup();
 		
 		if (pat.size() == 0) {
-			var eim:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
+			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
 			return eim.size();
 		}
 		
@@ -245,10 +245,10 @@ public class PatternFactory {
 				var e_label:Int = x.second;
 			
 				if (src_v < dest_v){
-					this_edge = new EdgePattern(src_v,src_v,e_label);
+					this_edge = new Pair(Pair(src_v,src_v),e_label);
 				}
 				else {
-					this_edge = new EdgePattern(dest_v,src_v,e_label);
+					this_edge = new Pair(Pair(dest_v,src_v),e_label);
 				}
 				var frequency:Int = pat.edge_counter(this_edge);
 				var max_freq:Int = this.d.get_freq(this_edge);

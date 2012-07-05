@@ -20,7 +20,7 @@ public class DataBase {
 	private var _ext_map:HashMap[Int,HashSet[Pair[Int,Int]]] = new HashMap[Int,HashSet[Pair[Int,Int]]]();
 	//!< it remembers for each label, what are the possible other label at the other end of an edge (also store the edge label)
 		// about ext_map, key is vertex label and value is a list that stores pair(vertex label,edgelabel)
-	private var _edge_info:HashMap[EdgePattern,Pair[ArrayList[Int],Int]] = new HashMap[EdgePattern,Pair[ArrayList[Int],Int]](); //!< store information for all edges.
+	private var _edge_info:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = new HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]](); //!< store information for all edges.
 		// about _edge_info, key is edgepattern and value is pair(list that stores graph number(id) that has the edge pattern same to the map key, max number of edge occurances in each graph)	
 	private var _graph_store:ArrayList[Pattern] = new ArrayList[Pattern]();  //!< store all the graph patterns
 	private var _minsup:Int = 0; //!< store minimum support
@@ -31,7 +31,7 @@ public class DataBase {
 		var i:Int = 0;
 		
 		while (true) {
-			var local_map:HashMap[EdgePattern,Int] = new HashMap[EdgePattern,Int]();
+			var local_map:HashMap[Pair[Pair[Int,Int],Int],Int] = new HashMap[Pair[Pair[Int,Int],Int],Int]();
 			var ret_val:Int = this.read_next(attrglist, graph_no, local_map); 
 			vat_and_freq_update(local_map, graph_no);
 			if (ret_val == -1) break;
@@ -41,7 +41,7 @@ public class DataBase {
 		
 	}
 	
-	private def read_next(val attrglist:ArrayList[AttributedGraph],var graph_no:Int,var local_map:HashMap[EdgePattern,Int]):Int{
+	private def read_next(val attrglist:ArrayList[AttributedGraph],var graph_no:Int,var local_map:HashMap[Pair[Pair[Int,Int],Int],Int]):Int{
 		var debug:Int = 0;
 				
 		
@@ -92,7 +92,7 @@ public class DataBase {
 				if (fromId != toId){
 					// when get edgelist from Attributedgraph indicated source vatex id may included in toId 
 					pat.add_edge(fromId,toId,eLabel);
-					var e:EdgePattern = (fromLabel < toLabel)? new EdgePattern(fromLabel, toLabel, eLabel) : new EdgePattern(toLabel, fromLabel, eLabel);
+					var e:Pair[Pair[Int,Int],Int] = (fromLabel < toLabel)? new Pair(Pair(fromLabel, toLabel), eLabel) : new Pair(Pair(toLabel, fromLabel), eLabel);
 
 					var s:Box[Int] = local_map.get(e);
 					if(s == null){
@@ -113,8 +113,8 @@ public class DataBase {
 		return 1;
 	}
 	
-	private def vat_and_freq_update(var local:HashMap[EdgePattern,Int],var graph_no:Int){
-		var lentrylist:Set[Map.Entry[EdgePattern,Int]]=local.entries();
+	private def vat_and_freq_update(var local:HashMap[Pair[Pair[Int,Int],Int],Int],var graph_no:Int){
+		var lentrylist:Set[Map.Entry[Pair[Pair[Int,Int],Int],Int]]=local.entries();
 		for(cit in lentrylist){
 			val ret:Boolean = _edge_info.containsKey(cit.getKey());
 			
@@ -146,13 +146,13 @@ public class DataBase {
 
 	public def remove_infrequent_edges(){
 		// identifying infrquent edges
-		var entry:Set[Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]]] = _edge_info.entries();
+		var entry:Set[Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]] = _edge_info.entries();
 		for(cit in entry){
 			if(cit.getValue().first.size() < _minsup){
-				var e:EdgePattern = cit.getKey();
-				var vl1:Int = e.get_srcl();
-				var vl2:Int = e.get_destl();
-				var el:Int = e.get_el();
+				var e:Pair[Pair[Int,Int],Int] = cit.getKey();
+				var vl1:Int = e.first.first;
+				var vl2:Int = e.first.second;
+				var el:Int = e.second;
 				_edge_info.remove(e);
 				var it:Box[HashSet[Pair[Int,Int]]]=_ext_map.get(vl1);
 				if(it == null){
@@ -183,7 +183,7 @@ public class DataBase {
 	}
 	
 	
-	public def get_a_random_freq_edge():EdgePattern{
+	public def get_a_random_freq_edge():Pair[Pair[Int,Int],Int]{
 		val total:Int = _edge_info.size();
 		val prob = new ArrayList[Double](total + 1);
 		prob(0) = 1.0 / total;
@@ -205,8 +205,8 @@ public class DataBase {
 			}
 			idx = x;
 		}while(idx == total);
-		var ep:EdgePattern = null;
-		val it:Iterator[Map.Entry[EdgePattern,Pair[ArrayList[Int],Int]]] = _edge_info.entries().iterator();
+		var ep:Pair[Pair[Int,Int],Int] = Pair(Pair(-1 as Int,-1 as Int),-1 as Int);
+		val it:Iterator[Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]] = _edge_info.entries().iterator();
 		for(var i:Int = 0 ;i < idx;i++){
 			ep = it.next().getKey();
 		}
@@ -214,22 +214,30 @@ public class DataBase {
 	}
 	
 	
-	public def get_edge_vat(var edge:EdgePattern):ArrayList[Int]{
+	public def get_edge_vat(var edge:Pair[Pair[Int,Int],Int]):ArrayList[Int]{
 		Console.OUT.println("get edge vat method");
+		val t = _edge_info.entries();
+		for(i in t){
+			val s = i.getValue().first;
+			Console.OUT.println("key is " + i.getKey().toString());
+			for (j in s){
+				Console.OUT.println("vat is " + j);
+
+			}
+		}
+		
 		var x:Box[Pair[ArrayList[Int],Int]] = _edge_info.get(edge);
-		assert(x!=null);
-		Console.OUT.println(x.value);
 		if(x != null){
 			return x.value.first;
 		}
-		return null;
+		return new ArrayList[Int]();//return dummy data
 	}
 	
 	public def get_minsup():Int{
 		return _minsup;
 	}
 	
-	public def get_all_edge_info():HashMap[EdgePattern,Pair[ArrayList[Int],Int]]{
+	public def get_all_edge_info():HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]{
 		return _edge_info;
 	}
 
@@ -240,7 +248,7 @@ public class DataBase {
 		return cit;
 	}
 	
-	public def get_freq(var e:EdgePattern):Int{
+	public def get_freq(var e:Pair[Pair[Int,Int],Int]):Int{
 		var cit:Box[Pair[ArrayList[Int],Int]] = _edge_info.get(e);
 		if (cit != null) {
 			return cit.value.second;

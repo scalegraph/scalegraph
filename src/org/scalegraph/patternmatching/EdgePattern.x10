@@ -1,5 +1,5 @@
 package org.scalegraph.patternmatching;
-
+/*
 public class EdgePattern {
 	private var _srcl:Int = 0;// source vertex label 
 	private var _destl:Int = 0;// destination vertex label
@@ -14,16 +14,32 @@ public class EdgePattern {
 	}
 	
 	public def get_srcl():Int{
-		return _srcl;
+		return this._srcl;
 	}
 	
 	public def get_destl():Int{
-		return _destl;
+		return this._destl;
 	}
 	
 	public def get_el():Int{
-		return _el;
+		return this._el;
+	}
+	
+	public def toString():String{
+		return ("src:" + _srcl + " dest:" + _destl + " el:" + _el);
+	}
+	
+	public def equals(val x:EdgePattern):Boolean{
+		if(this._srcl.equals(x.get_srcl())
+				&& this._destl.equals(x.get_destl())
+				&& this._el.equals(x.get_el())){
+			return true;
+		}
+		else{
+			return false;
+		}
 	}
 	
 	
 }
+ * */

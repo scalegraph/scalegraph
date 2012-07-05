@@ -12,7 +12,7 @@ public class Pattern {
 	private var _code_known:Boolean = false;
 	private var _status_known:Boolean = false;
 	private var _vat:ArrayList[Int] = new ArrayList[Int]();//!< contains the graph ids that has at least these edges
-	private var _edges:ArrayList[EdgePattern] = new ArrayList[EdgePattern](); //!< store edge pattern of all edges
+	private var _edges:ArrayList[Pair[Pair[Int,Int],Int]] = new ArrayList[Pair[Pair[Int,Int],Int]](); //!< store edge pattern of all edges
 	private var _removable_edges:ArrayList[Pair[Int, Int]];  //!< removing these edges keeps the pattern connected. represented in two vertces id.
 	private var _canonical_code:Canonicalcode;// modify after how to implemente cannonical_code 
 	private var _removable_edge_known:Boolean = false;
@@ -42,15 +42,15 @@ public class Pattern {
 
 		var v1:Int = _matrix.getLabel(i);
 		var v2:Int = _matrix.getLabel(j);
-		var edge:EdgePattern = null;
+		var edge:Pair[Pair[Int,Int],Int] = new Pair(Pair(-1 as Int,-1 as Int),-1 as Int);
 
 		//Console.OUT.println("v1:" + v1 + " v2:" + v2);
 		
 		if(v1 < v2){
-			edge = new EdgePattern(v1,v2,e);
+			edge = new Pair(Pair(v1,v2),e);
 		}
 		else{
-			edge = new EdgePattern(v2,v1,e);
+			edge = new Pair(Pair(v2,v1),e);
 		}
 
 		_edges.add(edge);
@@ -104,10 +104,10 @@ public class Pattern {
 	}
 	
 	
-	public def get_edges():ArrayList[EdgePattern]{
+	public def get_edges():ArrayList[Pair[Pair[Int,Int],Int]]{
 		return _edges;
 	}
-	public def set_edges(var edges:ArrayList[EdgePattern]){
+	public def set_edges(var edges:ArrayList[Pair[Pair[Int,Int],Int]]){
 		_edges = edges;
 	}
 	
@@ -139,7 +139,7 @@ public class Pattern {
 		return _matrix.getEdgeLabel(i,j);
 	}
 	
-	public def edge_counter(var e:EdgePattern):Int{//counting how many edges same to parameter in this graph pattern
+	public def edge_counter(var e:Pair[Pair[Int,Int],Int]):Int{//counting how many edges same to parameter in this graph pattern
 		var i:Int = 0;
 		var count:Int = 0;
 		for (i=0;i < _edges.size() ;i++){
@@ -222,7 +222,7 @@ public class Pattern {
 	
 	
 	public def is_super_pattern(var pat:Pattern):Boolean{
-		val mset:ArrayList[EdgePattern] = pat.get_edges();
+		val mset:ArrayList[Pair[Pair[Int,Int],Int]] = pat.get_edges();
 		var included:Boolean = true;
 		for (i in _edges){
 			if(mset.contains(i) == false){

@@ -28,7 +28,6 @@ public class RandamWalk {// random walk on pattern space
 
 		var p:Pattern = _pf.get_one_random_one_edge_frequent_pattern();
 
-		
 		var cc:Canonicalcode = _iso.check_isomorphism(p);
 		
 		p.set_canonical_code(cc);

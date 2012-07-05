@@ -8,7 +8,7 @@ public class PatternMatching {
 	
 
 	//private var current:LatticeNode;
-	private var max_iter:Int = 100;
+	private var max_iter:Int = 15;
 	private var minsup:Int = 1;
 	
 	
