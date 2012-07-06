@@ -36,8 +36,8 @@ public class TestMatrixPagerank {
   private static def graphSetUpTsubame():PlainGraph {
     val reader:EdgeListReader = new EdgeListReader();
     return reader.
-    //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-    loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-14.dl");
+    //loadFromFile("/work0/t2gsuzumuralab/miyuru/data/scale-14.dl");
+    loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
   }
   
   public static def main(Array[String]) {
