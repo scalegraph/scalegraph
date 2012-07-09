@@ -24,6 +24,7 @@ public class MatrixPagerank {
   private val idxToIdMap:HashMap[Int, Long];
   private var P:DistSparseMatrix;
   private val grid:Grid;
+  private val dangling;
 
   public def this(graph:PlainGraph) {
     this.graph = graph;
@@ -79,6 +80,10 @@ public class MatrixPagerank {
     return vector;
   }
 
+  private def dangling(matrix:DistDenseMatrix) {
+    
+  }
+  
   private def tereport(matrix:DistDenseMatrix) {
     val grid = matrix.grid;
     var sum:Double = 0.0;
@@ -282,7 +287,7 @@ public class MatrixPagerank {
         this.id = id;
       }
     }
-
+    
     val vertexList = graph.getVertexList();
     val bf = new BufferedHashMap();
     val globalBf = new GlobalRef[BufferedHashMap](bf);
@@ -312,7 +317,7 @@ public class MatrixPagerank {
                                      grid.getBlockId(a(0), a(1))));
               Console.OUT.println("F");
             }
-          }
+          } 
         }
         at (globalBf) {
           for (v in mpArray) {
@@ -327,9 +332,31 @@ public class MatrixPagerank {
     }
     return bf;
   }
+
+  private def initializeDanglingVector() {
+    val vertexList = graph.getVertexList();
+    val grid = Grid.makeMaxRow(nVertex, 1, Place.MAX_PLACES, Place.MAX_PLACES);
+    dangling:DistDenseMatrix =
+      DistDenseMatrix.make(grid);
+
+    var upIdx:Int = 0;
+    for (var rowId:Int = 0; rowId < grid.numRowBlocks; rowId++) {
+      val subId = grid.getBlockId(rowId, 0);
+      val subMatrix = dangling.getBlock(subId).getMatrix();
+      for (var i:Int = 0; i < subMatrix.M; i++) {
+        val nodeId = idxToIdMap(upIdx + i)();
+        val neighbours = graph.getOutNeighbours(nodeId);
+        if (neighbours == null || neighbours.size == 0) {
+          subMatrix(i, 0) = 1.0 / nVertex;
+        }
+      }
+      dangling.setBlock(subId, subMatrix);
+    }
+  }
   
   private def initialize() {
     initializeMap();
     initializeMatrix();
+    initializeDanglingVector();
   }
 }
