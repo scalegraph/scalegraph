@@ -13,16 +13,20 @@ public class Isomorphism {
 		var dest_v:Int=0;//least destination label
 		var ids:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();//ids with least labelled edges
 
+		Console.OUT.println("a");
 		if (cand_pat.get_code_known() == true) {
 			return cand_pat.get_canonical_code();
 		}
-		
+		Console.OUT.println("b");
+
 		if (cand_pat.size() == 0) {
 			assert(false):("ERROR: null patterns are not allowed");
 		}
-		
+		Console.OUT.println("c");
+
 		src_v = cand_pat.label(0);  // src_v has the label of the least vertex in dfs walk
-			
+		Console.OUT.println("d");
+
 		for(var j:Int = 0;j<cand_pat.size();j++){
 			if(cand_pat.get_matrix()(0,j)==1){
 				dest_v = cand_pat.label(j);// dest_v has the label of the second least vertex in dfs walk
@@ -30,14 +34,18 @@ public class Isomorphism {
 				break;
 			}
 		}
-		
+		Console.OUT.println("e");
+
 		if (dest_v < src_v) {// if dest_v is smaller then src_v,swap. 
 			var ch:Int = src_v;
 			src_v = dest_v;
 			dest_v = ch;
 		}
+		Console.OUT.println("f");
+
 		
 		iso_startup(cand_pat, src_v, dest_v, e, ids);
+		Console.OUT.println("finish iso start up");
 
 		// Each member of this vector corresponds to a minimal canonical code.
 		// At the end of the minimal() method, this vector should have a single
@@ -53,32 +61,44 @@ public class Isomorphism {
 		 */
 		var covered_edges:ArrayList[HashSet[FiveTuple]] = new ArrayList[HashSet[FiveTuple]]();
 
-		
+		Console.OUT.println("create separate codes for each pair in ids");
+		Console.OUT.println("ids size:" + ids.size());
+
 		// Create separate codes for each pair in ids.
 		// Each such pair shall have to be tested for isomorphism.
 		for(var i:Int=0; i<ids.size(); i++) {
-
+			Console.OUT.println("repeat time:" + i);
 			// Add a minimal edge to new_codes.
 			var cc_tuple:FiveTuple = new FiveTuple(0, 1, cand_pat.label(ids(i).first), 
 					e, cand_pat.label(ids(i).second));
+			Console.OUT.println("made five tuple");
 			var new_cc:Canonicalcode = new Canonicalcode(cc_tuple, ids(i).first, ids(i).second);
+			Console.OUT.println("made new canonicalcode");
+
 			new_codes.add(new_cc);
+			Console.OUT.println("complete add new code");
 
 			// Correspondingly update the covered_edges vector.
-			var g_tuple:FiveTuple = new FiveTuple(ids(i).first, ids(i).second, cc_tuple._li,
-					cc_tuple._lij, cc_tuple._lj);
+			var g_tuple:FiveTuple = new FiveTuple(ids(i).first, ids(i).second, cc_tuple.li,
+					cc_tuple.lij, cc_tuple.lj);
+			Console.OUT.println("made new tupple");
+
 			var s:HashSet[FiveTuple] = new HashSet[FiveTuple]();
 			s.add(g_tuple);
+			Console.OUT.println("added new hash set to store covered_edges");
 			covered_edges.add(s);
+			Console.OUT.println("finish add covered_edges");
 
 		}
-		
+		Console.OUT.println("start select minimal");
+
 		// Each of the above new codes, which are equivalent are passed to the
 		// minimal routine. Minimal routine will add more edges 
 		// and remove some of the candidate minimal codes until it comes up 
 		// with a single min canonical code.
 		minimal(new_codes, covered_edges, cand_pat);
-	
+		Console.OUT.println("finish minimal");
+		
 		cand_pat.set_code_known(true);
 		cand_pat.set_canonical_code(new_codes(0));
 		return new_codes(0);
@@ -186,17 +206,21 @@ public class Isomorphism {
 			
 	private def minimal(var new_codes:ArrayList[Canonicalcode],var covered_edges:ArrayList[HashSet[FiveTuple]],var cand_pat:Pattern):void{
 		var go_ahead:Boolean = true;
-		
+		var s:Int = 0;
 		// When none of the candidate codes can be extended,
 		// its time to stop.
 		while(go_ahead) {
-			
+			Console.OUT.println("repeat time in minimal : " + s);
+			s++;
 			var orig_sz:Int = new_codes.size();
+			Console.OUT.println("orig_sz : " + orig_sz);
 			var ret:Boolean = false;
 			
 			for(var i:Int = 0;i < orig_sz; i++) {
 				var did_extend:Boolean = extend(new_codes, covered_edges, cand_pat, i);
+				Console.OUT.println("did_extend : "+did_extend + " repeat time : " + i);
 				ret = (ret | did_extend);				
+				Console.OUT.println("ret : " + ret + " did_extend : "+did_extend);
 			}
 			
 			// Even if one of the extend() succeeds then go_ahead.
@@ -208,6 +232,7 @@ public class Isomorphism {
 			
 			// deleate codes that is not actually minimal from candidate codes
 			for(var i:Int=0; i < new_codes.size()-1; i++) {
+				Console.OUT.println("deleate time : " + i);
 				for(var j:Int=i+1; j < new_codes.size();) {
 					
 					if(new_codes(i) < new_codes(j)) {
@@ -248,17 +273,17 @@ public class Isomorphism {
 		// extend new codes till all edges are covered
 		
 		// Denotes, if last edge in new_code was a fwd edge.
-		var is_last_fwd:Boolean = (new_codes(idx).getCode().getLast()._i < new_codes(idx).getCode().getLast()._j);
+		var is_last_fwd:Boolean = (new_codes(idx).getCode().getLast().i < new_codes(idx).getCode().getLast().j);
 		
 		// If last edge is forward, last_vid=_j, otherwise 
 		// last_vid = _i. 
 		// This is the vid to which edge shall be added.
 		var last_vid:Int;
 		if(is_last_fwd){
-			last_vid = new_codes(idx).getCode().getLast()._j;
+			last_vid = new_codes(idx).getCode().getLast().j;
 		}
 		else{
-			last_vid = new_codes(idx).getCode().getLast()._i;
+			last_vid = new_codes(idx).getCode().getLast().i;
 		}
 		var g_src_id:Int=new_codes(idx).gid(last_vid);
 		var g_src_lbl:Int = cand_pat.label(g_src_id);
@@ -296,8 +321,28 @@ public class Isomorphism {
 						curr_fwd_cid--;
 					}
 					
-					if(covered_edges(idx).contains(new FiveTuple(g_src_id, g_dest_id, g_src_lbl, g_e_lbl, g_dest_lbl)) == false &&
-							covered_edges(idx).contains(new FiveTuple(g_dest_id, g_src_id, g_dest_lbl, g_e_lbl, g_src_lbl)) == false) {		
+					val ftuple = new FiveTuple(g_src_id, g_dest_id, g_src_lbl, g_e_lbl, g_dest_lbl);
+					val btuple = new FiveTuple(g_dest_id, g_src_id, g_dest_lbl, g_e_lbl, g_src_lbl);
+					
+					
+					Console.OUT.println("coverd tuple");
+					Console.OUT.println("size:" + covered_edges(idx).size());
+					var iscontain:Boolean = false;
+					for(s in covered_edges(idx)){
+						//Console.OUT.println(s.toString());
+						if(s.equals(ftuple) || s.equals(btuple)){
+							iscontain = true;
+						}
+						
+					}
+					
+					/*
+					Console.OUT.println("checking tuple");
+					Console.OUT.println(ftuple.toString());
+					Console.OUT.println(btuple.toString());
+					 * */
+					
+					if(iscontain == false) {		
 						var new_tuple:FiveTuple = new FiveTuple(last_vid, c_dest_id, g_src_lbl, g_e_lbl, g_dest_lbl);
 						
 						cand_edges.add(new_tuple);
@@ -309,12 +354,14 @@ public class Isomorphism {
 			}
 			
 			
+			Console.OUT.println("cand_edges.size : " + cand_edges.size());
+			
 			// No extensions can be made from this node.
 			if(cand_edges.size() == 0) {
 				// TODO: This process can be speeded up by passing a set of vertices
 				// for which all the out_edges have been explored.
 				last_vid--;
-				
+				Console.OUT.println("last_vid : " + last_vid);
 				if(last_vid == -1) {  // All vertices have been explored but still no candidates.
 					return false;
 				} else {
@@ -341,13 +388,13 @@ public class Isomorphism {
 		for(; z<cand_edges.size();z++){
 			// The second condition in the && is present since we assign
 			// negative weights to potential fwd edges.
-			if((cand_edges(z)._j < cand_edges(z)._i) && cand_edges(z)._j >= 0) {
+			if((cand_edges(z).j < cand_edges(z).i) && cand_edges(z).j >= 0) {
 				new_codes(idx).append(cand_edges(z));
 				
-				var src_id:Int = new_codes(idx).gid(cand_edges(z)._i);
-				var dest_id:Int = new_codes(idx).gid(cand_edges(z)._j);
-				covered_edges(idx).add(new FiveTuple(src_id, dest_id, cand_edges(z)._li, 
-						cand_edges(z)._lij, cand_edges(z)._lj));
+				var src_id:Int = new_codes(idx).gid(cand_edges(z).i);
+				var dest_id:Int = new_codes(idx).gid(cand_edges(z).j);
+				covered_edges(idx).add(new FiveTuple(src_id, dest_id, cand_edges(z).li, 
+						cand_edges(z).lij, cand_edges(z).lj));
 
 			}
 			else{
@@ -375,26 +422,26 @@ public class Isomorphism {
 			if(first) {
 
 				var cc_it:FiveTuple = new_codes(idx).getCode().getLast();
-				var is_last_fwd2:Boolean=(cc_it._i<cc_it._j);    // denotes, if last edge in new_code was a fwd edge
-				var c_last_vid:Int=(is_last_fwd2)? cc_it._j: cc_it._i;        // vid to which edge shall be added  
+				var is_last_fwd2:Boolean=(cc_it.i<cc_it.j);    // denotes, if last edge in new_code was a fwd edge
+				var c_last_vid:Int=(is_last_fwd2)? cc_it.j: cc_it.i;        // vid to which edge shall be added  
 
 				var c_new_dest_id:Int = c_last_vid+1; // Assign an id to the forward edge.
 				var g_new_dest_id:Int = -1, g_new_src_id:Int = -1;
-				g_new_src_id = new_codes(idx).gid(cand_edges(z)._i);
+				g_new_src_id = new_codes(idx).gid(cand_edges(z).i);
 
-				var itr:Box[Int] = cid_gid_map.get(cand_edges(z)._j);
+				var itr:Box[Int] = cid_gid_map.get(cand_edges(z).j);
 				if (itr != null){
 					g_new_dest_id = itr.value;
 				}
 				else{
-						Console.OUT.println( "Could not find " + cand_edges(z)._j + " in cid_gid_map.");
+						Console.OUT.println( "Could not find " + cand_edges(z).j + " in cid_gid_map.");
 				}
-				new_codes(idx).append(new FiveTuple(cand_edges(z)._i, c_new_dest_id, cand_edges(z)._li,
-						cand_edges(z)._lij, cand_edges(z)._lj), 
+				new_codes(idx).append(new FiveTuple(cand_edges(z).i, c_new_dest_id, cand_edges(z).li,
+						cand_edges(z).lij, cand_edges(z).lj), 
 						g_new_src_id, g_new_dest_id);
 
-				covered_edges(idx).add(new FiveTuple(g_new_src_id, g_new_dest_id, cand_edges(z)._li,
-						cand_edges(z)._lij, cand_edges(z)._lj));
+				covered_edges(idx).add(new FiveTuple(g_new_src_id, g_new_dest_id, cand_edges(z).li,
+						cand_edges(z).lij, cand_edges(z).lj));
 			
 				// The first fwd edge is inserted, subsequent insertions
 				// will require inserting a new member into new_codes.
@@ -411,14 +458,14 @@ public class Isomorphism {
 
 				// TODO: Can take these few lines out of the if..else.
 				var cc_it:FiveTuple = new_codes(idx).getCode().getLast();
-				var is_last_fwd2:Boolean=(cc_it._i<cc_it._j);    // denotes, if last edge in new_code was a fwd edge
-				var c_last_vid:Int=(is_last_fwd2)? cc_it._j: cc_it._i;        // vid to which edge shall be added  
+				var is_last_fwd2:Boolean=(cc_it.i<cc_it.j);    // denotes, if last edge in new_code was a fwd edge
+				var c_last_vid:Int=(is_last_fwd2)? cc_it.j: cc_it.i;        // vid to which edge shall be added  
 
 				
 				var c_new_dest_id:Int = c_last_vid+1; // Assign an id to the forward edge.
 				var g_new_dest_id:Int = -1, g_new_src_id:Int = -1;
-				g_new_src_id = new_codes(idx).gid(cand_edges(z)._i);
-				var itr:Box[Int] = cid_gid_map.get(cand_edges(z)._j);
+				g_new_src_id = new_codes(idx).gid(cand_edges(z).i);
+				var itr:Box[Int] = cid_gid_map.get(cand_edges(z).j);
 				
 				if(itr != null){
 					g_new_dest_id = itr.value;
@@ -427,12 +474,12 @@ public class Isomorphism {
 					// if need print the debug code
 				}
 
-				new_code_cand.append(new FiveTuple(cand_edges(z)._i, c_new_dest_id, cand_edges(z)._li,
-						cand_edges(z)._lij, cand_edges(z)._lj),
+				new_code_cand.append(new FiveTuple(cand_edges(z).i, c_new_dest_id, cand_edges(z).li,
+						cand_edges(z).lij, cand_edges(z).lj),
 						g_new_src_id, g_new_dest_id);
 
-				cov_edges_cand.add(new FiveTuple(g_new_src_id, g_new_dest_id, cand_edges(z)._li,
-						cand_edges(z)._lij, cand_edges(z)._lj));
+				cov_edges_cand.add(new FiveTuple(g_new_src_id, g_new_dest_id, cand_edges(z).li,
+						cand_edges(z).lij, cand_edges(z).lj));
 
 				// Birth of more new codes. Add to new_codes and covered_edges.
 				new_codes.add(new_code_cand);

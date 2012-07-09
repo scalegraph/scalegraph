@@ -20,10 +20,10 @@ public class Canonicalcode {
 	
 	public def this(var ft:FiveTuple, var gi:Int,var gj:Int) {
 		this.dfs_code.add(ft);
-		this.cid_to_gid.put(ft._i, gi);
-		this.cid_to_gid.put(ft._j, gj);
-		this.gid_to_cid.put(gi, ft._i);
-		this.gid_to_cid.put(gj, ft._j);
+		this.cid_to_gid.put(ft.i, gi);
+		this.cid_to_gid.put(ft.j, gj);
+		this.gid_to_cid.put(gi, ft.i);
+		this.gid_to_cid.put(gj, ft.j);
 	}
 	
 	public def clone():Canonicalcode{
@@ -100,12 +100,12 @@ public class Canonicalcode {
 	// override
 	public def append(var tuple:FiveTuple, var gi:Int,var gj:Int){
 		push_back(tuple);
-		this.cid_to_gid.put(tuple._i, gi);
-		this.cid_to_gid.put(tuple._j, gj);
-		this.gid_to_cid.put(gi, tuple._i);
-		this.gid_to_cid.put(gj, tuple._j);
+		this.cid_to_gid.put(tuple.i, gi);
+		this.cid_to_gid.put(tuple.j, gj);
+		this.gid_to_cid.put(gi, tuple.i);
+		this.gid_to_cid.put(gj, tuple.j);
 	}
-	
+
 	public operator this < (rhs:Canonicalcode): Boolean{
 		var i:Int=0;
 		var j:Int=0;
