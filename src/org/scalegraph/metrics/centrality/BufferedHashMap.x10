@@ -58,4 +58,14 @@ public class BufferedHashMap {
     }
     return v();
   }
+
+  public def size() {
+	var sum:Int = 0;
+	for (p in Place.places()) {
+	  sum += at(p) {
+		array(p.id).size()
+	  };
+	}
+	return sum;
+  }
 }

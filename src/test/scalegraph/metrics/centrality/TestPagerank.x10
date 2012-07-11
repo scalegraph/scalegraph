@@ -37,7 +37,7 @@ public class TestPagerank {
     val reader:EdgeListReader = new EdgeListReader();
     return reader.
     //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-    loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-12.dl");
+    loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-8.dl");
   }
   
   public static def main(Array[String]) {
@@ -106,6 +106,7 @@ public class TestPagerank {
 
   private static def end(v:DenseMatrix, u:DenseMatrix) {
     Console.OUT.printf("norm = %f\n", (v - u).norm());
+	v.print();
     return (v - u).norm() < 0.0000001;
   }
 

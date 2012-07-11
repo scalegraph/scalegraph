@@ -127,7 +127,7 @@ public class Pagerank {
       Console.OUT.printf("time = %f\n", (Timer.milliTime() - start) / 1000.0);
       Console.OUT.println("end iterate");
     }
-    return new PagerankResult(R, idToIdxMap, idxToIdMap);
+    return new PagerankResult(null, idToIdxMap, idxToIdMap);
   }
 
   private def initialize(setRN:HashSet[Long]) {
