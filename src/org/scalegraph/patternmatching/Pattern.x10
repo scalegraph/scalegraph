@@ -57,6 +57,26 @@ public class Pattern {
 		_sup_ok = 1;  // super-set of exact VAT
 	}
 	
+	public def remove_edge(val a:Int,val b:Int):Pair[Pair[Int,Int],Int]{
+		var v1:Int = this.label(a);
+		var v2:Int = this.label(b);
+		var e:Int = _matrix.getEdgeLabel(a,b);
+
+		_matrix.removeEdge(a,b);
+		var v_pair:Pair[Int,Int] = (v1 < v2) ? Pair(v1, v2) : Pair(v2,v1);
+		var edge:Pair[Pair[Int,Int],Int] = Pair(v_pair, e);
+		val eit = _edges.contains(edge);
+		if (eit == false) {
+			assert(false):"ERROR: request for non-existent edge removal";
+		}
+		_edges.remove(edge);
+		_sup_ok = -1; //current VAT is sub-set of exact VAT
+		
+		
+		assert(false):"not implemented yet";
+		return edge;
+	}
+	
 	
 	public def get_matrix():FullLabelAdjMatrix{
 		return _matrix;

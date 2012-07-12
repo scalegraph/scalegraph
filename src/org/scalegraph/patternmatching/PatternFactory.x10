@@ -88,9 +88,10 @@ public class PatternFactory {
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
+			Console.OUT.println("complete get source vertex label");
 			var nbrs:HashSet[Pair[Int,Int]]= this.d.get_neighbors(src_v);
 				// about nbrs element of first is destination label and second is edeg label
-			
+			Console.OUT.println("complete get neighbors");
 			
 			var nit:Iterator[Pair[Int,Int]] = nbrs.iterator();
 			while(nit.hasNext()==true){// trying extension on a vertex for all posible neighbor edge type
@@ -214,6 +215,10 @@ public class PatternFactory {
 	
 	public def pattern_with_edge_removed(var p:Pattern,var a:Int,var b:Int):Pattern{
 		var clone:Pattern = p.clone();
+		var edge:Pair[Pair[Int,Int],Int] = clone.remove_edge(a,b);
+		_d.get_exact_sup_from_super_pat_vat(clone);
+		
+		assert(false):"not implemented yet";
 		return clone;
 	}
 	

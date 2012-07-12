@@ -13,19 +13,22 @@ public class Isomorphism {
 		var dest_v:Int=0;//least destination label
 		var ids:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();//ids with least labelled edges
 
-		Console.OUT.println("a");
+		//Console.OUT.println("check the canonical code is known or not");
 		if (cand_pat.get_code_known() == true) {
+			//Console.OUT.println("retrun canonical code that is already known");
 			return cand_pat.get_canonical_code();
+			
 		}
-		Console.OUT.println("b");
+		
+		//Console.OUT.println("candidate pattern's canonical code is not known yet, so start to make new code");
 
 		if (cand_pat.size() == 0) {
 			assert(false):("ERROR: null patterns are not allowed");
 		}
-		Console.OUT.println("c");
+		//Console.OUT.println("cand_pat != 0");
 
 		src_v = cand_pat.label(0);  // src_v has the label of the least vertex in dfs walk
-		Console.OUT.println("d");
+		//Console.OUT.println("finish get start vatex label");
 
 		for(var j:Int = 0;j<cand_pat.size();j++){
 			if(cand_pat.get_matrix()(0,j)==1){
@@ -34,18 +37,18 @@ public class Isomorphism {
 				break;
 			}
 		}
-		Console.OUT.println("e");
+		//Console.OUT.println("if dest < src replace them");
 
 		if (dest_v < src_v) {// if dest_v is smaller then src_v,swap. 
 			var ch:Int = src_v;
 			src_v = dest_v;
 			dest_v = ch;
 		}
-		Console.OUT.println("f");
+		//Console.OUT.println("finish get sample edge's data that includes one particular vatex label");
 
 		
 		iso_startup(cand_pat, src_v, dest_v, e, ids);
-		Console.OUT.println("finish iso start up");
+		//Console.OUT.println("finish iso start up");
 
 		// Each member of this vector corresponds to a minimal canonical code.
 		// At the end of the minimal() method, this vector should have a single
@@ -61,43 +64,43 @@ public class Isomorphism {
 		 */
 		var covered_edges:ArrayList[HashSet[FiveTuple]] = new ArrayList[HashSet[FiveTuple]]();
 
-		Console.OUT.println("create separate codes for each pair in ids");
-		Console.OUT.println("ids size:" + ids.size());
+		//Console.OUT.println("create separate codes for each pair in ids");
+		//Console.OUT.println("ids size:" + ids.size());
 
 		// Create separate codes for each pair in ids.
 		// Each such pair shall have to be tested for isomorphism.
 		for(var i:Int=0; i<ids.size(); i++) {
-			Console.OUT.println("repeat time:" + i);
+			//Console.OUT.println("repeat times:" + i);
 			// Add a minimal edge to new_codes.
 			var cc_tuple:FiveTuple = new FiveTuple(0, 1, cand_pat.label(ids(i).first), 
 					e, cand_pat.label(ids(i).second));
-			Console.OUT.println("made five tuple");
+			//Console.OUT.println("made five tuple");
 			var new_cc:Canonicalcode = new Canonicalcode(cc_tuple, ids(i).first, ids(i).second);
-			Console.OUT.println("made new canonicalcode");
+			//Console.OUT.println("made new canonicalcode");
 
 			new_codes.add(new_cc);
-			Console.OUT.println("complete add new code");
+			//Console.OUT.println("complete add new code");
 
 			// Correspondingly update the covered_edges vector.
 			var g_tuple:FiveTuple = new FiveTuple(ids(i).first, ids(i).second, cc_tuple.li,
 					cc_tuple.lij, cc_tuple.lj);
-			Console.OUT.println("made new tupple");
+			//Console.OUT.println("made new tupple");
 
 			var s:HashSet[FiveTuple] = new HashSet[FiveTuple]();
 			s.add(g_tuple);
-			Console.OUT.println("added new hash set to store covered_edges");
+			//Console.OUT.println("added new hash set to store covered_edges");
 			covered_edges.add(s);
-			Console.OUT.println("finish add covered_edges");
+			//Console.OUT.println("finish add covered_edges");
 
 		}
-		Console.OUT.println("start select minimal");
+		//Console.OUT.println("start select minimal");
 
 		// Each of the above new codes, which are equivalent are passed to the
 		// minimal routine. Minimal routine will add more edges 
 		// and remove some of the candidate minimal codes until it comes up 
 		// with a single min canonical code.
 		minimal(new_codes, covered_edges, cand_pat);
-		Console.OUT.println("finish minimal");
+		//Console.OUT.println("finish minimal");
 		
 		cand_pat.set_code_known(true);
 		cand_pat.set_canonical_code(new_codes(0));
@@ -213,14 +216,14 @@ public class Isomorphism {
 			Console.OUT.println("repeat time in minimal : " + s);
 			s++;
 			var orig_sz:Int = new_codes.size();
-			Console.OUT.println("orig_sz : " + orig_sz);
+			//Console.OUT.println("orig_sz : " + orig_sz);
 			var ret:Boolean = false;
 			
 			for(var i:Int = 0;i < orig_sz; i++) {
 				var did_extend:Boolean = extend(new_codes, covered_edges, cand_pat, i);
-				Console.OUT.println("did_extend : "+did_extend + " repeat time : " + i);
+				//Console.OUT.println("did_extend : "+did_extend + " repeat time : " + i);
 				ret = (ret | did_extend);				
-				Console.OUT.println("ret : " + ret + " did_extend : "+did_extend);
+				//Console.OUT.println("ret : " + ret + " did_extend : "+did_extend);
 			}
 			
 			// Even if one of the extend() succeeds then go_ahead.
@@ -232,7 +235,7 @@ public class Isomorphism {
 			
 			// deleate codes that is not actually minimal from candidate codes
 			for(var i:Int=0; i < new_codes.size()-1; i++) {
-				Console.OUT.println("deleate time : " + i);
+				//Console.OUT.println("deleate roop times : " + i);
 				for(var j:Int=i+1; j < new_codes.size();) {
 					
 					if(new_codes(i) < new_codes(j)) {
@@ -328,13 +331,18 @@ public class Isomorphism {
 					Console.OUT.println("coverd tuple");
 					Console.OUT.println("size:" + covered_edges(idx).size());
 					var iscontain:Boolean = false;
-					for(s in covered_edges(idx)){
+					
+					
+					iscontain = !(covered_edges(idx).contains(ftuple) == false && covered_edges(idx).contains(btuple) == false);
+					/*for(s in covered_edges(idx)){
 						//Console.OUT.println(s.toString());
 						if(s.equals(ftuple) || s.equals(btuple)){
 							iscontain = true;
 						}
 						
-					}
+					}*/
+					
+					Console.OUT.println("iscontain : " + iscontain);
 					
 					/*
 					Console.OUT.println("checking tuple");

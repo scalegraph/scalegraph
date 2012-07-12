@@ -1,6 +1,7 @@
 package org.scalegraph.patternmatching;
 
 import x10.util.ArrayList;
+import x10.util.ListIterator;
 import x10.util.HashMap;
 import x10.util.Pair;
 import x10.util.Box;
@@ -92,6 +93,7 @@ public class DataBase {
 				if (fromId != toId){
 					// when get edgelist from Attributedgraph indicated source vatex id may included in toId 
 					pat.add_edge(fromId,toId,eLabel);
+					this.ext_map_insert(fromLabel, toLabel, eLabel);
 					var e:Pair[Pair[Int,Int],Int] = (fromLabel < toLabel)? new Pair(Pair(fromLabel, toLabel), eLabel) : new Pair(Pair(toLabel, fromLabel), eLabel);
 
 					var s:Box[Int] = local_map.get(e);
@@ -135,6 +137,29 @@ public class DataBase {
 
 	}
 	
+	private def ext_map_insert(val vl1:Int, val vl2:Int, val el:Int) :void{
+		
+		var it:Box[HashSet[Pair[Int,Int]]] = _ext_map.get(vl1);
+		if (it == null) {
+			val nbrs:HashSet[Pair[Int,Int]] = new HashSet[Pair[Int,Int]]();
+			nbrs.add(Pair(vl2 as Int, el as Int)); 
+			_ext_map.put(vl1, nbrs);
+		}
+		else {
+			it.value.add(Pair(vl2 as Int, el as Int));
+		}
+		if (vl1 == vl2) return;
+		// now doing the same for the other end (NOTE: for directed you need to do only one)
+		it = _ext_map.get(vl2);
+		if (it == null) {
+			var nbrs:HashSet[Pair[Int,Int]] = new HashSet[Pair[Int,Int]]();
+			nbrs.add(Pair(vl1 as Int , el as Int)); 
+			_ext_map.put(vl2, nbrs);
+		}
+		else {
+			it.value.add(Pair(vl1 as Int, el as Int));
+		}
+	}
 	
 	public def set_minsup(val minsup:Int){
 		
@@ -217,6 +242,7 @@ public class DataBase {
 	public def get_edge_vat(var edge:Pair[Pair[Int,Int],Int]):ArrayList[Int]{
 		Console.OUT.println("get edge vat method");
 		val t = _edge_info.entries();
+		/*
 		for(i in t){
 			val s = i.getValue().first;
 			Console.OUT.println("key is " + i.getKey().toString());
@@ -225,6 +251,7 @@ public class DataBase {
 
 			}
 		}
+		 * */
 		
 		var x:Box[Pair[ArrayList[Int],Int]] = _edge_info.get(edge);
 		if(x != null){
@@ -256,6 +283,82 @@ public class DataBase {
 		return -1;
 	}
 
+	
+	public def get_exact_sup_from_super_pat_vat(var pat:Pattern):Boolean{
+		var mset:ArrayList[Pair[Pair[Int,Int],Int]] = pat.get_edges();
+		var prev:Pair[Pair[Int,Int],Int] = mset.getFirst();
+		var sup_list:ArrayList[Int] = get_edge_vat(prev);
+		
+		var out_list:ArrayList[Int] = new ArrayList[Int]();
+		for(cit in mset) {
+			// cout << "Inside this for loop:" << endl;
+			if (prev.equals(cit) == false) {
+				prev = cit;
+				val its_vat:ArrayList[Int] = get_edge_vat(prev);
+				vat_join(its_vat, sup_list, out_list);
+				sup_list = out_list; 
+				out_list.clear();
+			}
+		}
+		
+		val cur_vat:ArrayList[Int] = pat.get_vat();
+		
+		var it2:ListIterator[Int] = cur_vat.iterator();
+		var it3:ListIterator[Int] = null;
+		for (it in sup_list) {
+			var s:Int = it2.previousIndex();
+			for(;s < cur_vat.size();s++){
+				if(cur_vat(s) >= cur_vat(it2.previousIndex())){
+					it3 = cur_vat.iteratorFrom(s);
+					break;
+				}
+			}
+			if(s >= cur_vat.size()){
+				it3 = null;
+			}
+			if (it3 == null || cur_vat(it3.previousIndex()) != it) {  // not exists
+				var database_pat:Pattern = _graph_store(it);
+				if (database_pat.is_super_pattern(pat) == true) {
+					out_list.add(it); 
+				}
+			}
+			it2 = it3;	
+	
+		}
+		
+		for (var i:Int=0; i<out_list.size(); i++) {
+			var database_pat:Pattern = _graph_store(out_list(i));
+			var m = new Matrix(pat.size(), database_pat.size());
+			matcher(pat.get_matrix(), database_pat.get_matrix(), m);
+			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat.get_matrix(), m ,false);
+			if (ret_val == true){
+				// cout << "adding " << out_list[i] << " to vatlist" << endl;
+				pat.add_tid_to_vat(out_list(i));
+			}
+		}
+		val c_vat:ArrayList[Int] = pat.get_vat();
+		
+		assert(false):"not implemented yet";
+		return false;
+	}
+
+	
+	public def vat_join(val v1:ArrayList[Int],val v2:ArrayList[Int], var out_list:ArrayList[Int]):void {
+		var i:Int=0,j:Int=0;
+		while (i<v1.size() && j<v2.size()) {
+			if (v1(i) < v2(j)) {
+				i++; 
+			}
+			else if(v2(j) < v1(i)) { 
+				j++;
+			}
+			else {
+				out_list.add(v1(i));
+				i++;j++;
+			}
+		}
+	}
+	
 	public def get_exact_sup_optimal(var pat:Pattern):Boolean{
 		var sup_list:ArrayList[Int] = new ArrayList[Int]();
 		val its_vat:ArrayList[Int] = pat.get_vat();

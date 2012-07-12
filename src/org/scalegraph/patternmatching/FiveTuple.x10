@@ -65,20 +65,26 @@ public class FiveTuple {
 		return false;
 	}//end operator<
 	
+	
 	public final def equals(val other:Any):Boolean{
-		return false;
+		Console.OUT.println("assign is Any");
+		
+		if(other instanceof FiveTuple){
+			return this.equals(other as FiveTuple);
+		}
+		else{
+			return false;
+		}
 	}
+	
+	
 	
 	public final def equals(val other:FiveTuple):Boolean{
 		atomic{
+			Console.OUT.println("assign is Five Tuple");
 			if(this.i.equals(other.i) && this.j.equals(other.j) 
 					&& this.li.equals(other.li) && this.lj.equals(other.lj)
-					&& this.lij.equals(other.lij)
-					&& other.i.equals(this.i) && other.j.equals(this.j) 
-					&& other.li.equals(this.li) && other.lj.equals(this.lj)
-					&& other.lij.equals(this.lij)
-		
-			){
+					&& this.lij.equals(other.lij)){
 				return true;
 			}
 			else{
@@ -87,9 +93,13 @@ public class FiveTuple {
 		}
 	}
 	
+	
 	public def toString ():String{
 		return "(i : " + i + ",j : " + j + ",li : " + li + ",lj :" + lj + ",lij :" +lij + ")";
 	}
 	
+	public def hashCode():Int{
+		return (i.hashCode() ^ j.hashCode() ^ li.hashCode() ^ lj.hashCode() ^ lij.hashCode());
+	}
 	
 }

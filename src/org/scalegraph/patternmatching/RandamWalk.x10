@@ -36,19 +36,22 @@ public class RandamWalk {// random walk on pattern space
 		if (p.get_is_frequent()==false) {
 			assert(false):("ERROR:this pattern is infrquent\n");
 		}
-		
+
+
 		var ln:LatticeNode = create_lattice_node(p);
 		Console.OUT.println("complete create lattice node");
 		process_node(ln);
 		Console.OUT.println("complete process_node");
 		Console.OUT.println("complete inityalizing ranndom walk");
+		
 		return ln;
 	}
 	
 	
 	public def walk(var current:LatticeNode,var iter:Int):Boolean{
 		var step:Int = 1;
-		
+		Console.OUT.println("walking step : " + step);
+
 		while(true){
 			Console.OUT.println("walking step : " + step);
 			process_node(current);
@@ -153,15 +156,16 @@ public class RandamWalk {// random walk on pattern space
 
 	
 	private def create_lattice_node(var p:Pattern):LatticeNode{
-		//Console.OUT.println("start create lattice node");
+		Console.OUT.println("start create lattice node");
 		var cc:Canonicalcode = _iso.check_isomorphism(p);
-		//Console.OUT.println("complete check iso");
+
+		Console.OUT.println("complete check iso");
 		p.set_canonical_code(cc);
-		//Console.OUT.println("complete set code");
+		Console.OUT.println("complete set code");
 		var min_dfs_cc:String = cc.to_string(); // defined temporarily to avoid error in coding
-		//Console.OUT.println("complete convert code to string");
+		Console.OUT.println("complete convert code to string");
 		var node:LatticeNode = exists(min_dfs_cc);
-		//Console.OUT.println("complete lattice node is exist or not");
+		Console.OUT.println("complete chedking lattice node is exist or not");
 		if (node == null) {  // new pattern
 			node = new LatticeNode(p);
 			node.setis_processed(false);
@@ -170,7 +174,7 @@ public class RandamWalk {// random walk on pattern space
 		else {
 			p = node.getpattern();
 		}
-		//Console.OUT.println("complete create lattice node");
+		Console.OUT.println("complete create lattice node");
 		return node;
 	}
 	
