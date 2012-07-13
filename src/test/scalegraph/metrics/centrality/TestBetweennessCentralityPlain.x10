@@ -18,12 +18,13 @@ public class TestBetweennessCentralityPlain {
 		val params = new OptionsParser(args, null,
 				[Option("i", "", "Input file/folder"),
 				 Option("o", "", "Output file"),
-				 Option("c", "", "Percent Cache"),
+				 Option("c", "", "Cut-off distance"),
 				 Option("r", "", "Print result")]);
 
 		val inputPath = params("-i", "");
 		val outputPath = params("-o", "");
 		val shouldPrintResult = params("-r");
+		val cutoffDistance = params("-c", 0);
 
 		if(inputPath == null || inputPath.equals("")) {
 			Console.OUT.println("Please enter file name");
@@ -60,7 +61,7 @@ public class TestBetweennessCentralityPlain {
 		}
 		val endLoadFile = System.currentTimeMillis();
 		val loadingElapse = (endLoadFile - startLoadFile) / 1000;
-		Console.OUT.println("Loading Elapse Time(s): " + loadingElapse);
+		Console.OUT.println("Loading Elapsed Time(s): " + loadingElapse);
 		
 		val distVertexList:DistArray[Long] = graph.getVertexList();
 		val vertexListBuilder: ArrayBuilder[Long] = new ArrayBuilder[Long]();
@@ -95,7 +96,7 @@ public class TestBetweennessCentralityPlain {
 		// }
 		
 		val calStart = System.currentTimeMillis();
-		val result = BetweennessCentrality.run(graph, vertexList, false);
+		val result = BetweennessCentrality.run(graph, vertexList, false, cutoffDistance);
 		val calEnd = System.currentTimeMillis();
 		
 		val vertexCountStart = System.currentTimeMillis();
@@ -118,6 +119,7 @@ public class TestBetweennessCentralityPlain {
 					calEnd,
 					vertexCountStart,
 					vertexCountEnd,
+					cutoffDistance,
 					true /* Always print result to file */);
 			printer.close();
 		} else {
@@ -132,6 +134,7 @@ public class TestBetweennessCentralityPlain {
 					         calEnd,
 					         vertexCountStart,
 					         vertexCountEnd,
+					         cutoffDistance,
 					         shouldPrintResult
 			);
 		}
@@ -151,6 +154,7 @@ public class TestBetweennessCentralityPlain {
 			calEnd: Long,
 			vertexCountStart: Long,
 			vertexCountEnd: Long,
+			cutoff: Long,
 			shouldPrintResult: Boolean
 			){
 		
@@ -169,10 +173,7 @@ public class TestBetweennessCentralityPlain {
 		p.println("---------------------------------------------------------------------");
 		p.println("Input file : " + inputFile);
 		p.println("Output file : " + outputFile);
-		// p.println("Total vertex count : " + vcount);
-		// p.println("Time to BuildList (ms): " + (buildEnd - buildStart) );
-		// p.println("Time to Cal (ms): " + (calEnd - calStart) );
-		// p.println("Time to Count vertex (ms): " + (vertexCountEnd - vertexCountStart) );
+		p.println("Cutoff : " + cutoff);
 		p.println("---------------------------------------------------------------------");
 		p.flush();
 	}
