@@ -898,17 +898,17 @@ public class BetweennessCentrality {
 	}
 	
 	public class FixedVertexQueue {
-		var space: Long;
+		var space: Int;
 		var count: Long;
-		var storage: IndexedMemoryChunk[Long];
-		var index: Long;
-		var f:Long;
-		var r: Long;
+		var storage: IndexedMemoryChunk[Int];
+		var index: Int;
+		var f:Int;
+		var r: Int;
 		
 		def this(space: Long) {
 			
-			this.space = space;
-			this.storage = IndexedMemoryChunk.allocateZeroed[Long](space);
+			this.space = space as Int;
+			this.storage = IndexedMemoryChunk.allocateZeroed[Int](space);
 			f = 0;
 			r = 0;
 			count = 0;
@@ -922,7 +922,7 @@ public class BetweennessCentrality {
 				throw new Exception("Data overflow");
 			}
 			
-			storage(r) = vertexId;
+			storage(r) = vertexId as Int;
 			r = (r + 1) % space;
 			++count;
 		}
@@ -953,15 +953,15 @@ public class BetweennessCentrality {
 	
 	public class FixedVertexStack {
 	
-		val storage: IndexedMemoryChunk[Long];
-		var index: Long;
+		val storage: IndexedMemoryChunk[Int];
+		var index: Int;
 		
 		def this(size: Long) {
-			this.storage = IndexedMemoryChunk.allocateZeroed[Long](size);
+			this.storage = IndexedMemoryChunk.allocateZeroed[Int](size);
 			this.index = 0;
 		}
 		
-		public def pop(): Long {
+		public def pop(): Int {
 			if(index <= 0)
 				throw new Exception("Stack underflow");
 
@@ -972,7 +972,7 @@ public class BetweennessCentrality {
 			if(index >= storage.length())
 				throw new Exception("Stack overflow size: " + storage.length() + " index: " + index );
 
-			storage(index) = vertexId;
+			storage(index) = vertexId as Int;
 			++index;
 		}
 		
@@ -981,7 +981,7 @@ public class BetweennessCentrality {
 		}
 		
 		public def isEmpty() {
-			return index == 0L;
+			return index == 0;
 		}
 	}
 	
@@ -1123,32 +1123,32 @@ public class BetweennessCentrality {
 		 * Create data structure for BC
 		 */
 		val traverseQ: FixedVertexQueue = new FixedVertexQueue(maximumVertexId);
-		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
-		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
+		val distanceMap = new Rail[Int](maximumVertexId as Int);
+		val geodesicsMap = new Rail[Int](maximumVertexId as Int);
 		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
-		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
-		val predecessorMap =  IndexedMemoryChunk.allocateUninitialized[FixedVertexStack](maximumVertexId); 
+		val tempScore =  new Rail[Double](maximumVertexId as Int);
+		val predecessorMap =  new Rail[FixedVertexStack](maximumVertexId as Int); 
 		
 		// Init predecessor map
-		for(var i: Int = 0; i <predecessorMap.length(); ++i) {
+		for(var i: Int = 0; i < predecessorMap.size; ++i) {
 			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
 		}
 		
-		// Create shuffle vertex
-		val localVerticesIndices = localVertices.size + 1L;
-		val vertexToWork = IndexedMemoryChunk.allocateZeroed[Long](localVerticesIndices);
-		val tempShuffling = IndexedMemoryChunk.allocateZeroed[Long](localVerticesIndices);
-		val rand = new Random();
-		for(var i: Long = 0; i < localVerticesIndices; ++i) {
-			// vertexToWork(i) = i;
-			tempShuffling(i) = i;
-		}
-		
-		for(var i: Long = 0; i < localVerticesIndices; ++i) {
-			val pickedIndex = rand.nextLong(localVerticesIndices - i);
-			vertexToWork(i) = tempShuffling(i + pickedIndex);
-			tempShuffling(i + pickedIndex) = tempShuffling(i);
-		}
+		// // Create shuffle vertex
+		// val localVerticesIndices = localVertices.size + 1L;
+		// val vertexToWork = IndexedMemoryChunk.allocateZeroed[Long](localVerticesIndices);
+		// val tempShuffling = IndexedMemoryChunk.allocateZeroed[Long](localVerticesIndices);
+		// val rand = new Random();
+		// for(var i: Long = 0; i < localVerticesIndices; ++i) {
+		// 	// vertexToWork(i) = i;
+		// 	tempShuffling(i) = i;
+		// }
+		// 
+		// for(var i: Long = 0; i < localVerticesIndices; ++i) {
+		// 	val pickedIndex = rand.nextLong(localVerticesIndices - i);
+		// 	vertexToWork(i) = tempShuffling(i + pickedIndex);
+		// 	tempShuffling(i + pickedIndex) = tempShuffling(i);
+		// }
 		
 		
 		/*
@@ -1165,7 +1165,7 @@ public class BetweennessCentrality {
 			}
 			
 			// Get source vertex
-			val source = localVertices(index);
+			val source = localVertices(index) as Int;
 			
 			if(source < 0) {
 				// Source maybe -1 to indicate end of array
@@ -1191,14 +1191,14 @@ public class BetweennessCentrality {
 			
 			// Clear Previous Data
 			// distanceMap.clear(0, maximumVertexId);
-			for(var i: Int = 0; i < distanceMap.length() ; ++i)
+			for(var i: Int = 0; i < distanceMap.size ; ++i)
 				distanceMap(i) = -1L;
 			
-			geodesicsMap.clear(0, maximumVertexId);
-			tempScore.clear(0, maximumVertexId);
+			geodesicsMap.clear();
+			tempScore.clear();
 			
 			
-			for(i in 0..(predecessorMap.length()-1)) {
+			for(i in 0..(predecessorMap.size-1)) {
 				predecessorMap(i).clear();
 			}
 			
@@ -1211,15 +1211,15 @@ public class BetweennessCentrality {
 			traverseQ.add(source);
 			// Runtime.probe();
 			
-			var neighbor: Long;
-			var actor: Long;
+			var neighbor: Int;
+			var actor: Int;
 			var neighbors: Array[Long]; 
 			// var visitNodes: Long = 0;
 			
 			// Traverse the graph 
 			while(!traverseQ.isEmpty()) {
 				
-				actor = traverseQ.removeFirst();
+				actor = traverseQ.removeFirst() as Int;
 				
 				neighbors = neighborMap(actor as Int);
 				vertexStack.push(actor);
@@ -1233,10 +1233,10 @@ public class BetweennessCentrality {
 				
 				for(var i: Int = 0; i < neighbors.size; ++i) {
 					
-					neighbor = neighbors(i);
+					neighbor = neighbors(i) as Int;
 					val distanceFromSource = distanceMap(actor) + 1;
 					
-					if(distanceMap(neighbor) == -1L) {
+					if(distanceMap(neighbor) == -1) {
 						distanceMap(neighbor) = distanceFromSource;
 						traverseQ.add(neighbor);
 					}
@@ -1259,10 +1259,10 @@ public class BetweennessCentrality {
 			// Calculate score
 			while(!vertexStack.isEmpty()) {
 				
-				actor = vertexStack.pop();
+				actor = vertexStack.pop() ;
 				
 				while(!predecessorMap(actor).isEmpty()) {
-					val pred = predecessorMap(actor).pop();
+					val pred = predecessorMap(actor).pop() ;
 					
 					tempScore(pred) += (tempScore(actor) + 1.0D) * 
 					(geodesicsMap(pred) as Double / geodesicsMap(actor) as Double);
@@ -1273,7 +1273,7 @@ public class BetweennessCentrality {
 			
 			
 			val length = betweennessScore.length();
-			for(var i: Long = 0; i < length; ++i) {
+			for(var i: Int = 0; i < length; ++i) {
 				val score = tempScore(i);
 				if( score == 0D || i == source)
 					continue;
