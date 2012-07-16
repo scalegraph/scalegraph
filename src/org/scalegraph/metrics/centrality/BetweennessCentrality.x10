@@ -1117,14 +1117,6 @@ public class BetweennessCentrality {
 		
 		var numProcessedSource: Long = 0;
 		var lastPrintThroughput: Long =  System.currentTimeMillis();
-		// var sumBfsTime: Long = 0;
-		// var bfsTime: Long = 0;
-		// var sumBacktrackTime: Long = 0;
-		// var backtrackTime: Long = 0;
-		// var updateLocalScoreTime: Long =0;
-		// var sumUpdateLocalScoreTime: Long = 0;
-		// 
-		// var allocationTime: Long = System.currentTimeMillis();
 		
 		
 		/**
@@ -1137,26 +1129,35 @@ public class BetweennessCentrality {
 		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
 		val predecessorMap =  IndexedMemoryChunk.allocateUninitialized[FixedVertexStack](maximumVertexId); 
 		
+		// Init predecessor map
 		for(var i: Int = 0; i <predecessorMap.length(); ++i) {
 			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
 		}
 		
-		// allocationTime = System.currentTimeMillis() - allocationTime;
+		// Create shuffle vertex
+		val localVerticesIndices = localVertices.size + 1L;
+		val vertexToWork = IndexedMemoryChunk.allocateZeroed[Long](localVerticesIndices);
+		val tempShuffling = IndexedMemoryChunk.allocateZeroed[Long](localVerticesIndices);
+		val rand = new Random();
+		for(var i: Long = 0; i < localVerticesIndices; ++i) {
+			// vertexToWork(i) = i;
+			tempShuffling(i) = i;
+		}
 		
-		// val writer = new FileWriter(new File("node_visit"));
-		// val printer = new Printer(writer);
-		
+		for(var i: Long = 0; i < localVerticesIndices; ++i) {
+			val pickedIndex = rand.nextLong(localVerticesIndices - i);
+			vertexToWork(i) = tempShuffling(i + pickedIndex);
+			tempShuffling(i + pickedIndex) = tempShuffling(i);
+		}
 		
 		
 		/*
 		 * localVertices can be accessed properly by Point only
 		 * Iterate over localVertices and process only assigned vertices
 		 */
-		
 		var indexCount: Int = 0;
 		for(index in localVertices) {
 			
-			// bfsTime = System.currentTimeMillis();
 			
 			// Exit if we perform BC for specified pivots
 			if(indexCount >= iterations) {
@@ -1254,11 +1255,6 @@ public class BetweennessCentrality {
 					}
 				}
 			}
-			// printer.println(source +","+ visitNodes);
-			// bfsTime = System.currentTimeMillis() - bfsTime;
-			// sumBfsTime += bfsTime;
-			
-			// backtrackTime = System.currentTimeMillis();
 			
 			// Calculate score
 			while(!vertexStack.isEmpty()) {
@@ -1275,10 +1271,7 @@ public class BetweennessCentrality {
 				
 			}
 			
-			// backtrackTime = System.currentTimeMillis() - backtrackTime;
-			// sumBacktrackTime += backtrackTime;
 			
-			// updateLocalScoreTime = System.currentTimeMillis();
 			val length = betweennessScore.length();
 			for(var i: Long = 0; i < length; ++i) {
 				val score = tempScore(i);
@@ -1290,10 +1283,8 @@ public class BetweennessCentrality {
 				betweennessScore(i) += tempScore(i);
 				zonelock.unlock();
 			}
-			numProcessedSource++;
 			
-			// updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
-			// sumUpdateLocalScoreTime += updateLocalScoreTime;
+			numProcessedSource++;
 			
 			// Print throuhgput every XX milliseconds
 			val now = System.currentTimeMillis();
@@ -1304,21 +1295,7 @@ public class BetweennessCentrality {
 				lastPrintThroughput = now;
 				numProcessedSource = 0;
 			}
-			
-			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
 		}
-		// Console.OUT.println("Thread " + taskId + " has processed all assigned vertices");
-		// // Print time info
-		// Console.OUT.println(here + ":" + threadId + " sumBfsTime time(ms): " + sumBfsTime);
-		// Console.OUT.println(here + ":" + threadId + " sumBacktrackTime neighbour time(ms): " + sumBacktrackTime);
-		// Console.OUT.println(here + ":" + threadId + " sumUpdateLocalScoreTime time(ms): " + sumUpdateLocalScoreTime);
-		
-		// updateTimeStatLock.lock();
-		// globalSpaceAllocTime += allocationTime;
-		// globalBfsTime += sumBfsTime;
-		// globalBacktrackTime += sumBacktrackTime;
-		// globalUpdateLocalTime += sumUpdateLocalScoreTime;
-		// updateTimeStatLock.unlock();
 	}
 	
 }
