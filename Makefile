@@ -749,6 +749,38 @@ test_matrixpagerank:
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 	
+# Test 29
+test_psc:
+	@echo "----------- Compile Parallel Spectral Clustering Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-cxx-postarg /nfs/home/ogata/software/ARPACK/libarpack_LINUX.a \
+	-cxx-postarg $(CBLAS_LIB) \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg -lgfortran \
+	src/test/scalegraph/clustering/psc/TestParallelSpectralClustering.x10 \
+	src/org/scalegraph/clustering/psc/ParallelSpectralClustering.x10 \
+	src/org/scalegraph/clustering/psc/LaplacianMatrix.x10 \
+	src/org/scalegraph/clustering/psc/SparseMatrix.x10 \
+	src/org/scalegraph/clustering/psc/Numbering.x10 \
+	src/org/scalegraph/clustering/psc/ARPACK.x10 \
+	src/org/scalegraph/clustering/Clustering.x10 \
+	src/org/scalegraph/clustering/ClusteringResult.x10 \
+	src/org/scalegraph/clustering/Vector.x10 \
+	src/test/scalegraph/clustering/StopWatch.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10;
+	
+	@echo "----------- Launch Parallel Spectral Clustering Tester ---------------------------";
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
+	
 help:
 	@echo '---- scalegraph build help -------'
 	@echo 'Usage : make <command>'

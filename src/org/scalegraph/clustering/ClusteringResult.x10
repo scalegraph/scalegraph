@@ -9,7 +9,7 @@ public class ClusteringResult(nVertices:Int, nClusters:Int) {
 	private var VtoC:HashMap[Long, Int];         // vertexID to cluster number
 	private var CtoV:HashMap[Int, Array[Long]];  // cluster number to array of vertexID
 	
-	def this(VtoC:HashMap[Long, Int], CtoV:HashMap[Int, Array[Long]]){
+	public def this(VtoC:HashMap[Long, Int], CtoV:HashMap[Int, Array[Long]]){
 		property(VtoC.size(), CtoV.size());
 		this.VtoC = VtoC;
 		this.CtoV = CtoV;

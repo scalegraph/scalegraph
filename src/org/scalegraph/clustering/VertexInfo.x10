@@ -8,13 +8,13 @@ import test.scalegraph.clustering.Tool;
 
 public class VertexInfo {
 	
-	val parent:Place = here;
+	public val parent:Place = here;
 	val minID = new Array[Long](Place.MAX_PLACES, Long.MAX_VALUE);
 	val minIDX = new Array[Int](Place.MAX_PLACES, Int.MAX_VALUE);
-	val gMinID = GlobalRef(minID);
-	val gMinIDX = GlobalRef(minIDX);
-	val IDtoIDX = DistArray.make[HashMap[Long, Int]](Dist.makeUnique(), (Point) => new HashMap[Long, Int]());
-	val IDXtoID = DistArray.make[HashMap[Int, Long]](Dist.makeUnique(), (Point) => new HashMap[Int, Long]());
+	public val gMinID = GlobalRef(minID);
+	public val gMinIDX = GlobalRef(minIDX);
+	public val IDtoIDX = DistArray.make[HashMap[Long, Int]](Dist.makeUnique(), (Point) => new HashMap[Long, Int]());
+	public val IDXtoID = DistArray.make[HashMap[Int, Long]](Dist.makeUnique(), (Point) => new HashMap[Int, Long]());
 	
 	public def getPlaceID(vertexID:Long): Int {
 		var i:Int;
