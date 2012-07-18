@@ -39,8 +39,8 @@ public class BetweennessCentrality {
 	// transient var globalBacktrackTime: Long = 0;
 	// transient var globalUpdateLocalTime: Long = 0;
 	
-	transient val neighborMap: Array[Array[Long]];
-	transient val inNeighbourCountMap: Array[Long];
+	transient val neighborMap: Rail[Rail[Int]];
+	transient val inNeighbourCountMap: Rail[Int];
 	
 	transient var firstPlaceInstance: GlobalRef[BetweennessCentrality];
 	transient var syncScoreLock: Lock = new Lock();
@@ -85,8 +85,8 @@ public class BetweennessCentrality {
 		this.numVertex = nVertex as Int;
 		this.maximumVertexId = maxVertexId as Int + 1; // Array start at zero
 		this.betweennessScore = IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
-		this.neighborMap = new Array[Array[Long]](maximumVertexId as Int);
-		this.inNeighbourCountMap = new Array[Long](maximumVertexId as Int);
+		this.neighborMap = new Rail[Rail[Int]](maximumVertexId as Int);
+		this.inNeighbourCountMap = new Rail[Int](maximumVertexId as Int);
 		this.updateScoreLock = IndexedMemoryChunk.allocateUninitialized[Lock](maximumVertexId);
 		this.cutoffDistance = cutoff;
 		this.iterations = iterations;
@@ -375,11 +375,22 @@ public class BetweennessCentrality {
 				async {
 					for (i in dat) {
 						// async {
-							val actor = dat(i);
+							val actor = dat(i) as Int;
 							if(actor >= 0L) {
 								val n = plainGraph.getOutNeighbours(actor);
-								neighborMap(actor as Int) = n;
-								inNeighbourCountMap(actor as Int) = plainGraph.getInNeighboursCount(actor);	
+								inNeighbourCountMap(actor) = plainGraph.getInNeighboursCount(actor) as Int;
+								// neighborMap(actor as Int) = new Rail[Long](n.size);
+								if(n == null) {
+									//Console.OUT.println("Actor ==> " + actor);
+									neighborMap(actor) = null;
+								} else {
+								// 	Console.OUT.println("N => " + n);
+									val r = new Rail[Int](n.size);
+									for([x] in 0..(n.size -1)) {
+										r(x) = n(x) as Int;
+									}
+									neighborMap(actor) = r;
+								}	
 							}
 						// }
 					}
@@ -460,6 +471,9 @@ public class BetweennessCentrality {
 		if(Place.ALL_PLACES > 1) {
 			synchronizeScore();
 			// Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
+		}  else {
+			// Release lock we made at distributing tasks over nodes
+			syncScoreLock.unlock();
 		}
 		time = System.currentTimeMillis() - time;
 		Console.OUT.println(here + ": Synch score time(ms): " + time);
@@ -468,200 +482,200 @@ public class BetweennessCentrality {
 	
 	protected def doBfsOnPlainGraph( taskId: Int, numParallelBfsTasks: Int, localVertices: Array[Long]) {
 		
-		var numProcessedSource: Long = 0;
-		var lastPrintThroughput: Long =  System.currentTimeMillis();
-		// var sumBfsTime: Long = 0;
-		// var bfsTime: Long = 0;
-		// var sumBacktrackTime: Long = 0;
-		// var backtrackTime: Long = 0;
-		// var updateLocalScoreTime: Long =0;
-		// var sumUpdateLocalScoreTime: Long = 0;
-		// 
-		// var allocationTime: Long = System.currentTimeMillis();
-		
-		
-		/**
-		 * Create data structure for BC
-		 */
-		val traverseQ: FixedVertexQueue = new FixedVertexQueue(maximumVertexId);
-		val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
-		val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
-		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
-		val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
-		val predecessorMap =  IndexedMemoryChunk.allocateUninitialized[FixedVertexStack](maximumVertexId); 
-				
-		for(var i: Int = 0; i <predecessorMap.length(); ++i) {
-			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
-		}
-		
-		// allocationTime = System.currentTimeMillis() - allocationTime;
-		
-		// val writer = new FileWriter(new File("node_visit"));
-		// val printer = new Printer(writer);
-		
-		
-		
-		/*
-		 * localVertices can be accessed properly by Point only
-		 * Iterate over localVertices and process only assigned vertices
-		 */
-		
-		var indexCount: Int = 0;
-		for(index in localVertices) {
-			
-			// bfsTime = System.currentTimeMillis();
-		
-			if((indexCount++) % numParallelBfsTasks != taskId) {
-				continue;
-			}
-			
-			// Get source vertex
-			val source = localVertices(index);
-			
-			if(source < 0) {
-				// Source maybe -1 to indicate end of array
-				continue;
-			}
-			
-			if(source >= maximumVertexId) {
-				throw new Exception("Vertex Id more than maximumVertexId");
-			}
-			
-			// Clear Previous Data
-		 	// distanceMap.clear(0, maximumVertexId);
-		 	for(var i: Int = 0; i < distanceMap.length() ; ++i)
-		 		distanceMap(i) = -1L;
-		 	
-		 	geodesicsMap.clear(0, maximumVertexId);
-		 	tempScore.clear(0, maximumVertexId);
-		 	
-		 	
-			for(i in 0..(predecessorMap.length()-1)) {
-				predecessorMap(i).clear();
-			}
-			
-			traverseQ.clear();
-			vertexStack.clear();
-			
-			distanceMap(source) = 0L;
-			geodesicsMap(source) = 1L;
-			
-			traverseQ.add(source);
-			// Runtime.probe();
-			
-			var neighbor: Long;
-			var actor: Long;
-			var neighbors: Array[Long]; 
-			// var visitNodes: Long = 0;
-			
-			// Traverse the graph 
-			while(!traverseQ.isEmpty()) {
-				
-				actor = traverseQ.removeFirst();
-				
-				if(cutoffDistance > 0 && distanceMap(actor) >= cutoffDistance) {
-							break;
-				}
-				
-				neighbors = neighborMap(actor as Int);
-				vertexStack.push(actor);
-				
-				// ++visitNodes;
-				
-				if(neighbors == null)
-					continue;
-				
-				
-				 
-				for(var i: Int = 0; i < neighbors.size; ++i) {
-					
-					neighbor = neighbors(i);
-					val distanceFromSource = distanceMap(actor) + 1;
-					
-					if(distanceMap(neighbor) == -1L) {
-						distanceMap(neighbor) = distanceFromSource;
-						traverseQ.add(neighbor);
-					}
-					
-					if(distanceMap(neighbor) == distanceFromSource) {
-						geodesicsMap(neighbor) += geodesicsMap(actor);
-						// try {
-							predecessorMap(neighbor).push(actor); 
-							// } catch(e: Exception) {
-							// 	// Console.OUT.println();
-							// 	Console.OUT.print(e);
-							// 	throw new Exception("E==> A(Pred): " + actor + "; N: " + 
-							// 			neighbor + "; N of Pred: " + plainGraph.getInNeighboursCount(neighbor) +
-							// 			" Hash: " + inNeighbourCountMap(neighbor as Int));
-							// }
-					}
-				}
-			}
-			// printer.println(source +","+ visitNodes);
-			// bfsTime = System.currentTimeMillis() - bfsTime;
-			// sumBfsTime += bfsTime;
-			
-			// backtrackTime = System.currentTimeMillis();
-			
-			// Calculate score
-			while(!vertexStack.isEmpty()) {
-				
-				actor = vertexStack.pop();
-				
-				while(!predecessorMap(actor).isEmpty()) {
-					val pred = predecessorMap(actor).pop();
-	
-					tempScore(pred) += (tempScore(actor) + 1.0D) * 
-					(geodesicsMap(pred) as Double / geodesicsMap(actor) as Double);
-					
-				}
-				
-			}
-			
-			// backtrackTime = System.currentTimeMillis() - backtrackTime;
-			// sumBacktrackTime += backtrackTime;
-			
-			// updateLocalScoreTime = System.currentTimeMillis();
-			val length = betweennessScore.length();
-			for(var i: Long = 0; i < length; ++i) {
-				val score = tempScore(i);
-				if( score == 0D || i == source)
-					continue;
-		
-				val zonelock = updateScoreLock(i);
-				zonelock.lock();
-				betweennessScore(i) += tempScore(i);
-				zonelock.unlock();
-			}
-			numProcessedSource++;
-			
-			// updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
-			// sumUpdateLocalScoreTime += updateLocalScoreTime;
-			
-			// Print throuhgput every XX milliseconds
-			val now = System.currentTimeMillis();
-			val elapse = now - lastPrintThroughput;
-			if( elapse > 60000) {
-				val thr = numProcessedSource / ((elapse / 60000) as Double);
-				Console.OUT.println(taskId + " Throughput (Processed Source/minute): " + thr);
-				lastPrintThroughput = now;
-				numProcessedSource = 0;
-			}
-				
-			// Console.OUT.println("End for src: " + source + " On place: " + here.id);
-		}
-		// Console.OUT.println("Thread " + taskId + " has processed all assigned vertices");
-		// // Print time info
-		// Console.OUT.println(here + ":" + threadId + " sumBfsTime time(ms): " + sumBfsTime);
-		// Console.OUT.println(here + ":" + threadId + " sumBacktrackTime neighbour time(ms): " + sumBacktrackTime);
-		// Console.OUT.println(here + ":" + threadId + " sumUpdateLocalScoreTime time(ms): " + sumUpdateLocalScoreTime);
-		
-		// updateTimeStatLock.lock();
-		// globalSpaceAllocTime += allocationTime;
-		// globalBfsTime += sumBfsTime;
-		// globalBacktrackTime += sumBacktrackTime;
-		// globalUpdateLocalTime += sumUpdateLocalScoreTime;
-		// updateTimeStatLock.unlock();
+	// 	var numProcessedSource: Long = 0;
+	// 	var lastPrintThroughput: Long =  System.currentTimeMillis();
+	// 	// var sumBfsTime: Long = 0;
+	// 	// var bfsTime: Long = 0;
+	// 	// var sumBacktrackTime: Long = 0;
+	// 	// var backtrackTime: Long = 0;
+	// 	// var updateLocalScoreTime: Long =0;
+	// 	// var sumUpdateLocalScoreTime: Long = 0;
+	// 	// 
+	// 	// var allocationTime: Long = System.currentTimeMillis();
+	// 	
+	// 	
+	// 	/**
+	// 	 * Create data structure for BC
+	// 	 */
+	// 	val traverseQ: FixedVertexQueue = new FixedVertexQueue(maximumVertexId);
+	// 	val distanceMap = IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
+	// 	val geodesicsMap =  IndexedMemoryChunk.allocateZeroed[Long](maximumVertexId);
+	// 	val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
+	// 	val tempScore =  IndexedMemoryChunk.allocateZeroed[Double](maximumVertexId);
+	// 	val predecessorMap =  IndexedMemoryChunk.allocateUninitialized[FixedVertexStack](maximumVertexId); 
+	// 			
+	// 	for(var i: Int = 0; i <predecessorMap.length(); ++i) {
+	// 		predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
+	// 	}
+	// 	
+	// 	// allocationTime = System.currentTimeMillis() - allocationTime;
+	// 	
+	// 	// val writer = new FileWriter(new File("node_visit"));
+	// 	// val printer = new Printer(writer);
+	// 	
+	// 	
+	// 	
+	// 	/*
+	// 	 * localVertices can be accessed properly by Point only
+	// 	 * Iterate over localVertices and process only assigned vertices
+	// 	 */
+	// 	
+	// 	var indexCount: Int = 0;
+	// 	for(index in localVertices) {
+	// 		
+	// 		// bfsTime = System.currentTimeMillis();
+	// 	
+	// 		if((indexCount++) % numParallelBfsTasks != taskId) {
+	// 			continue;
+	// 		}
+	// 		
+	// 		// Get source vertex
+	// 		val source = localVertices(index);
+	// 		
+	// 		if(source < 0) {
+	// 			// Source maybe -1 to indicate end of array
+	// 			continue;
+	// 		}
+	// 		
+	// 		if(source >= maximumVertexId) {
+	// 			throw new Exception("Vertex Id more than maximumVertexId");
+	// 		}
+	// 		
+	// 		// Clear Previous Data
+	// 	 	// distanceMap.clear(0, maximumVertexId);
+	// 	 	for(var i: Int = 0; i < distanceMap.length() ; ++i)
+	// 	 		distanceMap(i) = -1L;
+	// 	 	
+	// 	 	geodesicsMap.clear(0, maximumVertexId);
+	// 	 	tempScore.clear(0, maximumVertexId);
+	// 	 	
+	// 	 	
+	// 		for(i in 0..(predecessorMap.length()-1)) {
+	// 			predecessorMap(i).clear();
+	// 		}
+	// 		
+	// 		traverseQ.clear();
+	// 		vertexStack.clear();
+	// 		
+	// 		distanceMap(source) = 0L;
+	// 		geodesicsMap(source) = 1L;
+	// 		
+	// 		traverseQ.add(source);
+	// 		// Runtime.probe();
+	// 		
+	// 		var neighbor: Long;
+	// 		var actor: Long;
+	// 		var neighbors: Array[Long]; 
+	// 		// var visitNodes: Long = 0;
+	// 		
+	// 		// Traverse the graph 
+	// 		while(!traverseQ.isEmpty()) {
+	// 			
+	// 			actor = traverseQ.removeFirst();
+	// 			
+	// 			if(cutoffDistance > 0 && distanceMap(actor) >= cutoffDistance) {
+	// 						break;
+	// 			}
+	// 			
+	// 			neighbors = neighborMap(actor as Int);
+	// 			vertexStack.push(actor);
+	// 			
+	// 			// ++visitNodes;
+	// 			
+	// 			if(neighbors == null)
+	// 				continue;
+	// 			
+	// 			
+	// 			 
+	// 			for(var i: Int = 0; i < neighbors.size; ++i) {
+	// 				
+	// 				neighbor = neighbors(i);
+	// 				val distanceFromSource = distanceMap(actor) + 1;
+	// 				
+	// 				if(distanceMap(neighbor) == -1L) {
+	// 					distanceMap(neighbor) = distanceFromSource;
+	// 					traverseQ.add(neighbor);
+	// 				}
+	// 				
+	// 				if(distanceMap(neighbor) == distanceFromSource) {
+	// 					geodesicsMap(neighbor) += geodesicsMap(actor);
+	// 					// try {
+	// 						predecessorMap(neighbor).push(actor); 
+	// 						// } catch(e: Exception) {
+	// 						// 	// Console.OUT.println();
+	// 						// 	Console.OUT.print(e);
+	// 						// 	throw new Exception("E==> A(Pred): " + actor + "; N: " + 
+	// 						// 			neighbor + "; N of Pred: " + plainGraph.getInNeighboursCount(neighbor) +
+	// 						// 			" Hash: " + inNeighbourCountMap(neighbor as Int));
+	// 						// }
+	// 				}
+	// 			}
+	// 		}
+	// 		// printer.println(source +","+ visitNodes);
+	// 		// bfsTime = System.currentTimeMillis() - bfsTime;
+	// 		// sumBfsTime += bfsTime;
+	// 		
+	// 		// backtrackTime = System.currentTimeMillis();
+	// 		
+	// 		// Calculate score
+	// 		while(!vertexStack.isEmpty()) {
+	// 			
+	// 			actor = vertexStack.pop();
+	// 			
+	// 			while(!predecessorMap(actor).isEmpty()) {
+	// 				val pred = predecessorMap(actor).pop();
+	// 
+	// 				tempScore(pred) += (tempScore(actor) + 1.0D) * 
+	// 				(geodesicsMap(pred) as Double / geodesicsMap(actor) as Double);
+	// 				
+	// 			}
+	// 			
+	// 		}
+	// 		
+	// 		// backtrackTime = System.currentTimeMillis() - backtrackTime;
+	// 		// sumBacktrackTime += backtrackTime;
+	// 		
+	// 		// updateLocalScoreTime = System.currentTimeMillis();
+	// 		val length = betweennessScore.length();
+	// 		for(var i: Long = 0; i < length; ++i) {
+	// 			val score = tempScore(i);
+	// 			if( score == 0D || i == source)
+	// 				continue;
+	// 	
+	// 			val zonelock = updateScoreLock(i);
+	// 			zonelock.lock();
+	// 			betweennessScore(i) += tempScore(i);
+	// 			zonelock.unlock();
+	// 		}
+	// 		numProcessedSource++;
+	// 		
+	// 		// updateLocalScoreTime = System.currentTimeMillis()- updateLocalScoreTime;
+	// 		// sumUpdateLocalScoreTime += updateLocalScoreTime;
+	// 		
+	// 		// Print throuhgput every XX milliseconds
+	// 		val now = System.currentTimeMillis();
+	// 		val elapse = now - lastPrintThroughput;
+	// 		if( elapse > 60000) {
+	// 			val thr = numProcessedSource / ((elapse / 60000) as Double);
+	// 			Console.OUT.println(taskId + " Throughput (Processed Source/minute): " + thr);
+	// 			lastPrintThroughput = now;
+	// 			numProcessedSource = 0;
+	// 		}
+	// 			
+	// 		// Console.OUT.println("End for src: " + source + " On place: " + here.id);
+	// 	}
+	// 	// Console.OUT.println("Thread " + taskId + " has processed all assigned vertices");
+	// 	// // Print time info
+	// 	// Console.OUT.println(here + ":" + threadId + " sumBfsTime time(ms): " + sumBfsTime);
+	// 	// Console.OUT.println(here + ":" + threadId + " sumBacktrackTime neighbour time(ms): " + sumBacktrackTime);
+	// 	// Console.OUT.println(here + ":" + threadId + " sumUpdateLocalScoreTime time(ms): " + sumUpdateLocalScoreTime);
+	// 	
+	// 	// updateTimeStatLock.lock();
+	// 	// globalSpaceAllocTime += allocationTime;
+	// 	// globalBfsTime += sumBfsTime;
+	// 	// globalBacktrackTime += sumBacktrackTime;
+	// 	// globalUpdateLocalTime += sumUpdateLocalScoreTime;
+	// 	// updateTimeStatLock.unlock();
 	}
 	
 // 	protected def doBfsOnPlainGraphMultithreads( taskId: Int, numParallelBfsTasks: Int, cutoff: Long, localVertices: Array[Long]) {
@@ -897,6 +911,15 @@ public class BetweennessCentrality {
 		this.firstPlaceInstance = handler;
 	}
 	
+	protected  static def getPowerOfTwo(n: Int) {
+			var result: Int = 0x1;
+			while(result < n) {
+				result = result << 1;
+			}
+			
+			return result;
+		}
+	
 	public class FixedVertexQueue {
 		var space: Int;
 		var count: Long;
@@ -907,12 +930,14 @@ public class BetweennessCentrality {
 		
 		def this(space: Long) {
 			
-			this.space = space as Int;
+			// this.space = space as Int;
+			this.space = BetweennessCentrality.getPowerOfTwo(space as Int);
 			this.storage = IndexedMemoryChunk.allocateZeroed[Int](space);
 			f = 0;
 			r = 0;
 			count = 0;
 		}
+		
 		
 		
 		public def add(vertexId: Long) {
@@ -923,11 +948,13 @@ public class BetweennessCentrality {
 			}
 			
 			storage(r) = vertexId as Int;
-			r = (r + 1) % space;
 			++count;
+			// r = (r + 1) % space;
+			r = (r + 1) & (space-1);
+			
 		}
 		
-		public def removeFirst(): Long {
+		public def removeFirst(): Int {
 			
 			if(count <= 0) {
 				// Overflow
@@ -935,7 +962,8 @@ public class BetweennessCentrality {
 			}
 			
 			val data = storage(f);
-			f = (f + 1) % space;
+			// f = (f + 1) % space;
+			f = (f + 1) & (space-1);
 			--count;
 			return data;
 		}
@@ -946,9 +974,8 @@ public class BetweennessCentrality {
 			count = 0;
 		}
 		
-		public def isEmpty() {
-			return count == 0L;
-		}
+		public def isEmpty() = this.count == 0L;
+		
 	}
 	
 	public class FixedVertexStack {
@@ -980,9 +1007,7 @@ public class BetweennessCentrality {
 			index = 0;
 		}
 		
-		public def isEmpty() {
-			return index == 0;
-		}
+		public def isEmpty() = this.index == 0;
 	}
 	
 	// Estimated BC for plain Graph
@@ -1022,7 +1047,7 @@ public class BetweennessCentrality {
 					
 					betweennessCentrality().setInstanceHandler(firstPlaceInstance);
 					betweennessCentrality().makeNeighbourMap();
-					betweennessCentrality().calculateOnPlainGraph();
+					betweennessCentrality().estimateOnPlainGraph();
 				}
 			}
 		}
@@ -1053,7 +1078,7 @@ public class BetweennessCentrality {
 		
 		val numLocalVertices: Int = localVertices.size;	
 		Console.OUT.println("Assigned-Vertex count: " + numLocalVertices);
-		
+		var s: Long = System.currentTimeMillis();
 		finish {
 
 			for(taskId in 0..(numParallelBfsTasks -1 )) {
@@ -1065,7 +1090,8 @@ public class BetweennessCentrality {
 		Console.OUT.println("***************************");
 		Console.OUT.println("Run for all source vertex " + here.id);
 		Console.OUT.println("***************************");
-		
+		s = System.currentTimeMillis() - s;
+		Console.OUT.println("Elapsed time 2: " + s);
 		
 		// if undirected graph divide by 2
 		if(this.plainGraph.isDirected() == false) {
@@ -1107,6 +1133,8 @@ public class BetweennessCentrality {
 		if(Place.ALL_PLACES > 1) {
 			synchronizeScore();
 			// Team.WORLD.allreduce(here.id, betweennessScore, 0, betweennessScore, 0, betweennessScore.size, Team.ADD);
+		} else {
+			syncScoreLock.unlock();
 		}
 		time = System.currentTimeMillis() - time;
 		Console.OUT.println(here + ": Synch score time(ms): " + time);
@@ -1118,7 +1146,6 @@ public class BetweennessCentrality {
 		var numProcessedSource: Long = 0;
 		var lastPrintThroughput: Long =  System.currentTimeMillis();
 		
-		
 		/**
 		 * Create data structure for BC
 		 */
@@ -1127,12 +1154,14 @@ public class BetweennessCentrality {
 		val geodesicsMap = new Rail[Int](maximumVertexId as Int);
 		val vertexStack: FixedVertexStack = new FixedVertexStack(maximumVertexId);
 		val tempScore =  new Rail[Double](maximumVertexId as Int);
-		val predecessorMap =  new Rail[FixedVertexStack](maximumVertexId as Int); 
+		val predecessorMap =  new Rail[FixedVertexStack](maximumVertexId as Int);
+		val threadScoreMap = new Rail[Double](maximumVertexId as Int, 0.0);
+		val touchVertex: FixedVertexStack = new FixedVertexStack(maximumVertexId);
 		
 		// Init predecessor map
-		for(var i: Int = 0; i < predecessorMap.size; ++i) {
-			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
-		}
+		// for(var i: Int = 0; i < predecessorMap.size; ++i) {
+		// 	
+		// }
 		
 		// // Create shuffle vertex
 		// val localVerticesIndices = localVertices.size + 1L;
@@ -1150,6 +1179,17 @@ public class BetweennessCentrality {
 		// 	tempShuffling(i + pickedIndex) = tempShuffling(i);
 		// }
 		
+		for([i] in 0..(predecessorMap.size-1)) {
+			predecessorMap(i) = new FixedVertexStack(inNeighbourCountMap(i));
+			predecessorMap(i).clear();
+			geodesicsMap(i) = 0;
+			tempScore(i) = 0;
+			distanceMap(i) = -1;
+		}
+		
+		// var neighbor: Int;
+		// var actor: Int;
+		// var neighbors: Rail[Int]; 
 		
 		/*
 		 * localVertices can be accessed properly by Point only
@@ -1159,10 +1199,10 @@ public class BetweennessCentrality {
 		for(index in localVertices) {
 			
 			
-			// Exit if we perform BC for specified pivots
-			if(indexCount >= iterations) {
-				break;
-			}
+			// // Exit if we perform BC for specified pivots
+			// if(indexCount >= iterations) {
+			// 	break;
+			// }
 			
 			// Get source vertex
 			val source = localVertices(index) as Int;
@@ -1172,12 +1212,12 @@ public class BetweennessCentrality {
 				continue;
 			}
 			
-			// Skip a vertex which has zero if in- or out-neughtbor is zero
-			if(this.plainGraph.getInNeighboursCount(source) == 0L  ||
-				this.plainGraph.getOutNeighboursCount(source) == 0L) {
-				
-				continue;
-			}
+			// // Skip a vertex which has zero if in- or out-neughtbor is zero
+			// if(this.plainGraph.getInNeighboursCount(source) == 0L  ||
+			// 	this.plainGraph.getOutNeighboursCount(source) == 0L) {
+			// 	
+			// 	continue;
+			// }
 			
 			if((indexCount++) % numParallelBfsTasks != taskId) {
 				continue;
@@ -1185,21 +1225,29 @@ public class BetweennessCentrality {
 			
 			
 			
-			if(source >= maximumVertexId) {
-				throw new Exception("Vertex Id more than maximumVertexId");
-			}
+			// if(source >= maximumVertexId) {
+			// 	throw new Exception("Vertex Id more than maximumVertexId");
+			// }
 			
 			// Clear Previous Data
 			// distanceMap.clear(0, maximumVertexId);
-			for(var i: Int = 0; i < distanceMap.size ; ++i)
-				distanceMap(i) = -1L;
+			// for(var i: Int = 0; i < distanceMap.size ; ++i)
+			// 	distanceMap(i) = -1L;
 			
-			geodesicsMap.clear();
-			tempScore.clear();
+			// geodesicsMap.clear();
+			// tempScore.clear();
 			
 			
-			for(i in 0..(predecessorMap.size-1)) {
-				predecessorMap(i).clear();
+			// for([i] in 0..(predecessorMap.size-1)) {
+			// 	predecessorMap(i).clear();
+			// }
+			// for([i] in 0..(predecessorMap.size-1)) {
+			while(!touchVertex.isEmpty()){
+				val i = touchVertex.pop();
+		 		predecessorMap(i).clear();
+		 		geodesicsMap(i) = 0;
+		 		tempScore(i) = 0;
+		 		distanceMap(i) = -1;
 			}
 			
 			traverseQ.clear();
@@ -1211,38 +1259,36 @@ public class BetweennessCentrality {
 			traverseQ.add(source);
 			// Runtime.probe();
 			
-			var neighbor: Int;
-			var actor: Int;
-			var neighbors: Array[Long]; 
+			
 			// var visitNodes: Long = 0;
 			
 			// Traverse the graph 
 			while(!traverseQ.isEmpty()) {
 				
-				actor = traverseQ.removeFirst() as Int;
+				val actor = traverseQ.removeFirst();
 				
-				neighbors = neighborMap(actor as Int);
+				val neighbors = neighborMap(actor);
 				vertexStack.push(actor);
+				touchVertex.push(actor);
 				
 				// ++visitNodes;
 				
 				if(neighbors == null)
 					continue;
 				
-				
-				
-				for(var i: Int = 0; i < neighbors.size; ++i) {
+				val size = neighbors.size;
+				for([i] in 0..(size-1)) {
 					
-					neighbor = neighbors(i) as Int;
+					val neighbor = neighbors(i);
 					val distanceFromSource = distanceMap(actor) + 1;
 					
 					if(distanceMap(neighbor) == -1) {
-						distanceMap(neighbor) = distanceFromSource;
 						traverseQ.add(neighbor);
+						distanceMap(neighbor) = distanceFromSource;
 					}
 					
 					if(distanceMap(neighbor) == distanceFromSource) {
-						geodesicsMap(neighbor) += geodesicsMap(actor);
+						geodesicsMap(neighbor) = geodesicsMap(neighbor) + geodesicsMap(actor);
 						// try {
 						predecessorMap(neighbor).push(actor); 
 						// } catch(e: Exception) {
@@ -1259,30 +1305,18 @@ public class BetweennessCentrality {
 			// Calculate score
 			while(!vertexStack.isEmpty()) {
 				
-				actor = vertexStack.pop() ;
-				
+				val actor = vertexStack.pop() ;
 				while(!predecessorMap(actor).isEmpty()) {
-					val pred = predecessorMap(actor).pop() ;
-					
-					tempScore(pred) += (tempScore(actor) + 1.0D) * 
-					(geodesicsMap(pred) as Double / geodesicsMap(actor) as Double);
-					
+					val pred = predecessorMap(actor).pop();
+					tempScore(pred) += (geodesicsMap(pred) as Double / geodesicsMap(actor) as Double) * (tempScore(actor) + 1);
 				}
 				
+				if(actor != source) {
+					threadScoreMap(actor) += tempScore(actor);
+				}
 			}
 			
-			
-			val length = betweennessScore.length();
-			for(var i: Int = 0; i < length; ++i) {
-				val score = tempScore(i);
-				if( score == 0D || i == source)
-					continue;
-				
-				val zonelock = updateScoreLock(i);
-				zonelock.lock();
-				betweennessScore(i) += tempScore(i);
-				zonelock.unlock();
-			}
+			// Console.OUT.println("Node  : " + source + "Visit: => " + visitNodes);
 			
 			numProcessedSource++;
 			
@@ -1295,6 +1329,19 @@ public class BetweennessCentrality {
 				lastPrintThroughput = now;
 				numProcessedSource = 0;
 			}
+		}
+		
+		
+		val length = betweennessScore.length();
+		for(var i: Int = 0; i < length; ++i) {
+			val score = tempScore(i);
+			if( score == 0D)
+				continue;
+			
+			val zonelock = updateScoreLock(i);
+			zonelock.lock();
+			betweennessScore(i) += threadScoreMap(i);
+			zonelock.unlock();
 		}
 	}
 	
