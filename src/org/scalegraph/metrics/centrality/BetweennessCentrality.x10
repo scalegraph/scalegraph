@@ -1087,10 +1087,11 @@ public class BetweennessCentrality {
 			}
 			
 		}
+		s = System.currentTimeMillis() - s;
 		Console.OUT.println("***************************");
 		Console.OUT.println("Run for all source vertex " + here.id);
 		Console.OUT.println("***************************");
-		s = System.currentTimeMillis() - s;
+		
 		Console.OUT.println("Elapsed time 2: " + s);
 		
 		// if undirected graph divide by 2
@@ -1333,8 +1334,8 @@ public class BetweennessCentrality {
 		
 		
 		val length = betweennessScore.length();
-		for(var i: Int = 0; i < length; ++i) {
-			val score = tempScore(i);
+		for([i] in 0..(length -1)) {
+			val score = threadScoreMap(i);
 			if( score == 0D)
 				continue;
 			
