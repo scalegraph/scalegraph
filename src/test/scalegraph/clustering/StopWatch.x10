@@ -15,4 +15,8 @@ public class StopWatch {
 		startTime = Timer.milliTime();
 		return result;
 	}
+	
+	public def print(msg:String){
+		Console.OUT.println(msg + ": " + get());
+	}
 }

@@ -1,7 +1,9 @@
 package org.scalegraph.clustering.psc;
 
 import x10.util.ArrayBuilder;
+import x10.util.Box;
 import x10.util.HashMap;
+import x10.util.Pair;
 import x10.util.Random;
 import x10.util.Timer;
 
@@ -13,8 +15,15 @@ import test.scalegraph.clustering.StopWatch;
 
 public class ParallelSpectralClustering implements Clustering {
 	
-	private val matrix:LaplacianMatrix;
 	private val nClusters:Int;
+	private val graph:PlainGraph;
+	private val vertexList:DistArray[Long];
+	private val vertexInfo:VertexInfo;
+	
+	private var matrix:PlaceLocalHandle[SparseMatrix];
+	//private var firstColumnIndex:PlaceLocalHandle[Array[Int]];
+	//private var entries:PlaceLocalHandle[Array[Pair[Int, Double]]];
+	//private var num:Numbering;
 	
 	private var tol:Double;
 	private var ncv:Int;
@@ -22,18 +31,19 @@ public class ParallelSpectralClustering implements Clustering {
 	
 	public def this(graph:PlainGraph, nClusters:Int){
 		val sw = new StopWatch();
-		sw.start();
-		this.matrix = new LaplacianMatrix(graph);
-		Console.OUT.println("make Laplacian matrix: " + sw.get());
-		//val d = new Array[Double](5, (i:Int)=>(i+1.0));
-		//this.matrix = new DiagonalMatrix(d);
+		
 		this.nClusters = nClusters;
+		this.graph = graph;
+		sw.start();
+		this.vertexList = graph.getVertexListDualArrays(4).preArray;
+		//this.vertexList = graph.getVertexList();
+		sw.print("get vertex list");
+		this.vertexInfo = VertexInfo.make(graph);
+		sw.print("make vertex info");
 		
 		this.tol = 0.001;
-		this.ncv = 2 * nClusters < matrix.size ? 2 * nClusters : matrix.size - 1;
+		this.ncv = 2 * nClusters;
 		this.maxitr = 300;
-		
-		//Console.OUT.println(matrix);
 	}
 	
 	public def this(graph:PlainGraph, nClusters:Int, tol:Double, ncv:Int, maxitr:Int){
@@ -46,18 +56,20 @@ public class ParallelSpectralClustering implements Clustering {
 	public def run(): ClusteringResult {
 		val sw = new StopWatch();
 		sw.start();
+		
+		makeMatrix();
+		sw.print("make matrix");
+		
 		val z = solveEigenvalueProblem();
-		Console.OUT.println("solve eigenvalue problem: " + sw.get());
+		sw.print("solve eigenvalue problem");
 		if(z == null) return null;
 		
-		val degree = this.matrix.degree;
-		
-		val nPoints = matrix.size;
+		val nPoints = vertexInfo.size();
 		val points = new Array[Vector](nPoints);
 		for(var i:Int = 0; i < nPoints; i++){
 			points(i) = Vector.make(nClusters);
 			for(var j:Int = 0; j < nClusters; j++){
-				points(i)(j) = z(i + j * nPoints) / Math.sqrt(degree(i));
+				points(i)(j) = z(i + j * nPoints) / Math.sqrt(vertexInfo.getDegree(i)());
 				//Console.OUT.print(points(i)(j) + " ");
 			}
 			//Console.OUT.println("");
@@ -72,11 +84,51 @@ public class ParallelSpectralClustering implements Clustering {
 		return result;
 	}
 	
+	private def makeMatrix(){
+		this.matrix = PlaceLocalHandle.make[SparseMatrix](Dist.makeUnique(), ()=>{
+			val firstColumnIndexBuilder = new ArrayBuilder[Int]();
+			val entriesBuilder = new ArrayBuilder[Pair[Int, Double]]();
+			
+			var j:Int = 0;
+			for(vertexID in vertexInfo.IDtoIDX().keySet()){
+				val vertexIDX:Int = vertexInfo.getIDX(vertexID)();
+				val degree:Int = vertexInfo.getDegreeFromHere(vertexIDX)();
+				//if(vertexID < 0) continue;
+				
+				val neighbours = graph.getNeighbours(vertexID);
+				
+				firstColumnIndexBuilder.add(j);
+				entriesBuilder.add(Pair[Int, Double](vertexIDX, 1.0));
+				j++;
+				if(neighbours != null){
+					//Console.OUT.println("neighbour of " + vertexID + " is " + neighbours);
+					for(npt in neighbours){
+						val neighbourID:Long = neighbours(npt);
+						val boxNeighbourIDX:Box[Int] = vertexInfo.getIDX(neighbourID);
+						if(boxNeighbourIDX != null){
+							val neighbourIDX = boxNeighbourIDX();
+							val neighbourDegree = vertexInfo.getDegree(neighbourIDX)();
+							entriesBuilder.add(Pair[Int, Double](neighbourIDX, -1 / Math.sqrt(degree * neighbourDegree)));
+							j++;
+						}
+					}
+				}
+			}
+			firstColumnIndexBuilder.add(j);
+			val m = new SparseMatrix();
+			m.firstColumnIndex = firstColumnIndexBuilder.result();
+			m.entries = entriesBuilder.result();
+			m.size = m.firstColumnIndex.size - 1;
+			m
+		});
+	}
+	
 	private def solveEigenvalueProblem(){
 		
+		//val comm:Int = 0x44000000;  // MPI_COMM_WORLD
 		var ido:Int = 0;
 		val bmat:Char = 'I';
-		val n:Int = matrix.size;
+		val n:Int = vertexInfo.size();
 		val which:Int = ARPACK.SA;
 		val nev:Int = nClusters;
 		val tol:Double = this.tol;
@@ -131,7 +183,23 @@ public class ParallelSpectralClustering implements Clustering {
 			}
 			
 			if(ido == -1 || ido == 1){
-				matrix.mult(workd, ipntr(0) - 1, ipntr(1) - 1);
+				val x = new Array[Double](vertexInfo.size());
+				val y = new Array[Double](vertexInfo.size());
+				val gy = GlobalRef(y);
+				for(var i:Int = 0; i < x.size; i++){
+					x(i) = workd(ipntr(0) - 1 + i);
+				}
+				finish for(p in Place.places()) async at(p) {
+					val sub_y = matrix().mult(x);
+					at(gy) {
+						for(var i:Int = 0; i < sub_y.size; i++){
+							gy()(i + vertexInfo.offset(p.id)) = sub_y(i);
+						}
+					}
+				}
+				for(var i:Int = 0; i < y.size; i++){
+					workd(ipntr(1) - 1 + i) = y(i);
+				}
 			}else if(ido == 2){
 				for(var i:Int = 0; i < n; i++){
 					workd(ipntr(1) - 1 + i) = workd(ipntr(0) - 1 + i);
@@ -241,7 +309,7 @@ public class ParallelSpectralClustering implements Clustering {
 		val tmpLists = new Array[ArrayBuilder[Long]](nClusters, (Int) => new ArrayBuilder[Long]());
 		
 		for([i] in array){
-			val vertexID = matrix.num.getID(i)();
+			val vertexID = vertexInfo.getID(i)();
 			val clusterNum = array(i);
 			VtoC.put(vertexID, clusterNum);
 			tmpLists(clusterNum).add(vertexID);

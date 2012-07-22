@@ -21,7 +21,11 @@ public class ClusteringResult(nVertices:Int, nClusters:Int) {
 	
 	public def getCluster(vertexID:Long) = VtoC.get(vertexID)();
 	
+	public def tryGetCluster(vertexID:Long) = VtoC.get(vertexID);
+	
 	public def getVertices(clusterNum:Int) = CtoV.get(clusterNum)();
+	
+	public def tryGetVertices(clusterNum:Int) = CtoV.get(clusterNum);
 	
 	public def toString(): String {
 		val sb = new StringBuilder();

@@ -3,6 +3,7 @@ package test.scalegraph.clustering.psc;
 import org.scalegraph.clustering.psc.ParallelSpectralClustering;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.io.EdgeListReader;
+import org.scalegraph.io.ScatteredEdgeListReader;
 import test.scalegraph.clustering.StopWatch;
 
 public class TestParallelSpectralClustering {
@@ -21,8 +22,8 @@ public class TestParallelSpectralClustering {
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-22-142055.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-20-82792.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-18-39322.dl");
-    	val graph:PlainGraph = reader.loadFromFile(dir + "scale-16-14164.dl");
-    	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-14-5900.dl");
+    	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-16-14164.dl");
+    	val graph:PlainGraph = reader.loadFromFile(dir + "scale-14-5900.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-12.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-8.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "simple_graph.dl");
@@ -43,5 +44,30 @@ public class TestParallelSpectralClustering {
     	
     	Console.OUT.println("spectral clustering finished: " + sw.get());
     	Console.OUT.println(result);
+    	
+    	/* calculate normalized cut */
+    	var ncut:Double = 0.0;
+    	for(var i:Int = 0; i < result.nClusters; i++){
+    		var cut:Int = 0;
+    		var deg:Int = 0;
+    		val vertexList = result.getVertices(i);
+    		for(vpt in vertexList){
+    			val vertexID = vertexList(vpt);
+    			val neighbours = graph.getNeighbours(vertexID);
+    			for(npt in neighbours){
+    				val neighbourID = neighbours(npt);
+    				val boxCluster = result.tryGetCluster(neighbourID);
+    				if(boxCluster != null){
+    					deg++;
+	    				if(boxCluster() != i){
+	    					cut++;
+	    				}
+    				}
+    			}
+    		}
+    		Console.OUT.println([i] + ": cut = " + cut + ", deg = " + deg);
+    		ncut += cut / (deg as Double);
+    	}
+    	Console.OUT.println("ncut = " + ncut);
     }
 }

@@ -9,7 +9,7 @@ export X10_STATIC_THREADS=true
 export X10_NO_STEALS=false
 
 #X10 runtime environment variables
-X10_NPLACES = 3
+X10_NPLACES = 4
 X10_HOSTFILE = machines.txt
 X10_NTHERADS = 10
 
@@ -22,7 +22,7 @@ INTERM =./out
 X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
 CLASSPATH = $(X10_HOME)
 
-APP_DIR = /nfs/home/charuwat/workspace/ScaleGraph
+APP_DIR = /nfs/home/ogata/workspace/ScaleGraph
 
 #Set MPI Home
 MPI_HOME = /nfs/data0/miyuru/software/mpich2-1.4
@@ -685,7 +685,7 @@ test_mpiclustering:
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	@echo "----------- Launch MPI Spectral Clustering Tester ---------------------------";
-	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 X10RT_MPI_THREAD_MULTIPLE=true $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 # Test 27
@@ -759,9 +759,8 @@ test_psc:
 	-cxx-postarg -lgfortran \
 	src/test/scalegraph/clustering/psc/TestParallelSpectralClustering.x10 \
 	src/org/scalegraph/clustering/psc/ParallelSpectralClustering.x10 \
-	src/org/scalegraph/clustering/psc/LaplacianMatrix.x10 \
 	src/org/scalegraph/clustering/psc/SparseMatrix.x10 \
-	src/org/scalegraph/clustering/psc/Numbering.x10 \
+	src/org/scalegraph/clustering/psc/VertexInfo.x10 \
 	src/org/scalegraph/clustering/psc/ARPACK.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \

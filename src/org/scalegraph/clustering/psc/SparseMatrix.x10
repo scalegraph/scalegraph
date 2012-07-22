@@ -13,7 +13,7 @@ public class SparseMatrix {
 	var size:Int;
 	var firstColumnIndex:Array[Int];
 	var entries:Array[Pair[Int, Double]];
-	var num:Numbering;
+	//var num:Numbering;
 	
 	public def getSize(): Int {
 		return size;
