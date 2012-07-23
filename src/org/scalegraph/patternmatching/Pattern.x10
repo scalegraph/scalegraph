@@ -2,6 +2,7 @@ package org.scalegraph.patternmatching;
 
 
 import x10.util.ArrayList;
+import x10.util.ListIterator;
 import x10.util.Pair;
 
 
@@ -259,4 +260,15 @@ public class Pattern {
 		}
 	}
 
+	public def add_tid_to_vat(var tid:Int) :void {
+		var it:ListIterator[Int] = _vat.iterator();
+		for(;it.previousIndex()<_vat.size();it.next()){
+			if(_vat(it.previousIndex()) >= tid){
+				break;
+			}
+		}
+		
+		_vat.addBefore(it.previousIndex(),tid);
+	}
+	
 }

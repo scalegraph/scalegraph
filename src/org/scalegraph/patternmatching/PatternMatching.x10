@@ -8,7 +8,7 @@ public class PatternMatching {
 	
 
 	//private var current:LatticeNode;
-	private var max_iter:Int = 15;
+	private var max_iter:Int = 5;
 	private var minsup:Int = 1;
 	
 	
@@ -38,7 +38,8 @@ public class PatternMatching {
 		
 		//will call initialize followed by walk again and again until it gets a single edge pattern with some neighbors.
 		do {
-			var start:LatticeNode = rwm.initialize();      
+			var start:LatticeNode = rwm.initialize();     
+			assert(false):"finish initialize";
 			zero_neighbors = rwm.walk(start,cur_iter);
 		} while (zero_neighbors == false);
 		

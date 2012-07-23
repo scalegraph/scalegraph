@@ -21,9 +21,11 @@ public class PatternFactory {
 	
 	
 	public def get_one_random_one_edge_frequent_pattern():Pattern{
+		Console.OUT.println("get_one_random_one_edge_frequent_pattern");
 		//Console.OUT.println("before get edge randomly");
 		var edge:Pair[Pair[Int,Int],Int] = this.d.get_a_random_freq_edge();
 		//Console.OUT.println("before make edge pattern from one random edge");
+		Console.OUT.println("gotten random edge : " + edge.toString());
 		var cand_pat:Pattern = make_single_edge_pattern(edge.first.first, edge.first.second,edge.second);
 		//Console.OUT.println("complete to get one random edge");
 		return cand_pat;
@@ -31,22 +33,35 @@ public class PatternFactory {
 	
 	public def make_single_edge_pattern(var srcl:Int,var destl:Int,var el:Int):Pattern{
 		var vlabels:ArrayList[Int] = new ArrayList[Int](2);
+		//Console.OUT.println("srcl : " + srcl + " destl : " + destl + " el : " + el);
 		if (srcl < destl) { 
-			Console.OUT.println("srcl < dest");
+			//Console.OUT.println("srcl < dest");
 			vlabels.add(srcl);
 			vlabels.add(destl);
 		}
 		else {
-			Console.OUT.println("dest <= srcl");
+			//Console.OUT.println("dest <= srcl");
 			vlabels.add(destl);
 			vlabels.add(srcl);
 		}
 		
 		//Console.OUT.println("make new pattern");
+		//Console.OUT.println("vlabels" + vlabels.toString());
 		var p:Pattern = new Pattern(vlabels);
 		//Console.OUT.println("add edge");
 		p.add_edge(0,1,el);
 		//Console.OUT.println("make new edge pattern");
+		//Console.OUT.println("from PatternFactory");
+		val x = p.get_edges();
+		/*
+		Console.OUT.println("edge label:");
+		for(i in x){
+			Console.OUT.println(i);
+		}
+		*/
+		//Console.OUT.println("pattern matrix:");
+		//Console.OUT.println(p.get_matrix().toString());
+		
 		var edge:Pair[Pair[Int,Int],Int] = new Pair(Pair(vlabels(0),vlabels(1)),el);
 		//Console.OUT.println("complete make new edge pattern");
 		val vat:ArrayList[Int] = this.d.get_edge_vat(edge);
@@ -71,6 +86,8 @@ public class PatternFactory {
 		
 		var this_edge:Pair[Pair[Int,Int],Int];
 		var minsup:Int = this.d.get_minsup();
+		
+		assert(false):"get_freq_super_patterns";
 		
 		if (pat.size() == 0) {
 			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
@@ -216,7 +233,7 @@ public class PatternFactory {
 	public def pattern_with_edge_removed(var p:Pattern,var a:Int,var b:Int):Pattern{
 		var clone:Pattern = p.clone();
 		var edge:Pair[Pair[Int,Int],Int] = clone.remove_edge(a,b);
-		_d.get_exact_sup_from_super_pat_vat(clone);
+		this.d.get_exact_sup_from_super_pat_vat(clone);
 		
 		assert(false):"not implemented yet";
 		return clone;
@@ -229,6 +246,9 @@ public class PatternFactory {
 		
 		var this_edge:Pair[Pair[Int,Int],Int];
 		var minsup:Int = this.d.get_minsup();
+		
+		assert(false):"get_super_degree";
+
 		
 		if (pat.size() == 0) {
 			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();

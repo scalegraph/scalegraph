@@ -67,13 +67,15 @@ public class FiveTuple {
 	
 	
 	public final def equals(val other:Any):Boolean{
-		Console.OUT.println("assign is Any");
+		atomic{
+			//Console.OUT.println("assign is Any");
 		
-		if(other instanceof FiveTuple){
-			return this.equals(other as FiveTuple);
-		}
-		else{
-			return false;
+			if(other instanceof FiveTuple){
+				return this.equals(other as FiveTuple);
+			}
+			else{
+				return false;
+			}
 		}
 	}
 	
@@ -81,7 +83,7 @@ public class FiveTuple {
 	
 	public final def equals(val other:FiveTuple):Boolean{
 		atomic{
-			Console.OUT.println("assign is Five Tuple");
+			//Console.OUT.println("assign is Five Tuple");
 			if(this.i.equals(other.i) && this.j.equals(other.j) 
 					&& this.li.equals(other.li) && this.lj.equals(other.lj)
 					&& this.lij.equals(other.lij)){

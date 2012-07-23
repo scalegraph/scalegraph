@@ -27,12 +27,28 @@ public class RandamWalk {// random walk on pattern space
 	public def initialize():LatticeNode{//make new Lattice Node contains the graph pattern that is consist of only one frequent edge, before walk
 
 		var p:Pattern = _pf.get_one_random_one_edge_frequent_pattern();
-		Console.OUT.println("complete get one random one edge frequen pattern");
+		Console.OUT.println("complete get one random one edge frequen pattern in Random Walk initialize");
+		
+		val x = p.get_edges();
+		Console.OUT.println("edge labels:");
+		for(i in x){
+			Console.OUT.println(i);
+		}
+		
 		var cc:Canonicalcode = _iso.check_isomorphism(p);
 		Console.OUT.println("complete check iso");
 		p.set_canonical_code(cc);
 		Console.OUT.println("complete set canonical code");
-
+		
+		val y = p.get_edges();
+		Console.OUT.println("edge labels:");
+		for(i in y){
+			Console.OUT.println(i);
+		}
+	
+		Console.OUT.println("pattern matrix:");
+		Console.OUT.println(p.get_matrix().toString());
+		
 		if (p.get_is_frequent()==false) {
 			assert(false):("ERROR:this pattern is infrquent\n");
 		}
@@ -41,6 +57,7 @@ public class RandamWalk {// random walk on pattern space
 		var ln:LatticeNode = create_lattice_node(p);
 		Console.OUT.println("complete create lattice node");
 		process_node(ln);
+		assert(false):("complete process node");
 		Console.OUT.println("complete process_node");
 		Console.OUT.println("complete inityalizing ranndom walk");
 		
@@ -121,20 +138,18 @@ public class RandamWalk {// random walk on pattern space
 	private def process_node(var n:LatticeNode){
 		Console.OUT.println("check the node is processed or not");
 		if (n.getis_processed() == true) return;
-		Console.OUT.println("the node is not processed yet, begini process");
+		Console.OUT.println("the node is not processed yet, begin process");
 		val p:Pattern = n.getpattern();
 		assert(p.get_sup_ok() == 0);
 		
 		Console.OUT.println("not yet get super pattern");
 
-		/*
-		cout << "Current pattern:\n";
-		cout << *p;
-		*/
 
 		var neighbors:ArrayList[Pattern] = new ArrayList[Pattern]();
 		_pf.get_freq_super_patterns(p, neighbors);
 		Console.OUT.println("get frequent super pattern");
+		assert(false):("ERROR");
+
 		_pf.get_sub_patterns(p, neighbors);
 		Console.OUT.println("get frequent sub pattern");
 

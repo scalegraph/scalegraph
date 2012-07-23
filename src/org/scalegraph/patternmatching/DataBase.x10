@@ -93,6 +93,7 @@ public class DataBase {
 				if (fromId != toId){
 					// when get edgelist from Attributedgraph indicated source vatex id may included in toId 
 					pat.add_edge(fromId,toId,eLabel);
+					
 					this.ext_map_insert(fromLabel, toLabel, eLabel);
 					var e:Pair[Pair[Int,Int],Int] = (fromLabel < toLabel)? new Pair(Pair(fromLabel, toLabel), eLabel) : new Pair(Pair(toLabel, fromLabel), eLabel);
 
@@ -110,6 +111,16 @@ public class DataBase {
 			}
 			
 		}
+		Console.OUT.println("from database");
+		
+		val x = pat.get_edges();
+		Console.OUT.println("edge labels:");
+		for(i in x){
+			Console.OUT.println(i);
+		}
+		
+		//Console.OUT.println("pattern matrix:");
+		//Console.OUT.println(pat.get_matrix().toString());
 		_graph_store.add(pat);
 		
 		return 1;
@@ -205,6 +216,21 @@ public class DataBase {
 		}
 
 		Console.OUT.println("level one frequent:" + _edge_info.size());
+		
+		val x = _edge_info.entries();
+		Console.OUT.println("_edge_info" );
+		for(i in x){
+			Console.OUT.println(i.getKey().toString() + " " +i.getValue().toString());
+		}
+		val y = _ext_map.entries();
+		Console.OUT.println("_ext_map" );
+		for(i in y){
+			Console.OUT.println(i.getKey().toString());
+			val z =i.getValue();
+			for(j in z){
+				Console.OUT.println(j.toString());
+			}
+		}
 	}
 	
 	
@@ -232,7 +258,7 @@ public class DataBase {
 		}while(idx == total);
 		var ep:Pair[Pair[Int,Int],Int] = Pair(Pair(-1 as Int,-1 as Int),-1 as Int);
 		val it:Iterator[Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]] = _edge_info.entries().iterator();
-		for(var i:Int = 0 ;i < idx;i++){
+		for(var i:Int = 0 ;i <= idx;i++){
 			ep = it.next().getKey();
 		}
 		return ep;
@@ -328,18 +354,27 @@ public class DataBase {
 		
 		for (var i:Int=0; i<out_list.size(); i++) {
 			var database_pat:Pattern = _graph_store(out_list(i));
-			var m = new Matrix(pat.size(), database_pat.size());
-			matcher(pat.get_matrix(), database_pat.get_matrix(), m);
+			var m:Matrix = new Matrix(pat.size(), database_pat.size());
+			pat.get_matrix().matcher(database_pat.get_matrix(), m);
 			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat.get_matrix(), m ,false);
 			if (ret_val == true){
 				// cout << "adding " << out_list[i] << " to vatlist" << endl;
 				pat.add_tid_to_vat(out_list(i));
 			}
 		}
+		
 		val c_vat:ArrayList[Int] = pat.get_vat();
 		
-		assert(false):"not implemented yet";
-		return false;
+		pat.set_sup_status(0);
+		
+		if (c_vat.size() >= _minsup) {
+			pat.set_freq();
+			return true;
+		}
+		else {
+			return false;
+		}
+		
 	}
 
 	

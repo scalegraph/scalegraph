@@ -328,8 +328,8 @@ public class Isomorphism {
 					val btuple = new FiveTuple(g_dest_id, g_src_id, g_dest_lbl, g_e_lbl, g_src_lbl);
 					
 					
-					Console.OUT.println("coverd tuple");
-					Console.OUT.println("size:" + covered_edges(idx).size());
+					//Console.OUT.println("coverd tuple");
+					//Console.OUT.println("size:" + covered_edges(idx).size());
 					var iscontain:Boolean = false;
 					
 					
@@ -342,7 +342,7 @@ public class Isomorphism {
 						
 					}*/
 					
-					Console.OUT.println("iscontain : " + iscontain);
+					//Console.OUT.println("iscontain : " + iscontain);
 					
 					/*
 					Console.OUT.println("checking tuple");
@@ -543,8 +543,7 @@ public class Isomorphism {
 			}
 		}
 		
-		assert(false):"not implemented yet";
-	   // not implemented yet
+		
 	}
 	
 }
