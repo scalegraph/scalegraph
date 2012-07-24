@@ -765,6 +765,7 @@ test_psc:
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/Vector.x10 \
+	src/test/scalegraph/clustering/Tool.x10 \
 	src/test/scalegraph/clustering/StopWatch.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \

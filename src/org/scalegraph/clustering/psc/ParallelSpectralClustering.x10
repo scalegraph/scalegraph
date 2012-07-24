@@ -35,11 +35,12 @@ public class ParallelSpectralClustering implements Clustering {
 		this.nClusters = nClusters;
 		this.graph = graph;
 		sw.start();
-		this.vertexList = graph.getVertexListDualArrays(4).preArray;
-		//this.vertexList = graph.getVertexList();
+		//this.vertexList = graph.getVertexListDualArrays(4).preArray;
+		this.vertexList = graph.getVertexList();
 		sw.print("get vertex list");
 		this.vertexInfo = VertexInfo.make(graph);
 		sw.print("make vertex info");
+		//vertexInfo.print();
 		
 		this.tol = 0.001;
 		this.ncv = 2 * nClusters;
@@ -59,6 +60,10 @@ public class ParallelSpectralClustering implements Clustering {
 		
 		makeMatrix();
 		sw.print("make matrix");
+		/*for(p in Place.places()) at(p) {
+			Console.OUT.println("*** " + here + " ***");
+			Console.OUT.println(matrix());
+		}*/
 		
 		val z = solveEigenvalueProblem();
 		sw.print("solve eigenvalue problem");
@@ -109,6 +114,7 @@ public class ParallelSpectralClustering implements Clustering {
 							val neighbourIDX = boxNeighbourIDX();
 							val neighbourDegree = vertexInfo.getDegree(neighbourIDX)();
 							entriesBuilder.add(Pair[Int, Double](neighbourIDX, -1 / Math.sqrt(degree * neighbourDegree)));
+							//entriesBuilder.add(Pair[Int, Double](neighbourIDX, 1.0));
 							j++;
 						}
 					}
@@ -213,7 +219,7 @@ public class ParallelSpectralClustering implements Clustering {
 		Console.OUT.println("iterations = " + iparam(2));
 		Console.OUT.println("converged Ritz values = " + iparam(4));
 		
-		if(iparam(4) < nClusters){
+		if(iparam(4) < nev){
 			Console.OUT.println("ARPACK: dsaupd: could not calculate all required Ritz values");
 			return null;
 		}

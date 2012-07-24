@@ -6,7 +6,7 @@ import x10.util.HashMap;
 import x10.util.StringBuilder;
 
 import org.scalegraph.graph.PlainGraph;
-//import test.scalegraph.clustering.Tool;
+import test.scalegraph.clustering.Tool;
 
 public class VertexInfo {
 	
@@ -18,8 +18,8 @@ public class VertexInfo {
 	val offset = new Array[Int](Place.MAX_PLACES + 1);
 	
 	public static def make(graph:PlainGraph): VertexInfo {
-		val vertexList = graph.getVertexListDualArrays(4).preArray;
-		//val vertexList = graph.getVertexList();
+		//val vertexList = graph.getVertexListDualArrays(4).preArray;
+		val vertexList = graph.getVertexList();
 		val vertexInfo = new VertexInfo();
 		val gOffset = GlobalRef(vertexInfo.offset);
 		
@@ -139,6 +139,19 @@ public class VertexInfo {
 	
 	public def getDegreeFromHere(vertexIDX:Int): Box[Int] {
 		return degree().get(vertexIDX - offset(here.id));
+	}
+	
+	public def print(){
+		Console.OUT.println(placeList);
+		Console.OUT.println(offset);
+		for(p in Place.places()) at(p) {
+			Console.OUT.println("*** " + here + " ***");
+			Tool.print(IDtoIDX());
+			Console.OUT.println("---");
+			Tool.print(IDXtoID());
+			Console.OUT.println("---");
+			Tool.print(degree());
+		}
 	}
 	
 	/*public def toString(): String {
