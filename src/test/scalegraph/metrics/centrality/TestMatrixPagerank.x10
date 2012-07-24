@@ -34,10 +34,12 @@ public class TestMatrixPagerank {
   }
 
   private static def graphSetUpTsubame():PlainGraph {
-    val reader:EdgeListReader = new EdgeListReader();
+    //val reader:EdgeListReader = new EdgeListReader();
+	val reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
     return reader.
-    //loadFromFile("/work0/t2gsuzumuralab/miyuru/data/scale-14.dl");
-    loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-14.dl");
+	loadFromDir("/work0/t2gsuzumuralab/scalegraph/data/flickr");
+    //loadFromFile("/work0/t2gsuzumuralab/miyuru/data/scale-8.dl");
+    //loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-14.dl");
   }
   
   public static def main(Array[String]) {

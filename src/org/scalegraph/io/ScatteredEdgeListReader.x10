@@ -45,7 +45,7 @@ public class ScatteredEdgeListReader {
 			finish for(fileName in list){
 				val fullN:String = list(fileName).toString();
 				val p:Place = Place.places()(placeCounter);
-				
+
 				placeCounter++;
 				totalFilesProcessed++;
 				

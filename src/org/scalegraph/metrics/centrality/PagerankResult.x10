@@ -19,7 +19,7 @@ public class PagerankResult {
   public def getScore(key:Long) {
     val idx = idToIdxMap(key)();
     return vector(idx, 0);
-  } 
+  }
   
   public def toString() {
     var str:String = "";
