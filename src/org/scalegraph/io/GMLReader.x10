@@ -19,7 +19,7 @@ public class GMLReader {
 	protected val userIdAndVertexMap: HashMap[Long, Vertex] = new HashMap[Long, Vertex]();
 	protected val gmlEntries: ArrayList[GMLEntry] = new ArrayList[GMLEntry]();
 	protected var isGraphListFound: Boolean = false;
-	protected val graph: AttributedGraph = AttributedGraph.make(GraphSizeCategory.SMALL);
+	protected var graph: AttributedGraph = null;
 	protected var reader: FileReader;
 	
 	protected var elementPath: ArrayList[String] = new ArrayList[String]();
@@ -47,17 +47,24 @@ public class GMLReader {
 	public static def loadFromFile(fileName: String): AttributedGraph {
 		
 		val loader = new GMLReader();
-		return loader.internalLoadFromFile(fileName);
+		return loader.internalLoadFromFile(fileName, GraphSizeCategory.SMALL);
 	}
 	
 	
-	public def internalLoadFromFile(fileName: String): AttributedGraph {
+	public static def loadFromFile(fileName: String, sizeCategory: Short): AttributedGraph {
+		val loader = new GMLReader();
+		return loader.internalLoadFromFile(fileName, sizeCategory);
+	}
+	
+	public def internalLoadFromFile(fileName: String, sizeCategory: Short): AttributedGraph {
 		
 		numAddVertexAsync.set(0);
 		numAddEdgeAsync.set(0);
 		
 		// Open file and read
 		reader = new FileReader(new File(fileName));
+		graph = AttributedGraph.make(sizeCategory);
+		
 		finish {
 			parse(gmlEntries,false);
 		}
