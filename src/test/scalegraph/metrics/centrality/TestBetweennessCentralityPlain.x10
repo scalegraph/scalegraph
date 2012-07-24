@@ -91,18 +91,15 @@ public class TestBetweennessCentralityPlain {
 		val vertexList = vertexListBuilder.result();
 		val buildEnd = System.currentTimeMillis();
 		
-		// for( i in vertexList) {
-		// 	Console.OUT.println("===> (" + vertexList(i) + ") == " + graph.getInNeighboursCount(vertexList(i)));
-		// }
-		
 		val calStart = System.currentTimeMillis();
 		val result = BetweennessCentrality.run(graph, vertexList, false, cutoffDistance);
+		// val result2 = BetweennessCentrality.run(graph, vertexList, false, cutoffDistance);
+		// val result3 = BetweennessCentrality.run(graph, vertexList, false, cutoffDistance);
 		val calEnd = System.currentTimeMillis();
 		
 		val vertexCountStart = System.currentTimeMillis();
 		val vcount:Long = graph.getVertexCount();
 		val vertexCountEnd = System.currentTimeMillis();
-		
 		
 		// Print Running result
 		if(!outputPath.equals("")) {
@@ -160,13 +157,14 @@ public class TestBetweennessCentralityPlain {
 		
 			if(shouldPrintResult){
 				for(i in result) {
-					var k: Long = result(i).first;
-					var v: Double = result(i).second;
+					val k: Long = result(i).first;
+					val v: Double = result(i).second;
 					
 					if(v == 0D)
 						continue;
 					
-					p.println("" + k + " = " + v);
+					p.printf("%ld %.6lf\n", k, v);
+					// p.println("" + k + " = " + v);
 				}
 			}
 		
