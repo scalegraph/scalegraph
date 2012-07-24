@@ -34,10 +34,23 @@ public class AttributedGraph  implements Graph {
 	protected val sizeCategory: Short;
 	
 
-	val space: Int = 262144; // 2^18
-	val R = 0..(space - 1);
+	// val space: Int = 262144; // 2^18
+	// val R = 0..(space - 1);
+	protected var space: Int;
+	protected var R: Region;
 	
 	var dist: Dist;
+	
+	protected def this(sizeCategory: Short) {
+		
+		if(sizeCategory <= 0) {
+			throw new UnsupportedOperationException("Invalid size category");
+		}
+		
+		this.sizeCategory = sizeCategory;
+		space = 1 << sizeCategory;
+		R = 0..(space -1);
+	}
 	
 	public static def make(): AttributedGraph {
 		val g = new AttributedGraph(GraphSizeCategory.SMALL);
@@ -66,10 +79,6 @@ public class AttributedGraph  implements Graph {
 		g.addVertices(vertexList);
 		g.addEdge(edgeList);
 		return g;
-	}
-	
-	protected def this(sizeCategory: Short) {
-		this.sizeCategory = sizeCategory;
 	}
 	
 	protected def init() {
