@@ -524,9 +524,9 @@ public class BetweennessCentrality {
 				val actor = traverseQ.removeFirst();
 				touchVertex.push(actor);
 				
-				// if(cutoffDistance > 0 && distanceMap(actor) >= cutoffDistance) {
-				// 			break;
-				// }
+				if(cutoffDistance > 0 && distanceMap(actor) >= cutoffDistance) {
+							break;
+				}
 				
 				val neighbors = neighborMap(actor);
 				vertexStack.push(actor);
@@ -781,8 +781,6 @@ public class BetweennessCentrality {
 		var remainingIter: long = it;
 		
 		for(index in localVertices) {
-			
-			
 			
 			if((indexCount++) % numParallelBfsTasks != taskId) {
 				continue;
