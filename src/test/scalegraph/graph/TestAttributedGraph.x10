@@ -26,7 +26,7 @@ public class TestAttributedGraph {
 	    
 	    public static def testGetEdgeByVertexId(){
 	    	Console.OUT.println("---------------------Test GetVertexList--------------------");
-	    	val graph = GMLReader.loadFromFile("/nfs/data1/scalegraph/GML/gml_reader_t1.gml");
+	    	val graph = GMLReader.loadFromFile("/nfs/data1/scalegraph/GML/gml_reader_t1.gml", GraphSizeCategory.MEDIUM);
 	    	val vertexList = graph.getVertexList();
 	    	
 	    	for(i in vertexList){
@@ -37,5 +37,4 @@ public class TestAttributedGraph {
 	    		Console.OUT.println("-------------------");
 	    	}
 	    }
-	
 }   
