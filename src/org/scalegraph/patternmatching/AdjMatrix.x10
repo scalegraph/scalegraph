@@ -12,7 +12,8 @@ public class AdjMatrix extends SqrSymMatrix {
 	//private var edgeCount:Int;
 	
 	public def this(){
-		vlabel = null;
+		super();
+		vlabel = new ArrayList[Int]();
 	}
 	
 	/**
@@ -90,6 +91,19 @@ public class AdjMatrix extends SqrSymMatrix {
 	public def addEdge(v1:Int, v2:Int): void {
 		this(v1, v2) = 1;
 		this(v2, v1) = 1;
+	}
+	
+	public def cloneAdjMatrix(){
+		var m:AdjMatrix = new AdjMatrix(this.rows);
+		
+		for(var i:Int = 0;i < rows;i++){
+			for(var j:Int = 0;j < cols;j++){
+				m(i,j) = this(i,j); 
+			}
+		}
+		m.vlabel = this.vlabel.clone();
+		
+		return m;
 	}
 	
 	//public def getEdgeCount(): Int {}

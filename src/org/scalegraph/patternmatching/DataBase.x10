@@ -64,7 +64,7 @@ public class DataBase {
 		}
 		
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
-		var pat:Pattern = new Pattern(vlabels);
+		var pat:Cell[Pattern] = new Cell[Pattern](new Pattern(vlabels));
 		
 		
 		
@@ -92,7 +92,7 @@ public class DataBase {
 				
 				if (fromId != toId){
 					// when get edgelist from Attributedgraph indicated source vatex id may included in toId 
-					pat.add_edge(fromId,toId,eLabel);
+					pat().add_edge(fromId,toId,eLabel);
 					
 					this.ext_map_insert(fromLabel, toLabel, eLabel);
 					var e:Pair[Pair[Int,Int],Int] = (fromLabel < toLabel)? new Pair(Pair(fromLabel, toLabel), eLabel) : new Pair(Pair(toLabel, fromLabel), eLabel);
@@ -113,7 +113,7 @@ public class DataBase {
 		}
 		Console.OUT.println("from database");
 		
-		val x = pat.get_edges();
+		val x = pat().get_edges();
 		Console.OUT.println("edge labels:");
 		for(i in x){
 			Console.OUT.println(i);
@@ -121,7 +121,7 @@ public class DataBase {
 		
 		//Console.OUT.println("pattern matrix:");
 		//Console.OUT.println(pat.get_matrix().toString());
-		_graph_store.add(pat);
+		_graph_store.add(pat());
 		
 		return 1;
 	}
@@ -283,6 +283,7 @@ public class DataBase {
 		if(x != null){
 			return x.value.first;
 		}
+		assert(false):"complete get_edge_vat";
 		return new ArrayList[Int]();//return dummy data
 	}
 	
@@ -343,8 +344,8 @@ public class DataBase {
 				it3 = null;
 			}
 			if (it3 == null || cur_vat(it3.previousIndex()) != it) {  // not exists
-				var database_pat:Pattern = _graph_store(it);
-				if (database_pat.is_super_pattern(pat) == true) {
+				var database_pat:Cell[Pattern] = new Cell(_graph_store(it));
+				if (database_pat().is_super_pattern(pat) == true) {
 					out_list.add(it); 
 				}
 			}
@@ -353,10 +354,10 @@ public class DataBase {
 		}
 		
 		for (var i:Int=0; i<out_list.size(); i++) {
-			var database_pat:Pattern = _graph_store(out_list(i));
-			var m:Matrix = new Matrix(pat.size(), database_pat.size());
-			pat.get_matrix().matcher(database_pat.get_matrix(), m);
-			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat.get_matrix(), m ,false);
+			var database_pat:Cell[Pattern] = new Cell(_graph_store(out_list(i)));
+			var m:Matrix = new Matrix(pat.size(), database_pat().size());
+			pat.get_matrix().matcher(database_pat().get_matrix(), m);
+			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat().get_matrix(), m ,false);
 			if (ret_val == true){
 				// cout << "adding " << out_list[i] << " to vatlist" << endl;
 				pat.add_tid_to_vat(out_list(i));

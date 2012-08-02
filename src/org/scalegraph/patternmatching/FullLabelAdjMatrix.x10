@@ -25,6 +25,7 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	//}
 	
 	public def this(){
+		super();
 		elabel = new HashMap[Pair[Int, Int], Int]();
 	}
 	
@@ -261,5 +262,25 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			}
 		}
 		return;
+	}
+	
+	
+	public def cloneFullLabelAdjMatrix() {
+		var m:FullLabelAdjMatrix = new FullLabelAdjMatrix(this.vlabel);
+		for(var i:Int = 0;i < rows;i++){
+			for(var j:Int = 0;j < cols;j++){
+				m(i,j) = this(i,j); 
+			}
+		}
+		m.elabel = new HashMap[Pair[Int,Int],Int]();
+		val x = this.elabel.entries();
+		for(i in x){
+			m.elabel.put(i.getKey(),i.getValue());
+			
+		}
+		
+		return m;
+		
+		
 	}
 }

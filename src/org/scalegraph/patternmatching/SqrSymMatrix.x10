@@ -9,7 +9,7 @@ import x10.util.Pair;
 public class SqrSymMatrix extends Matrix {
 
 	public def this(){
-		
+		super();
 	}
 	
 	/**
@@ -93,5 +93,16 @@ public class SqrSymMatrix extends Matrix {
 			if(pos == dst || isReachable(pos, dst, visited)) return true;
 		}
 		return false;
+	}
+	
+	
+	public def cloneSqrSymMatrix():SqrSymMatrix{
+		var m:SqrSymMatrix = new SqrSymMatrix(this.rows);
+		for(var i:Int = 0;i < rows;i++){
+			for(var j:Int = 0;j < cols;j++){
+				m(i,j) = this(i,j); 
+			}
+		}
+		return m;
 	}
 }

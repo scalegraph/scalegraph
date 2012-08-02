@@ -13,7 +13,9 @@ public class Matrix {
 	protected var data:ArrayList[ArrayList[Int]];  // the list of rows
 	
 	public def this(){
-		data = null;
+		rows = 0;
+		cols = 0;
+		data = new ArrayList[ArrayList[Int]]();;
 	}
 	
 	/**
@@ -165,5 +167,16 @@ public class Matrix {
 				ret_val.add(pos);
 			}
 	}	
+	
+	public def cloneMatrix(){
+		var m:Matrix = new Matrix(this.rows,this.cols);
+		for(var i:Int = 0;i < rows;i++){
+			for(var j:Int = 0;j < cols;j++){
+				m(i,j) = this(i,j); 
+			}
+		}
+		
+		return m;
+	}
 	
 }

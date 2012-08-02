@@ -8,7 +8,7 @@ public class PatternMatching {
 	
 
 	//private var current:LatticeNode;
-	private var max_iter:Int = 5;
+	private var max_iter:Int = 20;
 	private var minsup:Int = 1;
 	
 	
@@ -34,13 +34,13 @@ public class PatternMatching {
 		//database->print_database();
 		/* creating random_walk_manager and starting walk */
 		var rwm:RandamWalk = new RandamWalk(database, max_iter);
-		var cur_iter:Int=0;
+		var cur_iter:Cell[Int]= new Cell[Int](0);
 		
 		//will call initialize followed by walk again and again until it gets a single edge pattern with some neighbors.
 		do {
 			var start:LatticeNode = rwm.initialize();     
-			assert(false):"finish initialize";
 			zero_neighbors = rwm.walk(start,cur_iter);
+			Console.OUT.println("current iter : " + cur_iter());
 		} while (zero_neighbors == false);
 		
 		

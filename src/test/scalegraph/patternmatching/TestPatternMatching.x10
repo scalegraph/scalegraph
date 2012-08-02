@@ -31,7 +31,7 @@ public class TestPatternMatching {
     	//var dataDir:String = "/work0/t2gsuzumuralab/ou/scalegraph/temp_graphs";
     	var splitter:FileSplitter = new FileSplitter(); 
     	//splitter.split("/nfs/data1/scalegraph/data/pattern-dataset/GRAPH_large.dat", dataDir);
-    	//splitter.split("/nfs/data1/scalegraph/data/pattern-dataset/GRAPH_int_toy2.data", dataDir);
+    	//splitter.split("/nfs/data1/scalegraph/data/GRAPH_int_toy2.data", dataDir);
     	splitter.split("/work0/t2gsuzumuralab/scalegraph/data/GRAPH_int_toy2.data", dataDir);
 
 
@@ -40,7 +40,7 @@ public class TestPatternMatching {
     	var graphlist:ArrayList[AttributedGraph] = new ArrayList[AttributedGraph]();
     	
     	for(item in list){
-    		Console.OUT.println("Reading file : " + list(item));
+    		//Console.OUT.println("Reading file : " + list(item));
     		var rdr:WeightedGraphReader = new WeightedGraphReader();
     		var attrib:AttributedGraph = rdr.loadFromFile(list(item));
     		

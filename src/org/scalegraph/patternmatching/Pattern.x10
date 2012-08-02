@@ -147,8 +147,8 @@ public class Pattern {
 	public def size():Int{
 		if (_matrix != null)
 			return _matrix.getSize();
-			else
-				return 0;
+		else
+			return 0;
 	}
 	
 	public def label(var i:Int) {
@@ -231,7 +231,7 @@ public class Pattern {
 	
 	public def clone():Pattern{
 		var x:Pattern = new Pattern();
-		x.set_matrix(this.get_matrix());
+		x.set_matrix(this.get_matrix().cloneFullLabelAdjMatrix());
 		x.set_sup_status(this.get_sup_ok());
 		x.set_is_frequent(this.get_is_frequent());
 		x.set_code_known(this.get_code_known());
