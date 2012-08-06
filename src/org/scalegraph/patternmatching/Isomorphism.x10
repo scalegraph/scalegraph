@@ -7,33 +7,33 @@ import x10.util.HashSet;
 
 public class Isomorphism {
 	
-	public def check_isomorphism(val cand_pat:Cell[Pattern]):Canonicalcode{
+	public def check_isomorphism(val cand_pat:Pattern):Canonicalcode{
 		var e:Int=0; //least edge label
 		var src_v:Int=0;//least source vertex label
 		var dest_v:Int=0;//least destination label
 		var ids:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();//ids with least labelled edges
 
 		//Console.OUT.println("check the canonical code is known or not");
-		if (cand_pat().get_code_known() == true) {
+		if (cand_pat.get_code_known() == true) {
 			//Console.OUT.println("retrun canonical code that is already known");
-			return cand_pat().get_canonical_code();
+			return cand_pat.get_canonical_code();
 			
 		}
 		
 		//Console.OUT.println("candidate pattern's canonical code is not known yet, so start to make new code");
 
-		if (cand_pat().size() == 0) {
+		if (cand_pat.size() == 0) {
 			assert(false):("ERROR: null patterns are not allowed");
 		}
 		//Console.OUT.println("cand_pat != 0");
 
-		src_v = cand_pat().label(0);  // src_v has the label of the least vertex in dfs walk
+		src_v = cand_pat.label(0);  // src_v has the label of the least vertex in dfs walk
 		//Console.OUT.println("finish get start vatex label");
 
-		for(var j:Int = 0;j<cand_pat().size();j++){
-			if(cand_pat().get_matrix()(0,j)==1){
-				dest_v = cand_pat().label(j);// dest_v has the label of the second least vertex in dfs walk
-				e = cand_pat().get_edge_label(0,j);
+		for(var j:Int = 0;j<cand_pat.size();j++){
+			if(cand_pat.get_matrix()(0,j)==1){
+				dest_v = cand_pat.label(j);// dest_v has the label of the second least vertex in dfs walk
+				e = cand_pat.get_edge_label(0,j);
 				break;
 			}
 		}
@@ -72,8 +72,8 @@ public class Isomorphism {
 		for(var i:Int=0; i<ids.size(); i++) {
 			//Console.OUT.println("repeat times:" + i);
 			// Add a minimal edge to new_codes.
-			var cc_tuple:FiveTuple = new FiveTuple(0, 1, cand_pat().label(ids(i).first), 
-					e, cand_pat().label(ids(i).second));
+			var cc_tuple:FiveTuple = new FiveTuple(0, 1, cand_pat.label(ids(i).first), 
+					e, cand_pat.label(ids(i).second));
 			//Console.OUT.println("made five tuple");
 			var new_cc:Canonicalcode = new Canonicalcode(cc_tuple, ids(i).first, ids(i).second);
 			//Console.OUT.println("made new canonicalcode");
@@ -102,23 +102,23 @@ public class Isomorphism {
 		minimal(new_codes, covered_edges, cand_pat);
 		//Console.OUT.println("finish minimal");
 		
-		cand_pat().set_code_known(true);
-		cand_pat().set_canonical_code(new_codes(0));
+		cand_pat.set_code_known(true);
+		cand_pat.set_canonical_code(new_codes(0));
 		return new_codes(0);
 	}
 	
-	private def iso_startup(var cand_pat:Cell[Pattern],var src_v:Int,var dest_v:Int,var e:Int,var ids:ArrayList[Pair[Int,Int]]):void{
+	private def iso_startup(var cand_pat:Pattern,var src_v:Int,var dest_v:Int,var e:Int,var ids:ArrayList[Pair[Int,Int]]):void{
 		
 		var swaped:Boolean = false;
 		
-		for(var i:Int = 0;i < cand_pat().get_matrix().getSize();i++){
+		for(var i:Int = 0;i < cand_pat.get_matrix().getSize();i++){
 			for(var j:Int = 0;j < i;j++){
-				if(cand_pat().get_matrix()(i,j) == 1){
+				if(cand_pat.get_matrix()(i,j) == 1){
 					var edge:Pair[Int,Int] = Pair(i,j);
 					swaped=false;
-					var v1:Int = cand_pat().label(edge.first); 
-					var v2:Int = cand_pat().label(edge.second);
-					var this_edge:Int =  cand_pat().get_edge_label(edge.first, edge.second);
+					var v1:Int = cand_pat.label(edge.first); 
+					var v2:Int = cand_pat.label(edge.second);
+					var this_edge:Int =  cand_pat.get_edge_label(edge.first, edge.second);
 					if (v1 > v2) {
 						val x = v1;
 						v1= v2;
@@ -207,7 +207,7 @@ public class Isomorphism {
 	}
 			
 			
-	private def minimal(var new_codes:ArrayList[Canonicalcode],var covered_edges:ArrayList[HashSet[FiveTuple]],var cand_pat:Cell[Pattern]):void{
+	private def minimal(var new_codes:ArrayList[Canonicalcode],var covered_edges:ArrayList[HashSet[FiveTuple]],var cand_pat:Pattern):void{
 		var go_ahead:Boolean = true;
 		var s:Int = 0;
 		// When none of the candidate codes can be extended,
@@ -272,7 +272,7 @@ public class Isomorphism {
 		}
 	}
 	
-	private def extend(var new_codes:ArrayList[Canonicalcode],var covered_edges:ArrayList[HashSet[FiveTuple]],var cand_pat:Cell[Pattern],var idx:Int):Boolean{
+	private def extend(var new_codes:ArrayList[Canonicalcode],var covered_edges:ArrayList[HashSet[FiveTuple]],var cand_pat:Pattern,var idx:Int):Boolean{
 		// extend new codes till all edges are covered
 		
 		// Denotes, if last edge in new_code was a fwd edge.
@@ -289,7 +289,7 @@ public class Isomorphism {
 			last_vid = new_codes(idx).getCode().getLast().i;
 		}
 		var g_src_id:Int=new_codes(idx).gid(last_vid);
-		var g_src_lbl:Int = cand_pat().label(g_src_id);
+		var g_src_lbl:Int = cand_pat.label(g_src_id);
 		
 		// This is the set of candidate edges, from g_src_id.
 		var cand_edges:ArrayList[FiveTuple] = new ArrayList[FiveTuple]();
@@ -308,11 +308,11 @@ public class Isomorphism {
 		do {
 			curr_fwd_cid = -1;
 			cid_gid_map.clear();
-			for(var i:Int = 0;i < cand_pat().size();i++){
-				if(cand_pat().get_matrix()(g_src_id,i) == 1){
+			for(var i:Int = 0;i < cand_pat.size();i++){
+				if(cand_pat.get_matrix()(g_src_id,i) == 1){
 					var g_dest_id:Int = i;
-					var g_dest_lbl:Int = cand_pat().label(g_dest_id);
-					var g_e_lbl:Int = cand_pat().get_edge_label(g_src_id,g_dest_id);
+					var g_dest_lbl:Int = cand_pat.label(g_dest_id);
+					var g_e_lbl:Int = cand_pat.get_edge_label(g_src_id,g_dest_id);
 					
 					// The call to cid returns -1 if the g_dest_id
 					// is not in new_codes[idx]. Which means that
@@ -374,7 +374,7 @@ public class Isomorphism {
 					return false;
 				} else {
 					g_src_id=new_codes(idx).gid(last_vid);
-					g_src_lbl = cand_pat().label(g_src_id);
+					g_src_lbl = cand_pat.label(g_src_id);
 				}
 			}
 		}while(cand_edges.size() == 0 && last_vid > -1);

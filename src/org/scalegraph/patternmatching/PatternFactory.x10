@@ -11,11 +11,11 @@ import x10.lang.Iterator;
 
 
 public class PatternFactory {
-	private var d:Cell[DataBase]=null;
+	private var d:DataBase=null;
 	private val iso:Isomorphism = new Isomorphism();
 	
-	public def this(var d:Cell[DataBase]){
-		this.d = d();
+	public def this(var d:DataBase){
+		this.d = d;
 	}
 	
 	
@@ -23,7 +23,7 @@ public class PatternFactory {
 	public def get_one_random_one_edge_frequent_pattern():Pattern{
 		Console.OUT.println("get_one_random_one_edge_frequent_pattern");
 		//Console.OUT.println("before get edge randomly");
-		var edge:Pair[Pair[Int,Int],Int] = this.d().get_a_random_freq_edge();
+		var edge:Pair[Pair[Int,Int],Int] = this.d.get_a_random_freq_edge();
 		//Console.OUT.println("before make edge pattern from one random edge");
 		Console.OUT.println("gotten random edge : " + edge.toString());
 		var cand_pat:Pattern = make_single_edge_pattern(edge.first.first, edge.first.second,edge.second);
@@ -64,12 +64,12 @@ public class PatternFactory {
 		
 		var edge:Pair[Pair[Int,Int],Int] = new Pair(Pair(vlabels(0),vlabels(1)),el);
 		//Console.OUT.println("complete make new edge pattern");
-		val vat:ArrayList[Int] = this.d().get_edge_vat(edge);
+		val vat:ArrayList[Int] = this.d.get_edge_vat(edge);
 		assert(vat != null):"failure to get edge vat";
 		p.set_vat(vat);
 		p.set_sup_status(0);
 		//Console.OUT.println("set minsup");
-		var minsup:Int = this.d().get_minsup();
+		var minsup:Int = this.d.get_minsup();
 		//Console.OUT.println("check the pattern is frequent or not");
 		if (vat.size() >= minsup){
 			p.set_freq();
@@ -80,19 +80,19 @@ public class PatternFactory {
 	
 	
 	
-	public def get_freq_super_patterns(val pat:Pattern,var super_patterns:ArrayList[Pattern]):void{
+	public def get_freq_super_patterns(var pat:Pattern,var super_patterns:ArrayList[Pattern]):void{
 		Console.OUT.println("get_freq_super_patterns");
 		var edge:Pattern = new Pattern();
 		var cand_pat:Pattern = new Pattern();
 		
 		var this_edge:Pair[Pair[Int,Int],Int] = Pair(Pair(-1 as Int,-1 as Int),-1 as Int);
-		var minsup:Int = this.d().get_minsup();
+		var minsup:Int = this.d.get_minsup();
 		
 		
 
 		
 		if (pat.size() == 0) {
-			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d().get_all_edge_info();
+			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
 			val cit:Iterator[Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]] = eim.entries().iterator();
 			
 			while (cit.hasNext()) {
@@ -111,7 +111,7 @@ public class PatternFactory {
 			Console.OUT.println("complete get source vertex label");
 			Console.OUT.println("vid : " + vid);
 			Console.OUT.println("pattern size : " + pat.size());
-			var nbrs:HashSet[Pair[Int,Int]]= this.d().get_neighbors(src_v);
+			var nbrs:HashSet[Pair[Int,Int]]= this.d.get_neighbors(src_v);
 				// about nbrs element of first is destination label and second is edeg label
 			Console.OUT.println("complete get neighbors");
 			
@@ -127,7 +127,7 @@ public class PatternFactory {
 					this_edge = new Pair(Pair(dest_v,src_v),e_label);
 				}
 				var frequency:Int = pat.edge_counter(this_edge);
-				var max_freq:Int = this.d().get_freq(this_edge);
+				var max_freq:Int = this.d.get_freq(this_edge);
 				if (frequency > max_freq) {
 					continue;
 				}
@@ -143,7 +143,7 @@ public class PatternFactory {
 					cand_pat = null;
 				}
 				else {
-					var freq:Boolean = this.d().get_exact_sup_optimal(cand_pat);
+					var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 					if (freq == true) { // is the pattern frequent?
 						super_patterns.add(cand_pat);
 					}
@@ -175,7 +175,7 @@ public class PatternFactory {
 						cand_pat = null;
 					}
 					else {
-						var freq:Boolean = this.d().get_exact_sup_optimal(cand_pat);
+						var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 						if (freq == true) { // is the pattern frequent?
 
 							super_patterns.add(cand_pat);
@@ -237,7 +237,7 @@ public class PatternFactory {
 	public def pattern_with_edge_removed(var p:Pattern,var a:Int,var b:Int):Pattern{
 		var clone:Pattern = p.clone();
 		var edge:Pair[Pair[Int,Int],Int] = clone.remove_edge(a,b);
-		this.d().get_exact_sup_from_super_pat_vat(clone);
+		this.d.get_exact_sup_from_super_pat_vat(clone);
 		
 		assert(false):"not implemented yet";
 		return clone;
@@ -249,20 +249,20 @@ public class PatternFactory {
 		var ret_val:Int = 0;
 		
 		var this_edge:Pair[Pair[Int,Int],Int];
-		var minsup:Int = this.d().get_minsup();
+		var minsup:Int = this.d.get_minsup();
 		
 		assert(false):"get_super_degree";
 
 		
 		if (pat.size() == 0) {
-			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d().get_all_edge_info();
+			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
 			return eim.size();
 		}
 		
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices and counting
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
-			var nbrs:HashSet[Pair[Int,Int]] = this.d().get_neighbors(src_v);
+			var nbrs:HashSet[Pair[Int,Int]] = this.d.get_neighbors(src_v);
 			// about nbrs element of first is destination label and second is edeg label
 			
 			
@@ -280,7 +280,7 @@ public class PatternFactory {
 					this_edge = new Pair(Pair(dest_v,src_v),e_label);
 				}
 				var frequency:Int = pat.edge_counter(this_edge);
-				var max_freq:Int = this.d().get_freq(this_edge);
+				var max_freq:Int = this.d.get_freq(this_edge);
 				if (frequency > max_freq) {
 					continue;
 				}
@@ -296,7 +296,7 @@ public class PatternFactory {
 					cand_pat = null;
 				}
 				else {
-					var freq:Boolean = this.d().get_exact_sup_optimal(cand_pat);
+					var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 					if (freq == true) { // is the pattern frequent?
 						cand_pat = null;
 						ret_val++;
@@ -329,7 +329,7 @@ public class PatternFactory {
 						cand_pat = null;	
 					}	
 					else {
-						var freq:Boolean = this.d().get_exact_sup_optimal(cand_pat);
+						var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
 						if (freq == true) { // is the pattern frequent
 							cand_pat = null;;
 							ret_val++;

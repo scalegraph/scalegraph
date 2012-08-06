@@ -5,11 +5,11 @@ public class LatticeNode {
 	//LaticeNode contains graph pattarn and pointer to otherLattice Node
 	
 	private var isProcessed:Boolean = false;//!< it is true, when we know all neighbors and their status of this pattern
-	private var pat:Cell[Pattern] = new Cell[Pattern](new Pattern());//!< Store a pattern in lattice node
-	private var neighbors:ArrayList[Cell[LatticeNode]] = new ArrayList[Cell[LatticeNode]]();//!< store all neighbors that consist of LatticeNode that contains superpattern or subpattern
+	private var pat:Pattern = new Pattern();//!< Store a pattern in lattice node
+	private var neighbors:ArrayList[LatticeNode] = new ArrayList[LatticeNode]();//!< store all neighbors that consist of LatticeNode that contains superpattern or subpattern
 	private var neighbor_prob:ArrayList[Double] = new ArrayList[Double]();//!< store Double type data useful for select which neighbor to transition
 	
-	public def this(var pat:Cell[Pattern]){
+	public def this(var pat:Pattern){
 		this.pat = pat;
 	}
 
@@ -21,11 +21,11 @@ public class LatticeNode {
 		this.isProcessed = i;
 	}
 	
-	public def getpattern():Cell[Pattern]{
+	public def getpattern():Pattern{
 		return this.pat;
 	}
 	
-	public def getneighbors():ArrayList[Cell[LatticeNode]]{
+	public def getneighbors():ArrayList[LatticeNode]{
 		return this.neighbors;
 	}
 	

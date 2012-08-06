@@ -38,7 +38,7 @@ public class PatternMatching {
 		
 		//will call initialize followed by walk again and again until it gets a single edge pattern with some neighbors.
 		do {
-			var start:LatticeNode = rwm.initialize();     
+			var start:LatticeNode = rwm.initialize(); 
 			zero_neighbors = rwm.walk(start,cur_iter);
 			Console.OUT.println("current iter : " + cur_iter());
 		} while (zero_neighbors == false);
