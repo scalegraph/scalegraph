@@ -14,7 +14,6 @@ public class Subiso {
 					return false;
 				}
 		}
-		assert(false):"not implemented yet";
 		return true;
 	}
 	

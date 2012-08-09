@@ -331,9 +331,14 @@ public class Isomorphism {
 					//Console.OUT.println("coverd tuple");
 					//Console.OUT.println("size:" + covered_edges(idx).size());
 					var iscontain:Boolean = false;
+					Console.OUT.println("covered_edges(idx):");
+					val x = covered_edges(idx);
+					for(t in x){
+						Console.OUT.println(t.toString());
+					}
 					
-					
-					iscontain = !(covered_edges(idx).contains(ftuple) == false && covered_edges(idx).contains(btuple) == false);
+					iscontain = !((covered_edges(idx).contains(ftuple) == false) 
+							&& (covered_edges(idx).contains(btuple) == false));
 					/*for(s in covered_edges(idx)){
 						//Console.OUT.println(s.toString());
 						if(s.equals(ftuple) || s.equals(btuple)){
@@ -342,7 +347,7 @@ public class Isomorphism {
 						
 					}*/
 					
-					//Console.OUT.println("iscontain : " + iscontain);
+					Console.OUT.println("iscontain : " + iscontain);
 					
 					/*
 					Console.OUT.println("checking tuple");
@@ -547,3 +552,4 @@ public class Isomorphism {
 	}
 	
 }
+

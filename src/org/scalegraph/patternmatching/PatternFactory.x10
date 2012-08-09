@@ -88,7 +88,7 @@ public class PatternFactory {
 		var this_edge:Pair[Pair[Int,Int],Int] = Pair(Pair(-1 as Int,-1 as Int),-1 as Int);
 		var minsup:Int = this.d.get_minsup();
 		
-		
+		Console.OUT.println("pattern size:" + pat.size());
 
 		
 		if (pat.size() == 0) {
@@ -104,6 +104,8 @@ public class PatternFactory {
 		}
 		
 		Console.OUT.println("coplete initilize");
+		Console.OUT.println("number of super pattern:" + super_patterns.size());
+
 		
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices
 			// vid is a vertex id stored in matrix of this pattern
@@ -117,6 +119,7 @@ public class PatternFactory {
 			
 			for(x in nbrs){// trying extension on a vertex for all posible neighbor edge type
 				// first get a one neighbor edge pattern
+				Console.OUT.println("neighbor:"+x.toString());
 				var dest_v:Int = x.first;
 				var e_label:Int = x.second;
 				
@@ -139,6 +142,7 @@ public class PatternFactory {
 				var lvid:Int = cand_pat.add_vertex(dest_v);
 				cand_pat.add_edge(vid, lvid, e_label);
 				cand_pat.join_vat(edge);
+				Console.OUT.println("cand_pat.get_vat().size():"+cand_pat.get_vat().size());
 				if (cand_pat.get_vat().size() < minsup) {
 					cand_pat = null;
 				}
@@ -238,8 +242,7 @@ public class PatternFactory {
 		var clone:Pattern = p.clone();
 		var edge:Pair[Pair[Int,Int],Int] = clone.remove_edge(a,b);
 		this.d.get_exact_sup_from_super_pat_vat(clone);
-		
-		assert(false):"not implemented yet";
+	
 		return clone;
 	}
 	

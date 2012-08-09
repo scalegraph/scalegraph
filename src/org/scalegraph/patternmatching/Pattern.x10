@@ -74,7 +74,6 @@ public class Pattern {
 		_sup_ok = -1; //current VAT is sub-set of exact VAT
 		
 		
-		assert(false):"not implemented yet";
 		return edge;
 	}
 	

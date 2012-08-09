@@ -1,7 +1,6 @@
 package org.scalegraph.patternmatching;
 
 
-
 import x10.util.Random;
 import x10.util.Timer;
 import x10.util.ArrayList;
@@ -27,7 +26,7 @@ public class RandamWalk {// random walk on pattern space
 	public def initialize():LatticeNode{//make new Lattice Node contains the graph pattern that is consist of only one frequent edge, before walk
 
 		var p:Pattern = _pf.get_one_random_one_edge_frequent_pattern();
-		Console.OUT.println("complete get one random one edge frequen pattern in Random Walk initialize");
+		Console.OUT.println("complete get one random one edge frequent pattern in Random Walk initialize");
 		
 		val x = p.get_edges();
 		Console.OUT.println("edge labels:");
@@ -37,6 +36,7 @@ public class RandamWalk {// random walk on pattern space
 		
 		var cc:Canonicalcode = _iso.check_isomorphism(p);
 		Console.OUT.println("complete check iso");
+		Console.OUT.println("canonicalcode:" + cc.to_string());
 		p.set_canonical_code(cc);
 		Console.OUT.println("complete set canonical code");
 		
@@ -154,8 +154,7 @@ public class RandamWalk {// random walk on pattern space
 		Console.OUT.println("get frequent sub pattern");
 
 		Console.OUT.println("number of neighbors" + neighbors.size());
-		assert(false):"stop for test in process node";
-		
+		assert(false):"randomwalk";
 		
 		for (var i:Int=0; i<neighbors.size(); i++) {
 			Console.OUT.println("repeat time : " + i);
@@ -177,8 +176,8 @@ public class RandamWalk {// random walk on pattern space
 	private def create_lattice_node(var p:Pattern):LatticeNode{
 		Console.OUT.println("start create lattice node");
 		var cc:Canonicalcode = _iso.check_isomorphism(p);
-
 		Console.OUT.println("complete check iso");
+		Console.OUT.println("canonicalcode:" + cc.to_string());
 		p.set_canonical_code(cc);
 		Console.OUT.println("complete set code");
 		var min_dfs_cc:String = cc.to_string(); // defined temporarily to avoid error in coding

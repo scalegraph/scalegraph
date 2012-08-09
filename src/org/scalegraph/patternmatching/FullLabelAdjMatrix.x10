@@ -41,19 +41,18 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	//}
 	
 	public def getEdgeLabel(v1:Int, v2:Int): Int {
-		/*if(v1 == v2 || v1 < 0 || this.getSize() <= v1 ||
+		if(v1 == v2 || v1 < 0 || this.getSize() <= v1 ||
 				v2 < 0 || this.getSize() <= v2){
-			Console.OUT.println("error: FullLabelAdjMatrix.getEdgeLabel: requested edge label from invalid position");
-			return Zero.get[E_T]();
-		}*/
+			assert(false):("error: FullLabelAdjMatrix.getEdgeLabel: requested edge label from invalid position");
+		}
 		val key = (v1 < v2) ? Pair[Int, Int](v1, v2) : Pair[Int, Int](v2, v1);
 		val ret = this.elabel.get(key);
-		/*if(ret == null){
-			Console.OUT.println("error: FullLabelAdjMatrix.getEdgeLabel: requested edge label from invalid position");
-			return Zero.get[E_T]();
+		if(ret == null){
+			assert(false):("error: FullLabelAdjMatrix.getEdgeLabel: requested edge label from invalid position");
+
 		}else{
 			return ret();
-		}*/
+		}
 		return ret();
 	}
 	
@@ -154,13 +153,16 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		if (i > getSize()) {
 			assert(false):"ERROR: Matrix::Requesting degree of non-existent vertex:";
 		}
-		for (pos in data(i))
+		for (var pos:Int = 0;pos < getSize();pos++){
+			if(data(i)(pos) == 1){
 			ret_val.add(pos);
+			}
+		}
 	}
 	
 	
 	public def matcher(val b:FullLabelAdjMatrix,M:Matrix):void{
-		Console.OUT.println("matcher");
+		//Console.OUT.println("matcher");
 		// match two matrix in one.
 		val a = this;
 		var size1:Int = a.getSize(); 
@@ -179,7 +181,7 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			}
 		}
 		
-		Console.OUT.println("complete initialize");
+		//Console.OUT.println("complete initialize");
 
 		var match_pair:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();
 		for (var i:Int = 0; i < size1; i++) {
@@ -195,8 +197,19 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 					match_pair.add(Pair(i,j)); 
 			}
 		}
-
-
+		/*
+		Console.OUT.println("complete check mathc_pair");
+		for(i in match_pair){
+			Console.OUT.println(i.toString());
+		}
+		 * */
+		/*
+		Console.OUT.println("elabel");
+		val t = elabel.entries();
+		for(i in t){
+			Console.OUT.println("Key:" + i.getKey().toString() + " Value:" + i.getValue().toString());			
+		}
+		 */
 		for (var idx:Int=0; idx < match_pair.size(); idx++) {
 			var i:Int = match_pair(idx).first;
 			var j:Int = match_pair(idx).second;
@@ -205,12 +218,23 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			var neigh_degree1:ArrayList[Int] = new ArrayList[Int]();
 			var neigh_labels1:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();
 			
+			//Console.OUT.println("complete initialize matching");
+			//Console.OUT.println("neighbors size:" + neighbors.size());
+			for(s in neighbors){
+				Console.OUT.println(s.toString());
+			}
+			//Console.OUT.println("matrix a's size:" + a.getSize());
+
+			
 			for (var k:Int=0; k < neighbors.size(); k++) {
 				var d_n:Int = a.getDegree(neighbors(k));//d_n > 0
 				var e_l:Int = a.getEdgeLabel(i,neighbors(k));
 				neigh_labels1.add(Pair(a.getLabel(neighbors(k)), e_l));
 				neigh_degree1.add(d_n); 
 			}
+			
+			//Console.OUT.println("complete get neighbors degree and edege label");
+
 			
 			var neighbors2:ArrayList[Int] = new ArrayList[Int](); 
 			b.neighbors(j, neighbors2);
