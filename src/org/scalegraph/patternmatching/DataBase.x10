@@ -64,7 +64,7 @@ public class DataBase {
 		}
 		
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
-		var pat:Cell[Pattern] = new Cell[Pattern](new Pattern(vlabels));
+		var pat:Pattern = new Pattern(vlabels);
 		
 		
 		
@@ -92,7 +92,7 @@ public class DataBase {
 				
 				if (fromId != toId){
 					// when get edgelist from Attributedgraph indicated source vatex id may included in toId 
-					pat().add_edge(fromId,toId,eLabel);
+					pat.add_edge(fromId,toId,eLabel);
 					
 					this.ext_map_insert(fromLabel, toLabel, eLabel);
 					var e:Pair[Pair[Int,Int],Int] = (fromLabel < toLabel)? new Pair(Pair(fromLabel, toLabel), eLabel) : new Pair(Pair(toLabel, fromLabel), eLabel);
@@ -113,7 +113,7 @@ public class DataBase {
 		}
 		Console.OUT.println("from database");
 		
-		val x = pat().get_edges();
+		val x = pat.get_edges();
 		Console.OUT.println("edge labels:");
 		for(i in x){
 			Console.OUT.println(i);
@@ -121,7 +121,7 @@ public class DataBase {
 		
 		//Console.OUT.println("pattern matrix:");
 		//Console.OUT.println(pat.get_matrix().toString());
-		_graph_store.add(pat());
+		_graph_store.add(pat);
 		
 		return 1;
 	}
@@ -354,10 +354,10 @@ public class DataBase {
 		}
 		
 		for (var i:Int=0; i<out_list.size(); i++) {
-			var database_pat:Cell[Pattern] = new Cell(_graph_store(out_list(i)));
-			var m:Matrix = new Matrix(pat.size(), database_pat().size());
-			pat.get_matrix().matcher(database_pat().get_matrix(), m);
-			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat().get_matrix(), m ,false);
+			var database_pat:Pattern = _graph_store(out_list(i));
+			var m:Matrix = new Matrix(pat.size(), database_pat.size());
+			pat.get_matrix().matcher(database_pat.get_matrix(), m);
+			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat.get_matrix(), m ,false);
 			if (ret_val == true){
 				// cout << "adding " << out_list[i] << " to vatlist" << endl;
 				pat.add_tid_to_vat(out_list(i));
@@ -396,13 +396,15 @@ public class DataBase {
 	}
 	
 	public def get_exact_sup_optimal(var pat:Pattern):Boolean{
+		Console.OUT.println("get_exact_sup_optimal method in DataBase");
 		var sup_list:ArrayList[Int] = new ArrayList[Int]();
 		val its_vat:ArrayList[Int] = pat.get_vat();
 		for (it in its_vat) {
-			var database_pat:Pattern = _graph_store(it);
+			var database_pat:Pattern = _graph_store(its_vat(it));
 			if (database_pat.is_super_pattern(pat) == false)  continue;
-			sup_list.add(it); 
+			sup_list.add(its_vat(it)); 
 		}
+		Console.OUT.println("sup_list:" + sup_list.toString());
 		
 		var max_sup_possible:Int = sup_list.size();
 		if (max_sup_possible < _minsup) return false;
@@ -410,17 +412,24 @@ public class DataBase {
 		
 	
 		var temp:ArrayList[Int] = new ArrayList[Int](sup_list.size());
+		Console.OUT.println("_graph_store:");
+		for(x in _graph_store){
+			Console.OUT.println(x != null);
+		}
 		for (var i:Int =0; i<max_sup_possible; i++) {
 			var database_pat:Pattern = _graph_store(sup_list(i));
 			var m:Matrix = new Matrix(pat.size(), database_pat.size());
 			
 	
-			(pat.get_matrix()).matcher((database_pat.get_matrix()),m);
+			(pat.get_matrix()).matcher(database_pat.get_matrix(),m);
 			var ret_val:Boolean = subiso.UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
 					m, false);
+			Console.OUT.println("ret_val:" + ret_val);
+			Console.OUT.println("_minsup:" + ret_val);
 			if (ret_val == false)  {
 				
 				var t:Int = max_sup_possible-1-i+temp.size();
+				Console.OUT.println("t:" + t);
 				if (t<_minsup) {
 					return false;
 				}

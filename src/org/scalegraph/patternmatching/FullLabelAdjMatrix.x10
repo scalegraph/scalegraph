@@ -160,6 +160,7 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	
 	
 	public def matcher(val b:FullLabelAdjMatrix,M:Matrix):void{
+		Console.OUT.println("matcher");
 		// match two matrix in one.
 		val a = this;
 		var size1:Int = a.getSize(); 
@@ -177,6 +178,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				}
 			}
 		}
+		
+		Console.OUT.println("complete initialize");
 
 		var match_pair:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();
 		for (var i:Int = 0; i < size1; i++) {

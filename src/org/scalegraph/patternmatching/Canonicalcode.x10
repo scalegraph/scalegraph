@@ -77,7 +77,7 @@ public class Canonicalcode {
 	
 	public def to_string():String{
 		if (this.dfs_code.size() == 0) return "null";
-		var t_str:String = null;
+		var t_str:String = "";
 
 		for(var i:Int=0; i < this.dfs_code.size(); i++) {
 			if(i == 0)

@@ -245,8 +245,8 @@ public class Pattern {
 	public def is_super_pattern(var pat:Pattern):Boolean{
 		val mset:ArrayList[Pair[Pair[Int,Int],Int]] = pat.get_edges();
 		var included:Boolean = true;
-		for (i in _edges){
-			if(mset.contains(i) == false){
+		for (i in mset){
+			if(_edges.contains(i) == false){
 				included = false;
 				break;
 			}
