@@ -22,7 +22,7 @@ INTERM =./out
 X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
 CLASSPATH = $(X10_HOME)
 
-APP_DIR = /nfs/home/ogata/workspace/ScaleGraph
+APP_DIR = /nfs/home/charuwat/workspace/ScaleGraph
 
 #Set MPI Home
 MPI_HOME = /nfs/data0/miyuru/software/mpich2-1.4
@@ -51,6 +51,9 @@ GML_JAR = lib/native_gml.jar
 test_attributed_graph:
 	@echo "----------- Compile Attributed Graph Tester -----------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-report postcompile=5 -x10rt mpi -v \
+	-cxx-postarg '-O3' \
+	-post $(MPI_HOME)/bin/mpic++ \
 	src/test/scalegraph/graph/TestAttributedGraph.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
@@ -75,7 +78,8 @@ test_attributed_graph:
 	src/org/scalegraph/util/Date.x10 ;
 	
 	@echo "----------- Launch Attributed Graph Tester -----------";
-	$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
+	#$(X10_HOME)/bin/X10Launcher  $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
 	@echo "----------- Test Completed ---------------------------";
 	
 #Test 2	
@@ -429,8 +433,9 @@ test_betweenness_centrality_plain:
 	
 	@echo "----------- Compile Betweenness Centrality Tester -----------";
 	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-report postcompile=5 -x10rt sockets -v \
+	-report postcompile=5 -x10rt mpi -v \
 	-cxx-postarg '-O3' \
+	-post $(MPI_HOME)/bin/mpic++ \
 	src/test/scalegraph/metrics/centrality/TestBetweennessCentralityPlain.x10 \
 	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
 	src/org/scalegraph/graph/AttributedGraph.x10 \
@@ -464,8 +469,8 @@ test_betweenness_centrality_plain:
 	
 	@echo "----------- Launch Betweenness Centrality Tester -----------";
 	#MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
-	#MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
-	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE)
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	#$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE)
 	@echo "----------- Test Completed ---------------------------------";
 
 
@@ -685,7 +690,7 @@ test_mpiclustering:
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	@echo "----------- Launch MPI Spectral Clustering Tester ---------------------------";
-	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 X10RT_MPI_THREAD_MULTIPLE=true $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 # Test 27
@@ -748,39 +753,85 @@ test_matrixpagerank:
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
+
+#Test 29
+test_estimated_betweenness_centrality_plain:
 	
-# Test 29
-test_psc:
-	@echo "----------- Compile Parallel Spectral Clustering Tester --------------------------";
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg /nfs/home/ogata/software/ARPACK/libarpack_LINUX.a \
-	-cxx-postarg $(CBLAS_LIB) \
-	-cxx-postarg $(CLAPACK_LIB) \
-	-cxx-postarg -lgfortran \
-	src/test/scalegraph/clustering/psc/TestParallelSpectralClustering.x10 \
-	src/org/scalegraph/clustering/psc/ParallelSpectralClustering.x10 \
-	src/org/scalegraph/clustering/psc/SparseMatrix.x10 \
-	src/org/scalegraph/clustering/psc/VertexInfo.x10 \
-	src/org/scalegraph/clustering/psc/ARPACK.x10 \
-	src/org/scalegraph/clustering/Clustering.x10 \
-	src/org/scalegraph/clustering/ClusteringResult.x10 \
-	src/org/scalegraph/clustering/Vector.x10 \
-	src/test/scalegraph/clustering/Tool.x10 \
-	src/test/scalegraph/clustering/StopWatch.x10 \
-	src/org/scalegraph/graph/Graph.x10 \
+	@echo "----------- Compile Betweenness Centrality Tester -----------";
+	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-report postcompile=5 -x10rt mpi -v \
+	-cxx-postarg '-O3' \
+	-post $(MPI_HOME)/bin/mpic++ \
+	src/test/scalegraph/metrics/centrality/TestEstimatedBetweennessCentralityPlain.x10 \
+	src/org/scalegraph/metrics/centrality/BetweennessCentrality.x10 \
+	src/org/scalegraph/graph/AttributedGraph.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
-	src/org/scalegraph/graph/VertexArrays.x10 \
-	src/org/scalegraph/io/EdgeListReader.x10 \
-	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/Vertex.x10 \
+	src/org/scalegraph/graph/Edge.x10 \
+	src/org/scalegraph/graph/Attribute.x10 \
+	src/org/scalegraph/io/GMLReader.x10 \
+	src/org/scalegraph/io/GMLEntry.x10 \
+	src/org/scalegraph/graph/StringAttribute.x10 \
+	src/org/scalegraph/graph/BooleanAttribute.x10 \
+	src/org/scalegraph/graph/ByteAttribute.x10 \
+	src/org/scalegraph/graph/ShortAttribute.x10 \
+	src/org/scalegraph/graph/IntAttribute.x10 \
+	src/org/scalegraph/graph/LongAttribute.x10 \
+	src/org/scalegraph/graph/FloatAttribute.x10 \
+	src/org/scalegraph/graph/DoubleAttribute.x10 \
+	src/org/scalegraph/graph/CharAttribute.x10 \
+	src/org/scalegraph/graph/DateAttribute.x10 \
+	src/org/scalegraph/graph/AttributeSchema.x10 \
+	src/org/scalegraph/util/Date.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
-	src/org/scalegraph/util/ScaleGraphMath.x10;
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/io/GMLToken.x10;
 	
-	@echo "----------- Launch Parallel Spectral Clustering Tester ---------------------------";
-	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Launch Betweenness Centrality Tester -----------";
+	#MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	#$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE)
 	@echo "----------- Test Completed ---------------------------------";
+
+#Test 30
+test_big_graph:
 	
+	@echo "----------- Compile Betweenness Centrality Tester -----------";
+	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-report postcompile=5 -x10rt mpi -v \
+	-cxx-postarg '-O3' \
+	-post $(MPI_HOME)/bin/mpic++ \
+	src/test/scalegraph/graph/TestBigGraph.x10 \
+	src/org/scalegraph/graph/BigGraph.x10 \
+	src/org/scalegraph/util/BigArray.x10  ;
+	
+	
+	@echo "----------- Launch Betweenness Centrality Tester -----------";
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	@echo "----------- Test Completed ---------------------------------";
+
+#Test 31
+test_big_array:
+	
+	@echo "----------- Compile Betweenness Centrality Tester -----------";
+	$(X10_HOME)/bin/x10c++ -O -NO_CHECKS -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-report postcompile=5 -x10rt mpi -v \
+	-cxx-postarg '-O3' \
+	-post $(MPI_HOME)/bin/mpic++ \
+	src/test/scalegraph/util/TestBigArray.x10 \
+	src/org/scalegraph/util/BigArray.x10 ;
+	
+	
+	@echo "----------- Launch Betweenness Centrality Tester -----------";
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph $(TEST_FILE);
+	@echo "----------- Test Completed ---------------------------------";
+
 help:
 	@echo '---- scalegraph build help -------'
 	@echo 'Usage : make <command>'
@@ -838,6 +889,8 @@ help:
 	@echo 'test_scalapack : Test ScaLAPACK'
 	#Test 27
 	@echo 'test_pagerank : Test Pagerank'
+	#Test 29
+	@echo 'test_estimated_betweenness_centrality_plain: Test estimated bc for large graph'
 	@echo 'clean : To clean the build'
 	@echo '---------------------------------';
 
