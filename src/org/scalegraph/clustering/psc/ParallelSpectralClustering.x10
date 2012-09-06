@@ -42,9 +42,9 @@ public class ParallelSpectralClustering implements Clustering {
 		sw.print("make vertex info");
 		//vertexInfo.print();
 		
-		this.tol = 0.001;
+		this.tol = 0.000;
 		this.ncv = 2 * nClusters;
-		this.maxitr = 300;
+		this.maxitr = 1000;
 	}
 	
 	public def this(graph:PlainGraph, nClusters:Int, tol:Double, ncv:Int, maxitr:Int){
@@ -73,8 +73,14 @@ public class ParallelSpectralClustering implements Clustering {
 		val points = new Array[Vector](nPoints);
 		for(var i:Int = 0; i < nPoints; i++){
 			points(i) = Vector.make(nClusters);
+			var sum:Double = 0.0;
 			for(var j:Int = 0; j < nClusters; j++){
-				points(i)(j) = z(i + j * nPoints) / Math.sqrt(vertexInfo.getDegree(i)());
+				sum += z(i + j * nPoints);
+			}
+			for(var j:Int = 0; j < nClusters; j++){
+				//points(i)(j) = z(i + j * nPoints) / sum;  // NJW
+				//points(i)(j) = z(i + j * nPoints);  // Shi,Malik
+				points(i)(j) = z(i + j * nPoints);  // Melia,Shi
 				//Console.OUT.print(points(i)(j) + " ");
 			}
 			//Console.OUT.println("");
@@ -95,15 +101,18 @@ public class ParallelSpectralClustering implements Clustering {
 			val entriesBuilder = new ArrayBuilder[Pair[Int, Double]]();
 			
 			var j:Int = 0;
-			for(vertexID in vertexInfo.IDtoIDX().keySet()){
-				val vertexIDX:Int = vertexInfo.getIDX(vertexID)();
+			for(var localVertexIDX:Int = 0; localVertexIDX < vertexInfo.IDXtoID().size(); localVertexIDX++){
+				val vertexIDX = localVertexIDX + vertexInfo.offset(here.id);
+				val vertexID:Long = vertexInfo.getID(vertexIDX)();
 				val degree:Int = vertexInfo.getDegreeFromHere(vertexIDX)();
 				//if(vertexID < 0) continue;
 				
 				val neighbours = graph.getNeighbours(vertexID);
 				
 				firstColumnIndexBuilder.add(j);
-				entriesBuilder.add(Pair[Int, Double](vertexIDX, 1.0));
+				//entriesBuilder.add(Pair[Int, Double](vertexIDX, 1.0));  // NJW
+				//entriesBuilder.add(Pair[Int, Double](vertexIDX, 1.0));  // Shi,Malik
+				entriesBuilder.add(Pair[Int, Double](vertexIDX, 1.0 / (degree + 1)));  // Melia,Shi
 				j++;
 				if(neighbours != null){
 					//Console.OUT.println("neighbour of " + vertexID + " is " + neighbours);
@@ -113,8 +122,9 @@ public class ParallelSpectralClustering implements Clustering {
 						if(boxNeighbourIDX != null){
 							val neighbourIDX = boxNeighbourIDX();
 							val neighbourDegree = vertexInfo.getDegree(neighbourIDX)();
-							entriesBuilder.add(Pair[Int, Double](neighbourIDX, -1 / Math.sqrt(degree * neighbourDegree)));
-							//entriesBuilder.add(Pair[Int, Double](neighbourIDX, 1.0));
+							//entriesBuilder.add(Pair[Int, Double](neighbourIDX, -1 / Math.sqrt(degree * neighbourDegree)));  // NJW: LA
+							//entriesBuilder.add(Pair[Int, Double](neighbourIDX, -1.0 / degree));  // Shi,Malik: SA
+							entriesBuilder.add(Pair[Int, Double](neighbourIDX, 1.0 / (degree + 1)));  // Melia,Shi: LA
 							j++;
 						}
 					}
@@ -135,7 +145,7 @@ public class ParallelSpectralClustering implements Clustering {
 		var ido:Int = 0;
 		val bmat:Char = 'I';
 		val n:Int = vertexInfo.size();
-		val which:Int = ARPACK.SA;
+		val which:Int = ARPACK.LA;
 		val nev:Int = nClusters;
 		val tol:Double = this.tol;
 		val resid:Array[Double](1) = new Array[Double](n);
@@ -233,7 +243,7 @@ public class ParallelSpectralClustering implements Clustering {
 			Console.OUT.println("ARPACK: dseupd: bad termination: " + info);
 		}
 		
-		//Console.OUT.println(d);
+		Console.OUT.println(d);
 		//Console.OUT.println(z);
 		
 		return z;
