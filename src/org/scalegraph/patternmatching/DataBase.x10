@@ -432,6 +432,8 @@ public class DataBase {
 				
 				var t:Int = max_sup_possible-1-i+temp.size();
 				Console.OUT.println("t:" + t);
+				Console.OUT.println("i:" + i);
+				Console.OUT.println("temp.size():" + temp.size());
 				if (t<_minsup) {
 					return false;
 				}

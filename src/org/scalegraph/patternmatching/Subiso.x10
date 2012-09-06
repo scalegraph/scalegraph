@@ -24,7 +24,7 @@ public class Subiso {
 			var i:Int = lst(idx1);              // i is one neighbor of d in A
 			var e1:Int = A.getEdgeLabel(d,i);
 
-			var match_i:ArrayList[Int] = new ArrayList[Int](0);   //In this ArrayList Int is unsigned  
+			var match_i:ArrayList[Int] = new ArrayList[Int]();   //In this ArrayList Int is unsigned  
 			M.neighbors(i, match_i);
 			for (var idx2:Int=0; idx2<match_i.size(); idx2++) { // for each matching of i in B
 				var j:Int = match_i(idx2); 
