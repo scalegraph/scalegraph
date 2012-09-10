@@ -221,7 +221,7 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			//Console.OUT.println("complete initialize matching");
 			//Console.OUT.println("neighbors size:" + neighbors.size());
 			for(s in neighbors){
-				Console.OUT.println(s.toString());
+				//Console.OUT.println(s.toString());
 			}
 			//Console.OUT.println("matrix a's size:" + a.getSize());
 

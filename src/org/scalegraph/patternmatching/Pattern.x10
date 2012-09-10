@@ -190,7 +190,12 @@ public class Pattern {
 	
 	public def get_vids_for_this_label(var label:Int,var ret_val:ArrayList[Int]):void{
 		// get id of vertices that have the label
-		ret_val = _matrix.getVerticesFromLabel(label);
+		
+		
+		val x = _matrix.getVerticesFromLabel(label);
+		for(i in x){
+			ret_val.add(i);
+		}
 	}
 	
 	

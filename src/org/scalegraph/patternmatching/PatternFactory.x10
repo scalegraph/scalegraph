@@ -92,12 +92,10 @@ public class PatternFactory {
 
 		
 		if (pat.size() == 0) {
-			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
-			val cit:Iterator[Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]] = eim.entries().iterator();
-			
-			while (cit.hasNext()) {
-				val x:Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = cit.next();
-				var p:Pattern = make_single_edge_pattern(x.getKey().first.first, x.getKey().first.second, x.getKey().second);
+			val eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
+			val eimentry = eim.entries();
+			for (cit in eimentry) {
+				var p:Pattern = make_single_edge_pattern(cit.getKey().first.first, cit.getKey().first.second, cit.getKey().second);
 				super_patterns.add(p);
 			}
 			return;
@@ -116,6 +114,10 @@ public class PatternFactory {
 			var nbrs:HashSet[Pair[Int,Int]]= this.d.get_neighbors(src_v);
 				// about nbrs element of first is destination label and second is edeg label
 			Console.OUT.println("complete get neighbors");
+			Console.OUT.println("nbrs:");
+			for(i in nbrs){
+				Console.OUT.println(i.toString());
+			}
 			
 			for(x in nbrs){// trying extension on a vertex for all posible neighbor edge type
 				// first get a one neighbor edge pattern
@@ -137,6 +139,7 @@ public class PatternFactory {
 				
 				edge = make_single_edge_pattern(src_v, dest_v, e_label);
 				
+				Console.OUT.println("strat checking forward edge");
 				// trying fwd-extension from this vertex
 				cand_pat = pat.clone();
 				var lvid:Int = cand_pat.add_vertex(dest_v);
@@ -148,6 +151,7 @@ public class PatternFactory {
 				}
 				else {
 					var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
+					Console.OUT.println("sup_optimal:" + freq);
 					if (freq == true) { // is the pattern frequent?
 						super_patterns.add(cand_pat);
 					}
@@ -155,12 +159,13 @@ public class PatternFactory {
 						cand_pat = null;
 					}
 				}
-				
+				Console.OUT.println("strat checking backedge");
 				// trying all the possible back-edges
 				// first get information(id of destination vertex) of possible backedges
 				var dest_vids:ArrayList[Int] = new ArrayList[Int]();
 				pat.get_vids_for_this_label(dest_v, dest_vids);
 				var i:Int = 0;
+				Console.OUT.println("number of dest_vids" + dest_vids.size());
 				while (i < dest_vids.size()) {
 					if (dest_vids(i) <= vid || pat.edge_exist(vid, dest_vids(i))){
 						dest_vids.removeAt(i);
@@ -169,17 +174,19 @@ public class PatternFactory {
 						i++;
 					}
 				}
-				
+				Console.OUT.println("join back edge");
 				// try to join the backedge
 				for (i=0; i < dest_vids.size(); i++) {
 					cand_pat = pat.clone();
 					cand_pat.add_edge(vid,dest_vids(i), e_label);
 					cand_pat.join_vat(edge);
+					Console.OUT.println("number of dest_vids" + dest_vids.size());
 					if (cand_pat.get_vat().size() < minsup) {
 						cand_pat = null;
 					}
 					else {
 						var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
+						Console.OUT.println("sup_optimal:" + freq);
 						if (freq == true) { // is the pattern frequent?
 
 							super_patterns.add(cand_pat);
