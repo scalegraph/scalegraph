@@ -727,6 +727,8 @@ test_pagerank:
 test_matrixpagerank:
 	@echo "----------- Compile Random Walk with Restart Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-post $(MPI_HOME)/bin/mpic++ \
 	-cxx-postarg $(CLAPACK_LIB) \
 	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg $(F2C_LIB) \
@@ -737,6 +739,7 @@ test_matrixpagerank:
 	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/test/scalegraph/metrics/centrality/TestMatrixPagerank.x10 \
 	src/org/scalegraph/metrics/centrality/MatrixPagerank.x10 \
+	src/org/scalegraph/metrics/centrality/MatrixMap.x10 \
 	src/org/scalegraph/metrics/centrality/PagerankResult.x10 \
 	src/org/scalegraph/metrics/centrality/BufferedHashMap.x10 \
 	src/org/scalegraph/communities/LongToIntMap.x10 \
@@ -749,9 +752,11 @@ test_matrixpagerank:
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	src/org/scalegraph/io/EdgeListReader.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/util/VertexInfo.x10 \
+	src/test/scalegraph/clustering/Tool.x10 \
 	
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
-	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 #Test 29

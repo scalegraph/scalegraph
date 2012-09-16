@@ -36,8 +36,8 @@ public class TestRandomWalk {
     private static def graphSetUpTsubame():PlainGraph {
         val reader:EdgeListReader = new EdgeListReader();
         return reader.
-            //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-8.dl");
-            loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-12.dl");
+            //loadFromFile("/data0/t2gsuzumuralab/miyuru/data/scale-18-39322.dl");
+            loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-18-39322.dl");
     }
     
     public static def main(Array[String]) {
