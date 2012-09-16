@@ -8,7 +8,7 @@ import x10.util.Pair;
 
 import org.scalegraph.graph.PlainGraph;
 
-public class SparseMatrix2 {
+public class SparseMatrix {
 	
 	var size:Int;
 	var entry:Array[Array[Pair[Int, Double]]];
