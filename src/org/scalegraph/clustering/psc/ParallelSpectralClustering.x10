@@ -1,6 +1,7 @@
 package org.scalegraph.clustering.psc;
 
 import x10.util.ArrayBuilder;
+import x10.util.ArrayList;
 import x10.util.Box;
 import x10.util.HashMap;
 import x10.util.Pair;
@@ -44,7 +45,7 @@ public class ParallelSpectralClustering implements Clustering {
 		
 		this.tol = 0.000;
 		this.ncv = 2 * nClusters;
-		this.maxitr = 1000;
+		this.maxitr = 10000;
 	}
 	
 	public def this(graph:PlainGraph, nClusters:Int, tol:Double, ncv:Int, maxitr:Int){
@@ -95,7 +96,7 @@ public class ParallelSpectralClustering implements Clustering {
 		return result;
 	}
 	
-	private def makeMatrix(){
+	/*private def makeMatrix(){
 		this.matrix = PlaceLocalHandle.make[SparseMatrix](Dist.makeUnique(), ()=>{
 			val firstColumnIndexBuilder = new ArrayBuilder[Int]();
 			val entriesBuilder = new ArrayBuilder[Pair[Int, Double]]();
@@ -103,7 +104,7 @@ public class ParallelSpectralClustering implements Clustering {
 			var j:Int = 0;
 			for(var localVertexIDX:Int = 0; localVertexIDX < vertexInfo.IDXtoID().size(); localVertexIDX++){
 				val vertexIDX = localVertexIDX + vertexInfo.offset(here.id);
-				val vertexID:Long = vertexInfo.getID(vertexIDX)();
+				val vertexID:Long = vertexInfo.getIDFromHere(vertexIDX)();
 				val degree:Int = vertexInfo.getDegreeFromHere(vertexIDX)();
 				//if(vertexID < 0) continue;
 				
@@ -135,6 +136,87 @@ public class ParallelSpectralClustering implements Clustering {
 			m.firstColumnIndex = firstColumnIndexBuilder.result();
 			m.entries = entriesBuilder.result();
 			m.size = m.firstColumnIndex.size - 1;
+			m
+		});
+	}*/
+	
+	private def makeMatrix(){
+		this.matrix = PlaceLocalHandle.make[SparseMatrix](Dist.makeUnique(), ()=>{
+			val nVertices = vertexInfo.IDXtoID().size();
+			//val firstColumnIndexBuilder = new ArrayBuilder[Int]();
+			//val entriesBuilder = new ArrayBuilder[Pair[Int, Double]]();
+			val entryBuilder = new Array[ArrayBuilder[Pair[Int, Double]]](nVertices, (Int)=>new ArrayBuilder[Pair[Int, Double]]());
+			val gEntryBuilder = GlobalRef(entryBuilder);
+			val recvHash = new HashMap[Long, ArrayBuilder[Int]]();
+			val allNeighboursID = new Array[ArrayList[Long]](Place.MAX_PLACES, (Int)=> new ArrayList[Long]());
+			val allNeighboursIDX = new Array[Array[Int]](Place.MAX_PLACES);
+			
+			var j:Int = 0;
+			for(var localVertexIDX:Int = 0; localVertexIDX < nVertices; localVertexIDX++){
+				val vertexIDX = localVertexIDX + vertexInfo.offset(here.id);
+				val vertexID:Long = vertexInfo.getIDFromHere(vertexIDX)();
+				val degree:Int = vertexInfo.getDegreeFromHere(vertexIDX)();
+				//if(vertexID < 0) continue;
+				
+				val neighbours = graph.getNeighbours(vertexID);
+				for(npt in neighbours){
+					val neighbourID:Long = neighbours(npt);
+					
+					val box = recvHash.get(neighbourID);
+					if(box == null){
+						val builder = new ArrayBuilder[Int]().add(vertexIDX);
+						recvHash.put(neighbourID, builder);
+					}else{
+						val builder = box().add(vertexIDX);
+						recvHash.put(neighbourID, builder);
+					}
+					
+					if(!allNeighboursID(vertexInfo.getPlaceID(neighbourID)).contains(neighbourID)){
+						allNeighboursID(vertexInfo.getPlaceID(neighbourID)).add(neighbourID);
+					}
+				}
+			}
+			
+			for(p in Place.places()) {  // don't async
+				val localNeighboursID = allNeighboursID(p.id).toArray();
+				allNeighboursIDX(p.id) = at(p){
+					val result = new Array[Int](localNeighboursID.region);
+					for(pt in localNeighboursID){  // don't atomic
+						val box = vertexInfo.getIDXFromHere(localNeighboursID(pt));
+						result(pt) = box();
+					}
+					result
+				};
+				
+				for(npt in allNeighboursIDX(p.id)){
+					val box = recvHash.get(localNeighboursID(npt));
+					if(box == null) continue;
+					val vertexIDXs = box().result();
+					for(vpt in vertexIDXs){
+						val vertexIDX = vertexIDXs(vpt);
+						val neighbourIDX = allNeighboursIDX(p.id)(npt);
+						at(gEntryBuilder){
+							/*Console.OUT.print(here + "vertexIDX = " + vertexIDX + ", degree = ");
+							val b = vertexInfo.getDegreeFromHere(vertexIDX);
+							if(b == null){
+								Console.OUT.println("null");
+							}else{
+								Console.OUT.println(b());
+							}*/
+							gEntryBuilder()(vertexIDX - vertexInfo.offset(here.id)).add(Pair[Int, Double](neighbourIDX, 1.0 / vertexInfo.getDegreeFromHere(vertexIDX)()));
+							//Console.OUT.println("entryBuilder(" + vertexIDX + ").add([" + neighbourIDX + ", " + 1.0 + "])");
+						}
+					}
+				}
+			}
+			
+			val m = new SparseMatrix();
+			m.size = nVertices;
+			m.entry = new Array[Array[Pair[Int, Double]]](nVertices);
+			for(pt in entryBuilder){
+				m.entry(pt) = entryBuilder(pt).result();
+				//Console.OUT.println(m.entry(pt));
+			}
 			m
 		});
 	}

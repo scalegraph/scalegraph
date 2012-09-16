@@ -21,15 +21,16 @@ public class TestParallelSpectralClustering {
     	val dir:String = "/work0/t2gsuzumuralab/scalegraph/data/";
     	//val dir:String = "/work0/t2gsuzumuralab/ogata/Developments/data/";
     	
-    	val reader:EdgeListReader = new EdgeListReader();
-    	//val reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
+    	//val reader:EdgeListReader = new EdgeListReader();
+    	val reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
     	
     	//val graph:PlainGraph = reader.loadFromFile(dir + "internet.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "powergrid.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "blogcatalog3.dl");
+    	//val graph:PlainGraph = reader.loadFromFile(dir + "kronecker-40333924.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-22-142055.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-20-82792.dl");
-    	val graph:PlainGraph = reader.loadFromFile(dir + "scale-18-39322.dl");
+    	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-18-39322.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-16-14164.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-14-5900.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "scale-12.dl");
@@ -40,8 +41,9 @@ public class TestParallelSpectralClustering {
     	//val graph:PlainGraph = reader.loadFromDir(dir + "flickr");
     	//val graph:PlainGraph = reader.loadFromDir(dir + "scattered_kronecker");
     	//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-5");
-    	//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-10");
+    	val graph:PlainGraph = reader.loadFromDir(dir + "twitter-10");
     	//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-100");
+    	//val graph:PlainGraph = reader.loadFromDir(dir + "scattered_twitter11M");
     	
     	//val graph:PlainGraph = reader.loadFromFile(dir + "simple_graph.dl");
     	

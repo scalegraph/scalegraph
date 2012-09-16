@@ -8,11 +8,10 @@ import x10.util.Pair;
 
 import org.scalegraph.graph.PlainGraph;
 
-public class SparseMatrix {
+public class SparseMatrix2 {
 	
 	var size:Int;
-	var firstColumnIndex:Array[Int];
-	var entries:Array[Pair[Int, Double]];
+	var entry:Array[Array[Pair[Int, Double]]];
 	//var num:Numbering;
 	
 	public def getSize(): Int {
@@ -23,9 +22,10 @@ public class SparseMatrix {
 		val y = new Array[Double](this.size, 0);
 		
 		for(var i:Int = 0; i < this.size; i++){
-			for(var jj:Int = this.firstColumnIndex(i); jj < this.firstColumnIndex(i+1); jj++){
-				val j = entries(jj).first;
-				y(i) += entries(jj).second * x(j);
+			for(jj in entry(i)){
+				val j = entry(i)(jj).first;
+				val v = entry(i)(jj).second;
+				y(i) += v * x(j);
 			}
 		}
 		
@@ -35,22 +35,25 @@ public class SparseMatrix {
 	public def mult(work:Array[Double](1), ofsx:Int, ofsy:Int): void {
 		for(var i:Int = 0; i < this.size; i++){
 			work(ofsy + i) = 0;
-			for(var jj:Int = this.firstColumnIndex(i); jj < this.firstColumnIndex(i+1); jj++){
-				val j = entries(jj).first;
-				work(ofsy + i) += entries(jj).second * work(ofsx + j);
+			for(jj in entry(i)){
+				val j = entry(i)(jj).first;
+				val v = entry(i)(jj).second;
+				work(ofsy + i) += v * work(ofsx + j);
 			}
 		}
 	}
 	
 	public def toString(): String {
 		val builder = new StringBuilder();
-		builder.add("****** firstColumnIndex *****\n");
-		builder.add(firstColumnIndex + "\n");
 		builder.add("********** entries **********\n");
-		for(pt in entries){
-			val pair = entries(pt);
-			builder.add(pair.toString() + "\n");
+		for(i in entry){
+			for(j in entry(i)){
+				val pair = entry(i)(j);
+				builder.add(i + ", " + pair.toString() + "\n");
+			}
 		}
+		builder.add("*****************************\n");
+		builder.add("size = " + size);
 		builder.add("*****************************\n");
 		return builder.result();
 	}
