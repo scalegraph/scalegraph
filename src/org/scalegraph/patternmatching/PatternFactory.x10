@@ -183,19 +183,16 @@ public class PatternFactory {
 				Console.OUT.println("join back edge");
 				// try to join the backedge
 				for (i=0; i < dest_vids.size(); i++) {
-					Console.OUT.println("a");
 					cand_pat = pat.clone();
-					Console.OUT.println("b");
 					cand_pat.add_edge(vid,dest_vids(i), e_label);
-					Console.OUT.println("c");
 					cand_pat.join_vat(edge);
-					Console.OUT.println("number of dest_vids" + dest_vids.size());
+					//Console.OUT.println("number of dest_vids" + dest_vids.size());
 					if (cand_pat.get_vat().size() < minsup) {
 						cand_pat = null;
 					}
 					else {
 						var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
-						Console.OUT.println("sup_optimal:" + freq);
+						//Console.OUT.println("sup_optimal:" + freq);
 						if (freq == true) { // is the pattern frequent?
 
 							super_patterns.add(cand_pat);
@@ -213,31 +210,27 @@ public class PatternFactory {
 		Console.OUT.println("	super_pattern size before remove same pattern:" + super_patterns.size());
 		 // sometimes few neighbors are actually unique, need to check that
 		 var codes:HashSet[String] = new HashSet[String]();
-		 Console.OUT.println("a");
 		 var i:Int = 0;
-		 Console.OUT.println("b");
 		 while (i < super_patterns.size()) {
 			 iso.check_isomorphism(super_patterns(i));
-			 Console.OUT.println("c");
-			 Console.OUT.println("super_patterns size:" + super_patterns.size());
-			 Console.OUT.println("i:" + i);
+			 //Console.OUT.println("super_patterns size:" + super_patterns.size());
+			 //Console.OUT.println("i:" + i);
+			 
+			 var cc_str:String = super_patterns(i).get_canonical_code().to_string();
+			 /*
 			 var pattern:Pattern = super_patterns(i);
-			 Console.OUT.println("x");
 			 var cc:Canonicalcode = pattern.get_canonical_code();
 			 Console.OUT.println("is_codekonwn:" + pattern.get_code_known());
-			 Console.OUT.println("code stattus : " + cc);
-			 var cc_str:String = cc.to_string();
-		 
-			 Console.OUT.println("d");
-			
+			 Console.OUT.println("code status : " + cc);
+			 var cc_str:String = cc.to_string();			
+			 */
+			 
 			 
 			 if (codes.contains(cc_str) == true) {
 				 super_patterns.removeAt(i);
-				 Console.OUT.println("et");
 			 }
 			 else {
 				 codes.add(cc_str);
-				 Console.OUT.println("ef");
 				 i++;
 			 }
 		 }
@@ -283,9 +276,7 @@ public class PatternFactory {
 		
 		var this_edge:Pair[Pair[Int,Int],Int];
 		var minsup:Int = this.d.get_minsup();
-		
-		assert(false):"get_super_degree";
-
+	
 		
 		if (pat.size() == 0) {
 			var eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();

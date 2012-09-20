@@ -243,6 +243,7 @@ public class Pattern {
 		x.set_status_known(this.get_status_known());
 		x.set_vat(this.get_vat().clone());
 		x.set_edges(this.get_edges().clone());
+		x.set_canonical_code(this.get_canonical_code());
 		return x;
 	}
 	

@@ -425,8 +425,6 @@ public class DataBase {
 			
 	
 			(pat.get_matrix()).matcher(database_pat.get_matrix(),m);
-			Console.OUT.println("result of match:");
-			Console.OUT.println(m.toString());
 			var ret_val:Boolean = subiso.UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
 					m, false);
 			Console.OUT.println("ret_val:" + ret_val);

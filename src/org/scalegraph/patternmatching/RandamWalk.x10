@@ -154,7 +154,6 @@ public class RandamWalk {// random walk on pattern space
 		Console.OUT.println("get frequent sub pattern");
 
 		Console.OUT.println("number of neighbors:" + neighbors.size());
-		assert(false):"randomwalk";
 		
 		for (var i:Int=0; i<neighbors.size(); i++) {
 			Console.OUT.println("repeat time : " + i);

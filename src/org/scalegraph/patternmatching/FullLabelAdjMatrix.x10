@@ -188,7 +188,9 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			}
 		}
 		
-		//Console.OUT.println("complete initialize");
+		Console.OUT.println("complete initialize");
+		Console.OUT.println(" matched matrix after initialize:");
+		Console.OUT.println(M.toString());
 
 		var match_pair:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();
 		for (var i:Int = 0; i < size1; i++) {
@@ -258,9 +260,9 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			
 			var isin:Boolean = true;
 			
-			for(x in neigh_degree1){
+			for(x in neigh_labels1){
 				var s:Boolean = false;
-				for(y in neigh_degree2){
+				for(y in neigh_labels2){
 					if(x.equals(y)){
 						s = true;
 						break;
