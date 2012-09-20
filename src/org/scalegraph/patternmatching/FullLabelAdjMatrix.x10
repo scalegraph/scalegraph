@@ -164,9 +164,16 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	public def matcher(val b:FullLabelAdjMatrix,M:Matrix):void{
 		//Console.OUT.println("matcher");
 		// match two matrix in one.
-		val a = this;
+		Console.OUT.println(" matcher");
+		var a:FullLabelAdjMatrix = this;
 		var size1:Int = a.getSize(); 
+		Console.OUT.println("matrix a:");
+		Console.OUT.println(a.toString());
+		Console.OUT.println(a.vlabel.toString());
 		var size2:Int = b.getSize();
+		Console.OUT.println("matrix b:");
+		Console.OUT.println(b.toString());
+		Console.OUT.println(b.vlabel.toString());
 		if (size1 > size2) {
 			return;
 		}
@@ -288,6 +295,9 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				M(i, j) = 0; 
 			}
 		}
+		
+		Console.OUT.println("result of match:");
+		Console.OUT.println(M.toString());
 		return;
 	}
 	

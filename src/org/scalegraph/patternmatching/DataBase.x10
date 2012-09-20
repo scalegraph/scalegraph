@@ -323,7 +323,7 @@ public class DataBase {
 				prev = cit;
 				val its_vat:ArrayList[Int] = get_edge_vat(prev);
 				vat_join(its_vat, sup_list, out_list);
-				sup_list = out_list; 
+				sup_list = out_list.clone(); 
 				out_list.clear();
 			}
 		}
@@ -407,6 +407,7 @@ public class DataBase {
 		Console.OUT.println("sup_list:" + sup_list.toString());
 		
 		var max_sup_possible:Int = sup_list.size();
+		Console.OUT.println("max_sup_possible:" + max_sup_possible);
 		if (max_sup_possible < _minsup) return false;
 		
 		
@@ -424,6 +425,8 @@ public class DataBase {
 			
 	
 			(pat.get_matrix()).matcher(database_pat.get_matrix(),m);
+			Console.OUT.println("result of match:");
+			Console.OUT.println(m.toString());
 			var ret_val:Boolean = subiso.UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
 					m, false);
 			Console.OUT.println("ret_val:" + ret_val);

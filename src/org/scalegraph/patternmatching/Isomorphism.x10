@@ -8,9 +8,9 @@ import x10.util.HashSet;
 public class Isomorphism {
 	
 	public def check_isomorphism(val cand_pat:Pattern):Canonicalcode{
-		var e:Int=0; //least edge label
-		var src_v:Int=0;//least source vertex label
-		var dest_v:Int=0;//least destination label
+		var e:Cell[Int] = new Cell[Int](0); //least edge label
+		var src_v:Cell[Int] = new Cell[Int](0);//least source vertex label
+		var dest_v:Cell[Int] = new Cell[Int](0);//least destination label
 		var ids:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();//ids with least labelled edges
 
 		//Console.OUT.println("check the canonical code is known or not");
@@ -27,7 +27,7 @@ public class Isomorphism {
 		}
 		//Console.OUT.println("cand_pat != 0");
 
-		src_v = cand_pat.label(0);  // src_v has the label of the least vertex in dfs walk
+		src_v() = cand_pat.label(0);  // src_v has the label of the least vertex in dfs walk
 		//Console.OUT.println("finish get start vatex label");
 
 		for(var j:Int = 0;j<cand_pat.size();j++){
@@ -39,8 +39,8 @@ public class Isomorphism {
 		}
 		//Console.OUT.println("if dest < src replace them");
 
-		if (dest_v < src_v) {// if dest_v is smaller then src_v,swap. 
-			var ch:Int = src_v;
+		if (dest_v() < src_v()) {// if dest_v is smaller then src_v,swap. 
+			var ch:Int = src_v();
 			src_v = dest_v;
 			dest_v = ch;
 		}
@@ -73,7 +73,7 @@ public class Isomorphism {
 			//Console.OUT.println("repeat times:" + i);
 			// Add a minimal edge to new_codes.
 			var cc_tuple:FiveTuple = new FiveTuple(0, 1, cand_pat.label(ids(i).first), 
-					e, cand_pat.label(ids(i).second));
+					e(), cand_pat.label(ids(i).second));
 			//Console.OUT.println("made five tuple");
 			var new_cc:Canonicalcode = new Canonicalcode(cc_tuple, ids(i).first, ids(i).second);
 			//Console.OUT.println("made new canonicalcode");
@@ -102,12 +102,12 @@ public class Isomorphism {
 		minimal(new_codes, covered_edges, cand_pat);
 		//Console.OUT.println("finish minimal");
 		
-		cand_pat.set_code_known(true);
+		assert(new_codes(0) != null):"new code is null";
 		cand_pat.set_canonical_code(new_codes(0));
 		return new_codes(0);
 	}
 	
-	private def iso_startup(var cand_pat:Pattern,var src_v:Int,var dest_v:Int,var e:Int,var ids:ArrayList[Pair[Int,Int]]):void{
+	private def iso_startup(var cand_pat:Pattern,var src_v:Cell[Int],var dest_v:Cell[Int],var e:Cell[Int],var ids:ArrayList[Pair[Int,Int]]):void{
 		
 		var swaped:Boolean = false;
 		
@@ -121,17 +121,17 @@ public class Isomorphism {
 					var this_edge:Int =  cand_pat.get_edge_label(edge.first, edge.second);
 					if (v1 > v2) {
 						val x = v1;
-						v1= v2;
+						v1 = v2;
 						v2 = x;
 						swaped=true;
 					}
-					if(v1 > src_v){// v1 should not sourece vartex
+					if(v1 > src_v()){// v1 should not sourece vartex
 						continue;
 					}
-					if(v1 < src_v){ // new source vertex found
-						ids = new ArrayList[Pair[Int,Int]]();
-						src_v = v1; dest_v = v2; e = this_edge;
-						if(src_v == dest_v){
+					if(v1 < src_v()){ // new source vertex found
+						ids.clear();
+						src_v() = v1; dest_v() = v2; e() = this_edge;
+						if(src_v() == dest_v()){
 							ids.add(Pair(edge.second, edge.first));     
 							ids.add(edge);
 						}
@@ -145,14 +145,14 @@ public class Isomorphism {
 						}
 						continue;
 					}
-					if (v1 == src_v) { // if v1 may be source vartex
+					if (v1 == src_v()) { // if v1 may be source vartex
 						var e2:Int = this_edge;
-						if (e2 > e) continue;
-						if (e2 < e) { // new edge label found
-							ids = new ArrayList[Pair[Int,Int]]();
-							e = e2;
-							dest_v = v2;
-							if (src_v == dest_v) {
+						if (e2 > e()) continue;
+						if (e2 < e()) { // new edge label found
+							ids.clear();
+							e() = e2;
+							dest_v() = v2;
+							if (src_v() == dest_v()) {
 								ids.add(Pair(edge.second, edge.first));     
 								ids.add(edge);
 							}
@@ -165,12 +165,12 @@ public class Isomorphism {
 								}
 							}
 						}
-						if (e2 == e) { // if e2 may be edge label of least label set
-							if (v2 > dest_v) continue;
-							if (v2 < dest_v) {  // new destination vertex found
+						if (e2 == e()) { // if e2 may be edge label of least label set
+							if (v2 > dest_v()) continue;
+							if (v2 < dest_v()) {  // new destination vertex found
 								ids.clear(); 
-								dest_v = v2;
-								if (src_v == dest_v) {
+								dest_v() = v2;
+								if (src_v() == dest_v()) {
 									ids.add(Pair(edge.second, edge.first));     
 									ids.add(edge);
 								}
@@ -183,7 +183,7 @@ public class Isomorphism {
 								}
 							}
 							else {  // all identically match
-								if (src_v == dest_v) {
+								if (src_v() == dest_v()) {
 									ids.add(Pair(edge.second, edge.first));     
 									ids.add(edge);
 								}

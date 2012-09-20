@@ -89,7 +89,7 @@ public class PatternFactory {
 		var minsup:Int = this.d.get_minsup();
 		
 		Console.OUT.println("pattern size:" + pat.size());
-
+		Console.OUT.println("	super_pattern size:" + super_patterns.size());
 		
 		if (pat.size() == 0) {
 			val eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
@@ -104,12 +104,14 @@ public class PatternFactory {
 		Console.OUT.println("coplete initilize");
 		Console.OUT.println("number of super pattern:" + super_patterns.size());
 
-		
+		Console.OUT.println("	super_pattern size after initialize:" + super_patterns.size());
+
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
 			Console.OUT.println("complete get source vertex label");
 			Console.OUT.println("vid : " + vid);
+			Console.OUT.println("vlabel : " + src_v);
 			Console.OUT.println("pattern size : " + pat.size());
 			var nbrs:HashSet[Pair[Int,Int]]= this.d.get_neighbors(src_v);
 				// about nbrs element of first is destination label and second is edeg label
@@ -138,8 +140,8 @@ public class PatternFactory {
 				}
 				
 				edge = make_single_edge_pattern(src_v, dest_v, e_label);
-				
-				Console.OUT.println("strat checking forward edge");
+				Console.OUT.println("	super_pattern size before check forward edge:" + super_patterns.size());
+				Console.OUT.println("start checking forward edge");
 				// trying fwd-extension from this vertex
 				cand_pat = pat.clone();
 				var lvid:Int = cand_pat.add_vertex(dest_v);
@@ -159,13 +161,15 @@ public class PatternFactory {
 						cand_pat = null;
 					}
 				}
-				Console.OUT.println("strat checking backedge");
+				Console.OUT.println("	super_pattern size before checking backedge:" + super_patterns.size());
+				Console.OUT.println("start checking backedge");
 				// trying all the possible back-edges
 				// first get information(id of destination vertex) of possible backedges
 				var dest_vids:ArrayList[Int] = new ArrayList[Int]();
 				pat.get_vids_for_this_label(dest_v, dest_vids);
 				var i:Int = 0;
-				Console.OUT.println("number of dest_vids" + dest_vids.size());
+				Console.OUT.println("number of dest_vids:" + dest_vids.size());
+				Console.OUT.println("dest_vids:" + dest_vids.toString());
 				while (i < dest_vids.size()) {
 					if (dest_vids(i) <= vid || pat.edge_exist(vid, dest_vids(i))){
 						dest_vids.removeAt(i);
@@ -174,11 +178,16 @@ public class PatternFactory {
 						i++;
 					}
 				}
+				Console.OUT.println("number of dest_vids:" + dest_vids.size());
+
 				Console.OUT.println("join back edge");
 				// try to join the backedge
 				for (i=0; i < dest_vids.size(); i++) {
+					Console.OUT.println("a");
 					cand_pat = pat.clone();
+					Console.OUT.println("b");
 					cand_pat.add_edge(vid,dest_vids(i), e_label);
+					Console.OUT.println("c");
 					cand_pat.join_vat(edge);
 					Console.OUT.println("number of dest_vids" + dest_vids.size());
 					if (cand_pat.get_vat().size() < minsup) {
@@ -197,24 +206,38 @@ public class PatternFactory {
 					}
 					
 				}// finish join backedge
+				
+				Console.OUT.println("complete check backedge");
 			}// finish extension about one vertex in this pattern
 		}// finish extension about all vartex in this pattern
-		
+		Console.OUT.println("	super_pattern size before remove same pattern:" + super_patterns.size());
 		 // sometimes few neighbors are actually unique, need to check that
 		 var codes:HashSet[String] = new HashSet[String]();
+		 Console.OUT.println("a");
 		 var i:Int = 0;
+		 Console.OUT.println("b");
 		 while (i < super_patterns.size()) {
 			 iso.check_isomorphism(super_patterns(i));
-			 var cc_str:String = super_patterns(i).get_canonical_code().to_string();
+			 Console.OUT.println("c");
+			 Console.OUT.println("super_patterns size:" + super_patterns.size());
+			 Console.OUT.println("i:" + i);
+			 var pattern:Pattern = super_patterns(i);
+			 Console.OUT.println("x");
+			 var cc:Canonicalcode = pattern.get_canonical_code();
+			 Console.OUT.println("is_codekonwn:" + pattern.get_code_known());
+			 Console.OUT.println("code stattus : " + cc);
+			 var cc_str:String = cc.to_string();
 		 
-			 
+			 Console.OUT.println("d");
 			
 			 
 			 if (codes.contains(cc_str) == true) {
 				 super_patterns.removeAt(i);
+				 Console.OUT.println("et");
 			 }
 			 else {
 				 codes.add(cc_str);
+				 Console.OUT.println("ef");
 				 i++;
 			 }
 		 }

@@ -136,6 +136,8 @@ public class Pattern {
 	}
 	public def set_canonical_code(var canonical_code:Canonicalcode){
 		_canonical_code = canonical_code;
+		assert(canonical_code != null):"canonical_code is null";
+		set_code_known(true);
 	}
 	
 	public def set_freq(){
@@ -190,7 +192,6 @@ public class Pattern {
 	
 	public def get_vids_for_this_label(var label:Int,var ret_val:ArrayList[Int]):void{
 		// get id of vertices that have the label
-		
 		
 		val x = _matrix.getVerticesFromLabel(label);
 		for(i in x){
