@@ -4,24 +4,31 @@ import x10.util.ArrayList;
 import x10.util.HashMap;
 import x10.util.StringBuilder;
 
+import org.scalegraph.util.VertexInfo;
+
 public class ClusteringResult(nVertices:Int, nClusters:Int) {
 	
-	private var VtoC:HashMap[Long, Int];         // vertexID to cluster number
-	private var CtoV:HashMap[Int, Array[Long]];  // cluster number to array of vertexID
+	public val vertexInfo:VertexInfo;
+	public val VtoC:PlaceLocalHandle[HashMap[Long, Int]];  // vertexID to cluster number
+	public val CtoV:HashMap[Int, Array[Long]];             // cluster number to array of vertexID
 	
-	public def this(VtoC:HashMap[Long, Int], CtoV:HashMap[Int, Array[Long]]){
-		property(VtoC.size(), CtoV.size());
+	public def this(vertexInfo:VertexInfo, VtoC:PlaceLocalHandle[HashMap[Long, Int]], CtoV:HashMap[Int, Array[Long]]){
+		property(vertexInfo.size(), CtoV.size());
+		this.vertexInfo = vertexInfo;
 		this.VtoC = VtoC;
 		this.CtoV = CtoV;
 	}
 	
-	public def getAllVertices() = VtoC.keySet();
+	//public def getAllVertices() = VtoC.keySet();
 	
 	public def getAllClusters() = CtoV.keySet();
 	
-	public def getCluster(vertexID:Long) = VtoC.get(vertexID)();
+	//public def getCluster(vertexID:Long) = VtoC.get(vertexID)();
 	
-	public def tryGetCluster(vertexID:Long) = VtoC.get(vertexID);
+	public def tryGetCluster(vertexID:Long){
+		val p = vertexInfo.getPlace(vertexID);
+		return at(p) VtoC().get(vertexID);
+	}
 	
 	public def getVertices(clusterNum:Int) = CtoV.get(clusterNum)();
 	

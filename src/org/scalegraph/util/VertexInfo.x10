@@ -11,14 +11,14 @@ import test.scalegraph.clustering.Tool;
 public class VertexInfo {
 	
 	public val parent:Place = here;
-	val placeList = new Array[Place](Place.MAX_PLACES);
-	val IDtoIDX = PlaceLocalHandle.make[HashMap[Long, Int]](Dist.makeUnique(), ()=>new HashMap[Long, Int]());
-	val IDXtoID = PlaceLocalHandle.make[HashMap[Int, Long]](Dist.makeUnique(), ()=>new HashMap[Int, Long]());
-	val degree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
-	val offset = new Array[Int](Place.MAX_PLACES + 1);
+	public val placeList = new Array[Place](Place.MAX_PLACES);
+	public val IDtoIDX = PlaceLocalHandle.make[HashMap[Long, Int]](Dist.makeUnique(), ()=>new HashMap[Long, Int]());
+	public val IDXtoID = PlaceLocalHandle.make[HashMap[Int, Long]](Dist.makeUnique(), ()=>new HashMap[Int, Long]());
+	public val degree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
+	public val offset = new Array[Int](Place.MAX_PLACES + 1);
 	
 	public static def make(graph:PlainGraph): VertexInfo {
-		//val vertexList = graph.getVertexListDualArrays(4).preArray;
+		//val vertexList = graph.getVertexListDualArrays(Place.MAX_PLACES).preArray;
 		val vertexList = graph.getVertexList();
 		val vertexInfo = new VertexInfo();
 		val gOffset = GlobalRef(vertexInfo.offset);
@@ -72,6 +72,10 @@ public class VertexInfo {
 	
 	public def size(): Int {
 		return offset(Place.MAX_PLACES);
+	}
+	
+	public def getVertexCount(placeID:Int): Int {
+		return offset(placeID + 1) - offset(placeID);
 	}
 	
 	public def getPlaceID(vertexID:Long): Int {

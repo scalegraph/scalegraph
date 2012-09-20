@@ -1,5 +1,8 @@
 package test.scalegraph.clustering.psc;
 
+import x10.io.File;
+import x10.io.FileWriter;
+import x10.io.Printer;
 import x10.util.ArrayBuilder;
 import x10.util.HashMap;
 import x10.util.Random;
@@ -38,10 +41,10 @@ public class TestParallelSpectralClustering {
     	//val graph:PlainGraph = reader.loadFromFile(dir + "simple_graph.dl");
     	//val graph:PlainGraph = reader.loadFromFile(dir + "mini_graph.dl");
     	
-    	//val graph:PlainGraph = reader.loadFromDir(dir + "flickr");
+    	val graph:PlainGraph = reader.loadFromDir(dir + "flickr");
     	//val graph:PlainGraph = reader.loadFromDir(dir + "scattered_kronecker");
     	//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-5");
-    	val graph:PlainGraph = reader.loadFromDir(dir + "twitter-10");
+    	//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-10");
     	//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-100");
     	//val graph:PlainGraph = reader.loadFromDir(dir + "scattered_twitter11M");
     	
@@ -56,12 +59,49 @@ public class TestParallelSpectralClustering {
     	Console.OUT.println("spectral clustering finished: " + sw.get());
     	Console.OUT.println(result);
     	
+    	write(result);
+    	
     	/* calculate normalized cut */
-    	printNormalizedCut(graph, result);
+    	//printNormalizedCut(graph, result);
     	//printNormalizedCut(graph, makeRandomClusteringResult(graph, nClusters));
     }
     
+    private static def write(result:ClusteringResult){
+    	val printer:Printer = new Printer(new FileWriter(new File("/data0/t2gsuzumuralab/ogata/ScaleGraph/result.txt")));
+    	for(p in Place.places()){
+    		val entries = at(p) result.VtoC().entries();
+    		for(entry in entries){
+    			printer.printf("%d:%d\n", entry.getKey(), entry.getValue());
+    		}
+    	}
+    	printer.close();
+    }
+    
     private static def printNormalizedCut(graph:PlainGraph, result:ClusteringResult): Double {
+    	var ncut:Double = 0.0;
+    	for(var i:Int = 0; i < result.nClusters; i++){
+    		var cut:Int = 0;
+    		var deg:Int = 0;
+    		val vertexList = result.getVertices(i);
+    		for(vpt in vertexList){
+    			val vertexID = vertexList(vpt);
+    			val neighbours = graph.getNeighbours(vertexID);
+    			for(npt in neighbours){
+    				val neighbourID = neighbours(npt);
+    				//val boxCluster = result.tryGetCluster(neighbourID);
+   					deg++;
+   					if(!contains(vertexList, neighbourID)){
+   						cut++;
+   					}
+    			}
+    		}
+    		Console.OUT.println([i] + ": cut = " + cut + ", deg = " + deg);
+    		ncut += cut / (deg as Double);
+    	}
+    	Console.OUT.println("ncut = " + ncut);
+    	return ncut;
+    }
+    /*private static def printNormalizedCut(graph:PlainGraph, result:ClusteringResult): Double {
     	var ncut:Double = 0.0;
     	for(var i:Int = 0; i < result.nClusters; i++){
     		var cut:Int = 0;
@@ -109,5 +149,12 @@ public class TestParallelSpectralClustering {
     	}
     	
     	return new ClusteringResult(VtoC, CtoV);
+    }*/
+    
+    private static def contains(array:Array[Long], value:Long): Boolean {
+    	for(i in array){
+    		if(array(i) == value) return true;
+    	}
+    	return false;
     }
 }

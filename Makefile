@@ -848,7 +848,6 @@ test_psc:
 	src/test/scalegraph/clustering/psc/TestParallelSpectralClustering.x10 \
 	src/org/scalegraph/clustering/psc/ParallelSpectralClustering.x10 \
 	src/org/scalegraph/clustering/psc/SparseMatrix.x10 \
-	src/org/scalegraph/clustering/psc/VertexInfo.x10 \
 	src/org/scalegraph/clustering/psc/ARPACK.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
@@ -863,7 +862,8 @@ test_psc:
 	src/org/scalegraph/io/EdgeListReader.x10 \
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
-	src/org/scalegraph/util/ScaleGraphMath.x10;
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/util/VertexInfo.x10;
 	
 	@echo "----------- Launch Parallel Spectral Clustering Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
