@@ -7,11 +7,11 @@ import x10.matrix.block.Grid;
 import x10.util.HashMap;
 
 public class PagerankResult {
-    private val vector:DistDenseMatrix;
+    private val vector:Array[Double];
     private val vertexInfo:VertexInfo;
     private val graph:PlainGraph;
 
-    public def this(vector:DistDenseMatrix, vertexInfo:VertexInfo, graph:PlainGraph) {
+    public def this(vector:Array[Double], vertexInfo:VertexInfo, graph:PlainGraph) {
         this.vector = vector;
         this.vertexInfo = vertexInfo;
         this.graph = graph;
@@ -19,7 +19,7 @@ public class PagerankResult {
 
     public def getScore(key:Long) {
         val idx = vertexInfo.getIDX(key)();
-        return vector(idx, 0);
+        return vector(idx);
     }
     
     public def toString() {
@@ -34,7 +34,7 @@ public class PagerankResult {
                     val v = vertexList(i);
                     if (v != -1l) {
                         val idx = vertexInfo.getIDX(v)();
-                        s += v + "       [ " + vector(idx, 0) + " ]\n";
+                        s += v + "       [ " + vector(idx) + " ]\n";
                     }
                 }
                 s
