@@ -12,8 +12,7 @@ import x10.lang.Math;
 import x10.util.Set;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
-import org.scalegraph.clustering.SpectralClustering;
-import org.scalegraph.clustering.DistSpectralClustering;
+import org.scalegraph.clustering.MPISpectralClustering;
 import org.scalegraph.clustering.ClusteringResult;
 
 public class RandomWalk {
@@ -398,7 +397,7 @@ public class RandomWalk {
     private def decomposeGraph(graph:PlainGraph) {
         Console.OUT.println("Start decomposeGraph");
         val startTime = Timer.milliTime();
-        val clustering = new DistSpectralClustering(graph, k);
+        val clustering = new MPISpectralClustering(graph, k);
         val result = clustering.run();
         Console.OUT.println(result);
 
@@ -598,7 +597,7 @@ public class RandomWalk {
         val graph = convertMatrixToGraph(matrix);
         Console.OUT.println("start dist spectral clustering");
         val distStartTime = Timer.milliTime();
-        val clustering = new DistSpectralClustering(graph, t);
+        val clustering = new MPISpectralClustering(graph, t);
         val result = clustering.run();
         Console.OUT.printf("end dist spectral clustering, time = %f\n",
                            (Timer.milliTime() - startTime) / 1000.0);

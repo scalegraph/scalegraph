@@ -602,34 +602,44 @@ test_pattern:
 test_randomwalk:
 	@echo "----------- Compile Random Walk with Restart Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-post $(MPI_HOME)/bin/mpic++ \
+	-cxx-postarg $(SCALAPACK) \
 	-cxx-postarg $(CLAPACK_LIB) \
 	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg $(F2C_LIB) \
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
 	-cxx-postarg -lgfortran \
+	-cxx-postarg -lifcore \
+	-cxx-postarg -lifport \
 	-classpath $(GML_DIST)/$(GML_JAR) \
 	-x10lib $(GML_DIST)/$(GML_PROPS) \
+	src/test/scalegraph/clustering/StopWatch.x10 \
+	src/test/scalegraph/clustering/Tool.x10 \
 	src/org/scalegraph/communities/RandomWalk.x10 \
 	src/org/scalegraph/communities/RandomWalkResult.x10 \
 	src/org/scalegraph/communities/LongToIntMap.x10 \
 	src/test/scalegraph/communities/TestRandomWalk.x10 \
+	src/org/scalegraph/communities/LAPACK.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/util/VertexInfo.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/VertexArrays.x10 \
-	src/org/scalegraph/communities/LAPACK.x10 \
-	src/org/scalegraph/graph/Graph.x10 \
-	src/org/scalegraph/util/ScaleGraphMath.x10 \
 	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
 	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
-	src/org/scalegraph/util/DirectoryInfo.x10 \
-	src/org/scalegraph/clustering/Clustering.x10 \
-	src/org/scalegraph/clustering/SpectralClustering.x10 \
-	src/org/scalegraph/clustering/DistSpectralClustering.x10 \
+	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
-	src/org/scalegraph/clustering/LAPACK.x10 \
-	src/org/scalegraph/io/EdgeListReader.x10; 
-
+	src/org/scalegraph/clustering/Clustering.x10 \
+	src/org/scalegraph/clustering/VertexInfo.x10 \
+	src/org/scalegraph/clustering/Vector.x10 \
+	src/org/scalegraph/clustering/ScaLAPACK.x10 \
+	src/org/scalegraph/clustering/BLACS.x10 \
+	src/org/scalegraph/clustering/MPI.x10 \
 	
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
