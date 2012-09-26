@@ -14,7 +14,8 @@ public class VertexInfo {
 	public val placeList = new Array[Place](Place.MAX_PLACES);
 	public val IDtoIDX = PlaceLocalHandle.make[HashMap[Long, Int]](Dist.makeUnique(), ()=>new HashMap[Long, Int]());
 	public val IDXtoID = PlaceLocalHandle.make[HashMap[Int, Long]](Dist.makeUnique(), ()=>new HashMap[Int, Long]());
-	public val degree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
+	public val inDegree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
+    public val outDegree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
 	public val offset = new Array[Int](Place.MAX_PLACES + 1);
 	
 	public static def make(graph:PlainGraph): VertexInfo {
@@ -48,10 +49,12 @@ public class VertexInfo {
 			for(i in recvArray()){
 				for(j in recvArray()(i)){
 					val vertexID = recvArray()(i)(j);
-					val nNeighbours = graph.getNeighbours(vertexID).size;
+					val nInNeighbours = graph.getInNeighbours(vertexID).size;
+                    val nOutNeighbours = graph.getOutNeighbours(vertexID).size;
 					vertexInfo.IDtoIDX().put(vertexID, counter);
 					vertexInfo.IDXtoID().put(counter, vertexID);
-					vertexInfo.degree().put(counter, nNeighbours);
+					vertexInfo.inDegree().put(counter, nInNeighbours);
+                    vertexInfo.outDegree().put(counter, nOutNeighbours);
 					counter++;
 				}
 			}
@@ -136,13 +139,15 @@ public class VertexInfo {
 		val pid = getPlaceID(vertexIDX);
 		val p = placeList(pid);
 		return at(p) {
-			val result = degree().get(vertexIDX - offset(pid));
+			val result = inDegree().get(vertexIDX - offset(pid)) +
+                outDegree().get(vertexIDX - offset(pid));
 			result
 		};
 	}
 	
 	public def getDegreeFromHere(vertexIDX:Int): Box[Int] {
-		return degree().get(vertexIDX - offset(here.id));
+		return inDegree().get(vertexIDX - offset(here.id)) +
+            outDegree().get(vertexIDX - offset(here.id));
 	}
 	
 	public def print(){
@@ -154,7 +159,8 @@ public class VertexInfo {
 			Console.OUT.println("---");
 			Tool.print(IDXtoID());
 			Console.OUT.println("---");
-			Tool.print(degree());
+			Tool.print(inDegree());
+            Tool.print(outDegree());
 		}
 	}
 	
