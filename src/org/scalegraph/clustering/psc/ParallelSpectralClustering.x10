@@ -572,7 +572,7 @@ public class ParallelSpectralClustering implements Clustering {
 			CtoV.put(i, CtoVLists(i).result());
 		}
 		
-		return new ClusteringResult(vertexInfo, VtoC, CtoV);
+		return new DistClusteringResult(vertexInfo, VtoC, CtoV);
 	}
 	/*private def makeClusteringResult(nClusters:Int, array:Array[Int](1)): ClusteringResult {
 		val VtoC = new HashMap[Long, Int](array.size);

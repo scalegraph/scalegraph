@@ -6,7 +6,7 @@ import org.scalegraph.clustering.ClusteringResult;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.io.EdgeListReader;
 import org.scalegraph.io.ScatteredEdgeListReader;
-import org.scalegraph.io.GMLReader;
+//import org.scalegraph.io.GMLReader;
 
 public class TestMPISpectralClustering {
 	public static def main(args: Array[String]) {
@@ -18,7 +18,7 @@ public class TestMPISpectralClustering {
 		val dir:String = "/work0/t2gsuzumuralab/scalegraph/data/";
 		//val dir:String = "/work0/t2gsuzumuralab/ogata/Developments/data/";
 		
-		//val reader:EdgeListReader = new EdgeListReader();
+		val reader:EdgeListReader = new EdgeListReader();
 		//val reader:ScatteredEdgeListReader = new ScatteredEdgeListReader();
 		
 		//val graph:PlainGraph = reader.loadFromFile(dir + "scale-22-142055.dl");
@@ -26,7 +26,7 @@ public class TestMPISpectralClustering {
 		//val graph:PlainGraph = reader.loadFromFile(dir + "scale-18-39322.dl");
 		//val graph:PlainGraph = reader.loadFromFile(dir + "scale-16-14164.dl");
 		//val graph:PlainGraph = reader.loadFromFile(dir + "scale-14-5900.dl");
-		//val graph:PlainGraph = reader.loadFromFile(dir + "scale-12.dl");
+		val graph:PlainGraph = reader.loadFromFile(dir + "scale-12.dl");
 		//val graph:PlainGraph = reader.loadFromFile(dir + "scale-8.dl");
 		//val graph:PlainGraph = reader.loadFromFile(dir + "mini_graph.dl");
 		
@@ -35,7 +35,7 @@ public class TestMPISpectralClustering {
 		//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-10");
 		//val graph:PlainGraph = reader.loadFromDir(dir + "twitter-100");
 		
-		val graph:PlainGraph = GMLReader.loadFromFile(dir + "power.gml");
+		//val graph:PlainGraph = GMLReader.loadFromFile(dir + "power.gml");
 		
 		//val graph:PlainGraph = reader.loadFromFile(dir + "simple_graph.dl");
 		

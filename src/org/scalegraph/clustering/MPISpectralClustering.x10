@@ -503,6 +503,6 @@ public class MPISpectralClustering implements Clustering {
 			CtoV.put(i, tmpLists(i).result());
 		}
 		
-		return new ClusteringResult(VtoC, CtoV);
+		return new SinglePlaceClusteringResult(VtoC, CtoV);
 	}
 }

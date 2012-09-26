@@ -1,47 +1,21 @@
 package org.scalegraph.clustering;
 
-import x10.util.ArrayList;
-import x10.util.HashMap;
-import x10.util.StringBuilder;
+import x10.util.Box;
+import x10.util.Set;
 
-import org.scalegraph.util.VertexInfo;
-
-public class ClusteringResult(nVertices:Int, nClusters:Int) {
+public interface ClusteringResult/*(nVertices:Int, nClusters:Int)*/ {
 	
-	public val vertexInfo:VertexInfo;
-	public val VtoC:PlaceLocalHandle[HashMap[Long, Int]];  // vertexID to cluster number
-	public val CtoV:HashMap[Int, Array[Long]];             // cluster number to array of vertexID
+	abstract public def getAllVertices(): Set[Long];
 	
-	public def this(vertexInfo:VertexInfo, VtoC:PlaceLocalHandle[HashMap[Long, Int]], CtoV:HashMap[Int, Array[Long]]){
-		property(vertexInfo.size(), CtoV.size());
-		this.vertexInfo = vertexInfo;
-		this.VtoC = VtoC;
-		this.CtoV = CtoV;
-	}
+	abstract public def getAllClusters(): Set[Int];
 	
-	//public def getAllVertices() = VtoC.keySet();
+	abstract public def getCluster(vertexID:Long): Int;
 	
-	public def getAllClusters() = CtoV.keySet();
+	abstract public def tryGetCluster(vertexID:Long): Box[Int];
 	
-	//public def getCluster(vertexID:Long) = VtoC.get(vertexID)();
+	abstract public def getVertices(clusterNum:Int): Array[Long];
 	
-	public def tryGetCluster(vertexID:Long){
-		val p = vertexInfo.getPlace(vertexID);
-		return at(p) VtoC().get(vertexID);
-	}
+	abstract public def tryGetVertices(clusterNum:Int): Box[Array[Long]];
 	
-	public def getVertices(clusterNum:Int) = CtoV.get(clusterNum)();
-	
-	public def tryGetVertices(clusterNum:Int) = CtoV.get(clusterNum);
-	
-	public def toString(): String {
-		val sb = new StringBuilder();
-		sb.add("-------- ClusteringResult("+nVertices+", "+nClusters+") --------\n");
-		sb.add("[clusterNum] -> [vertexID]\n");
-		for(clusterNum in getAllClusters()){
-			sb.add("[" + clusterNum + "] -> " + getVertices(clusterNum) + "\n");
-		}
-		sb.add("----------------------------------------\n");
-		return sb.result();
-	}
+	abstract public def toString(): String;
 }

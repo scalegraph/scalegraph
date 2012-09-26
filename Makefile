@@ -683,6 +683,7 @@ test_mpiclustering:
 	src/test/scalegraph/clustering/Tool.x10 \
 	src/org/scalegraph/clustering/MPISpectralClustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
+	src/org/scalegraph/clustering/SinglePlaceClusteringResult.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/VertexInfo.x10 \
 	src/org/scalegraph/clustering/Vector.x10 \
@@ -700,7 +701,7 @@ test_mpiclustering:
 	src/org/scalegraph/util/ScaleGraphMath.x10;
 	
 	@echo "----------- Launch MPI Spectral Clustering Tester ---------------------------";
-	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 X10RT_MPI_THREAD_MULTIPLE=true $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 # Test 27
@@ -858,6 +859,7 @@ test_psc:
 	src/test/scalegraph/clustering/psc/TestParallelSpectralClustering.x10 \
 	src/org/scalegraph/clustering/psc/ParallelSpectralClustering.x10 \
 	src/org/scalegraph/clustering/psc/SparseMatrix.x10 \
+	src/org/scalegraph/clustering/psc/DistClusteringResult.x10 \
 	src/org/scalegraph/clustering/psc/ARPACK.x10 \
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
