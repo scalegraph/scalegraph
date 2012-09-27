@@ -11,7 +11,7 @@ import test.scalegraph.clustering.Tool;
 public class VertexInfo {
 	
 	public val parent:Place = here;
-	public val placeList = new Array[Place](Place.MAX_PLACES);
+	public val placeList = Place.places();
 	public val IDtoIDX = PlaceLocalHandle.make[HashMap[Long, Int]](Dist.makeUnique(), ()=>new HashMap[Long, Int]());
 	public val IDXtoID = PlaceLocalHandle.make[HashMap[Int, Long]](Dist.makeUnique(), ()=>new HashMap[Int, Long]());
 	public val inDegree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
@@ -23,12 +23,6 @@ public class VertexInfo {
 		val vertexList = graph.getVertexList();
 		val vertexInfo = new VertexInfo();
 		val gOffset = GlobalRef(vertexInfo.offset);
-		
-		for(var i:Int = 0; i < Place.MAX_PLACES; i++){
-			vertexInfo.placeList(i) = Place.FIRST_PLACE.next(i);
-			assert(vertexInfo.placeList(i).id == i);
-		}
-		
 		val recvArray = PlaceLocalHandle.make[Array[Array[Long]]](Dist.makeUnique(), ()=>new Array[Array[Long]](Place.MAX_PLACES));
 		
 		finish for(p in Place.places()) async at(p) {
