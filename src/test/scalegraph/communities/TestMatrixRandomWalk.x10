@@ -3,21 +3,18 @@ package test.scalegraph.communities;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.graph.GraphSizeCategory;
 import org.scalegraph.io.ScatteredEdgeListReader;
-import org.scalegraph.communities.RandomWalk;
-import org.scalegraph.communities.LAPACK;
+import org.scalegraph.communities.MatrixRandomWalk;
 import org.scalegraph.io.EdgeListReader;
-import x10.matrix.DenseMatrix;
 import x10.util.HashMap;
 import x10.util.Pair;
 import x10.util.Timer;
 import x10.util.OptionsParser;
 import x10.util.Option;
-import x10.matrix.DenseMatrix;
 import x10.io.FileWriter;
 import x10.io.File;
 import x10.io.Printer;
 
-public class TestRandomWalk {
+public class TestMatrixRandomWalk {
     private static def graphSetUp():PlainGraph {
         val graph = new PlainGraph(GraphSizeCategory.SMALL);
         graph.addEdge("1 2");        graph.addEdge("2 1");
@@ -46,7 +43,7 @@ public class TestRandomWalk {
             loadFromFile("/nfs/data1/miyuru/Graph Data Sets/R-MAT/scale-18-39322.dl");
     }
     
-    public static def main(args:Array[String](1)): void {
+    public static def main(args:Array[String](1)):void {
 		val params = new OptionsParser(args, null,
 				[Option("i", "", "Input file/folder"),
 				 Option("o", "", "Output file")]);
@@ -91,9 +88,10 @@ public class TestRandomWalk {
 		val loadingElapse = (endLoadFile - startLoadFile) / 1000;
 		Console.OUT.println("Loading Elapsed Time(s): " + loadingElapse);
 
-		val rwr = new RandomWalk(graph);
-		rwr.run();
-        val result = rwr.query(4);
+		val rwr = new MatrixRandomWalk(graph);
+        rwr.run();
+		val result = rwr.query(4);
+
         
         if (!outputPath.equals("")) {
             val writer = new FileWriter(new File(outputPath));

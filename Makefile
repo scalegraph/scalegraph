@@ -640,6 +640,7 @@ test_randomwalk:
 	src/org/scalegraph/clustering/ScaLAPACK.x10 \
 	src/org/scalegraph/clustering/BLACS.x10 \
 	src/org/scalegraph/clustering/MPI.x10 \
+	src/org/scalegraph/clustering/SinglePlaceClusteringResult.x10 \
 	
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
@@ -767,7 +768,7 @@ test_matrixpagerank:
 	src/test/scalegraph/clustering/Tool.x10 \
 	
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
-	MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	X10RT_MPI_THREAD_MULTIPLE=true MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 #Test 29
@@ -880,6 +881,42 @@ test_psc:
 	@echo "----------- Launch Parallel Spectral Clustering Tester ---------------------------";
 	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
+
+# Test 33
+test_matrixrandomwalk:
+	@echo "----------- Compile Random Walk with Restart Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -O -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-post $(MPI_HOME)/bin/mpic++ \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
+	-cxx-postarg $(F2C_LIB) \
+	-cxx-postarg $(ATLAS_LAPACK_LIB) \
+	-cxx-postarg $(ATLAS_LIB) \
+	-cxx-postarg -lgfortran \
+	-classpath $(GML_DIST)/$(GML_JAR) \
+	-x10lib $(GML_DIST)/$(GML_PROPS) \
+	src/test/scalegraph/communities/TestMatrixRandomWalk.x10 \
+	src/org/scalegraph/communities/MatrixRandomWalk.x10 \
+	src/org/scalegraph/communities/MatrixRandomWalkResult.x10 \
+	src/org/scalegraph/metrics/centrality/BufferedHashMap.x10 \
+	src/org/scalegraph/communities/LongToIntMap.x10 \
+	src/org/scalegraph/graph/PlainGraph.x10 \
+	src/org/scalegraph/graph/Graph.x10 \
+	src/org/scalegraph/graph/VertexArrays.x10 \
+	src/org/scalegraph/util/ScaleGraphMath.x10 \
+	src/org/scalegraph/graph/GraphSizeCategory.x10 \
+	src/org/scalegraph/graph/PlainGraphRecord.x10 \
+	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
+	src/org/scalegraph/io/EdgeListReader.x10 \
+	src/org/scalegraph/util/DirectoryInfo.x10 \
+	src/org/scalegraph/util/VertexInfo.x10 \
+	src/test/scalegraph/clustering/Tool.x10 \
+	
+	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
+	X10RT_MPI_THREAD_MULTIPLE=true MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
+
 	
 help:
 	@echo '---- scalegraph build help -------'

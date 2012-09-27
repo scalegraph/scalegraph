@@ -49,12 +49,20 @@ public class VertexInfo {
 			for(i in recvArray()){
 				for(j in recvArray()(i)){
 					val vertexID = recvArray()(i)(j);
-					val nInNeighbours = graph.getInNeighbours(vertexID).size;
-                    val nOutNeighbours = graph.getOutNeighbours(vertexID).size;
+					val nInNeighbours = graph.getInNeighbours(vertexID);
+                    val nOutNeighbours = graph.getOutNeighbours(vertexID);
 					vertexInfo.IDtoIDX().put(vertexID, counter);
 					vertexInfo.IDXtoID().put(counter, vertexID);
-					vertexInfo.inDegree().put(counter, nInNeighbours);
-                    vertexInfo.outDegree().put(counter, nOutNeighbours);
+                    if (nInNeighbours == null) {
+                        vertexInfo.inDegree().put(counter, 0);
+                    } else {
+                        vertexInfo.inDegree().put(counter, nInNeighbours.size);
+                    }
+                    if (nOutNeighbours == null) {
+                        vertexInfo.outDegree().put(counter, 0);
+                    } else {
+                        vertexInfo.outDegree().put(counter, nOutNeighbours.size);
+                    }
 					counter++;
 				}
 			}
@@ -139,15 +147,15 @@ public class VertexInfo {
 		val pid = getPlaceID(vertexIDX);
 		val p = placeList(pid);
 		return at(p) {
-			val result = inDegree().get(vertexIDX - offset(pid)) +
-                outDegree().get(vertexIDX - offset(pid));
-			result
+			val result = inDegree().get(vertexIDX - offset(pid))() +
+                outDegree().get(vertexIDX - offset(pid))();
+			new Box[int](result)
 		};
 	}
 	
 	public def getDegreeFromHere(vertexIDX:Int): Box[Int] {
-		return inDegree().get(vertexIDX - offset(here.id)) +
-            outDegree().get(vertexIDX - offset(here.id));
+		return new Box[Int](inDegree().get(vertexIDX - offset(here.id))() +
+                            outDegree().get(vertexIDX - offset(here.id))());
 	}
 	
 	public def print(){
