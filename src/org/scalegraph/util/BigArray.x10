@@ -117,13 +117,13 @@ public final class BigArray[T] {
         
         val d = data;
         finish {
-            for(p in Place.places()) {
+            for (p in Place.places()) {
                 
                 async at (p) {
                     val IMC = raw();
                     val len = IMC.length();
                     
-                    for(var i: Int =0; i < len; ++i) {
+                    for (var i: Int =0; i < len; ++i) {
                         IMC(i) = d;
                     }
                 }
@@ -143,7 +143,12 @@ public final class BigArray[T] {
         val pd = placeDescriptors(placeId);
         val offset: Int = (index - pd.startIndex) as Int;
         val p = Place.places()(placeId);
+        
        return  at(p) raw()(offset);
+    }
+    
+    public operator this (index: Long) = (data: T) {
+        raw()(index as Int) = data;
     }
     
     public final def isLocal(index: Long): Boolean {
@@ -170,11 +175,12 @@ public final class BigArray[T] {
     public def getAsync(k: Key, index: Long, wrap: Wrap[T]) {
         
         val placeId = getPlaceId(index);
-        if (placeId != here.id) {
+        
+        if (placeId == here.id) {
             
            // Local data, just put it
             wrap.value = getLocal(index);
-            
+            Console.OUT.println("Getlocal data: " + index);
         } else {
             
             // Add to local waiting list for monitoring
@@ -183,14 +189,44 @@ public final class BigArray[T] {
         }
     }
     
-    protected final static class GlobalWaitEntry[V] {
+    public def wait(key: Key) {
+        
+        while (!instanceWaitList.isDataReady(key)) {
+            
+            if (GlobalWaitList.enterGlobalJob()) {
+                
+                // First thread
+                GlobalWaitList.execute();
+                GlobalWaitList.exitGlobalJob();
+                
+            } else {
+                
+                // Pause this activity and run other jobs in the queue
+                Runtime.probe();
+            }
+        }
+    }
+    
+    protected static interface RemoteCopyable {
+        
+        def remoteCopy(): void;
+    }
+    
+    
+    protected final static class GlobalWaitEntry[V] implements RemoteCopyable {
         
         var obj: BigArray[V];
-        var keys: List[Key];
-        var indices: List[Long];
-        var wraps: List[Wrap[V]];
+        var keys: ArrayList[Key];
+        var indices: ArrayList[Long];
+        var wraps: ArrayList[Wrap[V]];
         
-        private def this() {}
+        protected def this(o: BigArray[V]) {
+            
+            this.obj = o;
+            keys = new ArrayList[Key]();
+            indices = new ArrayList[Long]();
+            wraps = new ArrayList[Wrap[V]]();
+        }
         
         protected def add(key: Key, index: Long, wrap: Wrap[V]) {
             
@@ -198,21 +234,31 @@ public final class BigArray[T] {
             indices.add(index);
             wraps.add(wrap);
         }
+        
+         public def remoteCopy(): void {
+            
+        }
     }
     
     
     protected final static class GlobalWaitList {
         
-        transient var placeQ: Array[HashMap[Object, Object]];
+        transient var processQ: Array[HashMap[Object, RemoteCopyable]];
+        transient var bufferQ: Array[HashMap[Object, RemoteCopyable]];
+        transient var qLock: Lock;
         
         transient static val singleton: GlobalWaitList = new GlobalWaitList();
         
         transient var isInit: Boolean = false;
         transient var initLock: Lock = new Lock();
+        transient var mainJobLock: Lock;
         
         private def this() {
             
-            placeQ =  new Array[HashMap[Object, Object]](Place.MAX_PLACES);
+            processQ =  new Array[HashMap[Object, RemoteCopyable]](Place.MAX_PLACES);
+            bufferQ =  new Array[HashMap[Object, RemoteCopyable]](Place.MAX_PLACES);
+            mainJobLock = new Lock();
+            qLock = new Lock();
         }
         
         protected static def init() {
@@ -223,7 +269,7 @@ public final class BigArray[T] {
                 
 	            for (var i:int = 0; i < Place.MAX_PLACES; ++i) {
 	                
-	                singleton.placeQ(i) = new HashMap[Object, Object]();
+	                singleton.bufferQ(i) = new HashMap[Object, RemoteCopyable]();
 	            }
 	            
 	            x10.util.concurrent.Fences.storeStoreBarrier();
@@ -234,23 +280,60 @@ public final class BigArray[T] {
         }
         
         protected static def addWaitEntry[X](obj: BigArray[X], placeId: Int, key: Key, index: Long,  wrap: Wrap[X]) {
+
+            singleton.qLock.lock();
+            val Q = singleton.bufferQ(placeId);
+            singleton.qLock.unlock();
             
-            Console.OUT.println("Pending Add Global Async");
-            
-            val Q = singleton.placeQ(placeId);
             val temp = Q.getOrElse(obj, null);
             var waitEntry: GlobalWaitEntry[X];
-            Console.OUT.println("Get Obj");
-            // if (temp == null) {
-            //     
-            //     waitEntry = new GlobalWaitEntry[X]();
-            //     Q.put(obj, waitEntry);
-            // } else {
-            //     waitEntry = temp as GlobalWaitEntry[X];
-            // }
-            // 
-            // Console.OUT.println("Before add entry");
-            // waitEntry.add(key, index, wrap);
+            
+            if (temp == null) {
+                
+                waitEntry = new GlobalWaitEntry[X](obj);
+                Q.put(obj, waitEntry);
+                
+            } else {
+                
+                waitEntry = temp as GlobalWaitEntry[X];
+            }
+            
+            waitEntry.add(key, index, wrap);
+        }
+        
+        protected static def enterGlobalJob(): Boolean {
+            
+            return singleton.mainJobLock.tryLock();
+        }
+        
+        protected static def exitGlobalJob(): void {
+            singleton.mainJobLock.unlock();
+        }
+        
+        protected static def execute() {
+            
+            // Swap queue
+            singleton.qLock.lock();
+            
+            val temp = singleton.bufferQ;
+            singleton.bufferQ = singleton.processQ;
+            singleton.processQ = temp;
+            
+            x10.util.concurrent.Fences.storeStoreBarrier();
+            singleton.qLock.unlock();
+            
+            // Get remote data
+            finish {
+                
+                for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
+                    
+                    async {
+                        
+                        
+                    }
+                }
+                
+            }
         }
     }
     
@@ -263,9 +346,12 @@ public final class BigArray[T] {
     
     protected final static class InstanceWaitList[U] {
         
-        var waitList: HashMap[Key, InstanceWaitEntry[U]] = new HashMap[Key, InstanceWaitEntry[U]]();
+        transient var waitList: HashMap[Key, InstanceWaitEntry[U]] = new HashMap[Key, InstanceWaitEntry[U]]();
+        transient var internalLock: Lock = new Lock();
         
         public def addWait(k: Key, index: Long) {
+            
+            internalLock.lock();
             
             var entry: InstanceWaitEntry[U] = waitList.getOrElse(k, null);
             
@@ -277,7 +363,23 @@ public final class BigArray[T] {
             
             entry.indices.add(index);
             
-            Console.OUT.println("Add Local Async");
+            internalLock.unlock();
+        }
+        
+        public def isDataReady(key: Key): Boolean {
+            
+            internalLock.lock();
+            val obj = waitList.getOrElse(key, null);
+            internalLock.unlock();
+            
+            return obj.indices.size() == 0;
+        }
+        
+        public def removeKey(key: Key): void {
+            
+            internalLock.lock();
+            waitList.remove(key);
+            internalLock.unlock();
         }
 ;    }
 }
