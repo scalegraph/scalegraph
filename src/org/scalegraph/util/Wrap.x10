@@ -9,4 +9,8 @@ public class Wrap[T] {
     public def this() {T haszero} {value=  Zero.get[T]();}
     
     public  operator this() = this.value;
+    
+    public operator this() = (v: T) {
+        value = v;
+    }
 }
