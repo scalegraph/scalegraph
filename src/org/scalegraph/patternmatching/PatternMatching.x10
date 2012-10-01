@@ -1,5 +1,6 @@
 package org.scalegraph.patternmatching;
 
+import x10.util.StringBuilder;
 import x10.util.ArrayList;
 import org.scalegraph.graph.AttributedGraph;
 
@@ -8,7 +9,7 @@ public class PatternMatching {
 	
 
 	//private var current:LatticeNode;
-	private var max_iter:Int = 20;
+	private var max_iter:Int = 100;
 	private var minsup:Int = 1;
 	
 	
@@ -40,9 +41,17 @@ public class PatternMatching {
 		do {
 			var start:LatticeNode = rwm.initialize(); 
 			zero_neighbors = rwm.walk(start,cur_iter);
-			Console.OUT.println("current iter : " + cur_iter());
+			//Console.OUT.println("current iter : " + cur_iter());
 		} while (zero_neighbors == false);
 		
+		val r = rwm.get_node_map().entries();
+		Console.OUT.println("number of pattern:" + r.size());
+		val builder = new StringBuilder();
+		//print out the result of patterns stored in pattern lattice
+		for(x in r){
+			builder.add("pattern:\n" + x.getKey().toString() + "\n" + x.getValue().toString()+"\n");
+		}
+		Console.OUT.println(builder.result());
 		
 	/*-------------------------------------------------------------------------------*/		
 		return result;

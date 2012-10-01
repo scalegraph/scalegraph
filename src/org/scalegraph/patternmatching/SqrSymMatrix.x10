@@ -71,6 +71,9 @@ public class SqrSymMatrix extends Matrix {
 		if(nSrc.size == 1 || nDst.size == 1) return false;
 		
 		val visited = new Array[Boolean](this.getSize());
+		for (i in visited){
+			visited(i) = false;
+		}
 		visited(src) = true;
 		var reachable:Boolean = false;
 		for(i in nSrc){
@@ -90,7 +93,9 @@ public class SqrSymMatrix extends Matrix {
 		for(i in array){
 			val pos = array(i);
 			if(visited(pos)) continue;
-			if(pos == dst || isReachable(pos, dst, visited)) return true;
+			if(pos == dst) return true;
+			val retval = isReachable(pos, dst, visited);
+			if(retval == true) return true;
 		}
 		return false;
 	}

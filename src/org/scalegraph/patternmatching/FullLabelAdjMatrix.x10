@@ -1,6 +1,7 @@
 package org.scalegraph.patternmatching;
 
 import x10.util.ArrayBuilder;
+import x10.util.StringBuilder;
 import x10.util.ArrayList;
 import x10.util.HashMap;
 import x10.util.Map;
@@ -41,6 +42,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	//}
 	
 	public def getEdgeLabel(v1:Int, v2:Int): Int {
+		Console.OUT.println("v1:" + v1 + " v2:" + v2);
+		Console.OUT.println(this.toString());
 		if(v1 == v2 || v1 < 0 || this.getSize() <= v1 ||
 				v2 < 0 || this.getSize() <= v2){
 			assert(false):("error: FullLabelAdjMatrix.getEdgeLabel: requested edge label from invalid position");
@@ -48,7 +51,7 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		val key = (v1 < v2) ? Pair[Int, Int](v1, v2) : Pair[Int, Int](v2, v1);
 		val ret = this.elabel.get(key);
 		if(ret == null){
-			assert(false):("error: FullLabelAdjMatrix.getEdgeLabel: requested edge label from invalid position");
+			assert(false):("error: FullLabelAdjMatrix.getEdgeLabel: requested edge is not exist");
 
 		}else{
 			return ret();
@@ -77,6 +80,7 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			val x:Map.Entry[Pair[Int, Int], Int] = it;
 			var key:Pair[Int,Int] = x.getKey();
 			var el:Int = x.getValue();
+			assert(key.first <= key.second):"first id is small than second id";
 			if (key.first < v && key.second < v) {
 				v_pairs.add(key); 
 				elabels.add(el); 
@@ -96,10 +100,13 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				assert(false):("ERROR: program should not come to this line");
 			}
 		}
-		elabel.clear() ;
+		this.elabel.clear() ;
+		for (var j:Int=0; j<v_pairs.size(); j++) {
+			this.elabel.put(v_pairs(j), elabels(j));
+		}
 		var copy_v_pairs:Array[Pair[Int,Int]] = v_pairs.toArray();
-		vlabel.remove(getLabel(v));
-		changeAdjMatrix(getSize()-1,copy_v_pairs);
+		vlabel.removeAt(v);
+		changeAdjMatrix(this.getSize()-1,copy_v_pairs);
 	
 	}
 	
@@ -118,7 +125,21 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		
 		// both vertex got isolated, happens only when we
 		// are deleting an edge from an one-edge pattern
-		if (this.data(v1).isEmpty() && this.data(v2).isEmpty()) {  
+		var none1:Boolean = true;
+		var none2:Boolean = true;
+		for(i in this.data(v1)){
+			if(i != 0){
+				none1 = false;
+				break;
+			}
+		}
+		for(i in this.data(v2)){
+			if(i != 0){
+				none2 = false;
+				break;
+			}
+		}
+		if (none1 && none2) {  
 			assert(this.getSize() == 2); // we have only two vertices
 			this.data.clear();
 			this.vlabel.clear();
@@ -127,11 +148,11 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		}
 		var v_removed:Boolean=false;
 
-		if (this.data(v1).isEmpty()) {
+		if (none1) {
 			removeVertex(v1);
 			v_removed=true;
 		}
-		else if (this.data(v2).isEmpty()) {
+		else if (none2) {
 			removeVertex(v2);
 			v_removed=true;
 		}
@@ -145,7 +166,6 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			}
 			elabel.remove(key);
 		}
-		Console.OUT.println("error: FullLabelAdjMatrix.removeEdge: not implemented");
 	}
 	
 	
@@ -164,16 +184,21 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	public def matcher(val b:FullLabelAdjMatrix,M:Matrix):void{
 		//Console.OUT.println("matcher");
 		// match two matrix in one.
-		Console.OUT.println(" matcher");
+		//Console.OUT.println(" matcher");
 		var a:FullLabelAdjMatrix = this;
 		var size1:Int = a.getSize(); 
+		/*
 		Console.OUT.println("matrix a:");
 		Console.OUT.println(a.toString());
 		Console.OUT.println(a.vlabel.toString());
+		*/
 		var size2:Int = b.getSize();
+		/*
 		Console.OUT.println("matrix b:");
 		Console.OUT.println(b.toString());
 		Console.OUT.println(b.vlabel.toString());
+		*/
+		
 		if (size1 > size2) {
 			return;
 		}
@@ -187,11 +212,11 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				}
 			}
 		}
-		
+		/*
 		Console.OUT.println("complete initialize");
 		Console.OUT.println(" matched matrix after initialize:");
 		Console.OUT.println(M.toString());
-
+		 * */
 		var match_pair:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();
 		for (var i:Int = 0; i < size1; i++) {
 			if (M.getRowSetCount(i)  == 0) return;
@@ -229,9 +254,11 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			
 			//Console.OUT.println("complete initialize matching");
 			//Console.OUT.println("neighbors size:" + neighbors.size());
+			/*
 			for(s in neighbors){
-				//Console.OUT.println(s.toString());
+				Console.OUT.println(s.toString());
 			}
+			 * */
 			//Console.OUT.println("matrix a's size:" + a.getSize());
 
 			
@@ -298,8 +325,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 			}
 		}
 		
-		Console.OUT.println("result of match:");
-		Console.OUT.println(M.toString());
+		//Console.OUT.println("result of match:");
+		//Console.OUT.println(M.toString());
 		return;
 	}
 	
@@ -319,7 +346,16 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		}
 		
 		return m;
-		
-		
 	}
+	
+	public def toString(){
+		val builder = new StringBuilder(); 
+		builder.add(super.toString()+"\n" + "elabels:");
+		val edgelabel = elabel.entries();
+		for(i in edgelabel){
+			builder.add("[" + i.getKey().toString() + ","+ i.getValue().toString()+"]");
+		}
+		return builder.result();
+	}
+	
 }

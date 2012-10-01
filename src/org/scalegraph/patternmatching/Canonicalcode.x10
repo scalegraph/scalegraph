@@ -1,5 +1,6 @@
 package org.scalegraph.patternmatching;
 
+import x10.util.StringBuilder;
 import x10.util.ArrayList;
 import x10.util.HashMap;
 import x10.util.Box;
@@ -77,16 +78,16 @@ public class Canonicalcode {
 	
 	public def to_string():String{
 		if (this.dfs_code.size() == 0) return "null";
-		var t_str:String = "";
+		var t_str:StringBuilder = new StringBuilder();
 
 		for(var i:Int=0; i < this.dfs_code.size(); i++) {
 			if(i == 0)
-				t_str = t_str + this.dfs_code(i);
+				t_str.add(this.dfs_code(i));
 			else
-				t_str = t_str + ":" +  this.dfs_code(i);
+				t_str.add(":" +  this.dfs_code(i));
 		}
 		
-		return t_str;
+		return t_str.result();
 	}
 	
 	private def push_back(var tuple:FiveTuple) {

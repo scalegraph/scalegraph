@@ -213,7 +213,7 @@ public class Isomorphism {
 		// When none of the candidate codes can be extended,
 		// its time to stop.
 		while(go_ahead) {
-			Console.OUT.println("repeat time in minimal : " + s);
+			//Console.OUT.println("repeat time in minimal : " + s);
 			s++;
 			var orig_sz:Int = new_codes.size();
 			//Console.OUT.println("orig_sz : " + orig_sz);
@@ -331,12 +331,13 @@ public class Isomorphism {
 					//Console.OUT.println("coverd tuple");
 					//Console.OUT.println("size:" + covered_edges(idx).size());
 					var iscontain:Boolean = false;
+					/*
 					Console.OUT.println("covered_edges(idx):");
 					val x = covered_edges(idx);
 					for(t in x){
 						Console.OUT.println(t.toString());
 					}
-					
+					*/
 					iscontain = !((covered_edges(idx).contains(ftuple) == false) 
 							&& (covered_edges(idx).contains(btuple) == false));
 					/*for(s in covered_edges(idx)){
@@ -347,7 +348,7 @@ public class Isomorphism {
 						
 					}*/
 					
-					Console.OUT.println("iscontain : " + iscontain);
+					//Console.OUT.println("iscontain : " + iscontain);
 					
 					/*
 					Console.OUT.println("checking tuple");
@@ -367,14 +368,14 @@ public class Isomorphism {
 			}
 			
 			
-			Console.OUT.println("cand_edges.size : " + cand_edges.size());
+			//Console.OUT.println("cand_edges.size : " + cand_edges.size());
 			
 			// No extensions can be made from this node.
 			if(cand_edges.size() == 0) {
 				// TODO: This process can be speeded up by passing a set of vertices
 				// for which all the out_edges have been explored.
 				last_vid--;
-				Console.OUT.println("last_vid : " + last_vid);
+				//Console.OUT.println("last_vid : " + last_vid);
 				if(last_vid == -1) {  // All vertices have been explored but still no candidates.
 					return false;
 				} else {
@@ -548,7 +549,7 @@ public class Isomorphism {
 			}
 		}
 		
-		
+	
 	}
 	
 }

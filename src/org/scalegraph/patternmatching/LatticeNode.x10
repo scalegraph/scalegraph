@@ -1,4 +1,6 @@
 package org.scalegraph.patternmatching;
+
+import x10.util.StringBuilder;
 import x10.util.ArrayList;
 
 public class LatticeNode {
@@ -32,4 +34,17 @@ public class LatticeNode {
 	public def getneighbor_prob():ArrayList[Double]{
 		return this.neighbor_prob;
 	}
+	
+	public def toString():String{
+		val builder = new StringBuilder(); 
+		builder.add(pat.toString());
+		return builder.result();
+	}
+	/*
+	public def toString(val x:int):String{
+		val builder = new StringBuilder(); 
+		builder.add("pattern"+ x + "\n"+ super.toString());
+		return builder.result();
+	}
+	 * */
 }

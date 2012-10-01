@@ -1,6 +1,6 @@
 package org.scalegraph.patternmatching;
 
-
+import x10.util.StringBuilder;
 import x10.util.ArrayList;
 import x10.util.ListIterator;
 import x10.util.Pair;
@@ -14,7 +14,7 @@ public class Pattern {
 	private var _status_known:Boolean = false;
 	private var _vat:ArrayList[Int] = new ArrayList[Int]();//!< contains the graph ids that has at least these edges
 	private var _edges:ArrayList[Pair[Pair[Int,Int],Int]] = new ArrayList[Pair[Pair[Int,Int],Int]](); //!< store edge pattern of all edges
-	private var _removable_edges:ArrayList[Pair[Int, Int]];  //!< removing these edges keeps the pattern connected. represented in two vertces id.
+	private var _removable_edges:ArrayList[Pair[Int, Int]] = new ArrayList[Pair[Int,Int]]();  //!< removing these edges keeps the pattern connected. represented in two vertces id.
 	private var _canonical_code:Canonicalcode;// modify after how to implemente cannonical_code 
 	private var _removable_edge_known:Boolean = false;
 	
@@ -56,6 +56,10 @@ public class Pattern {
 
 		_edges.add(edge);
 		_sup_ok = 1;  // super-set of exact VAT
+		
+		this._code_known = false;
+		this._removable_edge_known = false;
+		this._status_known = false;
 	}
 	
 	public def remove_edge(val a:Int,val b:Int):Pair[Pair[Int,Int],Int]{
@@ -72,7 +76,9 @@ public class Pattern {
 		}
 		_edges.remove(edge);
 		_sup_ok = -1; //current VAT is sub-set of exact VAT
-		
+		this._code_known = false;
+		this._removable_edge_known = false;
+		this._status_known = false;
 		
 		return edge;
 	}
@@ -83,6 +89,9 @@ public class Pattern {
 	}
 	public def set_matrix(var matrix:FullLabelAdjMatrix){
 		_matrix = matrix;
+		this._code_known = false;
+		this._removable_edge_known = false;
+		this._status_known = false;
 	}
 	
 	
@@ -173,6 +182,7 @@ public class Pattern {
 	}
 	
 	public def add_vertex(var v:Int):Int{
+		this._code_known = false;
 		return _matrix.addVertex(v);
 	}
 	
@@ -214,6 +224,7 @@ public class Pattern {
 		// find removable edges and remember
 		if (_removable_edge_known == true) return _removable_edges.size();
 	
+		_removable_edges.clear();
 		for (var i:Int = 0;i < _matrix.getSize();i++) {
 			for(var j:Int = 0;j < i;j++){
 				if(_matrix(i,j) == 1){
@@ -233,6 +244,16 @@ public class Pattern {
 		// return removable edes
 		return _removable_edges;
 	}
+	protected def set_removable_edges(val removable_edges:ArrayList[Pair[Int,Int]]){
+		this._removable_edges = removable_edges;
+	}
+	protected def get_removable_edge_known():Boolean{
+		// return removable edes
+		return _removable_edge_known;
+	}
+	protected def set_removable_edge_known(var removable_edge_known:Boolean){
+		this._removable_edge_known = removable_edge_known;
+	}
 	
 	public def clone():Pattern{
 		var x:Pattern = new Pattern();
@@ -243,7 +264,9 @@ public class Pattern {
 		x.set_status_known(this.get_status_known());
 		x.set_vat(this.get_vat().clone());
 		x.set_edges(this.get_edges().clone());
+		x.set_removable_edges(this.get_removable_edges());
 		x.set_canonical_code(this.get_canonical_code());
+		x.set_removable_edge_known(this.get_removable_edge_known());
 		return x;
 	}
 	
@@ -267,14 +290,22 @@ public class Pattern {
 	}
 
 	public def add_tid_to_vat(var tid:Int) :void {
-		var it:ListIterator[Int] = _vat.iterator();
-		for(;it.previousIndex()<_vat.size();it.next()){
-			if(_vat(it.previousIndex()) >= tid){
+		var it:int = 0;
+		for(;it<_vat.size();it++){
+			if(_vat(it) >= tid){
 				break;
 			}
 		}
 		
-		_vat.addBefore(it.previousIndex(),tid);
+		_vat.addBefore(it,tid);
 	}
+	
+
+	public def toString():String{
+		val builder = new StringBuilder(); 
+		builder.add(_matrix.toString());
+		return builder.result();
+	}
+	
 	
 }

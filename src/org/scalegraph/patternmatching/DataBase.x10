@@ -38,7 +38,7 @@ public class DataBase {
 			if (ret_val == -1) break;
 			graph_no++;
 		}
-		Console.OUT.println("total graph in database:" + _graph_store.size());
+		//Console.OUT.println("total graph in database:" + _graph_store.size());
 		
 	}
 	
@@ -111,13 +111,15 @@ public class DataBase {
 			}
 			
 		}
-		Console.OUT.println("from database");
+		//Console.OUT.println("from database");
 		
 		val x = pat.get_edges();
-		Console.OUT.println("edge labels:");
+		//Console.OUT.println("edge labels:");
+		/*
 		for(i in x){
 			Console.OUT.println(i);
 		}
+		 * */
 		
 		//Console.OUT.println("pattern matrix:");
 		//Console.OUT.println(pat.get_matrix().toString());
@@ -215,15 +217,18 @@ public class DataBase {
 			}
 		}
 
-		Console.OUT.println("level one frequent:" + _edge_info.size());
+		//Console.OUT.println("level one frequent:" + _edge_info.size());
 		
 		val x = _edge_info.entries();
-		Console.OUT.println("_edge_info" );
+		//Console.OUT.println("_edge_info" );
+		/*
 		for(i in x){
 			Console.OUT.println(i.getKey().toString() + " " +i.getValue().toString());
 		}
+		 * */
 		val y = _ext_map.entries();
-		Console.OUT.println("_ext_map" );
+		//Console.OUT.println("_ext_map" );
+		/*
 		for(i in y){
 			Console.OUT.println(i.getKey().toString());
 			val z =i.getValue();
@@ -231,6 +236,7 @@ public class DataBase {
 				Console.OUT.println(j.toString());
 			}
 		}
+		 * */
 	}
 	
 	
@@ -266,7 +272,7 @@ public class DataBase {
 	
 	
 	public def get_edge_vat(var edge:Pair[Pair[Int,Int],Int]):ArrayList[Int]{
-		Console.OUT.println("get edge vat method");
+		//Console.OUT.println("get edge vat method");
 		val t = _edge_info.entries();
 		/*
 		for(i in t){
@@ -281,9 +287,9 @@ public class DataBase {
 		
 		var x:Box[Pair[ArrayList[Int],Int]] = _edge_info.get(edge);
 		if(x != null){
-			return x.value.first;
+			return x.value.first.clone();
 		}
-		assert(false):"complete get_edge_vat";
+		//assert(false):"complete get_edge_vat";
 		return new ArrayList[Int]();//return dummy data
 	}
 	
@@ -316,6 +322,9 @@ public class DataBase {
 		var prev:Pair[Pair[Int,Int],Int] = mset.getFirst();
 		var sup_list:ArrayList[Int] = get_edge_vat(prev);
 		
+		
+		Console.OUT.println("a");
+
 		var out_list:ArrayList[Int] = new ArrayList[Int]();
 		for(cit in mset) {
 			// cout << "Inside this for loop:" << endl;
@@ -328,22 +337,22 @@ public class DataBase {
 			}
 		}
 		
+		Console.OUT.println("b");
+		
 		val cur_vat:ArrayList[Int] = pat.get_vat();
 		
-		var it2:ListIterator[Int] = cur_vat.iterator();
-		var it3:ListIterator[Int] = null;
+		var it2:Int = 0;
+		var it3:Int = 0;
 		for (it in sup_list) {
-			var s:Int = it2.previousIndex();
+			var s:Int = it2;
 			for(;s < cur_vat.size();s++){
-				if(cur_vat(s) >= cur_vat(it2.previousIndex())){
-					it3 = cur_vat.iteratorFrom(s);
+				Console.OUT.println("s:" + s);
+				if(cur_vat(s) >= it){
 					break;
 				}
 			}
-			if(s >= cur_vat.size()){
-				it3 = null;
-			}
-			if (it3 == null || cur_vat(it3.previousIndex()) != it) {  // not exists
+			it3 = s;
+			if (it3 == cur_vat.size() || cur_vat(it3) != it) {  // not exists
 				var database_pat:Cell[Pattern] = new Cell(_graph_store(it));
 				if (database_pat().is_super_pattern(pat) == true) {
 					out_list.add(it); 
@@ -353,16 +362,23 @@ public class DataBase {
 	
 		}
 		
+		Console.OUT.println("c");
+
 		for (var i:Int=0; i<out_list.size(); i++) {
 			var database_pat:Pattern = _graph_store(out_list(i));
 			var m:Matrix = new Matrix(pat.size(), database_pat.size());
+			Console.OUT.println("x");
 			pat.get_matrix().matcher(database_pat.get_matrix(), m);
+			Console.OUT.println("y");
 			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat.get_matrix(), m ,false);
+			Console.OUT.println("z");
 			if (ret_val == true){
 				// cout << "adding " << out_list[i] << " to vatlist" << endl;
 				pat.add_tid_to_vat(out_list(i));
 			}
 		}
+		
+		Console.OUT.println("d");
 		
 		val c_vat:ArrayList[Int] = pat.get_vat();
 		
@@ -396,7 +412,7 @@ public class DataBase {
 	}
 	
 	public def get_exact_sup_optimal(var pat:Pattern):Boolean{
-		Console.OUT.println("get_exact_sup_optimal method in DataBase");
+		//Console.OUT.println("get_exact_sup_optimal method in DataBase");
 		var sup_list:ArrayList[Int] = new ArrayList[Int]();
 		val its_vat:ArrayList[Int] = pat.get_vat();
 		for (it in its_vat) {
@@ -404,10 +420,10 @@ public class DataBase {
 			if (database_pat.is_super_pattern(pat) == false)  continue;
 			sup_list.add(it); 
 		}
-		Console.OUT.println("sup_list:" + sup_list.toString());
+		//Console.OUT.println("sup_list:" + sup_list.toString());
 		
 		var max_sup_possible:Int = sup_list.size();
-		Console.OUT.println("max_sup_possible:" + max_sup_possible);
+		//Console.OUT.println("max_sup_possible:" + max_sup_possible);
 		if (max_sup_possible < _minsup) return false;
 		
 		
@@ -427,14 +443,14 @@ public class DataBase {
 			(pat.get_matrix()).matcher(database_pat.get_matrix(),m);
 			var ret_val:Boolean = subiso.UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
 					m, false);
-			Console.OUT.println("ret_val:" + ret_val);
-			Console.OUT.println("_minsup:" + _minsup);
+			//Console.OUT.println("ret_val:" + ret_val);
+			//Console.OUT.println("_minsup:" + _minsup);
 			if (ret_val == false)  {
 				
 				var t:Int = max_sup_possible-1-i+temp.size();
-				Console.OUT.println("t:" + t);
-				Console.OUT.println("i:" + i);
-				Console.OUT.println("temp.size():" + temp.size());
+				//Console.OUT.println("t:" + t);
+				//Console.OUT.println("i:" + i);
+				//Console.OUT.println("temp.size():" + temp.size());
 				if (t<_minsup) {
 					return false;
 				}

@@ -21,11 +21,11 @@ public class PatternFactory {
 	
 	
 	public def get_one_random_one_edge_frequent_pattern():Pattern{
-		Console.OUT.println("get_one_random_one_edge_frequent_pattern");
+		//Console.OUT.println("get_one_random_one_edge_frequent_pattern");
 		//Console.OUT.println("before get edge randomly");
 		var edge:Pair[Pair[Int,Int],Int] = this.d.get_a_random_freq_edge();
 		//Console.OUT.println("before make edge pattern from one random edge");
-		Console.OUT.println("gotten random edge : " + edge.toString());
+		//Console.OUT.println("gotten random edge : " + edge.toString());
 		var cand_pat:Pattern = make_single_edge_pattern(edge.first.first, edge.first.second,edge.second);
 		//Console.OUT.println("complete to get one random edge");
 		return cand_pat;
@@ -81,15 +81,15 @@ public class PatternFactory {
 	
 	
 	public def get_freq_super_patterns(var pat:Pattern,var super_patterns:ArrayList[Pattern]):void{
-		Console.OUT.println("get_freq_super_patterns");
+		//Console.OUT.println("get_freq_super_patterns");
 		var edge:Pattern = new Pattern();
 		var cand_pat:Pattern = new Pattern();
 		
 		var this_edge:Pair[Pair[Int,Int],Int] = Pair(Pair(-1 as Int,-1 as Int),-1 as Int);
 		var minsup:Int = this.d.get_minsup();
 		
-		Console.OUT.println("pattern size:" + pat.size());
-		Console.OUT.println("	super_pattern size:" + super_patterns.size());
+		//Console.OUT.println("pattern size:" + pat.size());
+		//Console.OUT.println("	super_pattern size:" + super_patterns.size());
 		
 		if (pat.size() == 0) {
 			val eim:HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]] = this.d.get_all_edge_info();
@@ -101,29 +101,33 @@ public class PatternFactory {
 			return;
 		}
 		
-		Console.OUT.println("coplete initilize");
-		Console.OUT.println("number of super pattern:" + super_patterns.size());
+		//Console.OUT.println("coplete initilize");
+		//Console.OUT.println("number of super pattern:" + super_patterns.size());
 
-		Console.OUT.println("	super_pattern size after initialize:" + super_patterns.size());
+		//Console.OUT.println("	super_pattern size after initialize:" + super_patterns.size());
 
 		for (var vid:Int =0; vid<pat.size(); vid++) {  // extentions from all vertices
 			// vid is a vertex id stored in matrix of this pattern
 			var src_v:Int=pat.label(vid);
+			/*
 			Console.OUT.println("complete get source vertex label");
 			Console.OUT.println("vid : " + vid);
 			Console.OUT.println("vlabel : " + src_v);
 			Console.OUT.println("pattern size : " + pat.size());
+			*/
 			var nbrs:HashSet[Pair[Int,Int]]= this.d.get_neighbors(src_v);
 				// about nbrs element of first is destination label and second is edeg label
+			/*
 			Console.OUT.println("complete get neighbors");
 			Console.OUT.println("nbrs:");
 			for(i in nbrs){
 				Console.OUT.println(i.toString());
 			}
+			 * */
 			
 			for(x in nbrs){// trying extension on a vertex for all posible neighbor edge type
 				// first get a one neighbor edge pattern
-				Console.OUT.println("neighbor:"+x.toString());
+				//Console.OUT.println("neighbor:"+x.toString());
 				var dest_v:Int = x.first;
 				var e_label:Int = x.second;
 				
@@ -140,20 +144,21 @@ public class PatternFactory {
 				}
 				
 				edge = make_single_edge_pattern(src_v, dest_v, e_label);
-				Console.OUT.println("	super_pattern size before check forward edge:" + super_patterns.size());
-				Console.OUT.println("start checking forward edge");
+				//Console.OUT.println("	super_pattern size before check forward edge:" + super_patterns.size());
+				//Console.OUT.println("start checking forward edge");
 				// trying fwd-extension from this vertex
 				cand_pat = pat.clone();
 				var lvid:Int = cand_pat.add_vertex(dest_v);
+				cand_pat.set_code_known(false);
 				cand_pat.add_edge(vid, lvid, e_label);
 				cand_pat.join_vat(edge);
-				Console.OUT.println("cand_pat.get_vat().size():"+cand_pat.get_vat().size());
+				//Console.OUT.println("cand_pat.get_vat().size():"+cand_pat.get_vat().size());
 				if (cand_pat.get_vat().size() < minsup) {
 					cand_pat = null;
 				}
 				else {
 					var freq:Boolean = this.d.get_exact_sup_optimal(cand_pat);
-					Console.OUT.println("sup_optimal:" + freq);
+					//Console.OUT.println("sup_optimal:" + freq);
 					if (freq == true) { // is the pattern frequent?
 						super_patterns.add(cand_pat);
 					}
@@ -161,15 +166,15 @@ public class PatternFactory {
 						cand_pat = null;
 					}
 				}
-				Console.OUT.println("	super_pattern size before checking backedge:" + super_patterns.size());
-				Console.OUT.println("start checking backedge");
+				//Console.OUT.println("	super_pattern size before checking backedge:" + super_patterns.size());
+				//Console.OUT.println("start checking backedge");
 				// trying all the possible back-edges
 				// first get information(id of destination vertex) of possible backedges
 				var dest_vids:ArrayList[Int] = new ArrayList[Int]();
 				pat.get_vids_for_this_label(dest_v, dest_vids);
 				var i:Int = 0;
-				Console.OUT.println("number of dest_vids:" + dest_vids.size());
-				Console.OUT.println("dest_vids:" + dest_vids.toString());
+				//Console.OUT.println("number of dest_vids:" + dest_vids.size());
+				//Console.OUT.println("dest_vids:" + dest_vids.toString());
 				while (i < dest_vids.size()) {
 					if (dest_vids(i) <= vid || pat.edge_exist(vid, dest_vids(i))){
 						dest_vids.removeAt(i);
@@ -178,9 +183,9 @@ public class PatternFactory {
 						i++;
 					}
 				}
-				Console.OUT.println("number of dest_vids:" + dest_vids.size());
+				//Console.OUT.println("number of dest_vids:" + dest_vids.size());
 
-				Console.OUT.println("join back edge");
+				//Console.OUT.println("join back edge");
 				// try to join the backedge
 				for (i=0; i < dest_vids.size(); i++) {
 					cand_pat = pat.clone();
@@ -204,10 +209,10 @@ public class PatternFactory {
 					
 				}// finish join backedge
 				
-				Console.OUT.println("complete check backedge");
+				//Console.OUT.println("complete check backedge");
 			}// finish extension about one vertex in this pattern
 		}// finish extension about all vartex in this pattern
-		Console.OUT.println("	super_pattern size before remove same pattern:" + super_patterns.size());
+		//Console.OUT.println("	super_pattern size before remove same pattern:" + super_patterns.size());
 		 // sometimes few neighbors are actually unique, need to check that
 		 var codes:HashSet[String] = new HashSet[String]();
 		 var i:Int = 0;
@@ -247,15 +252,21 @@ public class PatternFactory {
 		pat.find_removable_edges();
 		val re:ArrayList[Pair[Int,Int]] = pat.get_removable_edges();
 		var codes:HashSet[String] = new HashSet[String]();
-		
+		Console.OUT.println("removableedge:" + re.toString());
+		Console.OUT.println("candidate pattern:\n" + pat.toString());
 		
 		for(var i:Int = 0;i < re.size();i++){
+			Console.OUT.println("loop in get_sub_patterns:" + i);
+			Console.OUT.println("candidate of remove edge" + "("+re(i).first + "," + re(i).second+")");
 			var sub_pat:Pattern = pattern_with_edge_removed(pat,re(i).first,re(i).second);
+			Console.OUT.println("got sub pattern");
+			Console.OUT.println(sub_pat.toString());
 			iso.check_isomorphism(sub_pat);
+			Console.OUT.println("after check isromorphism");
 			var cc_str:String = sub_pat.get_canonical_code().to_string();
+		
 			
-			
-			if(codes.add(cc_str) == false){
+			if(codes.add(cc_str) == true){
 				sub_patterns.add(sub_pat);
 			}	
 		}

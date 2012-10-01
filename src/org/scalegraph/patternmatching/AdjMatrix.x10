@@ -2,6 +2,7 @@ package org.scalegraph.patternmatching;
 
 import x10.util.ArrayBuilder;
 import x10.util.ArrayList;
+import x10.util.StringBuilder;
 
 /**
  * adjacency matrix class for graph with labeled vertex
@@ -104,6 +105,12 @@ public class AdjMatrix extends SqrSymMatrix {
 		m.vlabel = this.vlabel.clone();
 		
 		return m;
+	}
+	
+	public def toString():String{
+		val builder = new StringBuilder(); 
+		builder.add(super.toString() + "vlabels:" + vlabel.toString());
+		return builder.result();
 	}
 	
 	//public def getEdgeCount(): Int {}

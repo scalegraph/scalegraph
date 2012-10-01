@@ -20,6 +20,8 @@ public class Subiso {
 	public def UllMan_edge_Refinement(val A:FullLabelAdjMatrix,val B:FullLabelAdjMatrix,var M:Matrix, val d:Int,var k:Int):Boolean {
 		var lst:ArrayList[Int] = new ArrayList[Int]();  
 		A.neighbors(d, lst);
+		//Console.OUT.println("Matrix A:\n" + A.toString());
+		//Console.OUT.println("Matrix B:\n" + B.toString());
 		for (var idx1:Int=0;idx1<lst.size(); idx1++) { // for each neighbors of d in A
 			var i:Int = lst(idx1);              // i is one neighbor of d in A
 			var e1:Int = A.getEdgeLabel(d,i);
@@ -56,12 +58,16 @@ public class Subiso {
 			var lst:ArrayList[Int] = new ArrayList[Int]();   // holds adjacent vertices of i in A
 			// in lst Int is unsigned
 			A.neighbors(i,lst);
+			//Console.OUT.println("i:" + i);
+			//Console.OUT.println("lst" + lst.toString());
 			var match_i:ArrayList[Int] = new ArrayList[Int]();              // holds the vertices in B that matches i
 			// in match_i Int is unsigned
 			M.neighbors(i, match_i);
 			for (var idx1:Int=0;idx1<lst.size(); idx1++) { // for each neighbors of i in A
 				var x:Int = lst(idx1);              // x is one neighbor of i in A
 				// x is unsigned
+				//Console.OUT.println("idx1:" + idx1);
+				//Console.OUT.println("lst" + lst.toString());
 				for (var idx2:Int=0; idx2<match_i.size(); idx2++) { // for each matching of i in B
 					var j:Int = match_i(idx2);
 					// j is unsigned
@@ -78,8 +84,11 @@ public class Subiso {
 						}
 					}
 					
+					//Console.OUT.println("idx2:" + idx2);
+					//Console.OUT.println("res" + res.toString());
+					
 					var isnone:Boolean = true;
-					for (var k:Int = 0; i<res.size();k++){
+					for (var k:Int = 0; k<res.size();k++){
 						if(res(k) != 0){
 							isnone = false;
 							break;

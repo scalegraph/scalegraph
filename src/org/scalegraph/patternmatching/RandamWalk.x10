@@ -26,28 +26,34 @@ public class RandamWalk {// random walk on pattern space
 	public def initialize():LatticeNode{//make new Lattice Node contains the graph pattern that is consist of only one frequent edge, before walk
 
 		var p:Pattern = _pf.get_one_random_one_edge_frequent_pattern();
-		Console.OUT.println("complete get one random one edge frequent pattern in Random Walk initialize");
+		//Console.OUT.println("complete get one random one edge frequent pattern in Random Walk initialize");
 		
+		/*
 		val x = p.get_edges();
 		Console.OUT.println("edge labels:");
 		for(i in x){
 			Console.OUT.println(i);
 		}
+		 * */
 		
 		var cc:Canonicalcode = _iso.check_isomorphism(p);
-		Console.OUT.println("complete check iso");
-		Console.OUT.println("canonicalcode:" + cc.to_string());
+		//Console.OUT.println("complete check iso");
+		//Console.OUT.println("canonicalcode:" + cc.to_string());
 		p.set_canonical_code(cc);
-		Console.OUT.println("complete set canonical code");
+		//Console.OUT.println("complete set canonical code");
 		
+		/*
 		val y = p.get_edges();
 		Console.OUT.println("edge labels:");
 		for(i in y){
 			Console.OUT.println(i);
 		}
+		 * */
 	
+		/*
 		Console.OUT.println("pattern matrix:");
 		Console.OUT.println(p.get_matrix().toString());
+		*/
 		
 		if (p.get_is_frequent()==false) {
 			assert(false):("ERROR:this pattern is infrquent\n");
@@ -55,10 +61,10 @@ public class RandamWalk {// random walk on pattern space
 
 
 		var ln:LatticeNode = create_lattice_node(p);
-		Console.OUT.println("complete create lattice node");
+		//Console.OUT.println("complete create lattice node");
 		process_node(ln);
-		Console.OUT.println("complete process_node");
-		Console.OUT.println("complete inityalizing ranndom walk");
+		//Console.OUT.println("complete process_node");
+		//Console.OUT.println("complete inityalizing ranndom walk");
 		
 		return ln;
 	}
@@ -103,6 +109,7 @@ public class RandamWalk {// random walk on pattern space
 			_last = p;
 			current = next;
 			step++;
+			Console.OUT.println("current pattern:\n" + current.toString());
 			
 		}
 		
@@ -154,44 +161,48 @@ public class RandamWalk {// random walk on pattern space
 		Console.OUT.println("get frequent sub pattern");
 
 		Console.OUT.println("number of neighbors:" + neighbors.size());
+		Console.OUT.println("neighbors canonical code:");
+		for(i in neighbors){
+			Console.OUT.println(i.get_canonical_code().to_string());
+		}
 		
 		for (var i:Int=0; i<neighbors.size(); i++) {
 			Console.OUT.println("repeat time : " + i);
-			var one_neighbor:Pattern = neighbors(i);
-			var its_degree:Int =  _pf.get_super_degree(one_neighbor) + _pf.get_sub_degree(one_neighbor);
+			var one_neighbor:Cell[Pattern] = neighbors(i);
+			var its_degree:Int =  _pf.get_super_degree(one_neighbor()) + _pf.get_sub_degree(one_neighbor());
 			
 			var prob:Double = 1.0 / (its_degree>neighbors.size()? its_degree : neighbors.size());
-			var ln:LatticeNode = create_lattice_node(one_neighbor);
+			var ln:LatticeNode = create_lattice_node(one_neighbor());
 			n.getneighbors().add(ln);
 			n.getneighbor_prob().add(prob);
 			
 			var cc:Canonicalcode = _iso.check_isomorphism(p);
-			one_neighbor.set_canonical_code(cc);
+			one_neighbor().set_canonical_code(cc);
 		}
 		n.setis_processed(true);
 	}
 
 	
-	private def create_lattice_node(var p:Pattern):LatticeNode{
+	private def create_lattice_node(var p:Cell[Pattern]):LatticeNode{
 		Console.OUT.println("start create lattice node");
-		var cc:Canonicalcode = _iso.check_isomorphism(p);
+		var cc:Canonicalcode = _iso.check_isomorphism(p());
 		Console.OUT.println("complete check iso");
 		Console.OUT.println("canonicalcode:" + cc.to_string());
-		p.set_canonical_code(cc);
+		p().set_canonical_code(cc);
 		Console.OUT.println("complete set code");
 		var min_dfs_cc:String = cc.to_string(); // defined temporarily to avoid error in coding
 		Console.OUT.println("complete convert code to string");
 		var node:LatticeNode = exists(min_dfs_cc);
 		Console.OUT.println("complete chedking lattice node is exist or not");
 		if (node == null) {  // new pattern
-			node = new LatticeNode(p);
+			node = new LatticeNode(p());
 			node.setis_processed(false);
 			insert_lattice_node(min_dfs_cc, node);
 		}
 		else {
-			p = node.getpattern();
+			p() = node.getpattern();
 		}
-		Console.OUT.println("complete create lattice node");
+		//Console.OUT.println("complete create lattice node");
 		return node;
 	}
 	
@@ -203,4 +214,9 @@ public class RandamWalk {// random walk on pattern space
 	private def insert_lattice_node(var p:String, var ln:LatticeNode):void {
 		_node_map.put(p, ln);
 	}
+	
+	def get_node_map(){
+		return _node_map;
+	}
+	
 }
