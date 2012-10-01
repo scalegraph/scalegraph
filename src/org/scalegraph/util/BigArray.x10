@@ -7,10 +7,11 @@ import x10.compiler.NativeCPPCompilationUnit;
 
 import org.scalegraph.util.KeyGenerator;
 import x10.util.concurrent.Lock;
+import x10.compiler.ByRef;
 
-// @NativeCPPInclude("BigArrayCore.h")
-// @NativeCPPCompilationUnit("BigArrayCore.cc")
-public final class BigArray[T] {
+public type Index = Long;
+
+public final class BigArray[T] implements BigArrayOperation {
     
     private val size: Long;
     
@@ -132,7 +133,7 @@ public final class BigArray[T] {
         }
     }
     
-    public operator this (index: Long) {
+    public operator this (index: Index) {
         
         if (index > this.size) {
             
@@ -147,17 +148,17 @@ public final class BigArray[T] {
        return  at(p) raw()(offset);
     }
     
-    public operator this (index: Long) = (data: T) {
+    public operator this (index: Index) = (data: T) {
         raw()(index as Int) = data;
     }
     
-    public final def isLocal(index: Long): Boolean {
+    public final def isLocal(index: Index): Boolean {
         
         val pd = placeDescriptors(here.id);
         return index >= pd.startIndex && index <= pd.endIndex;
     }
     
-    public def getLocal(index: Long): T {
+    public def getLocal(index: Index): T {
         
         val pd = placeDescriptors(here.id);
         val offset = (index - pd.startIndex);
@@ -170,9 +171,9 @@ public final class BigArray[T] {
         return keyGenerator.getKey();
     }
     
-    public def getPlaceId(index: Long) = (index / blockSize) as Int;
+    public def getPlaceId(index: Index) = (index / blockSize) as Int;
    
-    public def getAsync(k: Key, index: Long, wrap: Wrap[T]) {
+    public def getAsync(k: Key, index: Index, wrap: Wrap[T]) {
         
         val placeId = getPlaceId(index);
         
@@ -181,6 +182,7 @@ public final class BigArray[T] {
            // Local data, just put it
             wrap.value = getLocal(index);
             Console.OUT.println("Getlocal data: " + index);
+            
         } else {
             
             // Add to local waiting list for monitoring
@@ -207,9 +209,19 @@ public final class BigArray[T] {
         }
     }
     
+    @ByRef
+    protected static struct SendEnvelope(hash: Int, obj: BigArrayOperation, indices: Array[Index]) {
+        
+        public def this(hash: Int, obj: BigArrayOperation, indices: Array[Index]) {
+            property(hash, obj, indices);
+        }
+        
+    }
+    
+    
     protected static interface RemoteCopyable {
         
-        def remoteCopy(): void;
+        def createSenedEnvelope(ArrayList[SendEnvelope]): void;
     }
     
     
@@ -217,7 +229,7 @@ public final class BigArray[T] {
         
         var obj: BigArray[V];
         var keys: ArrayList[Key];
-        var indices: ArrayList[Long];
+        var indices: ArrayList[Index];
         var wraps: ArrayList[Wrap[V]];
         
         protected def this(o: BigArray[V]) {
@@ -228,15 +240,17 @@ public final class BigArray[T] {
             wraps = new ArrayList[Wrap[V]]();
         }
         
-        protected def add(key: Key, index: Long, wrap: Wrap[V]) {
+        protected def add(key: Key, index: Index, wrap: Wrap[V]) {
             
             keys.add(key);
             indices.add(index);
             wraps.add(wrap);
         }
         
-         public def remoteCopy(): void {
-            
+         public def createSenedEnvelope(list: ArrayList[SendEnvelope]) {
+             
+             val sendEnvelope = new SendEnvelope(obj.hashCode(), obj, indices.toArray());
+             list.add(sendEnvelope);
         }
     }
     
@@ -249,16 +263,18 @@ public final class BigArray[T] {
         
         transient static val singleton: GlobalWaitList = new GlobalWaitList();
         
-        transient var isInit: Boolean = false;
-        transient var initLock: Lock = new Lock();
+        transient var isInit: Boolean;
+        transient val initLock: Lock;
         transient var mainJobLock: Lock;
         
         private def this() {
             
             processQ =  new Array[HashMap[Object, RemoteCopyable]](Place.MAX_PLACES);
             bufferQ =  new Array[HashMap[Object, RemoteCopyable]](Place.MAX_PLACES);
+            initLock = new Lock();
             mainJobLock = new Lock();
             qLock = new Lock();
+            isInit = false;
         }
         
         protected static def init() {
@@ -279,7 +295,7 @@ public final class BigArray[T] {
             singleton.initLock.unlock();
         }
         
-        protected static def addWaitEntry[X](obj: BigArray[X], placeId: Int, key: Key, index: Long,  wrap: Wrap[X]) {
+        protected static def addWaitEntry[X](obj: BigArray[X], placeId: Int, key: Key, index: Index,  wrap: Wrap[X]) {
 
             singleton.qLock.lock();
             val Q = singleton.bufferQ(placeId);
@@ -307,6 +323,7 @@ public final class BigArray[T] {
         }
         
         protected static def exitGlobalJob(): void {
+            
             singleton.mainJobLock.unlock();
         }
         
@@ -323,17 +340,17 @@ public final class BigArray[T] {
             singleton.qLock.unlock();
             
             // Get remote data
-            finish {
-                
-                for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
-                    
-                    async {
-                        
-                        
-                    }
-                }
-                
-            }
+            // finish {
+            //     
+            //     for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
+            //         
+            //         async {
+            //             
+            //             
+            //         }
+            //     }
+            //     
+            // }
         }
     }
     
@@ -349,7 +366,7 @@ public final class BigArray[T] {
         transient var waitList: HashMap[Key, InstanceWaitEntry[U]] = new HashMap[Key, InstanceWaitEntry[U]]();
         transient var internalLock: Lock = new Lock();
         
-        public def addWait(k: Key, index: Long) {
+        public def addWait(k: Key, index: Index) {
             
             internalLock.lock();
             
@@ -372,7 +389,23 @@ public final class BigArray[T] {
             val obj = waitList.getOrElse(key, null);
             internalLock.unlock();
             
-            return obj.indices.size() == 0;
+            // All data is local, no waiting entry
+            if(obj == null) {
+                return true;
+            }
+            
+            if(obj.indices.size() == 0) {
+                
+                internalLock.lock();
+                
+                waitList.remove(key);
+                
+                internalLock.unlock();
+                
+                return true;
+            }
+            
+            return false;
         }
         
         public def removeKey(key: Key): void {
