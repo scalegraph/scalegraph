@@ -8,7 +8,6 @@ import x10.compiler.NativeCPPCompilationUnit;
 import org.scalegraph.util.KeyGenerator;
 import x10.util.concurrent.Lock;
 import x10.compiler.ByRef;
-import org.scalegraph.util.BigArrayOperation;
 
 public type Index = Long;
 
@@ -214,11 +213,10 @@ public final class BigArray[T] implements BigArrayOperation {
         
     }
     
-    @ByRef
-    protected static struct SendPayLoad(hash: Int, obj: BigArrayOperation, indices: Array[Index]) {
+    
+    protected static class SendPayload(hash: Int, obj: BigArrayOperation, indices: Array[Index]) {
         
         public def this(hash: Int, obj: BigArrayOperation, indices: Array[Index]) {
-            
             property(hash, obj, indices);
         }
         
@@ -227,7 +225,7 @@ public final class BigArray[T] implements BigArrayOperation {
     
     protected static interface RemoteCopyable {
         
-        def createSendEnvelope(ArrayList[SendPayLoad]): void;
+        def createSendPayload(ArrayList[SendPayload]): void;
     }
     
     
@@ -253,11 +251,11 @@ public final class BigArray[T] implements BigArrayOperation {
             wraps.add(wrap);
         }
         
-         public def createSendEnvelope(list: ArrayList[SendPayLoad]) {
+         public def createSendPayload(list: ArrayList[SendPayload]) {
              
              val h = obj.hashCode();
-             val sendPayLoad = new SendPayLoad(h, obj, indices.toArray());
-             list.add(sendPayLoad);
+             val sendPayload = new SendPayload(h, obj, indices.toArray());
+             list.add(sendPayload);
         }
     }
     
@@ -351,32 +349,12 @@ public final class BigArray[T] implements BigArrayOperation {
             //     
             //     for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
             //         
-            //         val p = i; // Copy to pass to closure
-            //         
-            //         async {               
+            //         async {
             //             
-            //             val placeQ = singleton.processQ(p);
             //             
-            //             if(placeQ.size() != 0) {
-            //             
-	           //              val payload = new ArrayList[SendPayLoad]();
-	           //              
-	           //              val it = placeQ.keySet();
-	           //              
-	           //              for(obj in it) {
-	           //                  
-	           //                  // Each WaitEntries append their payloads 
-	           //                  val entry = placeQ.get(obj).value; 
-	           //                  entry.createSendEnvelope(payload);
-	           //              }
-	           //              
-	           //              // // Send request to remote place
-	           //              // at (Place.places()(p)) {
-	           //              //     
-	           //              // }
-            //             }
             //         }
             //     }
+            //     
             // }
         }
     }
@@ -441,5 +419,5 @@ public final class BigArray[T] implements BigArrayOperation {
             waitList.remove(key);
             internalLock.unlock();
         }
-    }
+	}
 }
