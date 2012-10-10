@@ -3,6 +3,7 @@ package org.scalegraph.util;
 import x10.util.*;
 import org.scalegraph.util.KeyGenerator;
 import x10.util.concurrent.Lock;
+import org.scalegraph.util.BigArray;
 
 protected final class InstanceWaitList[U] {
     
