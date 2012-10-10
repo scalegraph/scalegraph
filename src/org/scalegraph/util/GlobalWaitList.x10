@@ -44,6 +44,7 @@ public class GlobalWaitList {
             for (var i:int = 0; i < Place.MAX_PLACES; ++i) {
                 
                 singleton.bufferQ(i) = new HashMap[Object, RemoteCopyable]();
+                singleton.processQ(i) = new HashMap[Object, RemoteCopyable]();
             }
             
             x10.util.concurrent.Fences.storeStoreBarrier();
@@ -71,7 +72,6 @@ public class GlobalWaitList {
             
             waitEntry = temp as ShareEntry[X];
         }
-        
         val wc = singleton.waitCount.getOrElse(key, -1);
         
         if (wc == -1) {
@@ -100,7 +100,6 @@ public class GlobalWaitList {
     protected static def isDataReady(key: Key): Boolean {
         
         singleton.qLock.lock();
-        
         val result = singleton.waitCount.containsKey(key);
         singleton.qLock.unlock();
         
@@ -112,7 +111,7 @@ public class GlobalWaitList {
         // Swap queue
         singleton.qLock.lock();
         
-        val temp = singleton.bufferQ;
+        var temp: Array[HashMap[Object, RemoteCopyable]] = singleton.bufferQ;
         singleton.bufferQ = singleton.processQ;
         singleton.processQ = temp;
         
@@ -127,7 +126,8 @@ public class GlobalWaitList {
                 val p = i; // Copy to pass to closure
                 val placeQ = singleton.processQ(p);
                 
-                async doRemoteOperation (p, placeQ);          
+                doRemoteOperation (p, placeQ); 
+                // async doRemoteOperation (p, placeQ);          
             } 
         }
     }
@@ -149,19 +149,29 @@ public class GlobalWaitList {
             }
             
             // Send request to remote place
-            at (Place.places()(placedId)) {
+            val remoteData = at (Place.places()(placedId)) {
                 
                 val returnData = new ArrayList[ReplyPayload]();
                 
                 for(var i: Int = 0; i < payload.size(); ++i) {
                     
                     Console.OUT.println("Reuqest index: " + payload(i).indices + " on " + here.id);
-                    // val obj = payload(i).obj;
-                    // val keys = payload(i).keys;
-                    // val indices = payload(i).indices;
-                    // val data = obj.getData(indices);
+                    val p = payload(i);
+                    val hash = p.hash;
+                    val obj = p.obj;
+                    val keys = p.keys;
+                    val indices = p.indices;
+                    val data = obj.getData(indices);
                     
+                    returnData.add(new ReplyPayload(hash, obj, keys, indices, data));
                 }
+                return returnData.toArray();
+            };
+            
+            Console.OUT.println("Remote Data: ");
+            for(var i:int = 0; i < remoteData.size; ++i) {
+                
+                Console.OUT.println(remoteData(i).data);
             }
             
             // Temp block

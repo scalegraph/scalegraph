@@ -239,7 +239,7 @@ public final class BigArray[T] implements BigArrayOperation {
             // operationLock.unlock();
         }
         
-        Console.OUT.println("P(" + here.id + ") -> start at: " + placeDesc.startIndex);
+        // Console.OUT.println("P(" + here.id + ") -> start at: " + placeDesc.startIndex);
         
         return list.toArray();
     }
