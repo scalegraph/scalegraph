@@ -1,22 +1,21 @@
 package org.scalegraph.util;
 
 import x10.util.*;
-import org.scalegraph.util.GlobalWaitList;
-import org.scalegraph.util.KeyGenerator;
 import x10.util.concurrent.Lock;
+
+import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.RemoteCopyable;
 import org.scalegraph.util.ShareEntry;
-
-
+import org.scalegraph.util.GlobalWaitList;
 
 
 public type Index = Long;
 
 public final class BigArray[T] implements BigArrayOperation {
     
-    private val size: Long;
+    private var size: Long;
     
-    private val placeDescriptors: Array[PlaceDescriptor]; // valid only on place0
+    // private var placeDescriptors: Rail[PlaceDescriptor];
     
     private val numPlaces: Int;
     
@@ -30,18 +29,14 @@ public final class BigArray[T] implements BigArrayOperation {
     
     private var instanceWaitList: InstanceWaitList[T];
     
-    private val operationLock: Lock;
-    
     private def this(sz: long) {
         
-        operationLock = new Lock();
         dist = Dist.makeUnique();
         size = sz;
         numPlaces = Place.MAX_PLACES;
         
         // Get space assigned to each place
-        val tempPlaceDescriptors = new Array[PlaceDescriptor](numPlaces);
-        placeDescriptors = tempPlaceDescriptors;
+        val placeDescriptors = new Rail[PlaceDescriptor](numPlaces);
         
         blockSize = (size / numPlaces) as Int;
         leftOver = (size % numPlaces) as Int;
@@ -60,24 +55,14 @@ public final class BigArray[T] implements BigArrayOperation {
             
         }
         
-        // val initPd = ()=> {
-        //     
-        //     // val storage = IndexedMemoryChunk.allocateZeroed[PlaceDescriptor](Place.MAX_PLACES);
-        //     return new LocalState(tempPlaceDescriptors.raw());
-        // };
-        // 
-        // localPdHandle = PlaceLocalHandle.make[LocalState[PlaceDescriptor]](dist, initPd);
-        
         val pd = placeDescriptors;
         val init = ()=> {
             
             val storage = IndexedMemoryChunk.allocateZeroed[T]( pd(here.id).size );
-            return new LocalState(storage);
+            return new LocalState(storage, pd);
         };
         
         localHandle = PlaceLocalHandle.make[LocalState[T]](dist, init);
-        
-        // Init place descriptor for each place
         
         instanceWaitList = null;
     }
@@ -97,21 +82,19 @@ public final class BigArray[T] implements BigArrayOperation {
         return b;
     }
     
-    // protected val localPdHandle: PlaceLocalHandle[LocalState[PlaceDescriptor]];
-    
     protected val localHandle: PlaceLocalHandle[LocalState[T]];
     protected transient var isStoragePointerValid: boolean;
     protected transient var cachedStoragePointer: IndexedMemoryChunk[T]; 
     
-    protected static class LocalState[T](data: IndexedMemoryChunk[T]) {
+    protected static class LocalState[T](IMC: IndexedMemoryChunk[T], placeDescriptors: Rail[PlaceDescriptor]) {
         
-        public def this(c: IndexedMemoryChunk[T]) {
+        public def this(IMC: IndexedMemoryChunk[T], placeDescriptors: Rail[PlaceDescriptor]) {
             
-            property (c);
+            property (IMC, placeDescriptors);
         }
     }
     
-    protected static class PlaceDescriptor(startIndex: Int, size: Int, endIndex: Int) {
+    static struct PlaceDescriptor(startIndex: Int, size: Int, endIndex: Int) {
         
         def this(startIndex: Int, size: Int, endIndex: Int) {
             
@@ -119,11 +102,24 @@ public final class BigArray[T] implements BigArrayOperation {
             }
     }
     
+    protected def setPlaceDistriptorForAll() {
+        
+        for(var i: Int = 1; i < Place.MAX_PLACES; ++i) {
+            
+            val pd = localHandle().placeDescriptors;
+            val p = i;
+            async at(Place.place(p)) {
+                
+                
+            }
+        }
+    }
+    
     protected final def raw(): IndexedMemoryChunk[T] {
     
         if (!isStoragePointerValid) {
             
-            cachedStoragePointer = localHandle().data;
+            cachedStoragePointer = localHandle().IMC;
             x10.util.concurrent.Fences.storeStoreBarrier();
             isStoragePointerValid = true;
         }
@@ -158,7 +154,7 @@ public final class BigArray[T] implements BigArrayOperation {
         }
         
         var placeId: Int = (index / blockSize) as Int;
-        val pd = placeDescriptors(placeId);
+        val pd = localHandle().placeDescriptors(placeId);
         val offset: Int = (index - pd.startIndex) as Int;
         val p = Place.places()(placeId);
         
@@ -171,13 +167,13 @@ public final class BigArray[T] implements BigArrayOperation {
     
     public final def isLocal(index: Index): Boolean {
         
-        val pd = placeDescriptors(here.id);
+        val pd = localHandle().placeDescriptors(here.id);
         return index >= pd.startIndex && index <= pd.endIndex;
     }
     
     public def getLocal(index: Index): T {
         
-        val pd = placeDescriptors(here.id);
+        val pd = localHandle().placeDescriptors(here.id);
         val offset = (index - pd.startIndex);
         
         return raw()(offset);
@@ -233,15 +229,17 @@ public final class BigArray[T] implements BigArrayOperation {
         
         val size = indices.size;
         val list = new ArrayList[T]();
-        // val placeDesc = localPdHandle().data(here.id);
-        // 
-        // for(var i: Int = 0; i < size; ++i) {
-        //     val localIndex = indices(i) - placeDesc.startIndex;
-        //     
-        //     operationLock.lock();
-        //     list.add(localHandle().data(localIndex));
-        //     operationLock.unlock();
-        // }
+        val placeDesc = localHandle().placeDescriptors(here.id);
+        
+        for(var i: Int = 0; i < size; ++i) {
+            val localIndex = indices(i) - placeDesc.startIndex;
+            
+            // operationLock.lock();
+            list.add(localHandle().IMC(localIndex));
+            // operationLock.unlock();
+        }
+        
+        Console.OUT.println("P(" + here.id + ") -> start at: " + placeDesc.startIndex);
         
         return list.toArray();
     }
