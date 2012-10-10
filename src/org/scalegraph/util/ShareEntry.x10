@@ -3,7 +3,7 @@ package org.scalegraph.util;
 import x10.util.*;
 import org.scalegraph.util.BigArray;
 import org.scalegraph.util.KeyGenerator;
-import org.scalegraph.util.SendPayload;
+import org.scalegraph.util.RequestPayload;
 import org.scalegraph.util.RemoteCopyable;
 
 
@@ -29,10 +29,10 @@ public class ShareEntry[V] implements RemoteCopyable {
         wraps.add(wrap);
     }
     
-    public def createSendPayload(list: ArrayList[SendPayload]) {
+    public def createSendPayload(list: ArrayList[RequestPayload]) {
         
         val h = obj.hashCode();
-        val sendPayload = new SendPayload(h, obj, indices.toArray());
+        val sendPayload = new RequestPayload(h, obj, keys.toArray(), indices.toArray());
         list.add(sendPayload);
     }
 }
