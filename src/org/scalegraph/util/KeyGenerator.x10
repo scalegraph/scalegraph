@@ -12,6 +12,7 @@ public class KeyGenerator {
     public static native def genNextKey(): void;
     
     public def getKey() {
+        
         this.genNextKey();
         return this.nextKey;
     }
