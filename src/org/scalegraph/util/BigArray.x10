@@ -1,11 +1,12 @@
 package org.scalegraph.util;
 
 import x10.util.*;
+import org.scalegraph.util.GlobalWaitList;
 import org.scalegraph.util.KeyGenerator;
 import x10.util.concurrent.Lock;
 import org.scalegraph.util.RemoteCopyable;
 import org.scalegraph.util.ShareEntry;
-import org.scalegraph.util.GlobalWaitList;
+
 
 
 
@@ -15,7 +16,7 @@ public final class BigArray[T] implements BigArrayOperation {
     
     private val size: Long;
     
-    private val placeDescriptors: Rail[PlaceDescriptor];
+    private val placeDescriptors: Array[PlaceDescriptor]; // valid only on place0
     
     private val numPlaces: Int;
     
@@ -29,14 +30,18 @@ public final class BigArray[T] implements BigArrayOperation {
     
     private var instanceWaitList: InstanceWaitList[T];
     
+    private val operationLock: Lock;
+    
     private def this(sz: long) {
         
+        operationLock = new Lock();
         dist = Dist.makeUnique();
         size = sz;
         numPlaces = Place.MAX_PLACES;
         
         // Get space assigned to each place
-        placeDescriptors = new Rail[PlaceDescriptor](numPlaces);
+        val tempPlaceDescriptors = new Array[PlaceDescriptor](numPlaces);
+        placeDescriptors = tempPlaceDescriptors;
         
         blockSize = (size / numPlaces) as Int;
         leftOver = (size % numPlaces) as Int;
@@ -55,6 +60,14 @@ public final class BigArray[T] implements BigArrayOperation {
             
         }
         
+        // val initPd = ()=> {
+        //     
+        //     // val storage = IndexedMemoryChunk.allocateZeroed[PlaceDescriptor](Place.MAX_PLACES);
+        //     return new LocalState(tempPlaceDescriptors.raw());
+        // };
+        // 
+        // localPdHandle = PlaceLocalHandle.make[LocalState[PlaceDescriptor]](dist, initPd);
+        
         val pd = placeDescriptors;
         val init = ()=> {
             
@@ -63,6 +76,8 @@ public final class BigArray[T] implements BigArrayOperation {
         };
         
         localHandle = PlaceLocalHandle.make[LocalState[T]](dist, init);
+        
+        // Init place descriptor for each place
         
         instanceWaitList = null;
     }
@@ -82,6 +97,8 @@ public final class BigArray[T] implements BigArrayOperation {
         return b;
     }
     
+    // protected val localPdHandle: PlaceLocalHandle[LocalState[PlaceDescriptor]];
+    
     protected val localHandle: PlaceLocalHandle[LocalState[T]];
     protected transient var isStoragePointerValid: boolean;
     protected transient var cachedStoragePointer: IndexedMemoryChunk[T]; 
@@ -94,7 +111,7 @@ public final class BigArray[T] implements BigArrayOperation {
         }
     }
     
-    private static struct PlaceDescriptor(startIndex: Int, size: Int, endIndex: Int) {
+    protected static class PlaceDescriptor(startIndex: Int, size: Int, endIndex: Int) {
         
         def this(startIndex: Int, size: Int, endIndex: Int) {
             
@@ -191,25 +208,41 @@ public final class BigArray[T] implements BigArrayOperation {
         }
     }
     
-    public def wait(key: Key) {
+    public static def wait(key: Key) {
         
         while (!GlobalWaitList.isDataReady(key)) {
             
             if (GlobalWaitList.enterGlobalJob()) {
                 
                 // First thread
+                Console.OUT.println("Enter global job");
                 GlobalWaitList.execute();
                 GlobalWaitList.exitGlobalJob();
                 
             } else {
                 
                 // Pause this activity and run other jobs in the queue
+                Console.OUT.println("Waiting, run another jobs");
                 Runtime.probe();
+                System.sleep(1);
             }
         }
     }
     
-    public def getData() {
+    public def getData(indices: Array[Index]): Any {
         
+        val size = indices.size;
+        val list = new ArrayList[T]();
+        // val placeDesc = localPdHandle().data(here.id);
+        // 
+        // for(var i: Int = 0; i < size; ++i) {
+        //     val localIndex = indices(i) - placeDesc.startIndex;
+        //     
+        //     operationLock.lock();
+        //     list.add(localHandle().data(localIndex));
+        //     operationLock.unlock();
+        // }
+        
+        return list.toArray();
     }
 }
