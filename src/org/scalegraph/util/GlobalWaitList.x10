@@ -4,9 +4,9 @@ import x10.util.*;
 import x10.util.concurrent.Lock;
 import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.RemoteCopyable;
-import org.scalegraph.util.ShareEntry;
-import org.scalegraph.util.RequestPayload;
-import org.scalegraph.util.ReplyPayload;
+import org.scalegraph.util.LocalWaitEntry;
+import org.scalegraph.util.ReadRequestPayload;
+import org.scalegraph.util.ReadReplyPayload;
 
 
 public class GlobalWaitList {
@@ -61,16 +61,16 @@ public class GlobalWaitList {
         singleton.qLock.unlock();
         
         val temp = Q.getOrElse(obj, null);
-        var waitEntry: ShareEntry[X];
+        var waitEntry: LocalWaitEntry[X];
         
         if (temp == null) {
             
-            waitEntry = new ShareEntry[X](obj);
+            waitEntry = new LocalWaitEntry[X](obj);
             Q.put(obj, waitEntry);
             
         } else {
             
-            waitEntry = temp as ShareEntry[X];
+            waitEntry = temp as LocalWaitEntry[X];
         }
         val wc = singleton.waitCount.getOrElse(key, -1);
         
@@ -137,7 +137,7 @@ public class GlobalWaitList {
 
         if(placeQ.size() > 0) {
             
-            val payload = new ArrayList[RequestPayload]();
+            val payload = new ArrayList[ReadRequestPayload]();
             
             val it = placeQ.keySet();
             
@@ -151,7 +151,7 @@ public class GlobalWaitList {
             // Send request to remote place
             val remoteData = at (Place.places()(placedId)) {
                 
-                val returnData = new ArrayList[ReplyPayload]();
+                val returnData = new ArrayList[ReadReplyPayload]();
                 
                 for(var i: Int = 0; i < payload.size(); ++i) {
                     
@@ -163,7 +163,7 @@ public class GlobalWaitList {
                     val indices = p.indices;
                     val data = obj.getData(indices);
                     
-                    returnData.add(new ReplyPayload(hash, obj, keys, indices, data));
+                    returnData.add(new ReadReplyPayload(hash, obj, keys, indices, data));
                 }
                 return returnData.toArray();
             };
@@ -174,8 +174,6 @@ public class GlobalWaitList {
                 Console.OUT.println(remoteData(i).data);
             }
             
-            // Temp block
-            // singleton.qLock.lock();
                
             for (var i: Int = 0; i < payload.size(); ++i) {
                 
@@ -200,8 +198,6 @@ public class GlobalWaitList {
                     }
                 }
             }
-            
-            // singleton.qLock.unlock();
         }
     }
 }

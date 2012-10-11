@@ -1,6 +1,5 @@
 package test.scalegraph.util;
 
-import org.scalegraph.util.ShareEntry;
 import org.scalegraph.util.Wrap;
 import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.BigArray;
@@ -26,15 +25,20 @@ public class TestBigArray {
         //     x = B(i);
         // }
 
-        val w = new Wrap[Long]();
-        val y = new Wrap[Long]();
         
-        Console.OUT.println("Call async");
-        val k = BigArray.getKey();
-        B.getAsync(k, 0L, w);
-        B.getAsync(k, size - 20, y);
-        B.getAsync(k, size/3, y);
-        BigArray.wait(k);
+        for (var it: Int = 0; it < 2; ++it) {
+
+            Console.OUT.println("Call async it: " + 1);
+            val w = new Wrap[Long]();
+            val y = new Wrap[Long]();
+            val k = BigArray.getKey();
+            // B.getAsync(k, 0L, w);
+            B.getAsync(k, size - 20, y);
+            B.getAsync(k, size - 30, y);
+            B.getAsync(k, size - 40, y);
+            B.getAsync(k, size/3, y);
+            BigArray.wait(k);
+        }
 //         
 //         Console.OUT.println(B.getKey());
 //         Console.OUT.println(B.getKey());

@@ -5,7 +5,7 @@ import x10.util.concurrent.Lock;
 
 import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.RemoteCopyable;
-import org.scalegraph.util.ShareEntry;
+import org.scalegraph.util.LocalWaitEntry;
 import org.scalegraph.util.GlobalWaitList;
 
 
@@ -27,7 +27,7 @@ public final class BigArray[T] implements BigArrayOperation {
     
     private static val keyGenerator = new KeyGenerator();
     
-    private var instanceWaitList: InstanceWaitList[T];
+    // private var instanceWaitList: InstanceWaitList[T];
     
     private def this(sz: long) {
         
@@ -64,12 +64,12 @@ public final class BigArray[T] implements BigArrayOperation {
         
         localHandle = PlaceLocalHandle.make[LocalState[T]](dist, init);
         
-        instanceWaitList = null;
+        // instanceWaitList = null;
     }
     
     private def init() {
         
-        instanceWaitList = new InstanceWaitList[T]();
+        // instanceWaitList = new InstanceWaitList[T]();
         
         // Init global structure
         GlobalWaitList.init();
@@ -199,9 +199,13 @@ public final class BigArray[T] implements BigArrayOperation {
         } else {
             
             // Add to local waiting list for monitoring
-            instanceWaitList.addWait(k, index);
+            // instanceWaitList.addWait(k, index);
             GlobalWaitList.addWaitEntry[T](this, placeId, k, index, wrap);
         }
+    }
+    
+    public def writeAsync(k :Key, Index, data: T) {
+        
     }
     
     public static def wait(key: Key) {
