@@ -30,7 +30,7 @@ public class ARPACK {
 		ldv:Int, iparam:Array[Int](1), ipntr:Array[Int](1), workd:Array[Double](1), workl:Array[Double](1),
 		lworkl:Int, info:Int
 	): Int;
-	/*
+	
 	@Native("c++", "pdsaupd_wrap(#comm, &#ido, #bmat, #n, #which, #nev, #tol, (#resid)->raw()->raw(), #ncv, (#v)->raw()->raw(), #ldv, (#iparam)->raw()->raw(), (#ipntr)->raw()->raw(), (#workd)->raw()->raw(), (#workl)->raw()->raw(), #lworkl, &#info)")
 	public native static def pdsaupd(
 			comm:Int, ido:Int, bmat:Char, n:Int, which:Int, nev:Int,
@@ -47,5 +47,7 @@ public class ARPACK {
 			ldv:Int, iparam:Array[Int](1), ipntr:Array[Int](1), workd:Array[Double](1), workl:Array[Double](1),
 			lworkl:Int, info:Int
 	): Int;
-	 * */
+	
+	@Native("c++", "pdlamch_wrap(#ictxt, #cmach)")
+	public native static def pdlamch(ictxt:Int, cmach:Char): Double;
 }

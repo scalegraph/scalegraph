@@ -38,6 +38,10 @@ ATLAS_LIB = /nfs/data1/scalegraph/ATLAS/lib/libatlas.a
 #SCALAPACK location
 SCALAPACK = /nfs/data1/scalegraph/scalapack-2.0.1/libscalapack.a
 
+#ARPACK locations
+ARPACK_LIB = /
+PARPACK_LIB = /
+
 #Location of the GML Library
 GML_DIST = /nfs/data1/scalegraph/X10_runtime/x10.gml
 GML_PROPS = native_gml.properties
@@ -853,7 +857,7 @@ test_big_array:
 test_psc:
 	@echo "----------- Compile Parallel Spectral Clustering Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
-	-cxx-postarg /work0/t2gsuzumuralab/ogata/Developments/ARPACK/libarpack_LINUX.a \
+	-cxx-postarg $(ARPACK_LIB) \
 	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg $(CLAPACK_LIB) \
 	-cxx-postarg -lgfortran \
@@ -914,6 +918,25 @@ test_matrixrandomwalk:
 	src/test/scalegraph/clustering/Tool.x10 \
 	
 	@echo "----------- Launch Random Walk with Restart Tester ---------------------------";
+	X10RT_MPI_THREAD_MULTIPLE=true MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	@echo "----------- Test Completed ---------------------------------";
+
+# Test 34
+test_parpack:
+	@echo "----------- Compile PARPACK Tester --------------------------";
+	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-post $(MPI_HOME)/bin/mpic++ \
+	-cxx-postarg $(ARPACK_LIB) \
+	-cxx-postarg $(PARPACK_LIB) \
+	-cxx-postarg $(CBLAS_LIB) \
+	-cxx-postarg $(CLAPACK_LIB) \
+	-cxx-postarg -lgfortran \
+	src/test/scalegraph/clustering/psc/TestPARPACK.x10 \
+	src/org/scalegraph/clustering/MPI.x10 \
+	src/org/scalegraph/clustering/psc/ARPACK.x10;
+	
+	@echo "----------- Launch PARPACK Tester ---------------------------";
 	X10RT_MPI_THREAD_MULTIPLE=true MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 

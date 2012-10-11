@@ -1,18 +1,12 @@
 package org.scalegraph.clustering.psc;
 
-import x10.util.ArrayBuilder;
-import x10.util.ArrayList;
-import x10.util.Box;
 import x10.util.StringBuilder;
 import x10.util.Pair;
-
-import org.scalegraph.graph.PlainGraph;
 
 public class SparseMatrix {
 	
 	var size:Int;
 	var entry:Array[Array[Pair[Int, Double]]];
-	//var num:Numbering;
 	
 	public def getSize(): Int {
 		return size;

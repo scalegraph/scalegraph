@@ -11,7 +11,7 @@ int dseupd_wrap(int rvec, x10_char howmny, int *select, double *d, double *z,
                 int ldv, int *iparam, int *ipntr, double *workd, double *workl,
                 int lworkl, int *info);
 
-/*int pdsaupd_wrap(int comm, int *ido, x10_char bmat, int n, int which_, int nev,
+int pdsaupd_wrap(int comm, int *ido, x10_char bmat, int n, int which_, int nev,
                  double tol, double *resid, int ncv, double *v, int ldv,
                  int *iparam, int *ipntr, double *workd, double *workl, int lworkl,
                  int *info);
@@ -21,4 +21,5 @@ int pdseupd_wrap(int comm, int rvec, x10_char howmny, int *select, double *d, do
                  int nev, double tol, double *resid, int ncv, double *v,
                  int ldv, int *iparam, int *ipntr, double *workd, double *workl,
                  int lworkl, int *info);
-*/
+
+double pdlamch_wrap(int ictxt, x10_char cmach);

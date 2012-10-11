@@ -13,7 +13,6 @@ int dseupd_(int *rvec, char *howmny, int *select, double *d, double *z,
             int *ldv, int *iparam, int *ipntr, double *workd, double *workl,
             int *lworkl, int *info);
 
-/*
 int pdsaupd_(int *comm, int *ido, char *bmat, int *n, char *which, int *nev,
              double *tol, double *resid, int *ncv, double *v, int *ldv,
              int *iparam, int *ipntr, double *workd, double *workl, int *lworkl,
@@ -24,7 +23,8 @@ int pdseupd_(int *comm, int *rvec, char *howmny, int *select, double *d, double 
              int *nev, double *tol, double *resid, int *ncv, double *v,
              int *ldv, int *iparam, int *ipntr, double *workd, double *workl,
              int *lworkl, int *info);
-*/
+
+double pdlamch_(int *ictxt, char *cmach);
 }
 
 int dsaupd_wrap(int *ido, x10_char bmat, int n, int which_, int nev,
@@ -73,7 +73,7 @@ int dseupd_wrap(int rvec, x10_char howmny, int *select, double *d, double *z,
                    &lworkl, info);
 }
 
-/*int pdsaupd_wrap(int comm, int *ido, x10_char bmat, int n, int which_, int nev,
+int pdsaupd_wrap(int comm, int *ido, x10_char bmat, int n, int which_, int nev,
                  double tol, double *resid, int ncv, double *v, int ldv,
                  int *iparam, int *ipntr, double *workd, double *workl, int lworkl,
                  int *info){
@@ -117,4 +117,8 @@ int pdseupd_wrap(int comm, int rvec, x10_char howmny, int *select, double *d, do
                    &nev, &tol, resid, &ncv, v,
                    &ldv, iparam, ipntr, workd, workl,
                    &lworkl, info);
-}*/
+}
+
+double pdlamch_wrap(int ictxt, x10_char cmach){
+	return pdlamch_(&ictxt, (char *)&cmach.v);
+}
