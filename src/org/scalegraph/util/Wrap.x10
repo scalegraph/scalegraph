@@ -11,6 +11,7 @@ public class Wrap[T] {
     public  operator this() = this.value;
     
     public operator this() = (v: T) {
+        
         value = v;
     }
 }

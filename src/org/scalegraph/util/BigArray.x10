@@ -4,9 +4,9 @@ import x10.util.*;
 import x10.util.concurrent.Lock;
 
 import org.scalegraph.util.KeyGenerator;
-import org.scalegraph.util.RemoteCopyable;
-import org.scalegraph.util.LocalWaitEntry;
-import org.scalegraph.util.GlobalWaitList;
+import org.scalegraph.util.Pending;
+import org.scalegraph.util.LocalPending;
+import org.scalegraph.util.BigArrayQueueManager;
 
 
 public type Index = Long;
@@ -72,7 +72,7 @@ public final class BigArray[T] implements BigArrayOperation {
         // instanceWaitList = new InstanceWaitList[T]();
         
         // Init global structure
-        GlobalWaitList.init();
+        BigArrayQueueManager.init();
     }
     
     public static def make[T](sz: long): BigArray[T] {
@@ -141,7 +141,6 @@ public final class BigArray[T] implements BigArrayOperation {
                         IMC(i) = d;
                     }
                 }
-                
             }
         }
     }
@@ -171,12 +170,20 @@ public final class BigArray[T] implements BigArrayOperation {
         return index >= pd.startIndex && index <= pd.endIndex;
     }
     
-    public def getLocal(index: Index): T {
+    protected def getLocal(index: Index): T {
         
         val pd = localHandle().placeDescriptors(here.id);
         val offset = (index - pd.startIndex);
         
         return raw()(offset);
+    }
+    
+    protected def writeLocal(index: Index, data: T) {
+        
+        val pd = localHandle().placeDescriptors(here.id);
+        val offset = (index - pd.startIndex);
+        
+        raw()(offset) = data;
     }
     
     public static def getKey(): Key {
@@ -192,7 +199,7 @@ public final class BigArray[T] implements BigArrayOperation {
         
         if (placeId == here.id) {
             
-           // Local data, just put it
+           // Local data, just put it to wrapper
             wrap.value = getLocal(index);
             Console.OUT.println("Getlocal data: " + index);
             
@@ -200,24 +207,38 @@ public final class BigArray[T] implements BigArrayOperation {
             
             // Add to local waiting list for monitoring
             // instanceWaitList.addWait(k, index);
-            GlobalWaitList.addWaitEntry[T](this, placeId, k, index, wrap);
+            BigArrayQueueManager.addRead[T](this, placeId, k, index, wrap);
         }
     }
     
-    public def writeAsync(k :Key, Index, data: T) {
+    public def writeAsync(k :Key, index: Index, data: T) {
         
+        val placeId = getPlaceId(index);
+        
+        if (placeId == here.id) {
+            
+            // Local data, just write it directly
+            writeLocal(index, data);
+            Console.OUT.println("Getlocal data: " + index);
+            
+        } else {
+            
+            // Add to local waiting list for monitoring
+            // instanceWaitList.addWait(k, index);
+            BigArrayQueueManager.addWrite[T](this, placeId, k, index, data);
+        }
     }
     
     public static def wait(key: Key) {
         
-        while (!GlobalWaitList.isDataReady(key)) {
+        while (!BigArrayQueueManager.isDataReady(key)) {
             
-            if (GlobalWaitList.enterGlobalJob()) {
+            if (BigArrayQueueManager.enterGlobalJob()) {
                 
                 // First thread
                 Console.OUT.println("Enter global job");
-                GlobalWaitList.execute();
-                GlobalWaitList.exitGlobalJob();
+                BigArrayQueueManager.execute();
+                BigArrayQueueManager.exitGlobalJob();
                 
             } else {
                 

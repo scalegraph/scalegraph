@@ -3,19 +3,19 @@ package org.scalegraph.util;
 import x10.util.*;
 import x10.util.concurrent.Lock;
 import org.scalegraph.util.KeyGenerator;
-import org.scalegraph.util.RemoteCopyable;
-import org.scalegraph.util.LocalWaitEntry;
+import org.scalegraph.util.Pending;
+import org.scalegraph.util.LocalPending;
 import org.scalegraph.util.ReadRequestPayload;
 import org.scalegraph.util.ReadReplyPayload;
 
 
-public class GlobalWaitList {
+protected class BigArrayQueueManager {
     
-    transient var processQ: Array[HashMap[Object, RemoteCopyable]];
-    transient var bufferQ: Array[HashMap[Object, RemoteCopyable]];
+    transient var readProcessQ: Array[HashMap[Object, Pending]];
+    transient var readBufferQ: Array[HashMap[Object, Pending]];
     transient var qLock: Lock;
     
-    transient static val singleton: GlobalWaitList = new GlobalWaitList();
+    transient static val singleton: BigArrayQueueManager = new BigArrayQueueManager();
     
     transient var isInit: Boolean;
     transient val initLock: Lock;
@@ -25,8 +25,8 @@ public class GlobalWaitList {
     
     protected def this() {
         
-        processQ =  new Array[HashMap[Object, RemoteCopyable]](Place.MAX_PLACES);
-        bufferQ =  new Array[HashMap[Object, RemoteCopyable]](Place.MAX_PLACES);
+        readProcessQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
+        readBufferQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
         initLock = new Lock();
         mainJobLock = new Lock();
         qLock = new Lock();
@@ -43,8 +43,8 @@ public class GlobalWaitList {
             
             for (var i:int = 0; i < Place.MAX_PLACES; ++i) {
                 
-                singleton.bufferQ(i) = new HashMap[Object, RemoteCopyable]();
-                singleton.processQ(i) = new HashMap[Object, RemoteCopyable]();
+                singleton.readBufferQ(i) = new HashMap[Object, Pending]();
+                singleton.readProcessQ(i) = new HashMap[Object, Pending]();
             }
             
             x10.util.concurrent.Fences.storeStoreBarrier();
@@ -54,23 +54,23 @@ public class GlobalWaitList {
         singleton.initLock.unlock();
     }
     
-    protected static def addWaitEntry[X](obj: BigArray[X], placeId: Int, key: Key, index: Index,  wrap: Wrap[X]) {
+    protected static def addRead[X](obj: BigArray[X], placeId: Int, key: Key, index: Index,  wrap: Wrap[X]) {
 
         singleton.qLock.lock();
-        val Q = singleton.bufferQ(placeId);
+        val Q = singleton.readBufferQ(placeId);
         singleton.qLock.unlock();
         
         val temp = Q.getOrElse(obj, null);
-        var waitEntry: LocalWaitEntry[X];
+        var readWait: LocalPending[X];
         
         if (temp == null) {
             
-            waitEntry = new LocalWaitEntry[X](obj);
-            Q.put(obj, waitEntry);
+            readWait = new LocalPending[X](obj);
+            Q.put(obj, readWait);
             
         } else {
             
-            waitEntry = temp as LocalWaitEntry[X];
+            readWait = temp as LocalPending[X];
         }
         val wc = singleton.waitCount.getOrElse(key, -1);
         
@@ -84,7 +84,12 @@ public class GlobalWaitList {
             singleton.waitCount.put(key, wc + 1);
         }
         
-        waitEntry.add(key, index, wrap);
+        readWait.addRead(key, index, wrap);
+    }
+    
+    protected static def addWrite[X](obj: BigArray[X], placeId: Int, key: Key, index: Index,  data: X) {
+        
+        
     }
     
     protected static def enterGlobalJob(): Boolean {
@@ -111,9 +116,9 @@ public class GlobalWaitList {
         // Swap queue
         singleton.qLock.lock();
         
-        var temp: Array[HashMap[Object, RemoteCopyable]] = singleton.bufferQ;
-        singleton.bufferQ = singleton.processQ;
-        singleton.processQ = temp;
+        var temp: Array[HashMap[Object, Pending]] = singleton.readBufferQ;
+        singleton.readBufferQ = singleton.readProcessQ;
+        singleton.readProcessQ = temp;
         
         x10.util.concurrent.Fences.storeStoreBarrier();
         singleton.qLock.unlock();
@@ -124,7 +129,7 @@ public class GlobalWaitList {
             for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
                 
                 val p = i; // Copy to pass to closure
-                val placeQ = singleton.processQ(p);
+                val placeQ = singleton.readProcessQ(p);
                 
                 doRemoteOperation (p, placeQ); 
                 // async doRemoteOperation (p, placeQ);          
@@ -132,31 +137,34 @@ public class GlobalWaitList {
         }
     }
     
-    protected static def doRemoteOperation(placedId: Int, placeQ: HashMap[Object, RemoteCopyable]) {
+    protected static def doRemoteOperation(placedId: Int, placeQ: HashMap[Object, Pending]) {
   
 
         if(placeQ.size() > 0) {
             
-            val payload = new ArrayList[ReadRequestPayload]();
+            val readRequests = new ArrayList[ReadRequestPayload]();
             
             val it = placeQ.keySet();
+            val localPendings = new ArrayList[Pending]();
             
+            // Create read requests
             for(obj in it) {
                 
                 // Each WaitEntries append their payloads 
                 val entry = placeQ.get(obj).value; 
-                entry.createSendPayload(payload);
+                entry.createReadRequestPayload(readRequests);
             }
             
-            // Send request to remote place
+            // Send read request to remote place
+             
             val remoteData = at (Place.places()(placedId)) {
                 
                 val returnData = new ArrayList[ReadReplyPayload]();
                 
-                for(var i: Int = 0; i < payload.size(); ++i) {
+                for(var i: Int = 0; i < readRequests.size(); ++i) {
                     
-                    Console.OUT.println("Reuqest index: " + payload(i).indices + " on " + here.id);
-                    val p = payload(i);
+                    Console.OUT.println("Reuqest index: " + readRequests(i).indices + " on " + here.id);
+                    val p = readRequests(i);
                     val hash = p.hash;
                     val obj = p.obj;
                     val keys = p.keys;
@@ -174,15 +182,21 @@ public class GlobalWaitList {
                 Console.OUT.println(remoteData(i).data);
             }
             
-               
-            for (var i: Int = 0; i < payload.size(); ++i) {
+            // Update waiting queue   
+            for (var i: Int = 0; i < remoteData.size; ++i) {
                 
-                val keys = payload(i).keys;
+                val readReplyPayload = remoteData(i);
+                val keys = readReplyPayload.keys;
+                val indices = readReplyPayload.indices;
+                val obj = readReplyPayload.obj;
+                val data = readReplyPayload.data;
                 
                 for (var j: Int = 0; j < keys.size; ++j) {
                     
                     val k = keys(j);
+                    // val index = indices
                     val wc = singleton.waitCount.getOrElse(k, -1);
+                    
                     
                     if (wc == -1) {
                         

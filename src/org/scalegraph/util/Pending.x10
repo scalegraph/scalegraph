@@ -4,7 +4,7 @@ import x10.util.*;
 import org.scalegraph.util.ReadRequestPayload;
 import org.scalegraph.util.KeyGenerator;
 
-protected interface RemoteCopyable {
+protected interface Pending {
     
-    def createSendPayload(ArrayList[ReadRequestPayload]): void;
+    def createReadRequestPayload(ArrayList[ReadRequestPayload]): void;
 }
