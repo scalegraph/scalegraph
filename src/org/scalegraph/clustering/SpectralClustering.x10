@@ -7,9 +7,9 @@ import x10.util.ArrayBuilder;
 import x10.util.HashMap;
 import x10.util.Random;
 import x10.util.Timer;
-import x10.matrix.Matrix;
-import x10.matrix.DenseMatrix;
-import x10.matrix.Vector;
+//import x10.matrix.Matrix;
+//import x10.matrix.DenseMatrix;
+//import x10.matrix.Vector;
 
 import org.scalegraph.graph.PlainGraph;
 
