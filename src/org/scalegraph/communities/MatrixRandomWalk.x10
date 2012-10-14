@@ -7,10 +7,6 @@ import x10.util.HashMap;
 import x10.util.Timer;
 import x10.util.ArrayList;
 import x10.util.concurrent.AtomicDouble;
-import x10.matrix.dist.DistDenseMatrix;
-import x10.matrix.block.Grid;
-import x10.matrix.sparse.CompressArray;
-import x10.matrix.dist.DistSparseMatrix;
 import x10.array.DistArray;
 import x10.util.Pair;
 import org.scalegraph.communities.LongToIntMap;
@@ -55,7 +51,7 @@ struct Val {
         this.value = value;
     }
 };
-    
+
 public class MatrixRandomWalk {
     private val alpha:Double = 0.85;
     private val delta:Double = 0.0001;
@@ -64,9 +60,6 @@ public class MatrixRandomWalk {
     private val vertexList:DistArray[Long];
     private val graph:PlainGraph;
     private val vertexInfo:VertexInfo;
-    private var P:DistSparseMatrix;
-    private val grid:Grid;
-    private var dangling:DistDenseMatrix;
     private val nNodePerPlace:Int;
     private val rem:Int;
     private var binLink:PlaceLocalHandle[Array[ArrayList[Elem]]];
@@ -85,17 +78,16 @@ public class MatrixRandomWalk {
         }
         this.nNodePerPlace = nVertex / Place.MAX_PLACES;
         this.rem = nVertex % Place.MAX_PLACES;
-        grid = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
 	    Console.OUT.printf("this = %f\n", (Timer.milliTime() - funStart) / 1000.0);
     }
 
     public def query(id:Long) {
         val idx = vertexInfo.getIDX(id)();
         val res = iteratePagerank(idx);
-        
+
         return new MatrixRandomWalkResult(vertexInfo, res, graph);
     }
-    
+
     public def run() {
         val startTime = Timer.milliTime();
         initialize();
@@ -111,7 +103,7 @@ public class MatrixRandomWalk {
             val nodeIdx = danglingList()(i);
             danglingScore += oldVector()(nodeIdx) / nVertex;
         }
-    
+
         for (i in 0..(binLink().size - 1)) {
             var score:Double = danglingScore;
             for (j in 0..(binLink()(i).size() - 1)) {
@@ -159,7 +151,7 @@ public class MatrixRandomWalk {
                 updateVector(newVector, oldVector, idx);
             }
             val isEnd = end(newVector, oldVector);
-            
+
             finish for (p in Place.places()) async at (p) {
                 syncVector(newVector, oldVector);
             }
@@ -168,35 +160,6 @@ public class MatrixRandomWalk {
         }
 	    Console.OUT.printf("iteratePagerank = %f\n", (Timer.milliTime() - funStart) / 1000.0);
         return oldVector();
-    }
-
-    private def dangling(matrix:DistDenseMatrix) {
-	    val funStart = Timer.milliTime();
-	    var sum:Double = 0.0;
-	    val grid = matrix.grid;
-        for (var i:Int = 0; i < grid.rowBs.size; i++) {
-	        val subMatrix = matrix.getBlock(i, 0).getMatrix();
-	        val subDangling = dangling.getBlock(i, 0).getMatrix();
-	        for (var idx:Int = 0; idx < grid.rowBs(i); idx++) {
-		        sum += subMatrix(idx, 0) * subDangling(idx, 0);
-	        }
-        }
-	    Console.OUT.printf("dangling = %f\n", (Timer.milliTime() - funStart) / 1000.0);
-	    return sum;
-    }
-    
-    private def tereport(matrix:DistDenseMatrix) {
-	    val funStart = Timer.milliTime();
-        val grid = matrix.grid;
-        var sum:Double = 0.0;
-        for (var i:Int = 0; i < grid.rowBs.size; i++) {
-	        val subMatrix = matrix.getBlock(i, 0).getMatrix();
-	        for (var idx:Int = 0; idx < grid.rowBs(i); idx++) {
-                sum += subMatrix(idx, 0);
-	        }
-        }
-	    Console.OUT.printf("tereport = %f\n", (Timer.milliTime() - funStart) / 1000.0);
-        return sum / nVertex;
     }
 
     private def end(
@@ -221,41 +184,6 @@ public class MatrixRandomWalk {
         return norm.get() < delta;
     }
 
-    private def numElements(grid:Grid) {
-	    val funStart = Timer.milliTime();
-	    val distNumberArray =
-	        DistArray.make[Array[Int]](Dist.makeUnique());
-	    
-        for (p in Place.places()) {
-	        val r = (vertexList.dist | p).region;      
-	        at (p) {
-		        distNumberArray(p.id) = new Array[Int](0..(Place.MAX_PLACES - 1));
-                for (i in r) {
-		            val vertex = vertexList(i);
-		            if (vertex != -1l) {
-                        val vertexIdx = vertexInfo.getIDX(vertex)();
-                        val neighbours = graph.getOutNeighbours(vertex);
-                        if (neighbours != null && neighbours.size > 0) {
-			                for (j in neighbours) {
-                                val neighbour = neighbours(j);
-                                val neighbourIdx = vertexInfo.getIDX(neighbour)();
-                                val ar = grid.find(neighbourIdx, vertexIdx);
-                                val gridId = grid.getBlockId(ar(0), ar(1));
-				                distNumberArray(p.id)(gridId) += 1;
-			                }
-                        } 
-		            }
-                }
-	        }
-        }
-
-	    val reducer = (res:Array[Int], arr:Array[Int]):Array[Int] => {
-	        return res.map(arr, (x:Int, y:Int)=>{x+y});
-	    };
-	    val numberArray = distNumberArray.reduce(reducer, new Array[Int](0..(Place.MAX_PLACES - 1)));
-	    Console.OUT.printf("numElements = %f\n", (Timer.milliTime() - funStart) / 1000.0);
-        return numberArray;
-    }
 
     private def print(o:Any) {
         Console.OUT.println(o);
@@ -289,21 +217,21 @@ public class MatrixRandomWalk {
         }
         return (x - (nNodePerPlace + 1) * rem) % nNodePerPlace;
     }
-    
-    private def nodeInfo() {
+
+    private def createMatrix() {
         val funStart = Timer.milliTime();
 
-        print("nodeInfo start");
+        print("createMatrix start");
 
         val start1 = Timer.milliTime();
-        // 1. move all node Id to local place 
+        // 1. move all node Id to local place
         val dstBuf =
             PlaceLocalHandle.make[Array[Array[Val]]](Dist.makeUnique(),
                                                      ()=>(new Array[Array[Val]](Place.MAX_PLACES)));
         val danglingIds = PlaceLocalHandle.make[Array[Array[Long]]](
             Dist.makeUnique(),
             ()=>(new Array[Array[Long]](Place.MAX_PLACES)));
-        
+
         finish for (p in Place.places()) async {
             val reg = (vertexList.dist | p).region;
             //print(p);
@@ -335,7 +263,7 @@ public class MatrixRandomWalk {
                         //print("F");
                     }
                 }
-                
+
                 for (p1 in Place.places()) finish {
                     //print(p1);
                     //print("G");
@@ -350,7 +278,7 @@ public class MatrixRandomWalk {
                     }
                     //print("H");
                 }
-                
+
                 for (p1 in Place.places()) finish {
                     val nNodes = danglingIdList(p1.id).length();
                     val recvBuf = at(p1) {
@@ -369,7 +297,7 @@ public class MatrixRandomWalk {
         val danglingIdxList = PlaceLocalHandle.make[Array[Array[Int]]](
             Dist.makeUnique(),
             ()=>(new Array[Array[Int]](Place.MAX_PLACES)));
-        
+
         finish for (p in Place.places()) async at (p) {
             val danglingIdxListHere = new ArrayBuilder[Int]();
             for (i in danglingIds()) {
@@ -512,7 +440,7 @@ public class MatrixRandomWalk {
         }
 
         Console.OUT.printf("3 end. time = %f\n", (Timer.milliTime() - start3) / 1000.0);
-    
+
         val arr = new Array[Int](Place.MAX_PLACES);
 
         val start4 = Timer.milliTime();
@@ -538,15 +466,15 @@ public class MatrixRandomWalk {
             }
             a
         };
-        
+
         val binLink = PlaceLocalHandle.make[Array[ArrayList[Elem]]](
             Dist.makeUnique(),
             fun);
         Console.OUT.printf("4 end. time = %f\n", (Timer.milliTime() - start4) / 1000.0);
-        Console.OUT.printf("nodeInfo time = %f\n", (Timer.milliTime() - funStart) / 1000.0);
+        Console.OUT.printf("createMatrix time = %f\n", (Timer.milliTime() - funStart) / 1000.0);
         this.binLink = binLink;
     }
-    
+
 
     private def testBinLink() {
         for (p in Place.places()) at (p) {
@@ -575,7 +503,7 @@ public class MatrixRandomWalk {
     private def initialize() {
 	    val funStart = Timer.milliTime();
         getOffset();
-        nodeInfo();
+        createMatrix();
         //testBinLink();
 	    Console.OUT.printf("initialize = %f\n", (Timer.milliTime() - funStart) / 1000.0);
     }

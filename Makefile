@@ -751,8 +751,6 @@ test_matrixpagerank:
 	-cxx-postarg $(ATLAS_LAPACK_LIB) \
 	-cxx-postarg $(ATLAS_LIB) \
 	-cxx-postarg -lgfortran \
-	-classpath $(GML_DIST)/$(GML_JAR) \
-	-x10lib $(GML_DIST)/$(GML_PROPS) \
 	src/test/scalegraph/metrics/centrality/TestMatrixPagerank.x10 \
 	src/org/scalegraph/metrics/centrality/MatrixPagerank.x10 \
 	src/org/scalegraph/metrics/centrality/MatrixMap.x10 \

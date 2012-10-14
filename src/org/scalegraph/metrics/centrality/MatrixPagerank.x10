@@ -7,10 +7,6 @@ import x10.util.HashMap;
 import x10.util.Timer;
 import x10.util.ArrayList;
 import x10.util.concurrent.AtomicDouble;
-import x10.matrix.dist.DistDenseMatrix;
-import x10.matrix.block.Grid;
-import x10.matrix.sparse.CompressArray;
-import x10.matrix.dist.DistSparseMatrix;
 import x10.array.DistArray;
 import x10.util.Pair;
 import org.scalegraph.communities.LongToIntMap;
@@ -55,7 +51,7 @@ struct Val {
         this.value = value;
     }
 };
-    
+
 public class MatrixPagerank {
     private val alpha:Double = 0.85;
     private val delta:Double = 0.0001;
@@ -64,13 +60,10 @@ public class MatrixPagerank {
     private val vertexList:DistArray[Long];
     private val graph:PlainGraph;
     private val vertexInfo:VertexInfo;
-    private var P:DistSparseMatrix;
-    private val grid:Grid;
-    private var dangling:DistDenseMatrix;
     private val nNodePerPlace:Int;
     private val rem:Int;
     private var binLink:PlaceLocalHandle[Array[ArrayList[Elem]]];
-    private var offset:Array[Int];
+    private var offset:PlaceLocalHandle[Array[Int]];
     private var danglingList:PlaceLocalHandle[Array[Int]];
 
     public def this(graph:PlainGraph) {
@@ -85,10 +78,9 @@ public class MatrixPagerank {
         }
         this.nNodePerPlace = nVertex / Place.MAX_PLACES;
         this.rem = nVertex % Place.MAX_PLACES;
-        grid = Grid.makeMaxRow(nVertex, nVertex, Place.MAX_PLACES, Place.MAX_PLACES);
 	    Console.OUT.printf("this = %f\n", (Timer.milliTime() - funStart) / 1000.0);
     }
-    
+
     public def run() {
         {
 	        val startTime = Timer.milliTime();
@@ -106,13 +98,13 @@ public class MatrixPagerank {
     private def updateVector(
         newVector:PlaceLocalHandle[Array[Double]],
         oldVector:PlaceLocalHandle[Array[Double]]) {
-        val offset = offset(here.id);
+        val offset = offset()(here.id);
         var danglingScore:Double = 0.0;
         for (i in 0..(danglingList().size -1)) {
             val nodeIdx = danglingList()(i);
             danglingScore += oldVector()(nodeIdx) / nVertex;
         }
-    
+
         for (i in 0..(binLink().size - 1)) {
             var score:Double = danglingScore;
             for (j in 0..(binLink()(i).size() - 1)) {
@@ -130,7 +122,7 @@ public class MatrixPagerank {
             val recvBuf = at (p) {
                 new RemoteArray[Double](oldVector() as Array[Double](1){self!=null})};
             finish {
-                Array.asyncCopy[Double](newVector(), 0, recvBuf, offset(here.id), newVector().size);
+                Array.asyncCopy[Double](newVector(), 0, recvBuf, offset()(here.id), newVector().size);
             }
         }
     }
@@ -157,7 +149,7 @@ public class MatrixPagerank {
                 updateVector(newVector, oldVector);
             }
             val isEnd = end(newVector, oldVector);
-            
+
             finish for (p in Place.places()) async at (p) {
                 syncVector(newVector, oldVector);
             }
@@ -168,91 +160,45 @@ public class MatrixPagerank {
         return oldVector();
     }
 
-    private def dangling(matrix:DistDenseMatrix) {
-	    val funStart = Timer.milliTime();
-	    var sum:Double = 0.0;
-	    val grid = matrix.grid;
-        for (var i:Int = 0; i < grid.rowBs.size; i++) {
-	        val subMatrix = matrix.getBlock(i, 0).getMatrix();
-	        val subDangling = dangling.getBlock(i, 0).getMatrix();
-	        for (var idx:Int = 0; idx < grid.rowBs(i); idx++) {
-		        sum += subMatrix(idx, 0) * subDangling(idx, 0);
-	        }
-        }
-	    Console.OUT.printf("dangling = %f\n", (Timer.milliTime() - funStart) / 1000.0);
-	    return sum;
-    }
-    
-    private def tereport(matrix:DistDenseMatrix) {
-	    val funStart = Timer.milliTime();
-        val grid = matrix.grid;
-        var sum:Double = 0.0;
-        for (var i:Int = 0; i < grid.rowBs.size; i++) {
-	        val subMatrix = matrix.getBlock(i, 0).getMatrix();
-	        for (var idx:Int = 0; idx < grid.rowBs(i); idx++) {
-                sum += subMatrix(idx, 0);
-	        }
-        }
-	    Console.OUT.printf("tereport = %f\n", (Timer.milliTime() - funStart) / 1000.0);
-        return sum / nVertex;
-    }
-
     private def end(
         newVector:PlaceLocalHandle[Array[Double]],
         oldVector:PlaceLocalHandle[Array[Double]]) {
 
 	    val funStart = Timer.milliTime();
-        val norm = new AtomicDouble();
+        val localNorm = new Array[Double](Place.MAX_PLACES);
+
+        val localTime = PlaceLocalHandle.make[Cell[Double]](
+            Dist.makeUnique(),
+            ()=>(new Cell[Double](0.0)));
+        val outLocalTime = new Array[Double](Place.MAX_PLACES);
+        val outOutStart = Timer.milliTime();
         finish for (p in Place.places()) async {
-            val localNorm = at(p) {
-                var localNorm:Double = 0.0;
+            val outStart = Timer.milliTime();
+            localNorm(p.id) = at(p) {
+                val start = Timer.milliTime();
+                var lNorm:Double = 0.0;
+                val off = offset()(here.id);
                 for (i in (0..(newVector().size - 1))) {
-                    localNorm += Math.abs(
-                        newVector()(i) - oldVector()(i + offset(here.id)));
+                    lNorm += Math.abs(
+                        newVector()(i) - oldVector()(i + off));
                 }
-                localNorm
+                localTime().set((Timer.milliTime() - start) / 1000.0);
+                lNorm
             };
-            norm.getAndAdd(localNorm);
+            outLocalTime(p.id) = (Timer.milliTime() - outStart) / 1000.0;
         }
-        Console.OUT.printf("delta = %f\n", norm.get());
+        Console.OUT.printf("out time = %f\n", (Timer.milliTime() - outOutStart) / 1000.0);
+        val norm = localNorm.reduce((x:Double, y:Double)=>(x + y), 0.0);
+        Console.OUT.printf("delta = %f\n", norm);
 	    Console.OUT.printf("end = %f\n", (Timer.milliTime() - funStart) / 1000.0);
-        return norm.get() < delta;
-    }
-
-    private def numElements(grid:Grid) {
-	    val funStart = Timer.milliTime();
-	    val distNumberArray =
-	        DistArray.make[Array[Int]](Dist.makeUnique());
-	    
-        for (p in Place.places()) {
-	        val r = (vertexList.dist | p).region;      
-	        at (p) {
-		        distNumberArray(p.id) = new Array[Int](0..(Place.MAX_PLACES - 1));
-                for (i in r) {
-		            val vertex = vertexList(i);
-		            if (vertex != -1l) {
-                        val vertexIdx = vertexInfo.getIDX(vertex)();
-                        val neighbours = graph.getOutNeighbours(vertex);
-                        if (neighbours != null && neighbours.size > 0) {
-			                for (j in neighbours) {
-                                val neighbour = neighbours(j);
-                                val neighbourIdx = vertexInfo.getIDX(neighbour)();
-                                val ar = grid.find(neighbourIdx, vertexIdx);
-                                val gridId = grid.getBlockId(ar(0), ar(1));
-				                distNumberArray(p.id)(gridId) += 1;
-			                }
-                        } 
-		            }
-                }
-	        }
+        for (p in Place.places()) at (p) {
+            Console.OUT.printf("place %d time : %f\n", p.id, localTime()());
+        }
+        for (id in 0..(Place.MAX_PLACES - 1)) {
+            Console.OUT.printf("place %d time : %f\n", id, outLocalTime(id));
         }
 
-	    val reducer = (res:Array[Int], arr:Array[Int]):Array[Int] => {
-	        return res.map(arr, (x:Int, y:Int)=>{x+y});
-	    };
-	    val numberArray = distNumberArray.reduce(reducer, new Array[Int](0..(Place.MAX_PLACES - 1)));
-	    Console.OUT.printf("numElements = %f\n", (Timer.milliTime() - funStart) / 1000.0);
-        return numberArray;
+        return norm < delta;
     }
 
     private def print(o:Any) {
@@ -271,7 +217,13 @@ public class MatrixPagerank {
                 offset(i) = offset(i) + nVertex / Place.MAX_PLACES;
             }
         }
-        this.offset = offset;
+        this.offset = PlaceLocalHandle.make[Array[Int]](
+            Dist.makeUnique(),
+            ()=>{
+                val arr = new Array[Int](Place.MAX_PLACES + 1);
+                Array.copy(offset, arr);
+                arr
+            });
     }
 
     private def getPlace(x:Int) {
@@ -287,21 +239,22 @@ public class MatrixPagerank {
         }
         return (x - (nNodePerPlace + 1) * rem) % nNodePerPlace;
     }
-    
-    private def nodeInfo() {
+
+    private def createMatrix() {
         val funStart = Timer.milliTime();
 
-        print("nodeInfo start");
+        print("createMatrix start");
 
         val start1 = Timer.milliTime();
-        // 1. move all node Id to local place 
+
+        // 1. move all node Id to local place
         val dstBuf =
             PlaceLocalHandle.make[Array[Array[Val]]](Dist.makeUnique(),
                                                      ()=>(new Array[Array[Val]](Place.MAX_PLACES)));
         val danglingIds = PlaceLocalHandle.make[Array[Array[Long]]](
             Dist.makeUnique(),
             ()=>(new Array[Array[Long]](Place.MAX_PLACES)));
-        
+
         finish for (p in Place.places()) async {
             val reg = (vertexList.dist | p).region;
             //print(p);
@@ -333,8 +286,8 @@ public class MatrixPagerank {
                         //print("F");
                     }
                 }
-                
-                for (p1 in Place.places()) finish {
+
+                finish for (p1 in Place.places()) async {
                     //print(p1);
                     //print("G");
                     val nNodes = nodeIdList(p1.id).length();
@@ -348,8 +301,8 @@ public class MatrixPagerank {
                     }
                     //print("H");
                 }
-                
-                for (p1 in Place.places()) finish {
+
+                finish for (p1 in Place.places()) async {
                     val nNodes = danglingIdList(p1.id).length();
                     val recvBuf = at(p1) {
                         danglingIds()(p.id) = new Array[Long](nNodes);
@@ -367,7 +320,7 @@ public class MatrixPagerank {
         val danglingIdxList = PlaceLocalHandle.make[Array[Array[Int]]](
             Dist.makeUnique(),
             ()=>(new Array[Array[Int]](Place.MAX_PLACES)));
-        
+
         finish for (p in Place.places()) async at (p) {
             val danglingIdxListHere = new ArrayBuilder[Int]();
             for (i in danglingIds()) {
@@ -443,7 +396,7 @@ public class MatrixPagerank {
             }
 
             // remote array copy
-            finish for (pl in Place.places()) {
+            finish for (pl in Place.places()) async {
                 //print(p);
                 val nNodes = nodeIdxList(pl.id).length();
                 //print("S");
@@ -491,7 +444,7 @@ public class MatrixPagerank {
             }
 
             // remote array copy
-            finish for (pl in Place.places()) {
+            finish for (pl in Place.places()) async {
                 //print("D1");
                 val nNodes = srcArray(pl.id).length();
                 //print("E1");
@@ -510,7 +463,7 @@ public class MatrixPagerank {
         }
 
         Console.OUT.printf("3 end. time = %f\n", (Timer.milliTime() - start3) / 1000.0);
-    
+
         val map:MatrixMap = new MatrixMap();
         val arr = new Array[Int](Place.MAX_PLACES);
 
@@ -537,20 +490,20 @@ public class MatrixPagerank {
             }
             a
         };
-        
+
         val binLink = PlaceLocalHandle.make[Array[ArrayList[Elem]]](
             Dist.makeUnique(),
             fun);
         Console.OUT.printf("4 end. time = %f\n", (Timer.milliTime() - start4) / 1000.0);
-        Console.OUT.printf("nodeInfo time = %f\n", (Timer.milliTime() - funStart) / 1000.0);
+        Console.OUT.printf("createMatrix time = %f\n", (Timer.milliTime() - funStart) / 1000.0);
         this.binLink = binLink;
     }
-    
+
 
     private def testBinLink() {
         for (p in Place.places()) at (p) {
             for (i in 0..(binLink().size - 1)) {
-                val idx = i + offset(p.id);
+                val idx = i + offset()(p.id);
                 val nodeId = vertexInfo.getID(idx)();
                 val inNeighbours = graph.getInNeighbours(nodeId);
                 if (inNeighbours == null) {
@@ -574,7 +527,7 @@ public class MatrixPagerank {
     private def initialize() {
 	    val funStart = Timer.milliTime();
         getOffset();
-        nodeInfo();
+        createMatrix();
         //testBinLink();
 	    Console.OUT.printf("initialize = %f\n", (Timer.milliTime() - funStart) / 1000.0);
     }

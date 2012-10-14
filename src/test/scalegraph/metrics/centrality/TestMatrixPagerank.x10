@@ -11,7 +11,6 @@ import x10.util.HashMap;
 import x10.util.Pair;
 import x10.util.OptionsParser;
 import x10.util.Option;
-import x10.matrix.DenseMatrix;
 import x10.io.FileWriter;
 import x10.io.File;
 import x10.io.Printer;
@@ -94,9 +93,13 @@ public class TestMatrixPagerank {
 		val endLoadFile = System.currentTimeMillis();
 		val loadingElapse = (endLoadFile - startLoadFile) / 1000;
 		Console.OUT.println("Loading Elapsed Time(s): " + loadingElapse);
+        
+        val runStart = Timer.milliTime();
 
 		val pagerank = new MatrixPagerank(graph);
 		val result = pagerank.run();
+        
+        Console.OUT.printf("Running Time(s) : %f\n", (Timer.milliTime() - runStart) / 1000.0);
         
         if (!outputPath.equals("")) {
             val writer = new FileWriter(new File(outputPath));

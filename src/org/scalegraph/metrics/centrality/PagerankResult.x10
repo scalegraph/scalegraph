@@ -2,9 +2,8 @@ package org.scalegraph.metrics.centrality;
 
 import org.scalegraph.util.VertexInfo;
 import org.scalegraph.graph.PlainGraph;
-import x10.matrix.dist.DistDenseMatrix;
-import x10.matrix.block.Grid;
 import x10.util.HashMap;
+import x10.util.StringBuilder;
 
 public class PagerankResult {
     private val vector:Array[Double];
@@ -24,22 +23,22 @@ public class PagerankResult {
     
     public def toString() {
         val vertexList = graph.getVertexList();
-        var str:String = "";
+        val strb = new StringBuilder();
 
         for (p in Place.places()) {
             val r = (vertexList.dist | p).region;
-            str += at (p) {
-                var s:String = "";
+            strb.add(at (p) {
+                val s = new StringBuilder();
                 for (i in r) {
                     val v = vertexList(i);
                     if (v != -1l) {
                         val idx = vertexInfo.getIDX(v)();
-                        s += v + "       [ " + vector(idx) + " ]\n";
+                        s.add(v + "       [ " + vector(idx) + " ]\n");
                     }
                 }
-                s
-            };
+                s.result()
+            });
         }
-        return str;
+        return strb.result();
     }
 }

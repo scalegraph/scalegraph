@@ -146,12 +146,36 @@ public class VertexInfo {
 			new Box[int](result)
 		};
 	}
-	
+
 	public def getDegreeFromHere(vertexIDX:Int): Box[Int] {
 		return new Box[Int](inDegree().get(vertexIDX - offset(here.id))() +
                             outDegree().get(vertexIDX - offset(here.id))());
 	}
-	
+
+	public def getInDegree(vertexIDX:Int): Box[Int] {
+		val pid = getPlaceID(vertexIDX);
+		val p = placeList(pid);
+		return at(p) {
+            return inDegree().get(vertexIDX - offset(pid));
+		};
+	}
+
+	public def getInDegreeFromHere(vertexIDX:Int): Box[Int] {
+		return inDegree().get(vertexIDX - offset(here.id));
+	}
+
+    public def getOutDegree(vertexIDX:Int): Box[Int] {
+		val pid = getPlaceID(vertexIDX);
+		val p = placeList(pid);
+		return at(p) {
+            return outDegree().get(vertexIDX - offset(pid));
+		};
+	}
+
+	public def getOutDegreeFromHere(vertexIDX:Int): Box[Int] {
+		return outDegree().get(vertexIDX - offset(here.id));
+	}
+    
 	public def print(){
 		Console.OUT.println(placeList);
 		Console.OUT.println(offset);
