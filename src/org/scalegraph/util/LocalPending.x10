@@ -54,4 +54,14 @@ protected class LocalPending[V] implements Pending {
         writeIndices.add(index);
         data.add(d);
     }
+    
+    public def updateReadRequestData(d: Any) {
+        
+        val dataList = d as Array[V];
+        
+        for(var i: Int = 0; i < dataList.size; ++i) {
+            
+            wraps(i).value = dataList(i);
+        }
+    }
 }

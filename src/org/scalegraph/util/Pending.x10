@@ -7,4 +7,5 @@ import org.scalegraph.util.KeyGenerator;
 protected interface Pending {
     
     def createReadRequestPayload(ArrayList[ReadRequestPayload]): void;
+    def updateReadRequestData(data: Any): void;
 }

@@ -153,6 +153,7 @@ protected class BigArrayQueueManager {
                 // Each WaitEntries append their payloads 
                 val entry = placeQ.get(obj).value; 
                 entry.createReadRequestPayload(readRequests);
+                localPendings.add(entry);
             }
             
             // Send read request to remote place
@@ -191,12 +192,13 @@ protected class BigArrayQueueManager {
                 val obj = readReplyPayload.obj;
                 val data = readReplyPayload.data;
                 
+                localPendings(i).updateReadRequestData(data);
+                
                 for (var j: Int = 0; j < keys.size; ++j) {
                     
                     val k = keys(j);
                     // val index = indices
                     val wc = singleton.waitCount.getOrElse(k, -1);
-                    
                     
                     if (wc == -1) {
                         

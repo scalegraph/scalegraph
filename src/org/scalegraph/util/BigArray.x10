@@ -229,7 +229,7 @@ public final class BigArray[T] implements BigArrayOperation {
         }
     }
     
-    public static def wait(key: Key) {
+    public static def synch(key: Key) {
         
         while (!BigArrayQueueManager.isDataReady(key)) {
             
