@@ -29,6 +29,8 @@ public final class BigArray[T] implements BigArrayOperation {
     
     private static val keyGenerator = new KeyGenerator();
     
+    
+    
     // private var instanceWaitList: InstanceWaitList[T];
     
     private def this(sz: long) {
@@ -69,6 +71,7 @@ public final class BigArray[T] implements BigArrayOperation {
         // instanceWaitList = null;
         
         operationExclusive = new Lock();
+        
     }
     
     private def init() {
@@ -266,16 +269,19 @@ public final class BigArray[T] implements BigArrayOperation {
                 // First thread
                 Console.OUT.println("Enter global job: " + Runtime.workerId() + " Wait key: " + key);
                 BigArrayQueueManager.printWaitingList();
-                System.sleep(100);
+                System.sleep(BigArrayQueueManager.waitRandom.nextInt(100) + 500);
+                
                 BigArrayQueueManager.execute();
                 BigArrayQueueManager.exitGlobalJob();
                 
+                System.sleep(BigArrayQueueManager.waitRandom.nextInt(10)+5);
             } else {
                 
                 // Pause this activity and run other jobs in the queue
-                Console.OUT.println("Waiting, run another jobs: " + Runtime.workerId() + " Wait key: " + key);
+                // Console.OUT.println("Waiting, run another jobs: " + Runtime.workerId() + " Wait key: " + key);
+                Console.OUT.print(".");
                 Runtime.probe();
-                System.sleep(100);
+                System.sleep(BigArrayQueueManager.waitRandom.nextInt(10)+5);
             }
         }
     }

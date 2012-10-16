@@ -12,7 +12,7 @@ public class TestBigArray {
         
         // BigArrayQueueManager.init();
  
-        val size: Long = 1L << 24L;
+        val size: Long = 1L << 20L;
         Console.OUT.println("Size: " + size);
         val B =  BigArray.make[Long](size);
         val C =  BigArray.make[Long](size);
@@ -28,7 +28,7 @@ public class TestBigArray {
         // }
 
         
-        for (var it: Int = 0; it < 5; ++it) {
+        for (var it: Int = 0; it < 100000; ++it) {
             
             val i = it;
             async {  
@@ -52,11 +52,12 @@ public class TestBigArray {
                 B.getAsync(k, index, y);
                 BigArray.synch(k);
                 
-                Console.OUT.println("W = " + w() );
-                Console.OUT.println("Y = " + y() );
+                Console.OUT.println("Exit from sync: " + k);
+                // Console.OUT.println("W = " + w() );
+                // Console.OUT.println("Y = " + y() );
             }
         }
-
+        BigArrayQueueManager.printWaitingList();
         
         Console.OUT.println("Enter to Continue");
         Console.IN.readChar();
