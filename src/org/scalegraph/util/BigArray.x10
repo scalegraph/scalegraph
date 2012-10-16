@@ -25,6 +25,8 @@ public final class BigArray[T] implements BigArrayOperation {
     
     private val blockSize: Int;
     
+    transient private val operationExclusive: Lock;
+    
     private static val keyGenerator = new KeyGenerator();
     
     // private var instanceWaitList: InstanceWaitList[T];
@@ -65,6 +67,8 @@ public final class BigArray[T] implements BigArrayOperation {
         localHandle = PlaceLocalHandle.make[LocalState[T]](dist, init);
         
         // instanceWaitList = null;
+        
+        operationExclusive = new Lock();
     }
     
     private def init() {
@@ -72,13 +76,13 @@ public final class BigArray[T] implements BigArrayOperation {
         // instanceWaitList = new InstanceWaitList[T]();
         
         // Init global structure
-        BigArrayQueueManager.init();
+        // BigArrayQueueManager.init();
     }
     
     public static def make[T](sz: long): BigArray[T] {
         
         val b = new BigArray[T](sz);
-        b.init();
+        // b.init();
         return b;
     }
     
@@ -191,11 +195,30 @@ public final class BigArray[T] implements BigArrayOperation {
         return keyGenerator.getKey();
     }
     
-    public def getPlaceId(index: Index) = (index / blockSize) as Int;
+    public def getPlaceId(index: Index): Int {
+        
+        val placeId = (index / blockSize) as Int;
+        
+        if (placeId >= Place.MAX_PLACES) {
+            
+            if(index < size) {
+            	
+                // Index is in left over indices
+                return Place.MAX_PLACES - 1;
+            } 
+            
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        
+        return placeId;
+    }
    
     public def getAsync(k: Key, index: Index, wrap: Wrap[T]) {
         
+        operationExclusive.lock();
+        
         val placeId = getPlaceId(index);
+        // Console.OUT.println("getAsync => index: " + index);
         
         if (placeId == here.id) {
             
@@ -205,13 +228,16 @@ public final class BigArray[T] implements BigArrayOperation {
             
         } else {
             
-            // Add to local waiting list for monitoring
-            // instanceWaitList.addWait(k, index);
+            // Add to  waiting list
             BigArrayQueueManager.addRead[T](this, placeId, k, index, wrap);
         }
+        
+        operationExclusive.unlock();
     }
     
     public def writeAsync(k :Key, index: Index, data: T) {
+        
+        operationExclusive.lock();
         
         val placeId = getPlaceId(index);
         
@@ -223,10 +249,12 @@ public final class BigArray[T] implements BigArrayOperation {
             
         } else {
             
-            // Add to local waiting list for monitoring
+            // Add to waiting list
             // instanceWaitList.addWait(k, index);
             BigArrayQueueManager.addWrite[T](this, placeId, k, index, data);
         }
+        
+        operationExclusive.unlock();
     }
     
     public static def synch(key: Key) {
@@ -236,36 +264,53 @@ public final class BigArray[T] implements BigArrayOperation {
             if (BigArrayQueueManager.enterGlobalJob()) {
                 
                 // First thread
-                Console.OUT.println("Enter global job");
+                Console.OUT.println("Enter global job: " + Runtime.workerId() + " Wait key: " + key);
+                BigArrayQueueManager.printWaitingList();
+                System.sleep(100);
                 BigArrayQueueManager.execute();
                 BigArrayQueueManager.exitGlobalJob();
                 
             } else {
                 
                 // Pause this activity and run other jobs in the queue
-                Console.OUT.println("Waiting, run another jobs");
+                Console.OUT.println("Waiting, run another jobs: " + Runtime.workerId() + " Wait key: " + key);
                 Runtime.probe();
-                System.sleep(1);
+                System.sleep(100);
             }
         }
     }
     
-    public def getData(indices: Array[Index]): Any {
+    public def readData(indices: Array[Index]): Any {
         
         val size = indices.size;
         val list = new ArrayList[T]();
         val placeDesc = localHandle().placeDescriptors(here.id);
         
-        for(var i: Int = 0; i < size; ++i) {
+        for (var i: Int = 0; i < size; ++i) {
+            
             val localIndex = indices(i) - placeDesc.startIndex;
             
             // operationLock.lock();
-            list.add(localHandle().IMC(localIndex));
+            list.add(raw()(localIndex));
             // operationLock.unlock();
         }
         
         // Console.OUT.println("P(" + here.id + ") -> start at: " + placeDesc.startIndex);
         
         return list.toArray();
+    }
+    
+    public def writeData(indices: Array[Index], data: Any) {
+        
+        val d = data as Array[T];
+        val placeDesc = localHandle().placeDescriptors(here.id);
+        
+        for (var i: Int = 0; i < indices.size; ++i) {
+            
+            val localIndex = indices(i) - placeDesc.startIndex;
+            
+            raw()(localIndex) = d(i);
+            // Console.OUT.println("Request write at " + indices(i) + " local: " + localIndex);
+        }
     }
 }

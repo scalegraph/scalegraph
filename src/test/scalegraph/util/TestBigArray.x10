@@ -3,12 +3,14 @@ package test.scalegraph.util;
 import org.scalegraph.util.Wrap;
 import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.BigArray;
+import org.scalegraph.util.BigArrayQueueManager;
 
 
 public class TestBigArray {
     
     public static def main(args: Array[String]) {
         
+        // BigArrayQueueManager.init();
  
         val size: Long = 1L << 24L;
         Console.OUT.println("Size: " + size);
@@ -26,24 +28,36 @@ public class TestBigArray {
         // }
 
         
-        for (var it: Int = 0; it < 2; ++it) {
-
-            Console.OUT.println("Call async it: " + 1);
-            val w = new Wrap[Long]();
-            val y = new Wrap[Long]();
-            val k = BigArray.getKey();
-            // B.getAsync(k, 0L, w);
-            B.getAsync(k, size - 20, y);
-            B.getAsync(k, size - 30, y);
-            B.getAsync(k, size - 40, y);
-            B.getAsync(k, size/3, y);
-            BigArray.wait(k);
+        for (var it: Int = 0; it < 5; ++it) {
+            
+            val i = it;
+            async {  
+                val w = new Wrap[Long]();
+                val y = new Wrap[Long]();
+                val k = BigArray.getKey();
+                
+                val index: Long = size - i - 1;
+                
+                Console.OUT.println("Key = " +  k );
+                
+                // B.writeAsync(k, 0, 1024);
+                // B.getAsync(k, 0L, w);
+                
+                // B.getAsync(k, size - 20, y);
+                // B.getAsync(k, size - 30, y);
+                // B.getAsync(k, size - 40, y);
+                
+                
+                // B.writeAsync(k, index, 1111);
+                B.getAsync(k, index, y);
+                BigArray.synch(k);
+                
+                Console.OUT.println("W = " + w() );
+                Console.OUT.println("Y = " + y() );
+            }
         }
-//         
-//         Console.OUT.println(B.getKey());
-//         Console.OUT.println(B.getKey());
-//         Console.OUT.println(C.getKey());
-//         Console.OUT.println("Share Entry");
+
+        
         Console.OUT.println("Enter to Continue");
         Console.IN.readChar();
     }

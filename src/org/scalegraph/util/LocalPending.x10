@@ -4,6 +4,7 @@ import x10.util.*;
 import org.scalegraph.util.BigArray;
 import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.ReadRequestPayload;
+import org.scalegraph.util.WriteRequestPayload;
 import org.scalegraph.util.Pending;
 
 
@@ -20,6 +21,7 @@ protected class LocalPending[V] implements Pending {
     var writeKeys: ArrayList[Key];
     var writeIndices: ArrayList[Index];
     var data: ArrayList[V];
+    
     
     public def this(o: BigArray[V]) {
         
@@ -44,8 +46,15 @@ protected class LocalPending[V] implements Pending {
     public def createReadRequestPayload(list: ArrayList[ReadRequestPayload]) {
         
         val h = obj.hashCode();
-        val sendPayload = new ReadRequestPayload(h, obj, readKeys.toArray(), readIndices.toArray());
-        list.add(sendPayload);
+        val readRequestPayload = new ReadRequestPayload(h, obj, readKeys.toArray(), readIndices.toArray());
+        list.add(readRequestPayload);
+    }
+    
+    public def createWriteRequestPayload(list: ArrayList[WriteRequestPayload]) {
+        
+        val h = obj.hashCode();
+        val writeRequestPayload = new WriteRequestPayload(h, obj, writeKeys.toArray(), writeIndices.toArray(), data.toArray());
+        list.add(writeRequestPayload);
     }
     
     public def addWrite(key: Key, index: Index, d: V) {
