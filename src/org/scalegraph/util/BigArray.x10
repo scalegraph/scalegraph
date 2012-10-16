@@ -269,12 +269,13 @@ public final class BigArray[T] implements BigArrayOperation {
                 // First thread
                 Console.OUT.println("Enter global job: " + Runtime.workerId() + " Wait key: " + key);
                 BigArrayQueueManager.printWaitingList();
-                System.sleep(BigArrayQueueManager.waitRandom.nextInt(100) + 500);
+                System.sleep(BigArrayQueueManager.waitRandom.nextInt(100) + 300);
                 
                 BigArrayQueueManager.execute();
                 BigArrayQueueManager.exitGlobalJob();
                 
-                System.sleep(BigArrayQueueManager.waitRandom.nextInt(10)+5);
+                // System.sleep(BigArrayQueueManager.waitRandom.nextInt(10)+5);
+                
             } else {
                 
                 // Pause this activity and run other jobs in the queue
