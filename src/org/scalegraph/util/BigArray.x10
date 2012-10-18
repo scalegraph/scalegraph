@@ -15,8 +15,6 @@ public final class BigArray[T] implements BigArrayOperation {
     
     private var size: Long;
     
-    // private var placeDescriptors: Rail[PlaceDescriptor];
-    
     private val numPlaces: Int;
     
     private val dist: Dist;
@@ -28,10 +26,6 @@ public final class BigArray[T] implements BigArrayOperation {
     transient private val operationExclusive: Lock;
     
     private static val keyGenerator = new KeyGenerator();
-    
-    
-    
-    // private var instanceWaitList: InstanceWaitList[T];
     
     private def this(sz: long) {
         
@@ -68,18 +62,12 @@ public final class BigArray[T] implements BigArrayOperation {
         
         localHandle = PlaceLocalHandle.make[LocalState[T]](dist, init);
         
-        // instanceWaitList = null;
-        
         operationExclusive = new Lock();
         
     }
     
     private def init() {
         
-        // instanceWaitList = new InstanceWaitList[T]();
-        
-        // Init global structure
-        // BigArrayQueueManager.init();
     }
     
     public static def make[T](sz: long): BigArray[T] {
@@ -253,7 +241,6 @@ public final class BigArray[T] implements BigArrayOperation {
         } else {
             
             // Add to waiting list
-            // instanceWaitList.addWait(k, index);
             BigArrayQueueManager.addWrite[T](this, placeId, k, index, data);
         }
         
@@ -267,22 +254,22 @@ public final class BigArray[T] implements BigArrayOperation {
             if (BigArrayQueueManager.enterGlobalJob()) {
                 
                 // First thread
-                Console.OUT.println("Enter global job: " + Runtime.workerId() + " Wait key: " + key);
+                // Console.OUT.println("Enter global job: " + Runtime.workerId() + " Wait key: " + key);
                 BigArrayQueueManager.printWaitingList();
-                System.sleep(BigArrayQueueManager.waitRandom.nextInt(100) + 300);
+                System.sleep(500);
                 
                 BigArrayQueueManager.execute();
                 BigArrayQueueManager.exitGlobalJob();
                 
-                // System.sleep(BigArrayQueueManager.waitRandom.nextInt(10)+5);
+                System.sleep(1);
                 
             } else {
                 
                 // Pause this activity and run other jobs in the queue
                 // Console.OUT.println("Waiting, run another jobs: " + Runtime.workerId() + " Wait key: " + key);
-                Console.OUT.print(".");
+                // Console.OUT.print(".");
                 Runtime.probe();
-                System.sleep(BigArrayQueueManager.waitRandom.nextInt(10)+5);
+                // System.sleep(BigArrayQueueManager.waitRandom.nextInt(5));
             }
         }
     }

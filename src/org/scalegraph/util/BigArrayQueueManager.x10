@@ -14,8 +14,8 @@ import x10.compiler.NoInline;
 
 public class BigArrayQueueManager {
     
-    transient var internalProcessQ: Array[HashMap[Object, Pending]];
-    transient var internalBufferQ: Array[HashMap[Object, Pending]];
+    transient var internalProcessQ: Array[HashMap[Any, Pending]];
+    transient var internalBufferQ: Array[HashMap[Any, Pending]];
     transient var qLock: Lock;
     
     transient static val singleton: BigArrayQueueManager = new BigArrayQueueManager();
@@ -28,11 +28,12 @@ public class BigArrayQueueManager {
     transient static val waitRandom: Random = new Random(System.currentTimeMillis());
     
     transient var sumCount: Long = 0;
+    transient var releaseCount: Long = 0;
     
     protected def this() {
         
-        internalProcessQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
-        internalBufferQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
+        internalProcessQ =  new Array[HashMap[Any, Pending]](Place.MAX_PLACES);
+        internalBufferQ =  new Array[HashMap[Any, Pending]](Place.MAX_PLACES);
         
         // writeProcessQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
         // writeBufferQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
@@ -47,8 +48,8 @@ public class BigArrayQueueManager {
         
         for (var i:int = 0; i < Place.MAX_PLACES; ++i) {
             
-            internalBufferQ(i) = new HashMap[Object, Pending]();
-            internalProcessQ(i) = new HashMap[Object, Pending]();
+            internalBufferQ(i) = new HashMap[Any, Pending]();
+            internalProcessQ(i) = new HashMap[Any, Pending]();
             
             // singleton.writeBufferQ(i) = new HashMap[Object, Pending]();
             // singleton.writeProcessQ(i) = new HashMap[Object, Pending]();
@@ -81,63 +82,32 @@ public class BigArrayQueueManager {
     
     protected static def addRead[X](obj: BigArray[X], placeId: Int, key: Key, index: Index,  wrap: Wrap[X]) {
 
-        // Console.OUT.println("Q => " + Q + " index: " + index + " Place: " + placeId);
-        // singleton.qLock.lock();
-        
-        // val Q = singleton.bufferQ(placeId);
-        // x10.util.concurrent.Fences.storeStoreBarrier();
-        // val temp = Q.getOrElse(obj, null);
         
         val temp = getEntryFromBufferQ(placeId, obj);
         var readPending: LocalPending[X];
-        // x10.util.concurrent.Fences.storeStoreBarrier();
+
         
         if (temp == null) {
             
             readPending = new LocalPending[X](obj);
-            // Q.put(obj, readPending);
             putEntryToBufferQ(placeId, obj, readPending);
-            // x10.util.concurrent.Fences.storeStoreBarrier();
+            
         } else {
             
             readPending = temp as LocalPending[X];
-            // x10.util.concurrent.Fences.storeStoreBarrier();
         }
         
-        // singleton.qLock.unlock();
-        
-        // singleton.waitCountLock.lock();
-        
-        // var wc: AtomicInteger = singleton.waitCount.getOrElse(key, null);
-        // 
-        // if (wc == null) {
-        //     
-        //     // Key waiting hasnt been added yet
-        //     wc = new AtomicInteger(1);
-        //     singleton.waitCount.put(key, wc);
-        //     x10.util.concurrent.Fences.storeStoreBarrier();
-        // } else {
-        //     
-        //    wc.incrementAndGet();
-        //     // singleton.waitCount.put(key, wc + 1);
-        // }
-        
-        // Console.OUT.println("Added Key: " + key + " Count: " + wc.intValue());
-        // Console.OUT.println("Added Key: " + key + " Count: " + singleton.waitCount.getOrElse(key, -1));
+       
         readPending.addRead(key, index, wrap);
         
-        Console.OUT.println("KKKK" + "add count(k): " + key);
+        // Console.OUT.println("KKKK" + "add count(k): " + key);
         increaseWaitingCount(key);
-        // singleton.waitCountLock.unlock();
+
     }
     
     protected static def addWrite[X](obj: BigArray[X], placeId: Int, key: Key, index: Index,  data: X) {
          
-        // singleton.qLock.lock();
-        
-        // val Q = singleton.bufferQ(placeId);
-        
-        // val temp = Q.getOrElse(obj, null);
+
         val temp = getEntryFromBufferQ(placeId, obj);
         var writePending: LocalPending[X];
 
@@ -152,28 +122,9 @@ public class BigArrayQueueManager {
             writePending = temp as LocalPending[X];
         }
         
-        // singleton.qLock.unlock();
-        
-        // singleton.waitCountLock.lock();
-        // 
-        // var wc: AtomicInteger = singleton.waitCount.getOrElse(key, null);
-        // 
-        // if (wc == null) {
-        //     
-        //     // Key waiting hasnt been added yet
-        //     wc = new AtomicInteger(1);
-        //     singleton.waitCount.put(key, wc);
-        //     
-        // } else {
-        //     
-        //     wc.incrementAndGet();
-        // }
-        
-        // Console.OUT.println("Added Key: " + key + " Count: " + wc.intValue());
         writePending.addWrite(key, index, data);
         increaseWaitingCount(key);
-        // singleton.waitCountLock.unlock();
-        
+
     }
     
     protected static def enterGlobalJob(): Boolean {
@@ -188,18 +139,20 @@ public class BigArrayQueueManager {
     
     protected  static def isDataReady(key: Key): Boolean {
         
-        // singleton.internalWaitCountLock.lock();
-        singleton.qLock.lock();
+        if(singleton.internalWaitCountLock.tryLock()) {
+            
+            
+            val result = singleton.internalWaitCount.getOrElse(key, null);
+            
+            singleton.internalWaitCountLock.unlock();
+            return result == null;
+        }
         
-        val result = singleton.internalWaitCount.getOrElse(key, null);
+        return false;
         
-        // singleton.internalWaitCountLock.unlock();
-        singleton.qLock.unlock();
-        
-        return result == null || result.intValue() == 0;
     }
     
-    private static def getEntryFromBufferQ(placeId: Int, obj: Object) {
+    private static def getEntryFromBufferQ(placeId: Int, obj: Any) {
         
         singleton.qLock.lock();
         val r = singleton.internalBufferQ(placeId).getOrElse(obj, null);
@@ -217,7 +170,7 @@ public class BigArrayQueueManager {
         return r;
     }
     
-    private static def putEntryToBufferQ(placeId: Int, obj: Object, pending: Pending) {
+    private static def putEntryToBufferQ(placeId: Int, obj: Any, pending: Pending) {
         
         singleton.qLock.lock();
         singleton.internalBufferQ(placeId).put(obj, pending);
@@ -228,10 +181,7 @@ public class BigArrayQueueManager {
         
         singleton.qLock.lock();
         
-        // for (var i: Int = 0; i < singleton.internalProcessQ.size; ++i) {
-            
-            singleton.internalProcessQ(placeId).clear();		// Clear old data
-        // }
+        singleton.internalProcessQ(placeId).clear();		// Clear old data
         
         singleton.qLock.unlock();
     }
@@ -240,7 +190,7 @@ public class BigArrayQueueManager {
         
         singleton.qLock.lock();
         
-        var temp: Array[HashMap[Object, Pending]] = singleton.internalBufferQ;
+        val temp = singleton.internalBufferQ;
         x10.util.concurrent.Fences.storeStoreBarrier();
         singleton.internalBufferQ = singleton.internalProcessQ;
         x10.util.concurrent.Fences.storeStoreBarrier();
@@ -252,30 +202,36 @@ public class BigArrayQueueManager {
     
     private  static def decreaseWaitingCount(k: Key) {
         
-        // singleton.internalWaitCountLock.lock();
-        singleton.qLock.lock();
+        singleton.internalWaitCountLock.lock();
+        // singleton.qLock.lock();
         
         val wc = singleton.internalWaitCount.getOrElse(k, null);
         
         if (wc == null) {
             
-            throw new UnsupportedOperationException("Invalid waiting key");
-        } 
-        
-        val count = wc.decrementAndGet();
-        
-        if (count == 0) {
+            // workaround, maybe due to optimization some state order are different from src
+            // throw new UnsupportedOperationException("Invalid waiting key: " + k);
             
-            singleton.internalWaitCount.remove(k);
+        } else { 
+        
+            val count = wc.decrementAndGet();
+            
+            if (count <= 0) {
+                
+                singleton.internalWaitCount.remove(k);
+                x10.util.concurrent.Fences.loadLoadBarrier();
+            }
+        
         }
-        singleton.qLock.unlock();
-        // singleton.internalWaitCountLock.unlock();
+        ++singleton.releaseCount;
+        // singleton.qLock.unlock();
+        singleton.internalWaitCountLock.unlock();
     }
     
     private static def increaseWaitingCount(k: Key) {
         
-        // singleton.internalWaitCountLock.lock();
-        singleton.qLock.lock();
+        singleton.internalWaitCountLock.lock();
+        // singleton.qLock.lock();
         
         var wc: AtomicInteger = singleton.internalWaitCount.getOrElse(k, null);
         
@@ -291,56 +247,33 @@ public class BigArrayQueueManager {
         }
         
         ++singleton.sumCount;
-        singleton.qLock.unlock();
-        // singleton.internalWaitCountLock.unlock();
+        // singleton.qLock.unlock();
+        singleton.internalWaitCountLock.unlock();
     }
     
     
     protected static def execute() {
         
-        // // Swap queue
-        // singleton.qLock.lock();
-        // 
-        // 
-        // 
-        // var temp: Array[HashMap[Object, Pending]] = singleton.bufferQ;
-        // x10.util.concurrent.Fences.storeStoreBarrier();
-        // singleton.bufferQ = singleton.processQ;
-        // x10.util.concurrent.Fences.storeStoreBarrier();
-        // singleton.processQ = temp;
-        // x10.util.concurrent.Fences.storeStoreBarrier();
-        // 
-        // singleton.qLock.unlock();
-        
-        // Get remote data
-        
         swapQ();
         
         finish {
-            
-            
-            
+
             for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
                 
-                // singleton.qLock.lock();
-                
                 val p = i; // Copy to pass to closure
-                // val placeQ = singleton.processQ(p);
-                // val placeQ = singleton.readBufferQ(p);
-                // x10.util.concurrent.Fences.storeStoreBarrier();
-                // singleton.qLock.unlock();
                 val placeQ = getProcessQ(p);
                 // Console.OUT.println("Job to exec: " + placeQ.size() + " Obj Addres" + placeQ);
                 doRemoteOperation (p, placeQ);
+                // async doRemoteOperation (p, placeQ);
                 clearProcessQ(p);
-                // async doRemoteOperation (p, placeQ);          
+                          
             } 
         }
         
-        // singleton.qLock.unlock();
+
     }
     
-    protected static def doRemoteOperation(placedId: Int, placeQ: HashMap[Object, Pending]) {
+    protected static def doRemoteOperation(placedId: Int, placeQ: HashMap[Any, Pending]) {
   
 
         if(placeQ.size() > 0) {
@@ -394,17 +327,17 @@ public class BigArrayQueueManager {
                     
                     readData.add(new ReadReplyPayload(hash, obj, keys, indices, data));
                     
-                    Console.OUT.println("remote k: " + keys);
+                    // Console.OUT.println("remote k: " + keys);
                 }
                 
                 return readData.toArray();
             };
-            
-            // Console.OUT.print("Remote Data: ");
-            // for (var i:int = 0; i < remoteReadData.size; ++i) {
-            //     
-            //     Console.OUT.println(remoteReadData(i).data);
-            // }
+           
+            Console.OUT.println("Remote Data: ");
+            for(var i:int = 0; i < remoteReadData.size; ++i) {
+                
+                Console.OUT.println(remoteReadData(i).data);
+            }
             
             // Update waiting queue   
             for (var i: Int = 0; i < remoteReadData.size; ++i) {
@@ -418,28 +351,12 @@ public class BigArrayQueueManager {
                 localReadPendings(i).updateReadRequestData(data);
                 
                 // Remove waiting count
-                // singleton.waitCountLock.lock();
-                
                 for (var j: Int = 0; j < keys.size; ++j) {
                     
                     val k = keys(j);
-                    // val wc = singleton.waitCount.getOrElse(k, null);
-                    // 
-                    // if (wc == null) {
-                    //     
-                    //     throw new UnsupportedOperationException("Invalid waiting key");
-                    // } 
-                    // 
-                    // val count = wc.decrementAndGet();
-                    // 
-                    // if (count == 0) {
-                    //     
-                    //     singleton.waitCount.remove(k);
-                    // }
+
                     decreaseWaitingCount(k);
                 }
-                // 
-                // singleton.waitCountLock.unlock();
                 
             }
             
@@ -449,29 +366,13 @@ public class BigArrayQueueManager {
                 val rq = writeRequests(i);
                 val obj = rq.obj;
                 val keys = rq.keys;
-                
-                // singleton.waitCountLock.lock();
-                // 
+                 
                 for (var j: Int = 0; j < keys.size; ++j) {
                     
                     val k = keys(j);
-                    // val wc = singleton.waitCount.getOrElse(k, null);
-                    // 
-                    // if (wc == null) {
-                    //     
-                    //     throw new UnsupportedOperationException("Invalid waiting key");
-                    // } 
-                    // 
-                    // val count = wc.decrementAndGet();
-                    // 
-                    // if (count == 0) {
-                    //     
-                    //     singleton.waitCount.remove(k);
-                    // }
+
                     decreaseWaitingCount(k);
                 }
-                // 
-                // singleton.waitCountLock.unlock();
             }
         }
     }
@@ -480,5 +381,6 @@ public class BigArrayQueueManager {
         
         Console.OUT.println("Keys in hash => " + singleton.internalWaitCount.size());
         Console.OUT.println("Sum count  => " + singleton.sumCount);
+        Console.OUT.println("Release count  => " + singleton.sumCount);
     } 
 }
