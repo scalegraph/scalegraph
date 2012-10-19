@@ -7,10 +7,13 @@ import x10.util.HashMap;
 import x10.util.Pair;
 import x10.util.Random;
 import x10.util.Timer;
+import x10.util.Team;
+import x10.util.concurrent.Lock;
 
 import org.scalegraph.clustering.Clustering;
 import org.scalegraph.clustering.ClusteringResult;
 import org.scalegraph.clustering.Vector;
+import org.scalegraph.clustering.MPI;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.util.VertexInfo;
 import test.scalegraph.clustering.StopWatch;
@@ -23,9 +26,9 @@ public class ParallelSpectralClustering implements Clustering {
 	private val vertexInfo:VertexInfo;
 	
 	private var matrix:PlaceLocalHandle[SparseMatrix];
-	//private var firstColumnIndex:PlaceLocalHandle[Array[Int]];
-	//private var entries:PlaceLocalHandle[Array[Pair[Int, Double]]];
-	//private var num:Numbering;
+	private var x:PlaceLocalHandle[Array[Double]];
+	private var remoteX:Array[RemoteArray[Double]];
+	private val team:Team;
 	
 	private var tol:Double;
 	private var ncv:Int;
@@ -44,6 +47,8 @@ public class ParallelSpectralClustering implements Clustering {
 		sw.print("make vertex info");
 		Console.OUT.println("vertexInfo.size() = " + vertexInfo.size());
 		
+		this.team = Team.WORLD;
+		
 		this.tol = 0.000;
 		this.ncv = 2 * nClusters;
 		this.maxitr = 10000;
@@ -61,6 +66,14 @@ public class ParallelSpectralClustering implements Clustering {
 		val sw = new StopWatch();
 		sw.start();
 		
+		this.x = PlaceLocalHandle.make[Array[Double]](Dist.makeUnique(), ()=>new Array[Double](vertexInfo.size()));
+		this.remoteX = new Array[RemoteArray[Double]](Place.MAX_PLACES);
+		this.remoteX(here.id) = new RemoteArray[Double](this.x());
+		for(p in Place.places()){
+			if(p.id == here.id) continue;
+			this.remoteX(p.id) = at(p) new RemoteArray[Double](x());
+		}
+		
 		makeMatrix();
 		sw.print("make matrix");
 		/*for(p in Place.places()) at(p) {
@@ -68,36 +81,23 @@ public class ParallelSpectralClustering implements Clustering {
 			Console.OUT.println(matrix());
 		}*/
 		
-		val z = solveEigenvalueProblem();
-		sw.print("solve eigenvalue problem");
-		if(z == null) return null;
-		
 		val nPoints = vertexInfo.size();
-		val points = PlaceLocalHandle.make[Array[Vector]](Dist.makeUnique(), ()=>new Array[Vector](vertexInfo.IDXtoID().size()));
+		val points = PlaceLocalHandle.make[Array[Vector]](Dist.makeUnique(), ()=>new Array[Vector](vertexInfo.getVertexCount(here)));
+		
+		val gsw = GlobalRef(sw);
 		finish for(p in Place.places()) async at(p) {
-			val ofs = vertexInfo.offset(p.id);
+			val z = solveEigenvalueProblem();
+			if(p.id == 0) at(gsw) gsw().print("solve eigenvalue problem");
+			//if(z == null) return null;
+			
+			val nloc = vertexInfo.getVertexCount(here);
 			finish for(i in points()) async {
 				points()(i) = Vector.make(nClusters);
 				for(var j:Int = 0; j < nClusters; j++){
-					points()(i)(j) = z(i + ofs + j * nPoints);
+					points()(i)(j) = z(i + j * nloc);
 				}
 			}
 		}
-		
-		/*for(var i:Int = 0; i < nPoints; i++){
-			points(i) = Vector.make(nClusters);
-			var sum:Double = 0.0;
-			for(var j:Int = 0; j < nClusters; j++){
-				sum += z(i + j * nPoints);
-			}
-			for(var j:Int = 0; j < nClusters; j++){
-				//points(i)(j) = z(i + j * nPoints) / sum;  // NJW
-				//points(i)(j) = z(i + j * nPoints);  // Shi,Malik
-				points(i)(j) = z(i + j * nPoints);  // Melia,Shi
-				//Console.OUT.print(points(i)(j) + " ");
-			}
-			//Console.OUT.println("");
-		}*/
 		Console.OUT.println("make points: " + sw.get());
 		
 		val kmeansResult = kmeans(nClusters, points);
@@ -156,45 +156,47 @@ public class ParallelSpectralClustering implements Clustering {
 		val vertexInfo = this.vertexInfo;
 		this.matrix = PlaceLocalHandle.make[SparseMatrix](Dist.makeUnique(), ()=>{
 			val nVertices = vertexInfo.IDXtoID().size();
-			//val firstColumnIndexBuilder = new ArrayBuilder[Int]();
-			//val entriesBuilder = new ArrayBuilder[Pair[Int, Double]]();
 			val entryBuilder = new Array[ArrayBuilder[Pair[Int, Double]]](nVertices, (Int)=>new ArrayBuilder[Pair[Int, Double]]());
-			val gEntryBuilder = GlobalRef(entryBuilder);
+			//val gEntryBuilder = GlobalRef(entryBuilder);
 			val recvHash = new HashMap[Long, ArrayBuilder[Int]]();
 			val allNeighboursID = new Array[ArrayList[Long]](Place.MAX_PLACES, (Int)=> new ArrayList[Long]());
 			val allNeighboursIDX = new Array[Array[Int]](Place.MAX_PLACES);
+			val lock = new Lock();
 			
 			var j:Int = 0;
-			for(var localVertexIDX:Int = 0; localVertexIDX < nVertices; localVertexIDX++){
-				val vertexIDX = localVertexIDX + vertexInfo.offset(here.id);
-				val vertexID:Long = vertexInfo.getIDFromHere(vertexIDX)();
-				val degree:Int = vertexInfo.getDegreeFromHere(vertexIDX)();
-				//if(vertexID < 0) continue;
-				
-				val neighbours = graph.getNeighbours(vertexID);
-				for(var npt:Int = 0; npt < neighbours.size; npt++){
-					val neighbourID:Long = neighbours(npt);
+			finish for(var i:Int = 0; i < nVertices; i++) {
+				val localVertexIDX = i;
+				//async {
+					val vertexIDX = localVertexIDX + vertexInfo.offset(here.id);
+					val vertexID:Long = vertexInfo.getIDFromHere(vertexIDX)();
+					val degree:Int = vertexInfo.getDegreeFromHere(vertexIDX)();
+					//if(vertexID < 0) continue;
 					
-					val box = recvHash.get(neighbourID);
-					if(box == null){
-						val builder = new ArrayBuilder[Int]().add(vertexIDX);
-						recvHash.put(neighbourID, builder);
-					}else{
-						val builder = box().add(vertexIDX);
-						recvHash.put(neighbourID, builder);
+					val neighbours = graph.getNeighbours(vertexID);
+					for(var npt:Int = 0; npt < neighbours.size; npt++){
+						val neighbourID:Long = neighbours(npt);
+						
+						val box = recvHash.get(neighbourID);
+						if(box == null){
+							val builder = new ArrayBuilder[Int]().add(vertexIDX);
+							recvHash.put(neighbourID, builder);
+						}else{
+							val builder = box().add(vertexIDX);
+							recvHash.put(neighbourID, builder);
+						}
+						
+						if(!allNeighboursID(vertexInfo.getPlaceID(neighbourID)).contains(neighbourID)){
+							allNeighboursID(vertexInfo.getPlaceID(neighbourID)).add(neighbourID);
+						}
 					}
-					
-					if(!allNeighboursID(vertexInfo.getPlaceID(neighbourID)).contains(neighbourID)){
-						allNeighboursID(vertexInfo.getPlaceID(neighbourID)).add(neighbourID);
-					}
-				}
+				//}
 			}
 			
-			for(p in Place.places()) {  // don't async
+			finish for(p in Place.places()) async {
 				val localNeighboursID = allNeighboursID(p.id).toArray();
 				allNeighboursIDX(p.id) = at(p){
 					val result = new Array[Int](localNeighboursID.region);
-					for(var pt:Int = 0; pt < localNeighboursID.size; pt++){  // don't atomic
+					for(var pt:Int = 0; pt < localNeighboursID.size; pt++){
 						val box = vertexInfo.getIDXFromHere(localNeighboursID(pt));
 						if(box != null) result(pt) = box();  // box must not be null
 					}
@@ -208,17 +210,17 @@ public class ParallelSpectralClustering implements Clustering {
 					for(var vpt:Int = 0; vpt < vertexIDXs.size; vpt++){
 						val vertexIDX = vertexIDXs(vpt);
 						val neighbourIDX = allNeighboursIDX(p.id)(npt);
-						at(gEntryBuilder){
-							/*Console.OUT.print(here + "vertexIDX = " + vertexIDX + ", degree = ");
-							val b = vertexInfo.getDegreeFromHere(vertexIDX);
-							if(b == null){
-								Console.OUT.println("null");
-							}else{
-								Console.OUT.println(b());
-							}*/
-							gEntryBuilder()(vertexIDX - vertexInfo.offset(here.id)).add(Pair[Int, Double](neighbourIDX, 1.0 / vertexInfo.getDegreeFromHere(vertexIDX)()));
-							//Console.OUT.println("entryBuilder(" + vertexIDX + ").add([" + neighbourIDX + ", " + 1.0 + "])");
-						}
+						/*Console.OUT.print(here + "vertexIDX = " + vertexIDX + ", degree = ");
+						val b = vertexInfo.getDegreeFromHere(vertexIDX);
+						if(b == null){
+							Console.OUT.println("null");
+						}else{
+							Console.OUT.println(b());
+						}*/
+						lock.lock();
+						entryBuilder(vertexIDX - vertexInfo.offset(here.id)).add(Pair[Int, Double](neighbourIDX, 1.0 / vertexInfo.getDegreeFromHere(vertexIDX)()));
+						lock.unlock();
+						//Console.OUT.println("entryBuilder(" + vertexIDX + ").add([" + neighbourIDX + ", " + 1.0 + "])");
 					}
 				}
 			}
@@ -236,21 +238,23 @@ public class ParallelSpectralClustering implements Clustering {
 	
 	private def solveEigenvalueProblem(){
 		val vertexInfo = this.vertexInfo;
+		val n:Int = vertexInfo.size();
+		val nloc:Int = vertexInfo.getVertexCount(here);
 		
-		//val comm:Int = 0x44000000;  // MPI_COMM_WORLD
+		val rank:Int = MPI.getRank();
+		val comm:Int = 0x44000000;  // MPI_COMM_WORLD
 		var ido:Int = 0;
 		val bmat:Char = 'I';
-		val n:Int = vertexInfo.size();
 		val which:Int = ARPACK.LA;
 		val nev:Int = nClusters;
 		val tol:Double = this.tol;
-		val resid:Array[Double](1) = new Array[Double](n);
+		val resid:Array[Double](1) = new Array[Double](nloc);
 		val ncv:Int = this.ncv;
-		val v:Array[Double](1) = new Array[Double](n*ncv);
-		val ldv:Int = n;
+		val v:Array[Double](1) = new Array[Double](nloc * ncv);
+		val ldv:Int = nloc;
 		val iparam:Array[Int](1) = new Array[Int](11);
 		val ipntr:Array[Int](1) = new Array[Int](11);
-		val workd:Array[Double](1) = new Array[Double](3*n);
+		val workd:Array[Double](1) = new Array[Double](3 * nloc);
 		val lworkl:Int = ncv * (ncv + 8);
 		val workl:Array[Double](1) = new Array[Double](lworkl);
 		var info:Int = 0;
@@ -264,27 +268,27 @@ public class ParallelSpectralClustering implements Clustering {
 		val howmny:Char = 'A';
 		val select:Array[Int](1) = new Array[Int](ncv);
 		val d:Array[Double](1) = new Array[Double](nev);
-		val z:Array[Double](1) = new Array[Double](nev * ldv);
-		val ldz:Int = n;
+		val z:Array[Double](1) = new Array[Double](nloc * nev);
+		val ldz:Int = nloc;
 		val sigma:Double = 0.0;
 		
 		var iter:Int = 0;
 		while(true){
-			if(iter % 100 == 0){
+			if(rank == 0 && iter % 100 == 0){
 				Console.OUT.println("iter = " + iter);
 			}
 			iter++;
 			
-			ARPACK.dsaupd(ido, bmat, n, which, nev, tol,
+			ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
 					resid, ncv, v, ldv, iparam, ipntr,
 					workd, workl, lworkl, info);
 			
-			if(info < 0){
+			if(rank == 0 && info < 0){
 				switch(info){
 				default:
 					Console.OUT.println("ARPACK: dsaupd: unrecognized return value: " + info);
 				}
-			}else if(info > 0){
+			}else if(rank == 0 && info > 0){
 				switch(info){
 				case 1:
 					Console.OUT.println("ARPACK: dsaupd: reached to max iteration");
@@ -295,51 +299,47 @@ public class ParallelSpectralClustering implements Clustering {
 			}
 			
 			if(ido == -1 || ido == 1){
-				val x = new Array[Double](vertexInfo.size());
-				val y = new Array[Double](vertexInfo.size());
-				val gy = GlobalRef(y);
-				for(var i:Int = 0; i < x.size; i++){
-					x(i) = workd(ipntr(0) - 1 + i);
+				for(var i:Int = 0; i < nloc; i++) {
+					x()(i + vertexInfo.offset(here.id)) = workd(ipntr(0) - 1 + i);
 				}
-				finish for(p in Place.places()) async at(p) {
-					val sub_y = matrix().mult(x);
-					at(gy) {
-						for(var i:Int = 0; i < sub_y.size; i++){
-							gy()(i + vertexInfo.offset(p.id)) = sub_y(i);
-						}
-					}
+				finish for(p in Place.places()) {
+					Array.asyncCopy(x(), vertexInfo.offset(here.id), remoteX(p.id), vertexInfo.offset(here.id), nloc);
 				}
-				for(var i:Int = 0; i < y.size; i++){
-					workd(ipntr(1) - 1 + i) = y(i);
+				//barrier
+				team.barrier(here.id);
+				
+				val yloc = matrix().mult(x());
+				for(var i:Int = 0; i < nloc; i++){
+					workd(ipntr(1) - 1 + i) = yloc(i);
 				}
 			}else if(ido == 2){
-				for(var i:Int = 0; i < n; i++){
+				for(var i:Int = 0; i < nloc; i++){
 					workd(ipntr(1) - 1 + i) = workd(ipntr(0) - 1 + i);
 				}
 			}else{
-				Console.OUT.println("ido = " + ido);
+				if(rank == 0) Console.OUT.println("ido = " + ido);
 				break;
 			}
 		}
 		
-		Console.OUT.println("iterations = " + iparam(2));
-		Console.OUT.println("converged Ritz values = " + iparam(4));
+		if(rank == 0) Console.OUT.println("iterations = " + iparam(2));
+		if(rank == 0) Console.OUT.println("converged Ritz values = " + iparam(4));
 		
 		if(iparam(4) < nev){
-			Console.OUT.println("ARPACK: dsaupd: could not calculate all required Ritz values");
+			if(rank == 0) Console.OUT.println("ARPACK: dsaupd: could not calculate all required Ritz values");
 			return null;
 		}
 		
-		ARPACK.dseupd(rvec, howmny, select, d, z, ldz,
-				sigma, bmat, n, which, nev, tol, resid,
+		ARPACK.pdseupd(comm, rvec, howmny, select, d, z, ldz,
+				sigma, bmat, nloc, which, nev, tol, resid,
 				ncv, v, ldv, iparam, ipntr, workd,
 				workl, lworkl, info);
 		
-		if(info < 0){
+		if(rank == 0 && info < 0){
 			Console.OUT.println("ARPACK: dseupd: bad termination: " + info);
 		}
 		
-		Console.OUT.println(d);
+		if(rank == 0) Console.OUT.println(d);
 		//Console.OUT.println(z);
 		
 		return z;
@@ -464,7 +464,7 @@ public class ParallelSpectralClustering implements Clustering {
 		}
 		
 		for(var iter:Int = 1; iter <= iterations; iter++){
-			Console.OUT.println("iteration: " + iter);
+			if(iter == 1 || iter % 10 == 0) Console.OUT.println("iteration: " + iter);
 			
 			// copy current clusters to local current clusters
 			finish for(p in Place.places()) async at(p) {

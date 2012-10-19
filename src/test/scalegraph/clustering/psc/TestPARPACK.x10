@@ -15,10 +15,17 @@ public class TestPARPACK {
 			ARPACK.pdlamch(0x44000000, 'E');
 		}*/
 		val test = new TestPARPACK();
-		for(p in Place.places()) async at(p) {
-			Console.OUT.println(here + ": rank = " + MPI.getRank());
-			Console.OUT.println(here + ": size = " + MPI.getSize());
-			test.solveEigenvalueProblem();
+		val z = new Array[Array[Double](1)](Place.MAX_PLACES, (Int)=>null);
+		finish for(p in Place.places()) async {
+			z(p.id) = at(p) {
+				Console.OUT.println(here + ": rank = " + MPI.getRank());
+				Console.OUT.println(here + ": size = " + MPI.getSize());
+				val zloc = test.solveEigenvalueProblem();
+				zloc
+			};
+		}
+		for(p in Place.places()){
+			Console.OUT.println(p + ": " + z(p.id));
 		}
 	}
 	
@@ -50,13 +57,13 @@ public class TestPARPACK {
 		val which:Int = ARPACK.LA;
 		val nev:Int = 2;
 		val tol:Double = 0.000;
-		val resid:Array[Double](1) = new Array[Double](n);
+		val resid:Array[Double](1) = new Array[Double](nloc);
 		val ncv:Int = 2 * nev;
-		val v:Array[Double](1) = new Array[Double](n*ncv);
-		val ldv:Int = n;
+		val v:Array[Double](1) = new Array[Double](nloc*ncv);
+		val ldv:Int = nloc;
 		val iparam:Array[Int](1) = new Array[Int](11);
 		val ipntr:Array[Int](1) = new Array[Int](11);
-		val workd:Array[Double](1) = new Array[Double](3*n);
+		val workd:Array[Double](1) = new Array[Double](3*nloc);
 		val lworkl:Int = ncv * (ncv + 8);
 		val workl:Array[Double](1) = new Array[Double](lworkl);
 		var info:Int = 0;
@@ -70,8 +77,8 @@ public class TestPARPACK {
 		val howmny:Char = 'A';
 		val select:Array[Int](1) = new Array[Int](ncv);
 		val d:Array[Double](1) = new Array[Double](nev);
-		val z:Array[Double](1) = new Array[Double](nev * ldv);
-		val ldz:Int = n;
+		val z:Array[Double](1) = new Array[Double](nloc * nev);
+		val ldz:Int = nloc;
 		val sigma:Double = 0.0;
 		
 		var iter:Int = 0;
@@ -81,7 +88,7 @@ public class TestPARPACK {
 			}
 			iter++;
 			
-			ARPACK.pdsaupd(comm, ido, bmat, n, which, nev, tol,
+			ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
 					resid, ncv, v, ldv, iparam, ipntr,
 					workd, workl, lworkl, info);
 			
@@ -140,7 +147,7 @@ public class TestPARPACK {
 		}
 		
 		ARPACK.pdseupd(comm, rvec, howmny, select, d, z, ldz,
-				sigma, bmat, n, which, nev, tol, resid,
+				sigma, bmat, nloc, which, nev, tol, resid,
 				ncv, v, ldv, iparam, ipntr, workd,
 				workl, lworkl, info);
 		
@@ -149,7 +156,7 @@ public class TestPARPACK {
 		}
 		
 		if(rank == 0) Console.OUT.println(d);
-		if(rank == 0) Console.OUT.println(z);
+		//if(rank == 0) Console.OUT.println(z);
 		
 		return z;
 	}

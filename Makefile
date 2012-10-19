@@ -855,7 +855,10 @@ test_big_array:
 test_psc:
 	@echo "----------- Compile Parallel Spectral Clustering Tester --------------------------";
 	$(X10_HOME)/bin/x10c++ -d $(OUTPUT) -o $(OUTPUT)/Testscalegraph \
+	-x10rt mpi \
+	-post $(MPI_HOME)/bin/mpic++ \
 	-cxx-postarg $(ARPACK_LIB) \
+	-cxx-postarg $(PARPACK_LIB) \
 	-cxx-postarg $(CBLAS_LIB) \
 	-cxx-postarg $(CLAPACK_LIB) \
 	-cxx-postarg -lgfortran \
@@ -867,6 +870,7 @@ test_psc:
 	src/org/scalegraph/clustering/Clustering.x10 \
 	src/org/scalegraph/clustering/ClusteringResult.x10 \
 	src/org/scalegraph/clustering/Vector.x10 \
+	src/org/scalegraph/clustering/MPI.x10 \
 	src/test/scalegraph/clustering/Tool.x10 \
 	src/test/scalegraph/clustering/StopWatch.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
@@ -881,7 +885,7 @@ test_psc:
 	src/org/scalegraph/util/VertexInfo.x10;
 	
 	@echo "----------- Launch Parallel Spectral Clustering Tester ---------------------------";
-	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
+	X10RT_MPI_THREAD_MULTIPLE=true MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------------";
 
 # Test 33

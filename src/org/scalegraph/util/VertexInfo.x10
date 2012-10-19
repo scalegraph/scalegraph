@@ -15,7 +15,7 @@ public class VertexInfo {
 	public val IDtoIDX = PlaceLocalHandle.make[HashMap[Long, Int]](Dist.makeUnique(), ()=>new HashMap[Long, Int]());
 	public val IDXtoID = PlaceLocalHandle.make[HashMap[Int, Long]](Dist.makeUnique(), ()=>new HashMap[Int, Long]());
 	public val inDegree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
-    public val outDegree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
+	public val outDegree = PlaceLocalHandle.make[HashMap[Int, Int]](Dist.makeUnique(), ()=>new HashMap[Int, Int]());
 	public val offset = new Array[Int](Place.MAX_PLACES + 1);
 	
 	public static def make(graph:PlainGraph): VertexInfo {
@@ -38,30 +38,31 @@ public class VertexInfo {
 			}
 		}
 		
-		finish for(p in Place.places()) async at(p) {
-			var counter:Int = 0;
-			for(i in recvArray()){
-				for(j in recvArray()(i)){
-					val vertexID = recvArray()(i)(j);
-					val nInNeighbours = graph.getInNeighbours(vertexID);
-                    val nOutNeighbours = graph.getOutNeighbours(vertexID);
-					vertexInfo.IDtoIDX().put(vertexID, counter);
-					vertexInfo.IDXtoID().put(counter, vertexID);
-                    if (nInNeighbours == null) {
-                        vertexInfo.inDegree().put(counter, 0);
-                    } else {
-                        vertexInfo.inDegree().put(counter, nInNeighbours.size);
-                    }
-                    if (nOutNeighbours == null) {
-                        vertexInfo.outDegree().put(counter, 0);
-                    } else {
-                        vertexInfo.outDegree().put(counter, nOutNeighbours.size);
-                    }
-					counter++;
+		finish for(p in Place.places()) async {
+			vertexInfo.offset(p.id) = at(p) {
+				var counter:Int = 0;
+				for(i in recvArray()){
+					for(j in recvArray()(i)){
+						val vertexID = recvArray()(i)(j);
+						val nInNeighbours = graph.getInNeighboursCount(vertexID);
+						val nOutNeighbours = graph.getOutNeighboursCount(vertexID);
+						vertexInfo.IDtoIDX().put(vertexID, counter);
+						vertexInfo.IDXtoID().put(counter, vertexID);
+						if (nInNeighbours < 0) {
+							vertexInfo.inDegree().put(counter, 0);
+						} else {
+							vertexInfo.inDegree().put(counter, nInNeighbours as Int);
+	                    }
+						if (nOutNeighbours < 0) {
+							vertexInfo.outDegree().put(counter, 0);
+						} else {
+							vertexInfo.outDegree().put(counter, nOutNeighbours as Int);
+						}
+						counter++;
+					}
 				}
-			}
-			val count = counter;
-			at(gOffset) gOffset()(p.id) = count;
+				counter
+			};
 		}
 		
 		for(var i:Int = Place.MAX_PLACES; i >= 1 ; i--){
@@ -77,6 +78,10 @@ public class VertexInfo {
 	
 	public def size(): Int {
 		return offset(Place.MAX_PLACES);
+	}
+	
+	public def getVertexCount(place:Place): Int {
+		return getVertexCount(place.id);
 	}
 	
 	public def getVertexCount(placeID:Int): Int {
