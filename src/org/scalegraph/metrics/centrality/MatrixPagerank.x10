@@ -14,7 +14,7 @@ import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.communities.LongToIntMap;
 import org.scalegraph.util.VertexInfo;
 
-struct MatrixElement1 {
+/*struct MatrixElement1 {
     public val x:Int;
     public val y:Long;
     public def this(x:Int, y:Long) {
@@ -50,7 +50,7 @@ struct Val {
         this.id = id;
         this.value = value;
     }
-};
+};*/
 
 public class MatrixPagerank {
     private val alpha:Double = 0.85;
@@ -62,7 +62,7 @@ public class MatrixPagerank {
     private val vertexInfo:VertexInfo;
     private val nNodePerPlace:Int;
     private val rem:Int;
-    private var binLink:PlaceLocalHandle[Array[ArrayList[Elem]]];
+    private var binLink:PlaceLocalHandle[Array[ArrayList[Element]]];
     private var offset:PlaceLocalHandle[Array[Int]];
     private var danglingList:PlaceLocalHandle[Array[Int]];
 
@@ -239,7 +239,7 @@ public class MatrixPagerank {
         }
         return (x - (nNodePerPlace + 1) * rem) % nNodePerPlace;
     }
-
+/*
     private def createMatrix() {
         val funStart = Timer.milliTime();
 
@@ -464,7 +464,6 @@ public class MatrixPagerank {
 
         Console.OUT.printf("3 end. time = %f\n", (Timer.milliTime() - start3) / 1000.0);
 
-        val map:MatrixMap = new MatrixMap();
         val arr = new Array[Int](Place.MAX_PLACES);
 
         val start4 = Timer.milliTime();
@@ -497,7 +496,7 @@ public class MatrixPagerank {
         Console.OUT.printf("4 end. time = %f\n", (Timer.milliTime() - start4) / 1000.0);
         Console.OUT.printf("createMatrix time = %f\n", (Timer.milliTime() - funStart) / 1000.0);
         this.binLink = binLink;
-    }
+    }*/
 
 
     private def testBinLink() {
@@ -527,7 +526,10 @@ public class MatrixPagerank {
     private def initialize() {
 	    val funStart = Timer.milliTime();
         getOffset();
-        createMatrix();
+        val matrix = new CreateMatrix(graph);
+        matrix.createMatrix();
+        this.binLink = matrix.binLink;
+        this.danglingList = matrix.danglingList;
         //testBinLink();
 	    Console.OUT.printf("initialize = %f\n", (Timer.milliTime() - funStart) / 1000.0);
     }

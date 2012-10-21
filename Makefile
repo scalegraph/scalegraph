@@ -756,6 +756,8 @@ test_matrixpagerank:
 	src/org/scalegraph/metrics/centrality/MatrixMap.x10 \
 	src/org/scalegraph/metrics/centrality/PagerankResult.x10 \
 	src/org/scalegraph/metrics/centrality/BufferedHashMap.x10 \
+	src/org/scalegraph/metrics/centrality/CreateMatrix.x10 \
+	src/org/scalegraph/metrics/centrality/Element.x10 \
 	src/org/scalegraph/communities/LongToIntMap.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \
