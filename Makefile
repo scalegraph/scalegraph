@@ -886,7 +886,8 @@ test_psc:
 	src/org/scalegraph/io/ScatteredEdgeListReader.x10 \
 	src/org/scalegraph/util/DirectoryInfo.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10 \
-	src/org/scalegraph/util/VertexInfo.x10;
+	src/org/scalegraph/util/VertexInfo.x10 \
+	src/org/scalegraph/util/Stopwatch.x10;
 	
 	@echo "----------- Launch Parallel Spectral Clustering Tester ---------------------------";
 	X10RT_MPI_THREAD_MULTIPLE=true MV2_ENABLE_AFFINITY=0 MV2_NUM_HCAS=2 $(MPI_HOME)/bin/mpirun -np $(X10_NPLACES) -f $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;

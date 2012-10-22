@@ -25,7 +25,7 @@ public class ParallelSpectralClustering implements Clustering {
 	private val vertexList:DistArray[Long];
 	private val vertexInfo:VertexInfo;
 	
-	private var matrix:PlaceLocalHandle[SparseMatrix];
+	private var matrix:PlaceLocalHandle[SparseMatrix[Double]];
 	private var x:PlaceLocalHandle[Array[Double]];
 	private var remoteX:Array[RemoteArray[Double]];
 	private val team:Team;
@@ -154,7 +154,7 @@ public class ParallelSpectralClustering implements Clustering {
 	
 	private def makeMatrix(){
 		val vertexInfo = this.vertexInfo;
-		this.matrix = PlaceLocalHandle.make[SparseMatrix](Dist.makeUnique(), ()=>{
+		this.matrix = PlaceLocalHandle.make[SparseMatrix[Double]](Dist.makeUnique(), ()=>{
 			val nVertices = vertexInfo.IDXtoID().size();
 			val entryBuilder = new Array[ArrayBuilder[Pair[Int, Double]]](nVertices, (Int)=>new ArrayBuilder[Pair[Int, Double]]());
 			//val gEntryBuilder = GlobalRef(entryBuilder);
@@ -225,9 +225,7 @@ public class ParallelSpectralClustering implements Clustering {
 				}
 			}
 			
-			val m = new SparseMatrix();
-			m.size = nVertices;
-			m.entry = new Array[Array[Pair[Int, Double]]](nVertices);
+			val m = new SparseMatrix(nVertices, new Array[Array[Pair[Int, Double]](1)](nVertices));
 			finish for(pt in entryBuilder) async {
 				m.entry(pt) = entryBuilder(pt).result();
 				//Console.OUT.println(m.entry(pt));
@@ -305,13 +303,10 @@ public class ParallelSpectralClustering implements Clustering {
 				finish for(p in Place.places()) {
 					Array.asyncCopy(x(), vertexInfo.offset(here.id), remoteX(p.id), vertexInfo.offset(here.id), nloc);
 				}
-				//barrier
 				team.barrier(here.id);
 				
-				val yloc = matrix().mult(x());
-				for(var i:Int = 0; i < nloc; i++){
-					workd(ipntr(1) - 1 + i) = yloc(i);
-				}
+				matrix().mult(x(), 0, workd, ipntr(1) - 1);
+				
 			}else if(ido == 2){
 				for(var i:Int = 0; i < nloc; i++){
 					workd(ipntr(1) - 1 + i) = workd(ipntr(0) - 1 + i);
