@@ -9,7 +9,7 @@ export X10_STATIC_THREADS=true
 export X10_NO_STEALS=false
 
 #X10 runtime environment variables
-X10_NPLACES = 4
+X10_NPLACES = 1
 X10_HOSTFILE = machines.txt
 X10_NTHERADS = 10
 
@@ -22,7 +22,7 @@ INTERM =./out
 X10_HOME = /nfs/data1/scalegraph/X10_runtime/X10-2.2.2-fulloptimized-withgc-mpi/x10.dist
 CLASSPATH = $(X10_HOME)
 
-APP_DIR = /nfs/home/charuwat/workspace/ScaleGraph
+APP_DIR = /nfs/home/kansyun/workspace/ScaleGraph
 
 #Set MPI Home
 MPI_HOME = /nfs/data0/miyuru/software/mpich2-1.4
@@ -596,10 +596,12 @@ test_pattern:
 	src/org/scalegraph/io/WeightedGraphReader.x10 \
 	src/org/scalegraph/util/Date.x10 \
 	src/org/scalegraph/util/ScaleGraphMath.x10;
+	src/org/scalegraph/util/Stopwatch.x10;
+	
 	
 	
 	@echo "----------- Launch Graph Pattern Matching ------------------";
-	$(X10_HOME)/bin/X10Launcher $(OUTPUT)/Testscalegraph;
+	$(X10_HOME)/bin/X10Launcher -np $(X10_NPLACES) -hostfile $(APP_DIR)/$(X10_HOSTFILE) $(OUTPUT)/Testscalegraph;
 	@echo "----------- Test Completed ---------------------------";
 	
 # Test 24
