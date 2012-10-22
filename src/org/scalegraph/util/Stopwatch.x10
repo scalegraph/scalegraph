@@ -2,7 +2,7 @@ package org.scalegraph.util;
 
 import x10.util.Timer;
 
-public class StopWatch {
+public class Stopwatch {
 	
 	private var startTime:Long;
 	
