@@ -14,13 +14,13 @@ import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.io.EdgeListReader;
 import org.scalegraph.io.ScatteredEdgeListReader;
 import org.scalegraph.util.VertexInfo;
-import test.scalegraph.clustering.StopWatch;
+import org.scalegraph.util.Stopwatch;
 
 public class TestParallelSpectralClustering {
     public static def main(args: Array[String]) {
     	val test_vertexInfo = false;
     	
-    	val sw = new StopWatch();
+    	val sw = new Stopwatch();
     	sw.start();
     	
     	//val dir:String = "/nfs/data1/miyuru/Graph Data Sets/R-MAT/";

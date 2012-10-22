@@ -16,7 +16,7 @@ import org.scalegraph.clustering.Vector;
 import org.scalegraph.clustering.MPI;
 import org.scalegraph.graph.PlainGraph;
 import org.scalegraph.util.VertexInfo;
-import test.scalegraph.clustering.StopWatch;
+import org.scalegraph.util.Stopwatch;
 
 public class ParallelSpectralClustering implements Clustering {
 	
@@ -35,7 +35,7 @@ public class ParallelSpectralClustering implements Clustering {
 	private var maxitr:Int;
 	
 	public def this(graph:PlainGraph, nClusters:Int){
-		val sw = new StopWatch();
+		val sw = new Stopwatch();
 		
 		this.nClusters = nClusters;
 		this.graph = graph;
@@ -63,7 +63,7 @@ public class ParallelSpectralClustering implements Clustering {
 	
 	public def run(): ClusteringResult {
 		val vertexInfo = this.vertexInfo;
-		val sw = new StopWatch();
+		val sw = new Stopwatch();
 		sw.start();
 		
 		this.x = PlaceLocalHandle.make[Array[Double]](Dist.makeUnique(), ()=>new Array[Double](vertexInfo.size()));
