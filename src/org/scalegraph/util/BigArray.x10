@@ -66,15 +66,39 @@ public final class BigArray[T] implements BigArrayOperation {
         
     }
     
-    private def init() {
-        
-    }
-    
     public static def make[T](sz: long): BigArray[T] {
         
         val b = new BigArray[T](sz);
-        // b.init();
         return b;
+    }
+    
+    public static def make[T](sz: long, init: (Index) => T): BigArray[T] {
+        
+        val b = new BigArray[T](sz);
+        b.initWithMethod(init);
+        
+        return b;
+    }
+    
+    protected def initWithMethod(init:(Index) => T) {
+        
+        finish {
+            for (p in Place.places()) {
+                
+                async at (p) {
+                    
+                    val IMC = raw();
+                    val len = IMC.length();
+                    val pd = localHandle().placeDescriptors(here.id);
+                    val startIndex = pd.startIndex;
+                    
+                    for (var i: Int =0; i < len; ++i) {
+                        
+                        IMC(i) = init(startIndex + i);
+                    }
+                }
+            }
+        }
     }
     
     protected val localHandle: PlaceLocalHandle[LocalState[T]];
@@ -95,19 +119,6 @@ public final class BigArray[T] implements BigArrayOperation {
             
             property(startIndex, size, endIndex);
             }
-    }
-    
-    protected def setPlaceDistriptorForAll() {
-        
-        for(var i: Int = 1; i < Place.MAX_PLACES; ++i) {
-            
-            val pd = localHandle().placeDescriptors;
-            val p = i;
-            async at(Place.place(p)) {
-                
-                
-            }
-        }
     }
     
     protected final def raw(): IndexedMemoryChunk[T] {
@@ -155,9 +166,8 @@ public final class BigArray[T] implements BigArrayOperation {
        return  at(p) raw()(offset);
     }
     
-    public operator this (index: Index) = (data: T) {
-        raw()(index as Int) = data;
-    }
+    public operator this (index: Index) = (data: T) { setLocal(index, data);}
+    
     
     public final def isLocal(index: Index): Boolean {
         
@@ -165,7 +175,15 @@ public final class BigArray[T] implements BigArrayOperation {
         return index >= pd.startIndex && index <= pd.endIndex;
     }
     
-    protected def getLocal(index: Index): T {
+    public def setLocal(index: Index, data: T) {
+        
+        val pd = localHandle().placeDescriptors(here.id);
+        val offset = (index - pd.startIndex);
+        
+        raw()(offset) = data;
+    }
+    
+    public def getLocal(index: Index): T {
         
         val pd = localHandle().placeDescriptors(here.id);
         val offset = (index - pd.startIndex);
@@ -179,6 +197,15 @@ public final class BigArray[T] implements BigArrayOperation {
         val offset = (index - pd.startIndex);
         
         raw()(offset) = data;
+    }    
+    
+    protected def invokeLocalWithNoReturn(index: Index, method: (Any, Index, Any)=>void, param: Any) {
+        
+       //  val pd = localHandle().placeDescriptors(here.id);
+       //  val offset = (index - pd.startIndex);
+       // (offset);
+        
+        method(this, index, param);
     }
     
     public static def getKey(): Key {
@@ -209,7 +236,6 @@ public final class BigArray[T] implements BigArrayOperation {
         operationExclusive.lock();
         
         val placeId = getPlaceId(index);
-        // Console.OUT.println("getAsync => index: " + index);
         
         if (placeId == here.id) {
             
@@ -236,13 +262,34 @@ public final class BigArray[T] implements BigArrayOperation {
             
             // Local data, just write it directly
             writeLocal(index, data);
-            Console.OUT.println("Getlocal data: " + index);
             
         } else {
             
             // Add to waiting list
             BigArrayQueueManager.addWrite[T](this, placeId, k, index, data);
         }
+        
+        operationExclusive.unlock();
+    }
+    
+    public def invokeRemoteWithNoReturn(key: Key, index: Index, method: (Any, Index, Any) => void, param: Any) {
+        
+        operationExclusive.lock();
+        
+        val placeId = getPlaceId(index);
+        
+        if (placeId == here.id) {
+            
+            // Local data, just invoke it directly
+            invokeLocalWithNoReturn(index, method, param);
+            
+        } else {
+            
+            // Add to waiting list
+            BigArrayQueueManager.addRemoteInvocation[T](this, placeId, key, index,  method, param);
+        }
+        
+        
         
         operationExclusive.unlock();
     }
@@ -274,7 +321,7 @@ public final class BigArray[T] implements BigArrayOperation {
         }
     }
     
-    public def readData(indices: Array[Index]): Any {
+    public def readAll(indices: Array[Index]): Any {
         
         val size = indices.size;
         val list = new ArrayList[T]();
@@ -294,6 +341,14 @@ public final class BigArray[T] implements BigArrayOperation {
         return list.toArray();
     }
     
+    public def readOne(index: Index): Any {
+        
+        val placeDesc = localHandle().placeDescriptors(here.id);
+        val localIndex = index - placeDesc.startIndex;
+        
+        return raw()(localIndex);
+    }
+    
     public def writeData(indices: Array[Index], data: Any) {
         
         val d = data as Array[T];
@@ -305,6 +360,28 @@ public final class BigArray[T] implements BigArrayOperation {
             
             raw()(localIndex) = d(i);
             // Console.OUT.println("Request write at " + indices(i) + " local: " + localIndex);
+        }
+    }
+    
+    /************************ DEBUG Methods *********************************/
+    public def print() {
+
+        finish {
+            
+            for (p in Place.places()) {
+                
+                at (p) {
+                    
+                    val IMC = raw();
+                    val len = IMC.length();
+                    
+                    for (var i: Int =0; i < len; ++i) {
+                        
+                        val index = localHandle().placeDescriptors(here.id).startIndex + i;
+                        Console.OUT.println(index + " => " + IMC(i));
+                    }
+                }
+            }
         }
     }
 }

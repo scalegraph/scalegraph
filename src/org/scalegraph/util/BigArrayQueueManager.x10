@@ -35,9 +35,6 @@ public class BigArrayQueueManager {
         internalProcessQ =  new Array[HashMap[Any, Pending]](Place.MAX_PLACES);
         internalBufferQ =  new Array[HashMap[Any, Pending]](Place.MAX_PLACES);
         
-        // writeProcessQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
-        // writeBufferQ =  new Array[HashMap[Object, Pending]](Place.MAX_PLACES);
-        
         initLock = new Lock();
         mainJobLock = new Lock();
         qLock = new Lock();
@@ -50,9 +47,6 @@ public class BigArrayQueueManager {
             
             internalBufferQ(i) = new HashMap[Any, Pending]();
             internalProcessQ(i) = new HashMap[Any, Pending]();
-            
-            // singleton.writeBufferQ(i) = new HashMap[Object, Pending]();
-            // singleton.writeProcessQ(i) = new HashMap[Object, Pending]();
         }
         
         x10.util.concurrent.Fences.storeStoreBarrier();
@@ -62,20 +56,6 @@ public class BigArrayQueueManager {
         
         singleton.initLock.lock();
         
-        // if(singleton.isInit == false) {
-        //     
-        //     for (var i:int = 0; i < Place.MAX_PLACES; ++i) {
-        //         
-        //         singleton.readBufferQ(i) = new HashMap[Object, Pending]();
-        //         singleton.readProcessQ(i) = new HashMap[Object, Pending]();
-        //         
-        //         // singleton.writeBufferQ(i) = new HashMap[Object, Pending]();
-        //         // singleton.writeProcessQ(i) = new HashMap[Object, Pending]();
-        //     }
-        //     
-        //     x10.util.concurrent.Fences.storeStoreBarrier();
-        //     singleton.isInit = true;
-        // }
         
         singleton.initLock.unlock();
     }
@@ -84,47 +64,67 @@ public class BigArrayQueueManager {
 
         
         val temp = getEntryFromBufferQ(placeId, obj);
-        var readPending: LocalPending[X];
+        var pending: LocalPending[X];
 
-        
         if (temp == null) {
             
-            readPending = new LocalPending[X](obj);
-            putEntryToBufferQ(placeId, obj, readPending);
+            pending = new LocalPending[X](obj);
+            putEntryToBufferQ(placeId, obj, pending);
             
         } else {
             
-            readPending = temp as LocalPending[X];
+            pending = temp as LocalPending[X];
         }
         
        
-        readPending.addRead(key, index, wrap);
+        pending.addRead(key, index, wrap);
         
         // Console.OUT.println("KKKK" + "add count(k): " + key);
         increaseWaitingCount(key);
-
     }
     
     protected static def addWrite[X](obj: BigArray[X], placeId: Int, key: Key, index: Index,  data: X) {
          
 
         val temp = getEntryFromBufferQ(placeId, obj);
-        var writePending: LocalPending[X];
+        var pending: LocalPending[X];
 
         if (temp == null) {
             
-            writePending = new LocalPending[X](obj);
-            // Q.put(obj, writePending);
-            putEntryToBufferQ(placeId, obj, writePending);
+            pending = new LocalPending[X](obj);
+            putEntryToBufferQ(placeId, obj, pending);
             
         } else {
             
-            writePending = temp as LocalPending[X];
+            pending = temp as LocalPending[X];
         }
         
-        writePending.addWrite(key, index, data);
+        pending.addWrite(key, index, data);
         increaseWaitingCount(key);
+    }
+    
+    protected static def addRemoteInvocation[X](obj: BigArray[X],
+            placeId: Int,
+            key: Key,
+            index: Index,
+            method: (Any, Index, Any)=> void,
+            param: Any) {
+        
+        val temp = getEntryFromBufferQ(placeId, obj);
+        var pending: LocalPending[X];
 
+        if (temp == null) {
+            
+            pending = new LocalPending[X](obj);
+            putEntryToBufferQ(placeId, obj, pending);
+            
+        } else {
+            
+            pending = temp as LocalPending[X];
+        }
+        
+        pending.addRemoteInvocation(key, index, method, param);
+        increaseWaitingCount(key);
     }
     
     protected static def enterGlobalJob(): Boolean {
@@ -280,6 +280,7 @@ public class BigArrayQueueManager {
             
             val writeRequests = new ArrayList[WriteRequestPayload]();
             val readRequests = new ArrayList[ReadRequestPayload]();
+            val remoteInvocations = new ArrayList[RemoteInvocationPayload]();
             
             val it = placeQ.keySet();
             val localReadPendings = new ArrayList[Pending]();
@@ -288,6 +289,8 @@ public class BigArrayQueueManager {
             for (obj in it) {
                 
                 val entry = placeQ.get(obj).value;
+                
+                entry.createRemoteInvocationPayload(remoteInvocations);
                 
                 // Create read request and append to list 
                 entry.createReadRequestPayload(readRequests);
@@ -300,6 +303,22 @@ public class BigArrayQueueManager {
             // Send read request to remote place
              
             val remoteReadData = at (Place.places()(placedId)) {
+                
+                // Remote invocation
+                for (var i: Int = 0; i < remoteInvocations.size(); ++i) {
+                    
+                    val ri = remoteInvocations(i);
+                    val obj = ri.obj;
+                    val indices = ri.indices;
+                    val methods = ri.methods;
+                    val params = ri.params;
+
+                    for (var k: Int = 0; k < methods.size; ++k) {
+                        
+                        val ind = indices(k);
+                        methods(k)(obj, ind, params(k));
+                    }
+                }
                 
                 // Write data
                 for (var i: Int = 0; i < writeRequests.size(); ++i) {
@@ -323,7 +342,7 @@ public class BigArrayQueueManager {
                     val obj = rq.obj;
                     val keys = rq.keys;
                     val indices = rq.indices;
-                    val data = obj.readData(indices);
+                    val data = obj.readAll(indices);
                     
                     readData.add(new ReadReplyPayload(hash, obj, keys, indices, data));
                     
@@ -333,19 +352,18 @@ public class BigArrayQueueManager {
                 return readData.toArray();
             };
            
-            Console.OUT.println("Remote Data: ");
-            for(var i:int = 0; i < remoteReadData.size; ++i) {
-                
-                Console.OUT.println(remoteReadData(i).data);
-            }
+            // Console.OUT.println("Remote Data: ");
+            // 
+            // for(var i:int = 0; i < remoteReadData.size; ++i) {
+            //     
+            //     Console.OUT.println(remoteReadData(i).data);
+            // }
             
             // Update waiting queue   
             for (var i: Int = 0; i < remoteReadData.size; ++i) {
                 
                 val readReplyPayload = remoteReadData(i);
                 val keys = readReplyPayload.keys;
-                val indices = readReplyPayload.indices;
-                val obj = readReplyPayload.obj;
                 val data = readReplyPayload.data;
                 
                 localReadPendings(i).updateReadRequestData(data);
@@ -360,11 +378,24 @@ public class BigArrayQueueManager {
                 
             }
             
-            // Clear waiting list for write request
+            // Remove waiting list for remote invocation
+            for (var i: Int = 0; i < remoteInvocations.size(); ++i) {
+                
+                val rq = remoteInvocations(i);
+                val keys = rq.keys;
+                
+                for (var j: Int = 0; j < keys.size; ++j) {
+                    
+                    val k = keys(j);
+                    
+                    decreaseWaitingCount(k);
+                }
+            }
+            
+            // Remove waiting list for write request
             for (var i: Int = 0; i < writeRequests.size(); ++i) {
                 
                 val rq = writeRequests(i);
-                val obj = rq.obj;
                 val keys = rq.keys;
                  
                 for (var j: Int = 0; j < keys.size; ++j) {
@@ -379,8 +410,8 @@ public class BigArrayQueueManager {
     
     public static def printWaitingList() {
         
-        Console.OUT.println("Keys in hash => " + singleton.internalWaitCount.size());
-        Console.OUT.println("Sum count  => " + singleton.sumCount);
-        Console.OUT.println("Release count  => " + singleton.sumCount);
+        // Console.OUT.println("Keys in hash => " + singleton.internalWaitCount.size());
+        // Console.OUT.println("Sum count  => " + singleton.sumCount);
+        // Console.OUT.println("Release count  => " + singleton.sumCount);
     } 
 }

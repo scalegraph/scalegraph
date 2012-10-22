@@ -5,6 +5,7 @@ import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.BigArray;
 import org.scalegraph.util.BigArrayQueueManager;
 
+public type Index = Long;
 
 public class TestBigArray {
     
@@ -18,7 +19,7 @@ public class TestBigArray {
         val C =  BigArray.make[Long](size);
         
         Console.OUT.println("Fill");
-        B.fill(5L);
+        B.fill(2L);
         // C.fill(6L);
         
         // var x: Long = 0;
@@ -26,41 +27,53 @@ public class TestBigArray {
         //     
         //     x = B(i);
         // }
-
-        
-        for (var it: Int = 0; it < 100000; ++it) {
+        val remoteOp = (obj: Any, index: Index, param: Any) => {
             
-            val i = it;
-            async {  
-                val w = new Wrap[Long]();
-                val y = new Wrap[Long]();
-                val k = BigArray.getKey();
+            val o = obj as BigArray[Long];
+
+            o.setLocal(index, index * index);
+        };
+
+        finish {
+            // for (var t: Int = 0; t < 100; ++t) { 
+            
+            for (var it: Int = 0; it < 1000; ++it) {
                 
-                val index: Long = size - i - 1;
+                val i = it;
                 
-                Console.OUT.println("Key = " +  k );
-                
-                // B.writeAsync(k, 0, 1024);
-                // B.getAsync(k, 0L, w);
-                
-                // B.getAsync(k, size - 20, y);
-                // B.getAsync(k, size - 30, y);
-                // B.getAsync(k, size - 40, y);
-                
-                
-                // B.writeAsync(k, index, 1111);
-                B.getAsync(k, index, y);
-                BigArray.synch(k);
-                
-                Console.OUT.println("Exit from sync: " + k);
-                // Console.OUT.println("W = " + w() );
-                // Console.OUT.println("Y = " + y() );
+                async {  
+                    
+                    val w = new Wrap[Long]();
+                    val y = new Wrap[Long]();
+                    val k = BigArray.getKey();
+                    
+                    val index: Long = size - i - 1;
+                    
+                    // Console.OUT.println("Key = " +  k );
+                    
+                    // B.writeAsync(k, 0, 1024);
+                    // B.getAsync(k, 0L, w);
+                    
+                    // B.getAsync(k, size - 20, y);
+                    // B.getAsync(k, size - 30, y);
+                    // B.getAsync(k, size - 40, y);
+                    
+                    
+                    // B.writeAsync(k, index, index);
+                    B.invokeRemoteWithNoReturn(k, index, remoteOp, index);
+                    B.getAsync(k, index, y);
+                    BigArray.synch(k);
+                    
+                    // Console.OUT.println("Exit from sync: " + k);
+                    // Console.OUT.println("W = " + w() );
+                    Console.OUT.println("Y("+ index +") = " + y() );
+                }
+                // }
             }
         }
         
         BigArrayQueueManager.printWaitingList();
-        
-        Console.OUT.println("Enter to Continue");
-        Console.IN.readChar();
+        Console.OUT.println("Enter of testing");
+        // Console.IN.readChar();
     }
 }

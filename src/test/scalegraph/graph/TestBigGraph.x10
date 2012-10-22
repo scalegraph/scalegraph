@@ -6,9 +6,17 @@ public class TestBigGraph {
     
     public static def main(args: Array[String]) {
         
-        val nodes = 1L << 32;
-        val b = BigGraph.make(nodes);
-        Console.OUT.println("Enter to Continue");
-        Console.IN.readChar();
+        // val nodes = 1L << 20;
+        // val b = BigGraph.make(nodes,true);
+        // Console.OUT.println("Size: " + nodes);
+        var t: Long = System.currentTimeMillis();
+        val g = BigGraph.loadFromFile("/nfs/home/charuwat/Desktop/BigGraph Loader Test/flickr.dl", true);
+        t = System.currentTimeMillis() - t;
+        
+        g.print();
+        
+        Console.OUT.println("Load time: " + t);
+        // Console.OUT.println("Enter to Continue");
+        // Console.IN.readChar();
     }
 }

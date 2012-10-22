@@ -9,5 +9,7 @@ protected interface Pending {
     
     def createReadRequestPayload(ArrayList[ReadRequestPayload]): void;
     def createWriteRequestPayload(ArrayList[WriteRequestPayload]): void;
+    def createRemoteInvocationPayload(ArrayList[RemoteInvocationPayload]): void;
+    
     def updateReadRequestData(data: Any): void;
 }
