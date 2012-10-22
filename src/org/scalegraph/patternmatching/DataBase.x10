@@ -27,6 +27,10 @@ public class DataBase {
 	private var _minsup:Int = 0; //!< store minimum support
 	private val subiso:Subiso = new Subiso();
 	
+	public def this(){
+		return;
+	}
+	
 	public def this(val attrglist:ArrayList[AttributedGraph]){
 		var graph_no:Int = 0;
 		var i:Int = 0;
@@ -64,7 +68,7 @@ public class DataBase {
 		}
 		
 		//loading edge label set from Attributed graph and using them to make a graph pattern.
-		var pat:Pattern = new Pattern(vlabels);
+		var pat:Cell[Pattern] = new Cell[Pattern](new Pattern(vlabels));
 		
 		
 		
@@ -92,7 +96,7 @@ public class DataBase {
 				
 				if (fromId != toId){
 					// when get edgelist from Attributedgraph indicated source vatex id may included in toId 
-					pat.add_edge(fromId,toId,eLabel);
+					pat().add_edge(fromId,toId,eLabel);
 					
 					this.ext_map_insert(fromLabel, toLabel, eLabel);
 					var e:Pair[Pair[Int,Int],Int] = (fromLabel < toLabel)? new Pair(Pair(fromLabel, toLabel), eLabel) : new Pair(Pair(toLabel, fromLabel), eLabel);
@@ -113,7 +117,7 @@ public class DataBase {
 		}
 		//Console.OUT.println("from database");
 		
-		val x = pat.get_edges();
+		val x = pat().get_edges();
 		//Console.OUT.println("edge labels:");
 		/*
 		for(i in x){
@@ -123,7 +127,7 @@ public class DataBase {
 		
 		//Console.OUT.println("pattern matrix:");
 		//Console.OUT.println(pat.get_matrix().toString());
-		_graph_store.add(pat);
+		_graph_store.add(pat());
 		
 		return 1;
 	}
@@ -185,6 +189,7 @@ public class DataBase {
 	public def remove_infrequent_edges(){
 		// identifying infrquent edges
 		var entry:Set[Map.Entry[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]] = _edge_info.entries();
+		/*
 		for(cit in entry){
 			if(cit.getValue().first.size() < _minsup){
 				var e:Pair[Pair[Int,Int],Int] = cit.getKey();
@@ -216,17 +221,58 @@ public class DataBase {
 				
 			}
 		}
-
+		 * */
+		var isfrequent:Boolean = false;
+		var e:Pair[Pair[Int,Int],Int] = Pair(Pair(-1 as Int,-1 as Int),-1 as Int);
+		while(isfrequent == false){
+			isfrequent = true;
+			for(cit in entry){
+				if(cit.getValue().first.size() < _minsup){
+					isfrequent = false;
+					e = cit.getKey();
+					break;
+				}
+			}
+			if(isfrequent == false){
+	
+				var vl1:Int = e.first.first;
+				var vl2:Int = e.first.second;
+				var el:Int = e.second;
+				_edge_info.remove(e);
+				var it:Box[HashSet[Pair[Int,Int]]]=_ext_map.get(vl1);
+				if(it == null){
+					assert(false):"ERROR: this v-label should have been found";
+				}
+				var ngbr:HashSet[Pair[Int,Int]] = it.value;
+				var removed_cnt:Boolean = ngbr.remove(Pair(vl2,el));
+				if(removed_cnt == false){
+					assert(false):("ERROR: this edge (" + vl1 + "," + vl2 + "," + el + ") should have been found");
+				}
+				if(vl1 == vl2) continue;
+				it = _ext_map.get(vl2);
+				if(it == null){
+					assert(false):"ERROR: this v-label should have been found";
+				}
+				var ngbr2:HashSet[Pair[Int,Int]] = it.value;
+				removed_cnt = ngbr2.remove(Pair(vl1,el));
+				if(removed_cnt == false){
+					assert(false):("ERROR: this edge (" + vl1 + "," + vl2 + "," + el + ") should have been found");
+				}
+			}
+			else{
+				
+			}
+		}
 		//Console.OUT.println("level one frequent:" + _edge_info.size());
 		
-		val x = _edge_info.entries();
+		//val x = _edge_info.entries();
 		//Console.OUT.println("_edge_info" );
 		/*
 		for(i in x){
 			Console.OUT.println(i.getKey().toString() + " " +i.getValue().toString());
 		}
 		 * */
-		val y = _ext_map.entries();
+		//val y = _ext_map.entries();
 		//Console.OUT.println("_ext_map" );
 		/*
 		for(i in y){
@@ -297,6 +343,10 @@ public class DataBase {
 		return _minsup;
 	}
 	
+	public def get_ext_map():HashMap[Int,HashSet[Pair[Int,Int]]]{
+		return this._ext_map;
+	}
+	
 	public def get_all_edge_info():HashMap[Pair[Pair[Int,Int],Int],Pair[ArrayList[Int],Int]]{
 		return _edge_info;
 	}
@@ -317,13 +367,13 @@ public class DataBase {
 	}
 
 	
-	public def get_exact_sup_from_super_pat_vat(var pat:Pattern):Boolean{
-		var mset:ArrayList[Pair[Pair[Int,Int],Int]] = pat.get_edges();
+	public def get_exact_sup_from_super_pat_vat(var pat:Cell[Pattern]):Boolean{
+		var mset:ArrayList[Pair[Pair[Int,Int],Int]] = pat().get_edges();
 		var prev:Pair[Pair[Int,Int],Int] = mset.getFirst();
 		var sup_list:ArrayList[Int] = get_edge_vat(prev);
 		
 		
-		Console.OUT.println("a");
+
 
 		var out_list:ArrayList[Int] = new ArrayList[Int]();
 		for(cit in mset) {
@@ -337,16 +387,16 @@ public class DataBase {
 			}
 		}
 		
-		Console.OUT.println("b");
+
 		
-		val cur_vat:ArrayList[Int] = pat.get_vat();
+		val cur_vat:ArrayList[Int] = pat().get_vat();
 		
 		var it2:Int = 0;
 		var it3:Int = 0;
 		for (it in sup_list) {
 			var s:Int = it2;
 			for(;s < cur_vat.size();s++){
-				Console.OUT.println("s:" + s);
+				//Console.OUT.println("s:" + s);
 				if(cur_vat(s) >= it){
 					break;
 				}
@@ -362,30 +412,24 @@ public class DataBase {
 	
 		}
 		
-		Console.OUT.println("c");
+
 
 		for (var i:Int=0; i<out_list.size(); i++) {
-			var database_pat:Pattern = _graph_store(out_list(i));
-			var m:Matrix = new Matrix(pat.size(), database_pat.size());
-			Console.OUT.println("x");
-			pat.get_matrix().matcher(database_pat.get_matrix(), m);
-			Console.OUT.println("y");
-			var ret_val:Boolean = subiso.UllMan_backtracking(pat.get_matrix(), database_pat.get_matrix(), m ,false);
-			Console.OUT.println("z");
+			var database_pat:Cell[Pattern] = _graph_store(out_list(i));
+			var m:Matrix = new Matrix(pat().size(), database_pat().size());
+			pat().get_matrix().matcher(database_pat().get_matrix(), m);
+			var ret_val:Boolean = subiso.UllMan_backtracking(pat().get_matrix(), database_pat().get_matrix(), m ,false);
 			if (ret_val == true){
 				// cout << "adding " << out_list[i] << " to vatlist" << endl;
-				pat.add_tid_to_vat(out_list(i));
+				pat().add_tid_to_vat(out_list(i));
 			}
 		}
+		val c_vat:ArrayList[Int] = pat().get_vat();
 		
-		Console.OUT.println("d");
-		
-		val c_vat:ArrayList[Int] = pat.get_vat();
-		
-		pat.set_sup_status(0);
+		pat().set_sup_status(0);
 		
 		if (c_vat.size() >= _minsup) {
-			pat.set_freq();
+			pat().set_freq();
 			return true;
 		}
 		else {
@@ -411,17 +455,17 @@ public class DataBase {
 		}
 	}
 	
-	public def get_exact_sup_optimal(var pat:Pattern):Boolean{
-		//Console.OUT.println("get_exact_sup_optimal method in DataBase");
+	public def get_exact_sup_optimal(var pat:Cell[Pattern]):Boolean{
+		//Console.OUT.println("  get_exact_sup_optimal method in DataBase");
 		var sup_list:ArrayList[Int] = new ArrayList[Int]();
-		val its_vat:ArrayList[Int] = pat.get_vat();
+		val its_vat:ArrayList[Int] = pat().get_vat();
 		for (it in its_vat) {
-			var database_pat:Pattern = _graph_store(it);
-			if (database_pat.is_super_pattern(pat) == false)  continue;
+			var database_pat:Cell[Pattern] = _graph_store(it);
+			if (database_pat().is_super_pattern(pat) == false)  continue;
 			sup_list.add(it); 
 		}
 		//Console.OUT.println("sup_list:" + sup_list.toString());
-		
+		//Console.OUT.println("checked pattern:\n" + pat().toString());
 		var max_sup_possible:Int = sup_list.size();
 		//Console.OUT.println("max_sup_possible:" + max_sup_possible);
 		if (max_sup_possible < _minsup) return false;
@@ -435,13 +479,15 @@ public class DataBase {
 			Console.OUT.println(x != null);
 		}
 		 * */
+		
+		
 		for (var i:Int =0; i<max_sup_possible; i++) {
 			var database_pat:Pattern = _graph_store(sup_list(i));
-			var m:Matrix = new Matrix(pat.size(), database_pat.size());
+			var m:Matrix = new Matrix(pat().size(), database_pat.size());
 			
 	
-			(pat.get_matrix()).matcher(database_pat.get_matrix(),m);
-			var ret_val:Boolean = subiso.UllMan_backtracking((pat.get_matrix()), (database_pat.get_matrix()), 
+			(pat().get_matrix()).matcher(database_pat.get_matrix(),m);
+			var ret_val:Boolean = subiso.UllMan_backtracking((pat().get_matrix()), (database_pat.get_matrix()), 
 					m, false);
 			//Console.OUT.println("ret_val:" + ret_val);
 			//Console.OUT.println("_minsup:" + _minsup);
@@ -459,9 +505,9 @@ public class DataBase {
 				temp.add(sup_list(i));  
 			}
 		}
-		pat.set_vat(temp); 
-		pat.set_sup_status(0);
-		pat.set_freq();
+		pat().set_vat(temp); 
+		pat().set_sup_status(0);
+		pat().set_freq();
 		
 		
 		return true;// need to modify

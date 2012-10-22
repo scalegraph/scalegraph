@@ -11,6 +11,10 @@ public class LatticeNode {
 	private var neighbors:ArrayList[LatticeNode] = new ArrayList[LatticeNode]();//!< store all neighbors that consist of LatticeNode that contains superpattern or subpattern
 	private var neighbor_prob:ArrayList[Double] = new ArrayList[Double]();//!< store Double type data useful for select which neighbor to transition
 	
+	public def this(){
+		return;
+	};
+	
 	public def this(var pat:Pattern){
 		this.pat = pat;
 	}

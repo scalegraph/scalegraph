@@ -68,6 +68,23 @@ public class SqrSymMatrix extends Matrix {
 	public def isEssentialEdge(src:Int, dst:Int): Boolean {
 		val nSrc = getNeighbours(src);
 		val nDst = getNeighbours(dst);
+		/*
+		var issrc:Boolean = false;
+		var isdst:Boolean = false;
+		for(i in nSrc){
+			if(nSrc(i) == dst){
+				issrc = true;
+				break;
+			}
+		}
+		for(i in nDst){
+			if(nDst(i) == src){
+				isdst = true;
+				break;
+			}
+		}
+		assert(issrc == true && isdst == true):"it is not edge";
+		 * */
 		if(nSrc.size == 1 || nDst.size == 1) return false;
 		
 		val visited = new Array[Boolean](this.getSize());

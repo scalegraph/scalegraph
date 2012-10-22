@@ -9,6 +9,9 @@ import x10.util.Set;
 import x10.util.Pair;
 import x10.lang.Iterator;
 
+
+
+
 /**
  * full labeled adjacency matrix class for graph with labeled vertex and edge
  */
@@ -42,8 +45,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	//}
 	
 	public def getEdgeLabel(v1:Int, v2:Int): Int {
-		Console.OUT.println("v1:" + v1 + " v2:" + v2);
-		Console.OUT.println(this.toString());
+		//Console.OUT.println("v1:" + v1 + " v2:" + v2);
+		//Console.OUT.println(this.toString());
 		if(v1 == v2 || v1 < 0 || this.getSize() <= v1 ||
 				v2 < 0 || this.getSize() <= v2){
 			assert(false):("error: FullLabelAdjMatrix.getEdgeLabel: requested edge label from invalid position");
@@ -184,20 +187,19 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 	public def matcher(val b:FullLabelAdjMatrix,M:Matrix):void{
 		//Console.OUT.println("matcher");
 		// match two matrix in one.
-		//Console.OUT.println(" matcher");
 		var a:FullLabelAdjMatrix = this;
 		var size1:Int = a.getSize(); 
-		/*
-		Console.OUT.println("matrix a:");
-		Console.OUT.println(a.toString());
-		Console.OUT.println(a.vlabel.toString());
-		*/
+		
+		//Console.OUT.println("matrix a:");
+		//Console.OUT.println(a.toString());
+		//Console.OUT.println(a.vlabel.toString());
+		
 		var size2:Int = b.getSize();
-		/*
-		Console.OUT.println("matrix b:");
-		Console.OUT.println(b.toString());
-		Console.OUT.println(b.vlabel.toString());
-		*/
+		
+		//Console.OUT.println("matrix b:");
+		//Console.OUT.println(b.toString());
+		//Console.OUT.println(b.vlabel.toString());
+		
 		
 		if (size1 > size2) {
 			return;
@@ -212,11 +214,11 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				}
 			}
 		}
-		/*
-		Console.OUT.println("complete initialize");
-		Console.OUT.println(" matched matrix after initialize:");
-		Console.OUT.println(M.toString());
-		 * */
+		
+		//Console.OUT.println("complete initialize");
+		//Console.OUT.println(" matched matrix after initialize:");
+		//Console.OUT.println(M.toString());
+		
 		var match_pair:ArrayList[Pair[Int,Int]] = new ArrayList[Pair[Int,Int]]();
 		for (var i:Int = 0; i < size1; i++) {
 			if (M.getRowSetCount(i)  == 0) return;
@@ -231,12 +233,14 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 					match_pair.add(Pair(i,j)); 
 			}
 		}
+		
+		//Console.OUT.println("complete check match_pair");
+		//Console.OUT.println(M.toString());
 		/*
-		Console.OUT.println("complete check mathc_pair");
 		for(i in match_pair){
 			Console.OUT.println(i.toString());
 		}
-		 * */
+		*/
 		/*
 		Console.OUT.println("elabel");
 		val t = elabel.entries();
@@ -269,6 +273,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				neigh_degree1.add(d_n); 
 			}
 			
+			this.sortLabel(neigh_labels1);
+			
 			//Console.OUT.println("complete get neighbors degree and edege label");
 
 			
@@ -284,6 +290,8 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				neigh_labels2.add(Pair(b.getLabel(neighbors2(k)), e_l));
 				neigh_degree2.add(d_n); 
 			}
+			
+			this.sortLabel(neigh_labels2);
 			
 			var isin:Boolean = true;
 			
@@ -307,10 +315,13 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				M(i,j)=0;
 				continue;
 			}
-
+			
+			//Console.OUT.println("checked contain");
+			//Console.OUT.println(M.toString());
+			
 			// now applying neighbor-degree invariant
-			neigh_degree1.sort();
-			neigh_degree2.sort();
+			this.sortDegree(neigh_degree1);
+			this.sortDegree(neigh_degree2);
 			//cout << "DEGREE:\n";
 			//std::copy(neigh_degree1.begin(), neigh_degree1.end(), ostream_iterator<int>(cout, " ")); cout << endl;
 			//std::copy(neigh_degree2.begin(), neigh_degree2.end(), ostream_iterator<int>(cout, " ")); cout << endl;
@@ -357,5 +368,39 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		}
 		return builder.result();
 	}
+	
+	private def sortLabel(var x:ArrayList[Pair[Int,Int]]){
+		if (x.size()<2){
+			return;
+		}
+		var s:Pair[Int,Int] = new Pair[Int,Int](-1,-1);
+		for(var i:Int = 0; i<x.size()-1;i++){
+			for (var j:Int = i+1;j<x.size();j++){
+				if(x(i).first >x(j).first){
+					s=x.removeAt(j);
+					x.addBefore(i,s);
+				}
+				else if(x(i).first == x(j).first){
+					if(x(i).second > x(j).second){
+						s=x.removeAt(j);
+						x.addBefore(i,s);
+					}
+				}
+			}
+		}
+		
+	}
+	public def sortDegree(x:ArrayList[Int]) { 
+		var s:Int = -1;
+		for(var i:Int=0;i < x.size()-1;i++){
+			for(var j:Int = i+1; j<x.size();j++){
+				if(x(i) < x(j)){
+					s = x.removeAt(j);
+					x.addBefore(i,s);
+				}
+			}
+		}
+	}
+	
 	
 }

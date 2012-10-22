@@ -17,7 +17,8 @@ public class Pattern {
 	private var _removable_edges:ArrayList[Pair[Int, Int]] = new ArrayList[Pair[Int,Int]]();  //!< removing these edges keeps the pattern connected. represented in two vertces id.
 	private var _canonical_code:Canonicalcode;// modify after how to implemente cannonical_code 
 	private var _removable_edge_known:Boolean = false;
-	
+
+	private val isomorphism:Isomorphism = new Isomorphism();
 	
 	public def this(){
 		_matrix = new FullLabelAdjMatrix(); //+Miyuru : Initialize the FullLabelAdjMatrix
@@ -144,7 +145,7 @@ public class Pattern {
 		return _canonical_code;
 	}
 	public def set_canonical_code(var canonical_code:Canonicalcode){
-		_canonical_code = canonical_code;
+		this._canonical_code = canonical_code;
 		assert(canonical_code != null):"canonical_code is null";
 		set_code_known(true);
 	}
@@ -186,12 +187,12 @@ public class Pattern {
 		return _matrix.addVertex(v);
 	}
 	
-	public def join_vat(var p:Pattern){// join the new edge pattern
+	public def join_vat(var p:Cell[Pattern]){// join the new edge pattern
 		// not implemennted yet
 		var out_vector:ArrayList[Int] = new ArrayList[Int]();
 		for(var i:Int = 0;i < _vat.size();i++){
-			for(var j:Int = 0;j < p.get_vat().size();j++){
-				if(_vat(i).equals(p.get_vat()(j))){
+			for(var j:Int = 0;j < p().get_vat().size();j++){
+				if(_vat(i).equals(p().get_vat()(j))){
 					out_vector.add(_vat(i));
 				}
 			}
@@ -223,13 +224,18 @@ public class Pattern {
 	public def find_removable_edges():Int{
 		// find removable edges and remember
 		if (_removable_edge_known == true) return _removable_edges.size();
-	
+		//Console.OUT.println("  find_removable_edge");
 		_removable_edges.clear();
+		var isEssential:Boolean = false;
+		//Console.OUT.println("this pattern:\n" + this.toString() );
 		for (var i:Int = 0;i < _matrix.getSize();i++) {
 			for(var j:Int = 0;j < i;j++){
 				if(_matrix(i,j) == 1){
 					var edge:Pair[Int,Int] = Pair(i,j);
-					if (! _matrix.isEssentialEdge(i,j)) {
+					//Console.OUT.println("candidate:" + i + "," + j);
+					isEssential = _matrix.isEssentialEdge(i,j);
+					//Console.OUT.println("isEssential?:"+ isEssential);
+					if (isEssential == false) {
 						// cout << "edge (" << edge.first << "," << edge.second << ") is removable\n";
 						_removable_edges.add(edge); 
 					}
@@ -242,6 +248,10 @@ public class Pattern {
 	
 	public def get_removable_edges():ArrayList[Pair[Int,Int]]{
 		// return removable edes
+		if(this._removable_edge_known == false){
+			this.find_removable_edges();
+		}
+
 		return _removable_edges;
 	}
 	protected def set_removable_edges(val removable_edges:ArrayList[Pair[Int,Int]]){
@@ -260,19 +270,19 @@ public class Pattern {
 		x.set_matrix(this.get_matrix().cloneFullLabelAdjMatrix());
 		x.set_sup_status(this.get_sup_ok());
 		x.set_is_frequent(this.get_is_frequent());
-		x.set_code_known(this.get_code_known());
-		x.set_status_known(this.get_status_known());
+		x.set_code_known(false);
+		x.set_status_known(false);
 		x.set_vat(this.get_vat().clone());
 		x.set_edges(this.get_edges().clone());
-		x.set_removable_edges(this.get_removable_edges());
-		x.set_canonical_code(this.get_canonical_code());
+		x.set_removable_edges(this.get_removable_edges().clone());
+		x.set_canonical_code(new Canonicalcode());
 		x.set_removable_edge_known(this.get_removable_edge_known());
 		return x;
 	}
 	
 	
-	public def is_super_pattern(var pat:Pattern):Boolean{
-		val mset:ArrayList[Pair[Pair[Int,Int],Int]] = pat.get_edges();
+	public def is_super_pattern(var pat:Cell[Pattern]):Boolean{
+		val mset:ArrayList[Pair[Pair[Int,Int],Int]] = pat().get_edges();
 		var included:Boolean = true;
 		for (i in mset){
 			if(_edges.contains(i) == false){
