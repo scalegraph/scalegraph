@@ -1,22 +1,24 @@
 package org.scalegraph.util;
 
-import org.scalegraph.util.BigArray;
-import org.scalegraph.util.KeyGenerator;
+// import org.scalegraph.util.KeyGenerator.*;
+// import org.scalegraph.util.BigArray;
 
-protected class RemoteInvocationPayload (hash: Int,
-                                         obj: BigArrayOperation, 
+public type Param1 = Any;
+public type Param2 = Any;
+public type ArrayObject = Any;
+
+public class RemoteInvocationPayload (obj: BigArrayOperation, 
                                          keys: Array[Key], 
-                                         indices: Array[Index], 
-                                         methods: Array[(Any, Index, Any) => void],
-                                         params: Array[Any]) {
+                                         methods: Array[(ArrayObject, Param1, Param2) => void],
+                                         params1: Array[Any],
+                                         params2: Array[Any]) {
     
-    public def this(hash: Int,
-                    obj: BigArrayOperation, 
+    public def this(obj: BigArrayOperation, 
                     keys: Array[Key], 
-                    indices: Array[Index], 
-                    methods: Array[(Any, Index, Any) => void],
-                    params: Array[Any]) {
+                    methods: Array[(ArrayObject, Param1, Param2) => void],
+                    params1: Array[Any],
+                    params2: Array[Any]) {
         
-        property(hash, obj, keys, indices, methods, params);
+        property(obj, keys, methods, params1, params2);
     }
 }

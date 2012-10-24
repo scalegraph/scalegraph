@@ -1,16 +1,17 @@
 package org.scalegraph.util;
 
-import x10.util.*;
 import x10.util.concurrent.Lock;
 import x10.util.concurrent.AtomicInteger;
-import org.scalegraph.util.KeyGenerator;
-import org.scalegraph.util.Pending;
-import org.scalegraph.util.LocalPending;
-import org.scalegraph.util.ReadRequestPayload;
-import org.scalegraph.util.ReadReplyPayload;
-import x10.compiler.NoInline;
+import x10.util.HashMap;
+import x10.util.Random;
+import x10.util.ArrayList;
 
-
+// import org.scalegraph.util.LocalPending;
+// import org.scalegraph.util.KeyGenerator.*;
+// import org.scalegraph.util.Pending;
+// import org.scalegraph.util.ReadRequestPayload;
+// import org.scalegraph.util.ReadReplyPayload;
+// import org.scalegraph.util.RemoteInvocationPayload.*;
 
 public class BigArrayQueueManager {
     
@@ -106,9 +107,9 @@ public class BigArrayQueueManager {
     protected static def addRemoteInvocation[X](obj: BigArray[X],
             placeId: Int,
             key: Key,
-            index: Index,
-            method: (Any, Index, Any)=> void,
-            param: Any) {
+            method: (ArrayObject, Param1, Param2)=> void,
+            param1: Any,
+            param2: Any) {
         
         val temp = getEntryFromBufferQ(placeId, obj);
         var pending: LocalPending[X];
@@ -123,7 +124,7 @@ public class BigArrayQueueManager {
             pending = temp as LocalPending[X];
         }
         
-        pending.addRemoteInvocation(key, index, method, param);
+        pending.addRemoteInvocation(key, method, param1, param2);
         increaseWaitingCount(key);
     }
     
@@ -309,14 +310,15 @@ public class BigArrayQueueManager {
                     
                     val ri = remoteInvocations(i);
                     val obj = ri.obj;
-                    val indices = ri.indices;
+                    // val indices = ri.indices;
                     val methods = ri.methods;
-                    val params = ri.params;
+                    val params1 = ri.params1;
+                    val params2 = ri.params2;
 
                     for (var k: Int = 0; k < methods.size; ++k) {
                         
-                        val ind = indices(k);
-                        methods(k)(obj, ind, params(k));
+                        // val ind = indices(k);
+                        methods(k)(obj, params1(k), params2(k));
                     }
                 }
                 

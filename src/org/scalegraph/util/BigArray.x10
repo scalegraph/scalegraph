@@ -1,33 +1,35 @@
 package org.scalegraph.util;
 
-import x10.util.*;
+import x10.util.HashMap;
+import x10.util.IndexedMemoryChunk;
+import x10.util.ArrayList;
 import x10.util.concurrent.Lock;
 
-import org.scalegraph.util.KeyGenerator;
-import org.scalegraph.util.Pending;
-import org.scalegraph.util.LocalPending;
-import org.scalegraph.util.BigArrayQueueManager;
-
+// import org.scalegraph.util.Pending;
+// import org.scalegraph.util.LocalPending;
+// import org.scalegraph.util.BigArrayQueueManager;
+// import org.scalegraph.util.RemoteInvocationPayload.*;
+// import org.scalegraph.util.KeyGenerator.*;
 
 public type Index = Long;
 
-public final class BigArray[T] implements BigArrayOperation {
+public class BigArray[T] implements BigArrayOperation {
     
-    private var size: Long;
+    protected var size: Long;
     
-    private val numPlaces: Int;
+    protected val numPlaces: Int;
     
-    private val dist: Dist;
+    protected val dist: Dist;
     
-    private val leftOver: Int;
+    protected val leftOver: Int;
     
-    private val blockSize: Int;
+    protected val blockSize: Int;
     
-    transient private val operationExclusive: Lock;
+    transient protected val operationExclusive: Lock;
     
-    private static val keyGenerator = new KeyGenerator();
+    protected static val keyGenerator = new KeyGenerator();
     
-    private def this(sz: long) {
+    protected def this(sz: long) {
         
         dist = Dist.makeUnique();
         size = sz;
@@ -199,13 +201,15 @@ public final class BigArray[T] implements BigArrayOperation {
         raw()(offset) = data;
     }    
     
-    protected def invokeLocalWithNoReturn(index: Index, method: (Any, Index, Any)=>void, param: Any) {
+    protected def invokeLocalWithNoReturn(method: (ArrayObject, Param1, Param2)=>void, 
+                                          param1: Any, 
+                                          param2: Any) {
         
        //  val pd = localHandle().placeDescriptors(here.id);
        //  val offset = (index - pd.startIndex);
        // (offset);
         
-        method(this, index, param);
+        method(this, param1, param2);
     }
     
     public static def getKey(): Key {
@@ -272,21 +276,30 @@ public final class BigArray[T] implements BigArrayOperation {
         operationExclusive.unlock();
     }
     
-    public def invokeRemoteWithNoReturn(key: Key, index: Index, method: (Any, Index, Any) => void, param: Any) {
+    public def invokeRemoteWithNoReturn(key: Key,
+                                        placeId: Int,
+                                        method: (ArrayObject, Param1, Param2) => void, 
+                                        param1: Any,
+                                        param2: Any) {
         
         operationExclusive.lock();
         
-        val placeId = getPlaceId(index);
+        // val placeId = getPlaceId(index);
         
         if (placeId == here.id) {
             
             // Local data, just invoke it directly
-            invokeLocalWithNoReturn(index, method, param);
+            invokeLocalWithNoReturn(method, param1, param2);
             
         } else {
             
             // Add to waiting list
-            BigArrayQueueManager.addRemoteInvocation[T](this, placeId, key, index,  method, param);
+            BigArrayQueueManager.addRemoteInvocation[T](this, 
+                    placeId, 
+                    key,  
+                    method, 
+                    param1, 
+                    param2);
         }
         
         
@@ -294,7 +307,7 @@ public final class BigArray[T] implements BigArrayOperation {
         operationExclusive.unlock();
     }
     
-    public static def synch(key: Key) {
+    public static def synch(key: Key, shouldWait: Boolean) {
         
         while (!BigArrayQueueManager.isDataReady(key)) {
             
@@ -303,12 +316,16 @@ public final class BigArray[T] implements BigArrayOperation {
                 // First thread
                 // Console.OUT.println("Enter global job: " + Runtime.workerId() + " Wait key: " + key);
                 BigArrayQueueManager.printWaitingList();
-                System.sleep(500);
+                
+                if (shouldWait) {
+                    
+                	System.sleep(500);
+                }
                 
                 BigArrayQueueManager.execute();
                 BigArrayQueueManager.exitGlobalJob();
                 
-                System.sleep(1);
+                // System.sleep(1);
                 
             } else {
                 

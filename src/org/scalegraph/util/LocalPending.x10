@@ -1,15 +1,15 @@
 package org.scalegraph.util;
 
-import x10.util.*;
-import org.scalegraph.util.BigArray;
-import org.scalegraph.util.KeyGenerator;
-import org.scalegraph.util.ReadRequestPayload;
-import org.scalegraph.util.WriteRequestPayload;
-import org.scalegraph.util.RemoteInvocationPayload;
-import org.scalegraph.util.Pending;
+import x10.util.ArrayList;
 
+// import org.scalegraph.util.BigArray;
+// import org.scalegraph.util.Pending;
+// import org.scalegraph.util.KeyGenerator.*;
+// import org.scalegraph.util.ReadRequestPayload;
+// import org.scalegraph.util.WriteRequestPayload;
+// import org.scalegraph.util.RemoteInvocationPayload.*;
 
-protected class LocalPending[V] implements Pending {
+public class LocalPending[V] implements Pending {
     
     var obj: BigArray[V];
     
@@ -25,9 +25,9 @@ protected class LocalPending[V] implements Pending {
     
     // data for remote invocation with no return
     var riKeys: ArrayList[Key];
-    var riIndices: ArrayList[Index];
-    var riMethods: ArrayList[(Any, Index, Any)=> void];
-    var riParams: ArrayList[Any];
+    var riMethods: ArrayList[(ArrayObject, Param1, Param2)=> void];
+    var riParams1: ArrayList[Any];
+    var riParams2: ArrayList[Any];
     
     public def this(o: BigArray[V]) {
         
@@ -42,9 +42,10 @@ protected class LocalPending[V] implements Pending {
         data = new ArrayList[V]();
         
         riKeys = new ArrayList[Key]();
-        riIndices = new ArrayList[Long]();
-        riMethods = new ArrayList[(Any, Index, Any)=> void]();
-        riParams = new ArrayList[Any]();
+        // riIndices = new ArrayList[Long]();
+        riMethods = new ArrayList[(ArrayObject, Param1, Param2)=> void]();
+        riParams1 = new ArrayList[Any]();
+        riParams2 = new ArrayList[Any]();
     }
     
     public def addRead(key: Key, index: Index, wrap: Wrap[V]) {
@@ -61,12 +62,15 @@ protected class LocalPending[V] implements Pending {
         data.add(d);
     }
     
-    public def addRemoteInvocation(key: Key, index: Index, method: (Any, Index, Any) => void, param: Any) {
+    public def addRemoteInvocation(key: Key, 
+                                   method: (ArrayObject, Param1, Param2) => void, 
+                                   param1: Any,
+                                   param2: Any) {
         
         riKeys.add(key);
-        riIndices.add(index);
         riMethods.add(method);
-        riParams.add(param);
+        riParams1.add(param1);
+        riParams2.add(param2);
     }
     
     
@@ -99,12 +103,11 @@ protected class LocalPending[V] implements Pending {
         
         val h = obj.hashCode();
         val RemoteInvocationPayload =
-            new RemoteInvocationPayload(h, 
-                                        obj, 
-                                        riKeys.toArray(),
-                                        riIndices.toArray(), 
+            new RemoteInvocationPayload(obj, 
+                                        riKeys.toArray(), 
                                         riMethods.toArray(),
-                                        riParams.toArray());
+                                        riParams1.toArray(),
+                                        riParams2.toArray());
         
         list.add(RemoteInvocationPayload);
     }

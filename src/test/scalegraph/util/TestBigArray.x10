@@ -4,6 +4,7 @@ import org.scalegraph.util.Wrap;
 import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.BigArray;
 import org.scalegraph.util.BigArrayQueueManager;
+import org.scalegraph.util.RemoteInvocationPayload;
 
 public type Index = Long;
 
@@ -27,10 +28,10 @@ public class TestBigArray {
         //     
         //     x = B(i);
         // }
-        val remoteOp = (obj: Any, index: Index, param: Any) => {
+        val remoteOp = (obj: Any, param1: Any, param2: Any) => {
             
             val o = obj as BigArray[Long];
-
+            val index = param1 as Long;
             o.setLocal(index, index * index);
         };
 
@@ -60,7 +61,8 @@ public class TestBigArray {
                     
                     
                     // B.writeAsync(k, index, index);
-                    B.invokeRemoteWithNoReturn(k, index, remoteOp, index);
+                    val pid = B.getPlaceId(index);
+                    B.invokeRemoteWithNoReturn(k, pid, remoteOp, index, null);
                     B.getAsync(k, index, y);
                     BigArray.synch(k);
                     

@@ -2,6 +2,7 @@ package org.scalegraph.util;
 
 import x10.compiler.Native;
 import x10.util.concurrent.Lock;
+import org.scalegraph.util.Key;
 
 public type Key = Long;
 
@@ -13,7 +14,7 @@ public class KeyGenerator {
     @Native("c++", "KeyGenerator::FMGL(nextKey)++;")
     public static native def genNextKey(): void;
     
-    public def getKey() {
+    public def getKey(): Key {
         
         keyLock.lock();
         
