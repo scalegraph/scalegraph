@@ -1,7 +1,7 @@
 package org.scalegraph.util;
 
-// import org.scalegraph.util.BigArray;
-// import org.scalegraph.util.KeyGenerator;
+import org.scalegraph.util.KeyGenerator.*;
+import org.scalegraph.util.BigArray.*;
 
 public class ReadRequestPayload(hash: Int, obj: BigArrayOperation, keys: Array[Key], indices: Array[Index]) {
     

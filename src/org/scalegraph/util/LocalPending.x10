@@ -4,7 +4,7 @@ import x10.util.ArrayList;
 
 // import org.scalegraph.util.BigArray;
 // import org.scalegraph.util.Pending;
-// import org.scalegraph.util.KeyGenerator.*;
+import org.scalegraph.util.KeyGenerator.*;
 // import org.scalegraph.util.ReadRequestPayload;
 // import org.scalegraph.util.WriteRequestPayload;
 // import org.scalegraph.util.RemoteInvocationPayload.*;

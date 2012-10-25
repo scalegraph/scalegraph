@@ -1,3 +1,3 @@
 package org.scalegraph.util;
 
-public type ArrayObject = Any;
+// public type ArrayObject = Any;

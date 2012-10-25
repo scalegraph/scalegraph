@@ -8,8 +8,8 @@ import x10.util.concurrent.Lock;
 // import org.scalegraph.util.Pending;
 // import org.scalegraph.util.LocalPending;
 // import org.scalegraph.util.BigArrayQueueManager;
-// import org.scalegraph.util.RemoteInvocationPayload.*;
-// import org.scalegraph.util.KeyGenerator.*;
+import org.scalegraph.util.RemoteInvocationPayload.*;
+import org.scalegraph.util.KeyGenerator.*;
 
 public type Index = Long;
 

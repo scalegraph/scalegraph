@@ -1,3 +1,3 @@
 package org.scalegraph.util;
 
-public type Key = Long;
+// public type Key = Long;

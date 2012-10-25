@@ -1,6 +1,6 @@
 package org.scalegraph.util;
 
-// import org.scalegraph.util.BigArray.*;
+import org.scalegraph.util.BigArray;
 
 public interface BigArrayOperation {
     

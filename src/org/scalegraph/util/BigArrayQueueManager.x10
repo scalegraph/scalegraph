@@ -7,11 +7,11 @@ import x10.util.Random;
 import x10.util.ArrayList;
 
 // import org.scalegraph.util.LocalPending;
-// import org.scalegraph.util.KeyGenerator.*;
+import org.scalegraph.util.KeyGenerator.*;
 // import org.scalegraph.util.Pending;
 // import org.scalegraph.util.ReadRequestPayload;
 // import org.scalegraph.util.ReadReplyPayload;
-// import org.scalegraph.util.RemoteInvocationPayload.*;
+import org.scalegraph.util.RemoteInvocationPayload.*;
 
 public class BigArrayQueueManager {
     

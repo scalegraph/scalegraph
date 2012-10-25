@@ -1,6 +1,6 @@
 package org.scalegraph.util;
 
-// import org.scalegraph.util.KeyGenerator.*;
+import org.scalegraph.util.KeyGenerator.*;
 // import org.scalegraph.util.BigArray;
 
 public type Param1 = Any;
