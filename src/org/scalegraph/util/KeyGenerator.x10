@@ -2,7 +2,6 @@ package org.scalegraph.util;
 
 import x10.compiler.Native;
 import x10.util.concurrent.Lock;
-// import org.scalegraph.util.Key;
 
 public type Key = Long;
 
