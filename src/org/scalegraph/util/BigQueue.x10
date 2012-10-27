@@ -35,6 +35,21 @@ public class BigQueue[T] {
      * 
      * @param vertexId vertex id to add
      */
+    public def add(data: T) {
+        
+        assert(count < this.size);
+        
+        storage(r) = data;
+        
+        r = (r + 1) % size;
+        ++count;
+    }
+    
+    /**
+     * Add vertex id into the queue
+     * 
+     * @param vertexId vertex id to add
+     */
     public def addAsync(key: Key, data: T) {
         
         assert(count < this.size);
@@ -75,9 +90,16 @@ public class BigQueue[T] {
         return BigArray.getKey();
     }
     
+    public def count() = count;
+    
     /**
      * Determine wether queue is empty
      */
     public def isEmpty() = count == 0L;
+    
+    public static def sync(key: Key, shouldWait: Boolean) {
+        
+        BigArray.sync(key, shouldWait);
+    }
 
 }
