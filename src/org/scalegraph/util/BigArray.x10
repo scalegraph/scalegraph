@@ -163,12 +163,36 @@ public class BigArray[T] implements BigArrayOperation {
         var placeId: Int = (index / blockSize) as Int;
         val pd = localHandle().placeDescriptors(placeId);
         val offset: Int = (index - pd.startIndex) as Int;
+        
+        
+        if(placeId == here.id) {
+            
+            return raw()(offset);
+        }
+        
         val p = Place.places()(placeId);
         
-       return  at(p) raw()(offset);
+        return  at(p) raw()(offset);
     }
     
-    public operator this (index: Index) = (data: T) { setLocal(index, data);}
+    public operator this (val index: Index) = (val data: T) {
+        
+        if (isLocal(index)) {
+            
+            setLocal(index, data);
+            
+        } else {
+            
+            val pid = getPlaceId(index);
+            
+            val p = Place.places()(pid);
+            
+            at(p) {
+                
+                setLocal(index, data);
+            }
+        }
+    }
     
     
     public final def isLocal(index: Index): Boolean {
@@ -245,7 +269,7 @@ public class BigArray[T] implements BigArrayOperation {
             
            // Local data, just put it to wrapper
             wrap.value = getLocal(index);
-            Console.OUT.println("Getlocal data: " + index);
+            // Console.OUT.println("Getlocal data: " + index);
             
         } else {
             
@@ -307,7 +331,7 @@ public class BigArray[T] implements BigArrayOperation {
         operationExclusive.unlock();
     }
     
-    public static def synch(key: Key, shouldWait: Boolean) {
+    public static def sync(key: Key, shouldWait: Boolean) {
         
         while (!BigArrayQueueManager.isDataReady(key)) {
             
@@ -344,6 +368,7 @@ public class BigArray[T] implements BigArrayOperation {
         val list = new ArrayList[T]();
         val placeDesc = localHandle().placeDescriptors(here.id);
         
+        // Assume all index in the same place
         for (var i: Int = 0; i < size; ++i) {
             
             val localIndex = indices(i) - placeDesc.startIndex;
