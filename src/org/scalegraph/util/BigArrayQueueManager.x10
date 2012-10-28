@@ -6,11 +6,7 @@ import x10.util.HashMap;
 import x10.util.Random;
 import x10.util.ArrayList;
 
-// import org.scalegraph.util.LocalPending;
 import org.scalegraph.util.KeyGenerator.*;
-// import org.scalegraph.util.Pending;
-// import org.scalegraph.util.ReadRequestPayload;
-// import org.scalegraph.util.ReadReplyPayload;
 import org.scalegraph.util.RemoteInvocationPayload.*;
 
 public class BigArrayQueueManager {
@@ -138,7 +134,7 @@ public class BigArrayQueueManager {
         singleton.mainJobLock.unlock();
     }
     
-    protected  static def isDataReady(key: Key): Boolean {
+    protected static def isDataReady(key: Key): Boolean {
         
         if(singleton.internalWaitCountLock.tryLock()) {
             
@@ -178,11 +174,14 @@ public class BigArrayQueueManager {
         singleton.qLock.unlock();
     }
     
-    private static def clearProcessQ(placeId: Int) {
+    private static def clearProcessQ() {
         
         singleton.qLock.lock();
         
-        singleton.internalProcessQ(placeId).clear();		// Clear old data
+        for (var placeId: Int = 0; placeId < Place.MAX_PLACES; ++ placeId) {
+            
+            singleton.internalProcessQ(placeId).clear();		// Clear old data
+        }
         
         singleton.qLock.unlock();
     }
@@ -191,12 +190,18 @@ public class BigArrayQueueManager {
         
         singleton.qLock.lock();
         
+        clearProcessQ();
+        
         val temp = singleton.internalBufferQ;
-        x10.util.concurrent.Fences.storeStoreBarrier();
+        // x10.util.concurrent.Fences.storeStoreBarrier();
         singleton.internalBufferQ = singleton.internalProcessQ;
-        x10.util.concurrent.Fences.storeStoreBarrier();
+        // x10.util.concurrent.Fences.storeStoreBarrier();
         singleton.internalProcessQ = temp;
-        x10.util.concurrent.Fences.storeStoreBarrier();
+        // x10.util.concurrent.Fences.storeStoreBarrier();
+        
+        // Console.OUT.println("Q stat => proc: " + singleton.internalProcessQ(2).size() +
+        //                                        " buff: " +  singleton.internalBufferQ(2).size());
+        // System.sleep(1);
         
         singleton.qLock.unlock();
     }
@@ -252,7 +257,6 @@ public class BigArrayQueueManager {
         singleton.internalWaitCountLock.unlock();
     }
     
-    
     protected static def execute() {
         
         swapQ();
@@ -266,12 +270,8 @@ public class BigArrayQueueManager {
                 // Console.OUT.println("Job to exec: " + placeQ.size() + " Obj Addres" + placeQ);
                 doRemoteOperation (p, placeQ);
                 // async doRemoteOperation (p, placeQ);
-                clearProcessQ(p);
-                          
             } 
         }
-        
-
     }
     
     protected static def doRemoteOperation(placedId: Int, placeQ: HashMap[Any, Pending]) {
@@ -294,8 +294,8 @@ public class BigArrayQueueManager {
                 entry.createRemoteInvocationPayload(remoteInvocations);
                 
                 // Create read request and append to list 
-                entry.createReadRequestPayload(readRequests);
-                localReadPendings.add(entry);
+                entry.createReadRequestPayload(readRequests, localReadPendings);
+                // localReadPendings.add(entry);
                 
                 // Create write request and append to list
                 entry.createWriteRequestPayload(writeRequests);
@@ -310,15 +310,19 @@ public class BigArrayQueueManager {
                     
                     val ri = remoteInvocations(i);
                     val obj = ri.obj;
-                    // val indices = ri.indices;
                     val methods = ri.methods;
                     val params1 = ri.params1;
                     val params2 = ri.params2;
+                    
+                    // x10.util.concurrent.Fences.storeStoreBarrier();
 
                     for (var k: Int = 0; k < methods.size; ++k) {
                         
-                        // val ind = indices(k);
-                        methods(k)(obj, params1(k), params2(k));
+                        // Console.OUT.println("Before call method");
+                        
+                        // Workaround for ITable look up failed, by delaying the system
+                        // Runtime.probe();
+                        methods(k)(ri.obj, params1(k), params2(k));
                     }
                 }
                 
@@ -326,7 +330,7 @@ public class BigArrayQueueManager {
                 for (var i: Int = 0; i < writeRequests.size(); ++i) {
                     
                     val rq = writeRequests(i);
-                    val obj = rq.obj;
+                    val obj = rq.obj as BigArrayOperation;
                     val indices = rq.indices;
                     val data = rq.data;
                     
@@ -339,12 +343,14 @@ public class BigArrayQueueManager {
                 for (var i: Int = 0; i < readRequests.size(); ++i) {
                     
                     // Console.OUT.println("Reuqest index: " + readRequests(i).indices + " on " + here.id);
+                    
                     val rq = readRequests(i);
                     val hash = rq.hash;
-                    val obj = rq.obj;
+                    val obj = rq.obj as BigArrayOperation;
                     val keys = rq.keys;
                     val indices = rq.indices;
                     val data = obj.readAll(indices);
+                    
                     
                     readData.add(new ReadReplyPayload(hash, obj, keys, indices, data));
                     
@@ -412,7 +418,7 @@ public class BigArrayQueueManager {
     
     public static def printWaitingList() {
         
-        // Console.OUT.println("Keys in hash => " + singleton.internalWaitCount.size());
+        Console.OUT.println("Keys in hash => " + singleton.internalWaitCount.size());
         // Console.OUT.println("Sum count  => " + singleton.sumCount);
         // Console.OUT.println("Release count  => " + singleton.sumCount);
     } 

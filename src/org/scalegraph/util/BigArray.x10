@@ -333,33 +333,39 @@ public class BigArray[T] implements BigArrayOperation {
     
     public static def sync(key: Key, shouldWait: Boolean) {
         
-        while (!BigArrayQueueManager.isDataReady(key)) {
+        // var waitTime: int = 500;
+        Clock.advanceAll();
+        // while (!BigArrayQueueManager.isDataReady(key)) {
             
             if (BigArrayQueueManager.enterGlobalJob()) {
                 
-                // First thread
                 // Console.OUT.println("Enter global job: " + Runtime.workerId() + " Wait key: " + key);
-                BigArrayQueueManager.printWaitingList();
+                // BigArrayQueueManager.printWaitingList();
                 
-                if (shouldWait) {
-                    
-                	System.sleep(500);
-                }
+                // if (shouldWait) {
+                //     
+                //     // dumpDelay();
+                // 	System.sleep(waitTime);
+                // }
                 
                 BigArrayQueueManager.execute();
                 BigArrayQueueManager.exitGlobalJob();
-                
-                // System.sleep(1);
+                // Runtime.probe();
+                // System.sleep(3);
                 
             } else {
                 
                 // Pause this activity and run other jobs in the queue
                 // Console.OUT.println("Waiting, run another jobs: " + Runtime.workerId() + " Wait key: " + key);
                 // Console.OUT.print(".");
-                Runtime.probe();
-                // System.sleep(BigArrayQueueManager.waitRandom.nextInt(5));
+                // Runtime.probe();
+                // System.sleep(BigArrayQueueManager.waitRandom.nextInt(2));
+                // dumpDelay();
+                
             }
-        }
+            Clock.advanceAll();
+
+        // }
     }
     
     public def readAll(indices: Array[Index]): Any {
