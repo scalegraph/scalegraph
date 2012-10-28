@@ -5,6 +5,8 @@ import org.scalegraph.util.KeyGenerator;
 import org.scalegraph.util.BigArray;
 import org.scalegraph.util.BigArrayQueueManager;
 import org.scalegraph.util.RemoteInvocationPayload;
+import org.scalegraph.util.*;
+import org.scalegraph.util.BigArrayOperation;
 
 public type Index = Long;
 
@@ -28,49 +30,52 @@ public class TestBigArray {
         //     
         //     x = B(i);
         // }
-        val remoteOp = (obj: Any, param1: Any, param2: Any) => {
+        val remoteOp = (obj: ArrayObject, param1: Param1, param2: Param2) => {
             
             val o = obj as BigArray[Long];
             val index = param1 as Long;
             o.setLocal(index, index * index);
         };
 
-        finish {
-            // for (var t: Int = 0; t < 100; ++t) { 
+        
             
-            for (var it: Int = 0; it < 1000; ++it) {
+            for (var t: Int = 0; t < 100; ++t) {
                 
-                val i = it;
+                 clocked finish {
                 
-                async {  
+                    for (var it: Int = 0; it < 100; ++it) {
                     
-                    val w = new Wrap[Long]();
-                    val y = new Wrap[Long]();
-                    val k = BigArray.getKey();
+                    val i = it;
                     
-                    val index: Long = size - i - 1;
-                    
-                    // Console.OUT.println("Key = " +  k );
-                    
-                    // B.writeAsync(k, 0, 1024);
-                    // B.getAsync(k, 0L, w);
-                    
-                    // B.getAsync(k, size - 20, y);
-                    // B.getAsync(k, size - 30, y);
-                    // B.getAsync(k, size - 40, y);
-                    
-                    
-                    // B.writeAsync(k, index, index);
-                    val pid = B.getPlaceId(index);
-                    B.invokeRemoteWithNoReturn(k, pid, remoteOp, index, null);
-                    B.getAsync(k, index, y);
-                    BigArray.synch(k);
-                    
-                    // Console.OUT.println("Exit from sync: " + k);
-                    // Console.OUT.println("W = " + w() );
-                    Console.OUT.println("Y("+ index +") = " + y() );
+                     clocked async  {  
+                        
+                        val w = new Wrap[Long]();
+                        val y = new Wrap[Long]();
+                        val k = BigArray.getKey();
+                        
+                        val index: Long = size - i - 1;
+                        
+                        // Console.OUT.println("Key = " +  k );
+                        
+                        // B.writeAsync(k, 0, 1024);
+                        // B.getAsync(k, 0L, w);
+                        
+                        // B.getAsync(k, size - 20, y);
+                        // B.getAsync(k, size - 30, y);
+                        // B.getAsync(k, size - 40, y);
+                        
+                        
+                        // B.writeAsync(k, index, index);
+                        val pid = B.getPlaceId(index);
+                        // B.invokeRemoteWithNoReturn(k, pid, remoteOp, index, index);
+                        B.getAsync(k, index, y);
+                        BigArray.sync(k, true);
+                        
+                        // Console.OUT.println("Exit from sync: " + k);
+                        // Console.OUT.println("W = " + w() );
+                        Console.OUT.println("Y("+ index +") = " + y() );
+                    }
                 }
-                // }
             }
         }
         
