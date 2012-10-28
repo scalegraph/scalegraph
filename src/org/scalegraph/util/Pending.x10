@@ -8,7 +8,7 @@ import x10.util.ArrayList;
 
 public interface Pending {
     
-    def createReadRequestPayload(ArrayList[ReadRequestPayload]): void;
+    def createReadRequestPayload(ArrayList[ReadRequestPayload], ArrayList[Pending]): void;
     def createWriteRequestPayload(ArrayList[WriteRequestPayload]): void;
     def createRemoteInvocationPayload(ArrayList[RemoteInvocationPayload]): void;
     def updateReadRequestData(data: Any): void;
