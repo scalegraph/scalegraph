@@ -2,11 +2,13 @@ package org.scalegraph.util;
 
 import org.scalegraph.util.BigArray;
 import org.scalegraph.util.KeyGenerator;
+import org.scalegraph.util.RemoteInvocationPayload.*;
 
-public class WriteRequestPayload(hash: Int, obj: BigArrayOperation, keys: Array[Key], indices: Array[Index], data: Any) {
+
+public struct WriteRequestPayload(obj: ArrayObject, keys: Array[Key], indices: Array[Index], data: Any) {
     
-    public def this(hash: Int, obj: BigArrayOperation, keys: Array[Key], indices: Array[Index], data: Any) {
+    public def this(obj: ArrayObject, keys: Array[Key], indices: Array[Index], data: Any) {
         
-        property(hash, obj, keys, indices, data);
+        property(obj, keys, indices, data);
     }
 }

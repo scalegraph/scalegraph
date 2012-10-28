@@ -7,13 +7,13 @@ public type Param1 = Any;
 public type Param2 = Any;
 public type ArrayObject = Any;
 
-public class RemoteInvocationPayload (obj: BigArrayOperation, 
+public struct RemoteInvocationPayload (obj: ArrayObject, 
                                          keys: Array[Key], 
                                          methods: Array[(ArrayObject, Param1, Param2) => void],
                                          params1: Array[Any],
                                          params2: Array[Any]) {
     
-    public def this(obj: BigArrayOperation, 
+    public def this(obj: ArrayObject, 
                     keys: Array[Key], 
                     methods: Array[(ArrayObject, Param1, Param2) => void],
                     params1: Array[Any],
