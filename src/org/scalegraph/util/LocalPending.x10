@@ -9,25 +9,25 @@ import org.scalegraph.util.KeyGenerator.*;
 // import org.scalegraph.util.WriteRequestPayload;
 // import org.scalegraph.util.RemoteInvocationPayload.*;
 
-public class LocalPending[V] implements Pending {
+public struct LocalPending[V] implements Pending {
     
-    var obj: BigArray[V];
+    val obj: BigArray[V];
     
     // Data for read entry
-    var readKeys: ArrayList[Key];
-    var readIndices: ArrayList[Index];
-    var wraps: ArrayList[Wrap[V]];
+    val readKeys: ArrayList[Key];
+    val readIndices: ArrayList[Index];
+    val wraps: ArrayList[Wrap[V]];
     
     // data for write entry
-    var writeKeys: ArrayList[Key];
-    var writeIndices: ArrayList[Index];
-    var data: ArrayList[V];
+    val writeKeys: ArrayList[Key];
+    val writeIndices: ArrayList[Index];
+    val data: ArrayList[V];
     
     // data for remote invocation with no return
-    var riKeys: ArrayList[Key];
-    var riMethods: ArrayList[(ArrayObject, Param1, Param2)=> void];
-    var riParams1: ArrayList[Any];
-    var riParams2: ArrayList[Any];
+    val riKeys: ArrayList[Key];
+    val riMethods: ArrayList[(ArrayObject, Param1, Param2)=> void];
+    val riParams1: ArrayList[Param1];
+    val riParams2: ArrayList[Param2];
     
     public def this(o: BigArray[V]) {
         
@@ -44,8 +44,8 @@ public class LocalPending[V] implements Pending {
         riKeys = new ArrayList[Key]();
         // riIndices = new ArrayList[Long]();
         riMethods = new ArrayList[(ArrayObject, Param1, Param2)=> void]();
-        riParams1 = new ArrayList[Any]();
-        riParams2 = new ArrayList[Any]();
+        riParams1 = new ArrayList[Param1]();
+        riParams2 = new ArrayList[Param2]();
     }
     
     public def addRead(key: Key, index: Index, wrap: Wrap[V]) {
@@ -74,42 +74,53 @@ public class LocalPending[V] implements Pending {
     }
     
     
-    public def createReadRequestPayload(list: ArrayList[ReadRequestPayload]) {
+    public def createReadRequestPayload(list: ArrayList[ReadRequestPayload], 
+                                        localPendingList: ArrayList[Pending]) {
         
-        val h = obj.hashCode();
-        val readRequestPayload =
-            new ReadRequestPayload(h,
-                                   obj,
-                                   readKeys.toArray(),
-                                   readIndices.toArray());
-        
-        list.add(readRequestPayload);
+        if(readKeys.size() > 0) {
+            
+            val h = obj.hashCode();
+            val readRequestPayload =
+                new ReadRequestPayload(h,
+                                       obj,
+                                       readKeys.toArray(),
+                                       readIndices.toArray());
+            
+            list.add(readRequestPayload);
+            localPendingList.add(this);
+        }
     }
     
     public def createWriteRequestPayload(list: ArrayList[WriteRequestPayload]) {
         
-        val h = obj.hashCode();
-        val writeRequestPayload = 
-            new WriteRequestPayload(h, 
-                                    obj, 
-                                    writeKeys.toArray(),
-                                    writeIndices.toArray(),
-                                    data.toArray());
-        
-        list.add(writeRequestPayload);
+        if (writeKeys.size() > 0) {
+            
+            val h = obj.hashCode();
+            val writeRequestPayload = 
+                new WriteRequestPayload(obj, 
+                                        writeKeys.toArray(),
+                                        writeIndices.toArray(),
+                                        data.toArray());
+            
+            list.add(writeRequestPayload);
+        }
     }
     
     public def createRemoteInvocationPayload(list: ArrayList[RemoteInvocationPayload]) {
         
-        val h = obj.hashCode();
-        val RemoteInvocationPayload =
-            new RemoteInvocationPayload(obj, 
-                                        riKeys.toArray(), 
-                                        riMethods.toArray(),
-                                        riParams1.toArray(),
-                                        riParams2.toArray());
-        
-        list.add(RemoteInvocationPayload);
+        if(riKeys.size() > 0) {
+            
+            val h = obj.hashCode();
+            
+            val remoteInvocationPayload =
+                new RemoteInvocationPayload(obj as Any, 
+                                            riKeys.toArray(), 
+                                            riMethods.toArray(),
+                                            riParams1.toArray(),
+                                            riParams2.toArray());
+            
+            list.add(remoteInvocationPayload);
+        }
     }
     
     public def updateReadRequestData(d: Any) {
