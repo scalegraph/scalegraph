@@ -911,6 +911,8 @@ test_matrixrandomwalk:
 	src/org/scalegraph/communities/MatrixRandomWalk.x10 \
 	src/org/scalegraph/communities/MatrixRandomWalkResult.x10 \
 	src/org/scalegraph/metrics/centrality/BufferedHashMap.x10 \
+	src/org/scalegraph/metrics/centrality/CreateMatrix.x10 \
+	src/org/scalegraph/metrics/centrality/Element.x10 \
 	src/org/scalegraph/communities/LongToIntMap.x10 \
 	src/org/scalegraph/graph/PlainGraph.x10 \
 	src/org/scalegraph/graph/Graph.x10 \

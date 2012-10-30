@@ -375,5 +375,4 @@ public class CreateMatrix {
 		Console.OUT.printf("createMatrix time = %f\n", (Timer.milliTime() - funStart) / 1000.0);
 		this.binLink = binLink;
 	}
-
 }
