@@ -5,41 +5,38 @@ import x10.util.Pair;
 
 public class SparseMatrix[T] {T <: Arithmetic[T], T haszero} {
 	
-	val size:Int;
-	val entry:Array[Array[Pair[Int, T]](1)](1);
+	private val nRow:Int;
+	private val nCol:Int;
+	private val offset:Array[Int];
+	private val entry:Array[Pair[Int, T]];
 	
-	public def this(size:Int, entry:Array[Array[Pair[Int, T]](1)](1)) {
-		this.size = size;
+	public def this(nRow:Int, nCol:Int, offset:Array[Int], entry:Array[Pair[Int, T]]) {
+		this.nRow = nRow;
+		this.nCol = nCol;
+		this.offset = offset;
 		this.entry = entry;
 	}
 	
-	public def getSize(): Int {
-		return size;
+	public def getRowCount(): Int {
+		return nRow;
+	}
+	
+	public def getColumnCount(): Int {
+		return nCol;
 	}
 	
 	public def mult(x:Array[T](1), ofsx:Int, y:Array[T](1), ofsy:Int): void {
-		for(var i:Int = 0; i < this.size; i++){
+		for(var i:Int = 0; i < nRow; i++){
 			y(ofsy + i) = Zero.get[T]();
-			for(jj in entry(i)){
-				val j = entry(i)(jj).first;
-				val v = entry(i)(jj).second;
-				y(ofsy + i) += v * x(ofsx + j);
+			for(var jj:Int = offset(i); jj < offset(i + 1); jj++) {
+				val j = entry(jj).first;
+				val mij = entry(jj).second;
+				y(ofsy + i) += mij * x(ofsx + j);
 			}
 		}
 	}
 	
-	/*public def mult(work:Array[Double](1), ofsx:Int, ofsy:Int): void {
-		for(var i:Int = 0; i < this.size; i++){
-			work(ofsy + i) = 0;
-			for(jj in entry(i)){
-				val j = entry(i)(jj).first;
-				val v = entry(i)(jj).second;
-				work(ofsy + i) += v * work(ofsx + j);
-			}
-		}
-	}*/
-	
-	public def toString(): String {
+	/*public def toString(): String {
 		val builder = new StringBuilder();
 		builder.add("********** entries **********\n");
 		for(i in entry){
@@ -52,5 +49,5 @@ public class SparseMatrix[T] {T <: Arithmetic[T], T haszero} {
 		builder.add("size = " + size);
 		builder.add("*****************************\n");
 		return builder.result();
-	}
+	}*/
 }
