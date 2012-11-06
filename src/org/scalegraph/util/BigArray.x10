@@ -10,36 +10,96 @@ import x10.util.concurrent.Lock;
 // import org.scalegraph.util.BigArrayQueueManager;
 import org.scalegraph.util.RemoteInvocationPayload.*;
 import org.scalegraph.util.KeyGenerator.*;
+import x10.io.SerialData;
 
 public type Index = Long;
 
-public class BigArray[T] implements BigArrayOperation {
+public class BigArray[T] implements BigArrayOperation, x10.io.CustomSerialization {
     
-    protected var size: Long;
+    protected var localHandle: PlaceLocalHandle[LocalState[T]];
+    protected transient var isStoragePointerValid: boolean;
+    protected transient var cachedStoragePointer: IndexedMemoryChunk[T]; 
+    
+    protected static class LocalState[T](IMC: IndexedMemoryChunk[T],
+            placeDescriptors: Rail[PlaceDescriptor],
+            lcSize: Long,
+            lcNumPlaces: Int,
+            lcBlockSize: Int,
+            lcOperationExclusive: Lock) {
+        
+        public def this(IMC: IndexedMemoryChunk[T],
+                        placeDescriptors: Rail[PlaceDescriptor],
+                        size: Long,
+                        numPlaces: Int,
+                        blockSize: Int,
+                        operationExclusive: Lock) {
+            
+            property (IMC,
+                      placeDescriptors,
+                      size,
+                      numPlaces,
+                      blockSize,
+                      operationExclusive);
+        }
+    }
+    
+    static struct PlaceDescriptor(startIndex: Int, size: Int, endIndex: Int) {
+        
+        def this(startIndex: Int, size: Int, endIndex: Int) {
+            
+            property(startIndex, size, endIndex);
+        }
+    }
+    
+    protected val size: Long;
     
     protected val numPlaces: Int;
     
-    protected val dist: Dist;
+    // protected val dist: Dist;
     
-    protected val leftOver: Int;
+    // protected val leftOver: Int;
     
     protected val blockSize: Int;
     
-    transient protected val operationExclusive: Lock;
+    protected val operationExclusive: Lock;
     
     protected static val keyGenerator = new KeyGenerator();
     
-    protected def this(sz: long) {
+    protected def this(lch: PlaceLocalHandle[LocalState[T]]) {
         
-        dist = Dist.makeUnique();
-        size = sz;
-        numPlaces = Place.MAX_PLACES;
+        localHandle = lch;
+        size = lch().lcSize;
+        blockSize = lch().lcBlockSize;
+        numPlaces = lch().lcNumPlaces;
+        operationExclusive = lch().lcOperationExclusive;
+    }
+    
+    public def this(serialData: SerialData) {
+        
+        val lch = serialData.data as PlaceLocalHandle[LocalState[T]];
+        localHandle = lch;
+        size = lch().lcSize;
+        blockSize = lch().lcBlockSize;
+        numPlaces = lch().lcNumPlaces;
+        operationExclusive = lch().lcOperationExclusive;
+    }
+    
+    public def serialize(): SerialData {
+        
+        return new SerialData(localHandle, null);
+    }
+    
+    public static def make[T](sz: long): BigArray[T] {
+        
+        val dist = Dist.makeUnique();
+        val size = sz;
+        val numPlaces = Place.MAX_PLACES;
         
         // Get space assigned to each place
         val placeDescriptors = new Rail[PlaceDescriptor](numPlaces);
         
-        blockSize = (size / numPlaces) as Int;
-        leftOver = (size % numPlaces) as Int;
+        val blockSize = (size / numPlaces) as Int;
+        val leftOver = (size % numPlaces) as Int;
         var startIndex: int = 0;
         
         for (var i: int = 0; i < numPlaces; ++i) {
@@ -51,33 +111,35 @@ public class BigArray[T] implements BigArrayOperation {
             }
             
             placeDescriptors(i) = new PlaceDescriptor(startIndex, len, startIndex + len - 1);
-            startIndex += len;
-            
+            startIndex += len;   
         }
         
-        val pd = placeDescriptors;
-        val init = ()=> {
+        val initBigArray = ()=> {
             
-            val storage = IndexedMemoryChunk.allocateZeroed[T]( pd(here.id).size );
-            return new LocalState(storage, pd);
+            val allocatedSize = placeDescriptors(here.id).size;
+            val storage = IndexedMemoryChunk.allocateZeroed[T](allocatedSize);
+            
+            return new LocalState(storage,
+                                  placeDescriptors,
+                                  size,
+                                  numPlaces,
+                                  blockSize,
+                                  new Lock());
         };
         
-        localHandle = PlaceLocalHandle.make[LocalState[T]](dist, init);
+        val lch = PlaceLocalHandle.make[LocalState[T]](dist, initBigArray);
         
-        operationExclusive = new Lock();
-        
-    }
-    
-    public static def make[T](sz: long): BigArray[T] {
-        
-        val b = new BigArray[T](sz);
+        // operationExclusive = new Lock();
+
+        val b = new BigArray[T](lch);
+ 
         return b;
     }
     
-    public static def make[T](sz: long, init: (Index) => T): BigArray[T] {
+    public static def make[T](sz: long, userInit: (Index) => T): BigArray[T] {
         
-        val b = new BigArray[T](sz);
-        b.initWithMethod(init);
+        val b = make[T](sz);
+        b.initWithMethod(userInit);
         
         return b;
     }
@@ -87,7 +149,7 @@ public class BigArray[T] implements BigArrayOperation {
         finish {
             for (p in Place.places()) {
                 
-                async at (p) {
+                at (p) async {
                     
                     val IMC = raw();
                     val len = IMC.length();
@@ -101,26 +163,6 @@ public class BigArray[T] implements BigArrayOperation {
                 }
             }
         }
-    }
-    
-    protected val localHandle: PlaceLocalHandle[LocalState[T]];
-    protected transient var isStoragePointerValid: boolean;
-    protected transient var cachedStoragePointer: IndexedMemoryChunk[T]; 
-    
-    protected static class LocalState[T](IMC: IndexedMemoryChunk[T], placeDescriptors: Rail[PlaceDescriptor]) {
-        
-        public def this(IMC: IndexedMemoryChunk[T], placeDescriptors: Rail[PlaceDescriptor]) {
-            
-            property (IMC, placeDescriptors);
-        }
-    }
-    
-    static struct PlaceDescriptor(startIndex: Int, size: Int, endIndex: Int) {
-        
-        def this(startIndex: Int, size: Int, endIndex: Int) {
-            
-            property(startIndex, size, endIndex);
-            }
     }
     
     protected final def raw(): IndexedMemoryChunk[T] {
