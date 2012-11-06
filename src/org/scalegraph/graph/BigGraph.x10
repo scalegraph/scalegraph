@@ -8,27 +8,60 @@ import org.scalegraph.util.RemoteInvocationPayload;
 import x10.io.FileReader;
 import x10.io.File;
 import x10.io.IOException;
+import x10.io.SerialData;
 
 public type VertexId = Long;
 public type VertexList = ArrayList[Index];
 
-public class BigGraph {
+public class BigGraph implements x10.io.CustomSerialization {
     
 
     protected var storage: BigArray[VertexList];
     protected var isDirected: Boolean;
     protected var numVertices: Long;
+    protected var localHandle: PlaceLocalHandle[LocalState];
     
-    protected def this(nodes: long, isDirected: boolean) {
-                
-        storage = BigArray.make[VertexList](nodes);
-        this.numVertices = nodes;
-        this.isDirected = isDirected;
+    protected static class LocalState(lcStorage: BigArray[VertexList],
+                                      lcIsDirected: Boolean,
+                                      lcNumVertices: Long) {
+        
+        public def this(storage: BigArray[VertexList],
+                        isDirected: Boolean,
+                        numVertices: Long) {
+            
+            property(storage, isDirected, numVertices);
+        }
+        
+    }
+    
+    protected def this(lch: PlaceLocalHandle[LocalState]) {
+        
+        localHandle = lch;
+        storage = lch().lcStorage;
+        isDirected = lch().lcIsDirected;
+        numVertices = lch().lcNumVertices;
+    }
+    
+    protected def this(serialData: SerialData) {
+        
+        localHandle = serialData.data as PlaceLocalHandle[LocalState];
+    }
+    
+    public def serialize(): SerialData {
+        
+        return new SerialData(localHandle, null);
     }
     
     public static def make(nodes: Long, isDirect: boolean): BigGraph {
         
-        return new BigGraph(nodes, isDirect);
+        val dist = Dist.makeUnique();
+        val storage = BigArray.make[VertexList](nodes);
+        
+        val initGraph = () =>{
+            return new LocalState(storage, isDirect, nodes);
+        };
+        val lch = PlaceLocalHandle.make[LocalState](dist, initGraph);
+        return new BigGraph(lch);
     }
     
    protected def internalInsertEdgeAsynch(placeId: Int, key: Key, src: Array[Index], dst: Array[Index]) {
