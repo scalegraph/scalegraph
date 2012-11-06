@@ -16,19 +16,14 @@ public class BigGraph {
     
 
     protected var storage: BigArray[VertexList];
+    protected var isDirected: Boolean;
+    protected var numVertices: Long;
     
-    
-    protected def this(nodes: long, isDirect: boolean) {
-        
-        // val init = (index: Index) => {
-        //     
-        //     Console.OUT.println("Init index: " + index);
-        //     return new VertexList();
-        // };
-        
-        // storage = BigArray.make[VertexList](nodes, init);
-        
+    protected def this(nodes: long, isDirected: boolean) {
+                
         storage = BigArray.make[VertexList](nodes);
+        this.numVertices = nodes;
+        this.isDirected = isDirected;
     }
     
     public static def make(nodes: Long, isDirect: boolean): BigGraph {
@@ -36,11 +31,6 @@ public class BigGraph {
         return new BigGraph(nodes, isDirect);
     }
     
-   // public def insertEdgeAsync(src: Index, dst: Index) {
-   //     
-   //     
-   // }
-   
    protected def internalInsertEdgeAsynch(placeId: Int, key: Key, src: Array[Index], dst: Array[Index]) {
        
        val addEdgeOp = (obj: ArrayObject, param1: Param1, param2: Param2) => {
@@ -73,11 +63,15 @@ public class BigGraph {
        var line:String = null;
        var numVertices: Long = 0;
        var key:Key = BigArray.getKey();
+       var lineCount: Long = 0;
+       var splitter: String;
        
        if (filePath.indexOf("twitter_rv.net") != -1) {
            
            // Work around for twitter kaist on tsubame
            numVertices = 61578170;
+           Console.OUT.println("Load Twiiter data with nodes = " + numVertices);
+           splitter = "\t";
            
        } else {
            
@@ -89,17 +83,18 @@ public class BigGraph {
            reader.readLine();		// skip 
            reader.readLine();		// skip label
            reader.readLine();		// skip data:
+           splitter = " ";
        }
        
-       val bigGraph = BigGraph.make(numVertices,isDirected);
+       val bigGraph = BigGraph.make(numVertices, isDirected);
        var addEdgeCount: int = 0;
-       val numbeOfEdgesPerkey = 100000;
+       val numbeOfEdgesPerKey = 500000;
        
        val srcList = new Array[ArrayList[VertexId]](Place.MAX_PLACES, 
-               (Int) => new ArrayList[VertexId](numbeOfEdgesPerkey));
+               (Int) => new ArrayList[VertexId](numbeOfEdgesPerKey));
        
        val dstList = new Array[ArrayList[VertexId]](Place.MAX_PLACES, 
-               (Int) => new ArrayList[VertexId](numbeOfEdgesPerkey));
+               (Int) => new ArrayList[VertexId](numbeOfEdgesPerKey));
        
        finish {
            
@@ -109,6 +104,7 @@ public class BigGraph {
                try {
                    
                    line = reader.readLine().trim();
+                   
 
                    if (line.length() == 0) {
                        
@@ -117,7 +113,7 @@ public class BigGraph {
                        continue;
                    }
                    
-                   val temp = line.split(" ");
+                   val temp = line.split(splitter);
                    val src = Long.parse(temp(0));
                    val dst = Long.parse(temp(1));
                    
@@ -128,7 +124,7 @@ public class BigGraph {
                    
                    ++addEdgeCount;
                    
-                   if(addEdgeCount >= numbeOfEdgesPerkey) {
+                   if(addEdgeCount >= numbeOfEdgesPerKey) {
                        
                        for (var i: Int = 0; i < srcList.size; ++i) {
                            
@@ -136,7 +132,7 @@ public class BigGraph {
                        }
                       
                        addEdgeCount = 0;
-                       BigArray.synch(key, false);
+                       BigArray.sync(key, false);
                        key = BigArray.getKey();
                        
                        for (var i: Int = 0; i < srcList.size; ++i) {
@@ -144,7 +140,12 @@ public class BigGraph {
                            srcList(i).clear();
                            dstList(i).clear();
                        }
+                       
+                 	lineCount += numbeOfEdgesPerKey;
+                 	Console.OUT.println(lineCount);
                    }
+                   
+                   
                    
                } catch (e: IOException) {
                    
@@ -158,20 +159,34 @@ public class BigGraph {
            if(addEdgeCount > 0) {
                
                // We still have some edges in buffer
-               BigArray.synch(key, false);
+               BigArray.sync(key, false);
            }
        }
        
        return bigGraph;
    }
    
-    public def getOutNeighboursAsync(key: Key, index: Index, wrap: Wrap[VertexList]) {
-        
-        storage.getAsync(key, index, wrap);
-    }
-    
-    public def print() {
-        
-        storage.print();
-    }
+   public def getVerticesCount(): Long { return numVertices; }
+ 
+   public static def getKey() = BigArray.getKey();
+   
+   public def getOutNeigbours(vid: VertexId): VertexList {
+       
+       return storage(vid);
+   }
+   
+   public def getOutNeighboursAsync(key: Key, vid: VertexId, wrap: Wrap[VertexList]) {
+       
+       storage.getAsync(key, vid, wrap);
+   }
+   
+   public static def sync(key: Key) {
+       
+       BigArray.sync(key, false);
+   }
+   
+   public def print() {
+       
+       storage.print();
+   }
 }
