@@ -20,28 +20,24 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
 
     public static val MAX_BUCKET_INDEX = Int.MAX_VALUE;
     
-    protected def distance() = localHandleT().lcDistance;
-    protected def graph() = localHandleT().lcGraph;
-    protected def buckets() = localHandleT().lcBuckets;
-    protected def isDeletedMap() = localHandleT().lcIsDeleted;
-    protected def currentBucket() = localHandleT().lcCurrentBucket;
-    protected def deletedVertices() = localHandleT().lcDeletedVertices;
-    protected def delta() = localHandleT().lcDelta;
-    
-    // protected val graph: BigGraph;
-    // protected var buckets: Bucket;
+    protected def distance() = localHandle().lcDistance;
+    protected def predecessor() = localHandle().lcPredecessor;
+    protected def graph() = localHandle().lcGraph;
+    protected def buckets() = localHandle().lcBuckets;
+    protected def isDeletedMap() = localHandle().lcIsDeleted;
+    protected def currentBucket() = localHandle().lcCurrentBucket;
+    protected def deletedVertices() = localHandle().lcDeletedVertices;
+    protected def delta() = localHandle().lcDelta;
+
     protected var currentSource: VertexId;
-    // protected var currentBucket: BucketIndex;
-    // protected var distance: BigArray[Long];
-    // protected var isDeleted: BigArray[Boolean];
-    // protected var delta: Long;
-    // protected var deletedVertices: GrowableIndexedMemoryChunk[VertexId];
+
     
-    protected var localHandleT: PlaceLocalHandle[LocalState];
+    protected var localHandle: PlaceLocalHandle[LocalState];
     
     
     protected static class LocalState(lcGraph: BigGraph,
                                       lcDistance: BigArray[Long],
+                                      lcPredecessor: BigArray[ArrayList[VertexId]],
                                       lcIsDeleted: BigArray[Boolean],
                                       lcDelta: Long,
                                       lcDeletedVertices: GrowableIndexedMemoryChunk[VertexId],
@@ -52,44 +48,47 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
         
         public def this(g: BigGraph,
                         distance: BigArray[Long],
+                        predecessor: BigArray[ArrayList[VertexId]],
                         isDeleted: BigArray[Boolean],
                         delta: Long,
                         deletedVertices: GrowableIndexedMemoryChunk[VertexId],
                         buckets: Bucket,
                         currentBucket: BucketIndex) {
             
-            property(g, distance, isDeleted, delta, deletedVertices, buckets);
+            property(g, distance, predecessor, isDeleted, delta, deletedVertices, buckets);
             this.lcCurrentBucket = currentBucket; 
         }
     }
     
     protected def this(lch: PlaceLocalHandle[LocalState]) {
         
-        localHandleT = lch;;
+        localHandle = lch;;
     }
     
     public def this(serialData: SerialData) {
         
-        localHandleT = serialData.data as PlaceLocalHandle[LocalState];
+        localHandle = serialData.data as PlaceLocalHandle[LocalState];
     }
     
     public def serialize(): SerialData {
         
-        return new SerialData(localHandleT, null);
+        return new SerialData(localHandle, null);
     }
     
     public static def run(val g:BigGraph) {
-       
+
         val nodes = g.getVertexCount();
         val distance = BigArray.make[Long](nodes);
+        val predecessor = BigArray.make[ArrayList[VertexId]](nodes);
         val isDeleted = BigArray.make[Boolean](nodes);
-        val delta = 3;
-        val initBucketSize = 1000;
+        val delta = 1;
+        val initBucketSize = 20;
         
         val initBigBc = () => {
             
             return new LocalState(g,
                                   distance,
+                                  predecessor,
                                   isDeleted,
                                   delta,
                                   new GrowableIndexedMemoryChunk[VertexId](),
@@ -115,11 +114,13 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
                 }
             }
         }
+        
+        predecessor().print();
     }
     
     protected def deltaSteppingInit() {
         
-        Console.OUT.println("Start at " + here.id);
+        // Console.OUT.println("Start at " + here.id);
         
         if(here.id == 0) {
             
@@ -128,32 +129,20 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
             currentSource = 10L;
         }
         
-        // buckets = new GrowableIndexedMemoryChunk[ArrayList[VertexId]](100);
-        // deletedVertices = new GrowableIndexedMemoryChunk[VertexId]();
-        localHandleT().lcCurrentBucket = 0L;
+        localHandle().lcCurrentBucket = 0L;
     }
     
     protected def delta_stepping() {
      
         deltaSteppingInit();
         
-        Console.OUT.print("Init completed");
-        
-        // isDeleted = localHandle().lcIsDeleted;
-        // distance = localHandle().lcDistance;
-        // delta = localHandle().lcDelta;
-        // deletedVertices = localHandle().lcDeletedVertices;
-        // buckets = localHandle().lcBuckets;
-        
         var nonEmptyCount: Int = 0;
         
-        if(here.id == 0) {
+        if (here.id == 0) {
             
-            Console.OUT.println("Relax source: " + currentSource);
-            relax(currentSource, currentSource, 0);
+            finish relax(currentSource, currentSource, 0);
         }
         
-        Console.OUT.println("AAAAA");
         do {
             
             // Wait other places
@@ -162,16 +151,16 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
             while(currentBucket() < buckets().length()
                     && (buckets()(currentBucket()) == null
                             || buckets()(currentBucket()).isEmpty())) {
-                ++localHandleT().lcCurrentBucket;
+                ++localHandle().lcCurrentBucket;
             }
             
             if(currentBucket() >= buckets().length()) {
                 
-                localHandleT().lcCurrentBucket = MAX_BUCKET_INDEX; 
+                localHandle().lcCurrentBucket = MAX_BUCKET_INDEX; 
             }
             
             // Find smallest bucket
-            localHandleT().lcCurrentBucket = Team.WORLD.allreduce(here.id, currentBucket(), Team.MIN);
+            localHandle().lcCurrentBucket = Team.WORLD.allreduce(here.id, currentBucket(), Team.MIN);
             
             if(currentBucket() == MAX_BUCKET_INDEX) {
                 // No more work to do
@@ -182,38 +171,43 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
             
             do {
                 
-                if(currentBucket() < buckets().length()
+                // Console.OUT.println(here.id + "still working");
+                
+                if(currentBucket() < buckets().capacity()
                         && buckets()(currentBucket()) != null) {
                     
                     val bucket = buckets()(currentBucket());
                     
-                    while(!bucket.isEmpty()) {
+                    finish {
                         
-                        val v = bucket.removeFirst();
-                        
-                        if(!isDeletedMap()(v)) {
+                        while(!bucket.isEmpty()) {
                             
-                            isDeletedMap()(v) = true;
-                            deletedVertices().add(v);
-                        }
-                        
-                        val v_d = distance()(v);
-                        val neighbours = graph().getOutNeigbours(v);
-                        
-                        if(neighbours != null) {
+                            val v = bucket.removeFirst();
                             
-                            for(var i:Int = 0; i < neighbours.size(); ++i) {
+                            if(!isDeletedMap()(v)) {
                                 
-                                val w = neighbours(i);
-                                val w_d = graph().getWeight(w);
+                                isDeletedMap()(v) = true;
+                                deletedVertices().add(v);
+                            }
+                            
+                            val v_d = distance()(v);
+                            val neighbours = graph().getOutNeigbours(v);
+                            
+                            // if(here.id != 0)
+                            	Console.OUT.println(here.id + ":Visit L: " + v + " N: " + neighbours);
+                            
+                            if(neighbours != null) {
                                 
-                            	if (w_d <= delta()) {
-                            	    
-                            	    if(here.id != 0)
-                            	    	Console.OUT.println("Relax L: " + here.id);
-                            	    
-                            	    relax(v, w, v_d + w_d);
-                            	}
+                                for(var i:Int = 0; i < neighbours.size(); ++i) {
+                                    
+                                    val w = neighbours(i);
+                                    val w_d = graph().getWeight(w);
+                                    
+                                    if (w_d <= delta()) {
+                                        
+                                        relax(v, w, v_d + w_d);
+                                    }
+                                }
                             }
                         }
                     }
@@ -221,7 +215,7 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
                 
                 Team.WORLD.barrier(here.id);
                 
-                if (currentBucket() < buckets().length()
+                if (currentBucket() < buckets().capacity()
                         && buckets()(currentBucket()) != null
                         && !buckets()(currentBucket()).isEmpty()) {
                     nonEmptyCount = 1;
@@ -232,40 +226,38 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
                 }
                 
                 nonEmptyCount = Team.WORLD.allreduce(here.id, nonEmptyCount, Team.MAX);
-                Console.OUT.println(".");
                 
             } while(nonEmptyCount > 0);
             
-            
-            Console.OUT.println("Start Relax heavy");
             // Relax heavy edge
-            for(var i: Int = 0; i < deletedVertices().length(); ++i) {
+            finish {
                 
-                val v = deletedVertices()(i);
-                val v_d = distance()(v);
-                
-                // Console.OUT.println("Relax heavy("+here.id+") " + v);
-
-                val neighbours = graph().getOutNeigbours(v);
-                if(neighbours != null) {
+                for(var i: Int = 0; i < deletedVertices().length(); ++i) {
                     
-                    for(var k:Int = 0; k < neighbours.size(); ++k) {
+                    val v = deletedVertices()(i);
+                    val v_d = distance()(v);
+                    val neighbours = graph().getOutNeigbours(v);
+                    
+                    // if(here.id != 0)
+                    Console.OUT.println(here.id + ":Visit H: " + v + " N: " + neighbours);
+                    
+                    if(neighbours != null) {
                         
-                        val w = neighbours(k);
-                        val w_d = graph().getWeight(w);
-                        
-                        if(w_d > delta()) {
+                        for(var k:Int = 0; k < neighbours.size(); ++k) {
                             
-                            if(here.id != 0)
-                            	Console.OUT.println(here.id + ":Relax H");
+                            val w = neighbours(k);
+                            val w_d = graph().getWeight(w);
                             
-                            relax(v, w, v_d + w_d);
+                            if(w_d > delta()) {                    
+                                
+                                relax(v, w, v_d + w_d);
+                            }
                         }
                     }
                 }
             }
-            Console.OUT.println("*");
-            ++localHandleT().lcCurrentBucket;
+            
+            ++localHandle().lcCurrentBucket;
             
         } while(true);
     }
@@ -274,10 +266,9 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
         
         
         val placeId = graph().getPlaceId(w);
-        // Console.OUT.println("PlaceID: " + placeId);
-        
+                
         if(placeId == here.id) {
-            
+            // distance().print();
             val w_d = distance()(w);
             
             if(x < w_d) {
@@ -286,7 +277,6 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
                 
                 if (newIndex > buckets().capacity()) {
                     
-                    Console.OUT.println("Grow bucket by " + (newIndex + 4));
                     buckets().grow(newIndex + 1);
                 }
                 
@@ -299,207 +289,39 @@ public class BigBetweennessCentrality implements x10.io.CustomSerialization{
                     
                     val oldIndex = (w_d / delta()) as BucketIndex;
                     
-                    if(here.id != 0) Console.OUT.println(here.id + ":Remove "+ w +" to bucket("+oldIndex+")=>" + buckets()(oldIndex).size()  );
-                    if(here.id != 0) Console.OUT.println(here.id + ":Put "+ w +" to bucket("+newIndex+")=>" + buckets()(newIndex).size()  );
-
                     buckets()(oldIndex).remove(w);
                     buckets()(newIndex).add(w);
                     
                 } else {
                     
-                    if(here.id != 0) Console.OUT.println(here.id + ":New node "+ w +" to bucket("+newIndex+")=>" + buckets()(newIndex).size());
-                     
+                    // if(here.id != 0)
+                        Console.OUT.println(here.id + ":Put vertex: " + w);
+                                         
                     buckets()(newIndex).add(w);
-                   
                 }
                 
                 distance()(w) = x;
-                // if(localHandle().lcDistance.getPlaceId(w) != here.id) {
-                //     throw new Exception("Volky");
-                // }
+                
+                if(predecessor()(w) == null) {
+                    
+                    predecessor()(w) = new ArrayList[VertexId]();
+                }
+                
+                predecessor()(w).clear();
+                predecessor()(w).add(v);
                 
             } else if (x == w_d) {
                 
-                // Console.OUT.println("Found predecessor: " + v + " -> " + w);
+                predecessor()(w).add(v);
+                Console.OUT.println(here.id + ": " + v + " => " + w);
             }
+            
         } else {
             
-            // Console.OUT.println("Remote from: " + here.id);
-            at (Place.place(placeId)) async {
+            at (Place.place(placeId)) {
                 
                 relax(v, w, x);
             }
         }
     }
 }
-    
-    
-       // protected def estimatedBc() {
-    //     
-    //     findShortestPath();
-    // }
-    // 
-    // protected def findShortestPath() {
-    //     
-    //     // Implmenet Delta-stepping
-    //     val numVertices = graph.getVerticesCount();
-    //     val distance = BigArray.make[Long](numVertices);
-    //     val wieght = BigArray.make[Long](numVertices, (Long) => 0L);
-    //     val delta = 20L;
-    // }
-    /*
-    protected def bfs() {
-        
-        Console.OUT.println("BFSSSSSS");
-        
-        val numVertices = g.getVerticesCount();
-        val distance = BigArray.make[Long](numVertices);
-        var traverseQ: BigQueue[VertexId] = BigQueue.make[VertexId](numVertices);
-        var nextQ: BigQueue[VertexId] = BigQueue.make[VertexId](numVertices);
-        
-        val bufferSize: Int = 10000;
-        val actorsWrap = new Array[Wrap[VertexId]](bufferSize, (Int) =>  new Wrap[Long]());
-        val actors = new Array[VertexId](bufferSize);
-        val actorsDistanceWrap = new Array[Wrap[Long]](bufferSize, (Int) => new Wrap[Long]());
-        val actorsDistance = new Array[Long](bufferSize);
-        val neighbourListWrap = new Array[Wrap[VertexList]](bufferSize, (Int) =>  new Wrap[VertexList]());
-        val neighbourList = new Array[VertexList](bufferSize);
-        
-        var key: Key;
-        
-        // for (var src: Long = 0; src < numVertices; ++src) {
-        var src: Long = 1L;
-        // for each source
-        distance.fill(-1L);
-        distance(src) = 0;
-        
-        traverseQ.clear();
-        nextQ.clear();
-        
-        nextQ.add(src);
-        
-        while(!nextQ.isEmpty()) {
-            
-            // Swap Q
-            val temp = nextQ;
-            nextQ = traverseQ;
-            traverseQ = temp;
-            
-            nextQ.clear();
-            
-            while(!traverseQ.isEmpty()) {
-                
-                key = BigGraph.getKey();
-                // val w = new Wrap[VertexId]();
-                
-                var count: Int = traverseQ.count() as Int;
-                count = count < bufferSize ? count: bufferSize;
-                
-                Console.OUT.println("Count: " + count);
-                
-                // Get vertices in queue
-                Console.OUT.println("Get source async");
-                for(var i: int = 0; i < count; ++i) {
-                    
-                    val w = actorsWrap(i);
-                    traverseQ.removeFirstAsync(key, w);
-                    actors(i) = w();
-                }
-                
-                traverseQ.sync(key, false);
-                
-                // Get actor distance
-                key = BigGraph.getKey();
-                
-                for (var i: int = 0; i < count; ++i) {
-                    
-                    val w = actorsDistanceWrap(i);
-                    distance.getAsync(key, actors(i), w);
-                    actorsDistance(i) = w();
-                }
-                
-                distance.sync(key, false);
-                
-                Console.OUT.println("Get Neighbours async");
-                key = BigGraph.getKey();
-                
-                finish {
-                    
-                    for(var i: int = 0; i < count; ++i) {
-                        
-                        val j = i;
-                        
-                        async {
-                            
-                            val n = neighbourListWrap(j);
-                            g.getOutNeighboursAsync(key, actors(j), n);
-                            neighbourList(j) = n();
-                        }
-                    }                    
-                }
-                g.sync(key);
-                
-                // For each actors
-                
-                for (var i: int = 0; i < count; ++i) {
-                    
-                    val actorsIndex = i;
-                    val neighbours = neighbourList(i);
-                    
-                    Console.OUT.println("Actor: " + actors(i) + " N: " + neighbours);
-                    
-                    if(neighbours == null)
-                        continue;
-
-                    // val maxAsync = 20;
-                    var j: int = 0;
-                    var asyncCount: Int = 0;
-                    while(j < neighbours.size()) {
-                        
-                        asyncCount = 0;
-                        
-                        clocked finish {
-                            
-                            for (; j < neighbours.size(); ++j) {
-                                
-                                ++asyncCount;
-                                
-                                if(asyncCount > 200) {
-                                    break;
-                                }
-                                // val outloop = neighbours.size() - j;
-                                // val loops = maxAsync <  outloop ? maxAsync: outloop;
-                                
-                                // for (var t: int = 0; t < maxAsync && j < neighbours.size(); ++t, ++j) {
-                                
-                                val neighbourIndex = j;
-                                
-                                clocked async {
-                                    
-                                    val waitRead = BigArray.getKey();
-                                    val wrap = new Wrap[Long]();
-                                    val nid = neighbours(neighbourIndex);
-                                    
-                                    distance.getAsync(waitRead, nid, wrap);
-                                    distance.sync(waitRead, true);
-                                    
-                                    val neighbourDistance = wrap();
-                                    val waitWrite = BigArray.getKey();
-                                    
-                                    if (neighbourDistance == -1L) {
-                                        
-                                        distance.writeAsync(waitWrite, nid, actorsDistance(actorsIndex) + 1);
-                                        nextQ.addAsync(waitWrite, nid);
-                                        distance.sync(waitWrite, true);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            Console.OUT.println("End of traverse");
-        }
-    }
-     */
