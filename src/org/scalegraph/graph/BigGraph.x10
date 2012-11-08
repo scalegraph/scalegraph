@@ -16,10 +16,11 @@ public type VertexList = ArrayList[Index];
 public class BigGraph implements x10.io.CustomSerialization {
     
 
-    protected var storage: BigArray[VertexList];
-    protected var isDirected: Boolean;
-    protected var numVertices: Long;
+    // protected var storage: BigArray[VertexList];
+    // protected var isDirected: Boolean;
+    // protected var numVertices: Long;
     protected var localHandle: PlaceLocalHandle[LocalState];
+    
     
     protected static class LocalState(lcStorage: BigArray[VertexList],
                                       lcIsDirected: Boolean,
@@ -37,20 +38,29 @@ public class BigGraph implements x10.io.CustomSerialization {
     protected def this(lch: PlaceLocalHandle[LocalState]) {
         
         localHandle = lch;
-        storage = lch().lcStorage;
-        isDirected = lch().lcIsDirected;
-        numVertices = lch().lcNumVertices;
+        // storage = lch().lcStorage;
+        // isDirected = lch().lcIsDirected;
+        // numVertices = lch().lcNumVertices;
     }
     
     protected def this(serialData: SerialData) {
         
         localHandle = serialData.data as PlaceLocalHandle[LocalState];
+        // storage = localHandle().lcStorage;
+        // isDirected = localHandle().lcIsDirected;
+        // numVertices = localHandle().lcNumVertices;
     }
     
     public def serialize(): SerialData {
         
         return new SerialData(localHandle, null);
     }
+    
+    public def numVertices() = localHandle().lcNumVertices;
+    
+    protected def storage() = localHandle().lcStorage;
+    
+    protected def isDirected() = localHandle().lcIsDirected;
     
     public static def make(nodes: Long, isDirect: boolean): BigGraph {
         
@@ -86,7 +96,7 @@ public class BigGraph implements x10.io.CustomSerialization {
            }
        };
        
-       storage.invokeRemoteWithNoReturn(key, placeId, addEdgeOp, src, dst);
+       storage().invokeRemoteWithNoReturn(key, placeId, addEdgeOp, src, dst);
    }
     
    
@@ -112,6 +122,9 @@ public class BigGraph implements x10.io.CustomSerialization {
            
            // Get number of vertices, Format: "n = XXXX"
            numVertices = Long.parse(reader.readLine().split("=")(1).trim());
+           
+           // Our lib start at 0 so plus 1 for safety
+           ++numVertices;
            
            reader.readLine();		// skip 
            reader.readLine();		// skip label
@@ -150,7 +163,7 @@ public class BigGraph implements x10.io.CustomSerialization {
                    val src = Long.parse(temp(0));
                    val dst = Long.parse(temp(1));
                    
-                   val pid = bigGraph.storage.getPlaceId(src);
+                   val pid = bigGraph.storage().getPlaceId(src);
                    
                    srcList(pid).add(src);
                    dstList(pid).add(dst);
@@ -192,6 +205,10 @@ public class BigGraph implements x10.io.CustomSerialization {
            if(addEdgeCount > 0) {
                
                // We still have some edges in buffer
+               for (var i: Int = 0; i < srcList.size; ++i) {
+                   
+                   bigGraph.internalInsertEdgeAsynch(i, key, srcList(i).toArray(), dstList(i).toArray());
+               }
                BigArray.sync(key, false);
            }
        }
@@ -199,18 +216,28 @@ public class BigGraph implements x10.io.CustomSerialization {
        return bigGraph;
    }
    
-   public def getVerticesCount(): Long { return numVertices; }
+   public def getVertexCount(): Long { return numVertices(); }
  
    public static def getKey() = BigArray.getKey();
    
    public def getOutNeigbours(vid: VertexId): VertexList {
        
-       return storage(vid);
+       return storage()(vid);
+   }
+   
+   public def getPlaceId(vid: VertexId) {
+       
+       return storage().getPlaceId(vid);
+   }
+   
+   public def getWeight(vid: VertexId): Long {
+       
+       return 1L;
    }
    
    public def getOutNeighboursAsync(key: Key, vid: VertexId, wrap: Wrap[VertexList]) {
        
-       storage.getAsync(key, vid, wrap);
+       storage().getAsync(key, vid, wrap);
    }
    
    public static def sync(key: Key) {
@@ -220,6 +247,6 @@ public class BigGraph implements x10.io.CustomSerialization {
    
    public def print() {
        
-       storage.print();
+       storage().print();
    }
 }
