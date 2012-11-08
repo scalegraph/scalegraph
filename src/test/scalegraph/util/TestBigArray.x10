@@ -65,9 +65,9 @@ public class TestBigArray {
                         // B.getAsync(k, size - 40, y);
                         
                         
-                        // B.writeAsync(k, index, index);
+                        B.writeAsync(k, index, index);
                         val pid = B.getPlaceId(index);
-                        // B.invokeRemoteWithNoReturn(k, pid, remoteOp, index, index);
+                        B.invokeRemoteWithNoReturn(k, pid, remoteOp, index, index);
                         B.getAsync(k, index, y);
                         BigArray.sync(k, true);
                         

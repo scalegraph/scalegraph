@@ -12,7 +12,10 @@ public class TestBigGraph {
         
         var t: Long = System.currentTimeMillis();
         
-        val g = BigGraph.loadFromFile("/nfs/home/charuwat/Desktop/BigGraph Loader Test/flickr.dl", true);
+        Console.OUT.println("Start testing");
+        
+        // val g = BigGraph.loadFromFile("/nfs/home/charuwat/Desktop/BigGraph Loader Test/flickr.dl", true);
+        val g = BigGraph.loadFromFile("/home/usr6/11R34003/flickr.dl", true);
         // val g = BigGraph.loadFromFile("/work0/t2gsuzumuralab/scalegraph/data/twitter_rv.net", true);
         
         t = System.currentTimeMillis() - t;
