@@ -199,10 +199,10 @@ public class BigArray[T] implements BigArrayOperation, x10.io.CustomSerializatio
         
         if (index > this.size) {
             
-            throw new x10.lang.ArrayIndexOutOfBoundsException();
+            throw new x10.lang.Exception("BigArray: Index out of bound");
         }
         
-        var placeId: Int = (index / blockSize) as Int;
+        val placeId = getPlaceId(index);
         val pd = localHandle().placeDescriptors(placeId);
         val offset: Int = (index - pd.startIndex) as Int;
         
