@@ -16,6 +16,8 @@ public class RandamWalk {// random walk on pattern space
 	private var _node_map:HashMap[String,LatticeNode] = new HashMap[String,LatticeNode]();//<! store all lattice node.
 	private var _iso:Isomorphism = new Isomorphism();
 	private var _freq_cnt:HashMap[String,Int] = new HashMap[String,Int]();// key is CanonicalCode represented in String,and value is frequency.
+	//private var rwr:RandomWalkResult = new RandomWalkResult();
+	
 	
 	public def this(var d:DataBase,var iter:Int){
 		_last() = new Pattern();
@@ -76,7 +78,8 @@ public class RandamWalk {// random walk on pattern space
 
 		while(true){
 			
-			//Console.OUT.println("walking step : " + step);
+			Console.OUT.println("walking step : " + step);
+			Console.OUT.println("current pattern:\n" + current().toString());
 			assert(current != null):"current is null";
 			process_node(current);
 			if(current().getneighbors().size() == 0){// if current has no neighbors return and start over again.
@@ -111,7 +114,6 @@ public class RandamWalk {// random walk on pattern space
 			_last = p();
 			current = next();
 			step++;
-			Console.OUT.println("current pattern:\n" + current().toString());
 			
 		}
 		

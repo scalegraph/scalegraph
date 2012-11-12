@@ -264,7 +264,7 @@ public class PatternFactory {
 	}
 	
 	
-	public def get_sub_patterns(val pat:Cell[Pattern],var sub_patterns:ArrayList[Pattern]):void{
+	public def get_sub_patterns(val pat:Cell[Pattern],val sub_patterns:ArrayList[Pattern]):void{
 		// if pattern size is too small the pattern don't have sub pattern
 		if (pat().size() <= 2) {
 			// it has no sub puttern
@@ -273,9 +273,62 @@ public class PatternFactory {
 		}
 		pat().find_removable_edges();
 		val re:ArrayList[Pair[Int,Int]] = pat().get_removable_edges();
-		var codes:HashSet[String] = new HashSet[String]();
-		//Console.OUT.println("removableedge:" + re.toString());
+		val codes:HashSet[String] = new HashSet[String]();
+		Console.OUT.println("removableedge:" + re.toString());
 		//Console.OUT.println("candidate pattern:\n" + pat.toString());
+		val before = sub_patterns.clone();
+		
+		//parallel routine
+		/*
+		val sub_pat_point = GlobalRef(sub_patterns);
+		val codes_point = GlobalRef(codes);
+		val re_point = GlobalRef(re);
+		val x:PlaceLocalHandle[ArrayList[Pair[Int,Int]]] = PlaceLocalHandle.make[ArrayList[Pair[Int,Int]]](Dist.makeUnique(),() => {new ArrayList[Pair[Int,Int]]()});
+		val p = Place.places();
+		Console.OUT.println("number of places:" + p.size());
+		Console.OUT.println("re:" + re_point().toString());
+		val n:Int = (re.size() / p.size()) + 1;
+		finish for(var t:Int = 0;t<p.size();t++) {
+			val t2:Int = t;
+			async at(p(t2)){
+				//Console.OUT.println("t2:" + t2 + "n:" + n);
+				for(var j:Int = t2*n;j<(t2+1) * n && j < re.size();j++){
+					val s = re(j);
+					Console.OUT.println("s:" + s);
+					x().add(s);
+				}
+				
+				Console.OUT.println("local patterns" + x().toString());
+			
+				for(var i:Int = 0;i < x().size();i++){
+					Console.OUT.println("loop in get_sub_patterns:" + i);
+					//Console.OUT.println("removableedge:" + re.toString());
+					//Console.OUT.println("candidate of remove edge" + "("+re(i).first + "," + re(i).second+")");
+					val sub_pat:Cell[Pattern] = pattern_with_edge_removed(pat,re(i).first,re(i).second);
+					Console.OUT.println("got sub pattern");
+					//Console.OUT.println(sub_pat.toString());
+					iso.check_isomorphism(sub_pat);
+					Console.OUT.println("after check isomorphism");
+					val cc_str:String = sub_pat().get_canonical_code().to_string();
+					Console.OUT.println("assigned canonical code");
+					
+					at(codes_point){
+						atomic{
+							if(codes_point().add(cc_str) == true){
+								Console.OUT.println("not exist pattern");
+								sub_pat_point().add(sub_pat());
+							}
+						}
+					}
+					
+				}
+			}
+		}
+		Console.OUT.println("before:\n" + before.toString());
+		Console.OUT.println("after:\n" + sub_patterns.toString());
+		*/
+		
+		//non parallel routine
 		
 		for(var i:Int = 0;i < re.size();i++){
 			//Console.OUT.println("loop in get_sub_patterns:" + i);
@@ -293,6 +346,8 @@ public class PatternFactory {
 				sub_patterns.add(sub_pat());
 			}	
 		}
+		 
+		
 	}
 	
 	public def pattern_with_edge_removed(var p:Cell[Pattern],var a:Int,var b:Int):Pattern{

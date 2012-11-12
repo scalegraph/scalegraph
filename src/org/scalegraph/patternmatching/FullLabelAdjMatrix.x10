@@ -391,6 +391,7 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 		
 	}
 	public def sortDegree(x:ArrayList[Int]) { 
+		/*
 		var s:Int = -1;
 		for(var i:Int=0;i < x.size()-1;i++){
 			for(var j:Int = i+1; j<x.size();j++){
@@ -400,6 +401,10 @@ public class FullLabelAdjMatrix extends AdjMatrix {
 				}
 			}
 		}
+		 * */
+		
+		x.sort(((x:Int,y:Int) => (y).compareTo(x)));
+		
 	}
 	
 	
