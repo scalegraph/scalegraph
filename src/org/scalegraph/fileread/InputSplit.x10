@@ -1,5 +1,5 @@
 /* Vertex and Edge List */
-package gimv.fileread;
+package org.scalegraph.fileread;
 
 import x10.io.BufferedReader;
 import x10.io.FileReader;

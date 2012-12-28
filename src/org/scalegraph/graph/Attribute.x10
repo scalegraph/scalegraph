@@ -1,4 +1,4 @@
-package gimv.graph;
+package org.scalegraph.graph;
 
 import org.scalegraph.util.DistGrowableMemory;
 

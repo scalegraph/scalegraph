@@ -2,7 +2,7 @@
  * simple distributed file reader
  */
  
-package gimv.fileread; 
+package org.scalegraph.fileread; 
 
 import x10.util.ArrayList;
 import x10.lang.Exception;

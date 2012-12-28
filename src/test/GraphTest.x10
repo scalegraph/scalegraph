@@ -1,10 +1,10 @@
 package test;
 
 import org.scalegraph.util.tuple.*;
-import gimv.fileread.DistributedReader;
+import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
-import gimv.graph.Graph;
-import gimv.graph.Dist2D;
+import org.scalegraph.graph.Graph;
+import org.scalegraph.graph.Dist2D;
 
 public class GraphTest {
 	

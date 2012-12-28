@@ -1,4 +1,4 @@
-package gimv.graph;
+package org.scalegraph.graph;
 
 import x10.util.ArrayList;
 import x10.util.HashMap;
