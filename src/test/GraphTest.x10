@@ -4,7 +4,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.Dist2D;
+import org.scalegraph.concurrent.Dist2D;
 
 public class GraphTest {
 	

@@ -16,6 +16,7 @@ import org.scalegraph.concurrent.Team2;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.id.IdStruct;
 import org.scalegraph.concurrent.Remote;
+import org.scalegraph.concurrent.Dist2D;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
