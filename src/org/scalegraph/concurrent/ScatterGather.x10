@@ -54,7 +54,9 @@ public struct ScatterGather {
 	
 	public def getCounts(tid :Int) {
 		val mc = threadCounts.subpart(bufferWidth*tid, bufferWidth);
-		for(i in 0..(bufferWidth-1)) mc(i) = 0;
+		@Ifndef("NO_BOUNDS_CHECKS") {
+			for(i in 0..(bufferWidth-1)) assert(mc(i) == 0);
+		}
 		return mc;
 	}
 	

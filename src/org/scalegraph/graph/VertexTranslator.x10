@@ -124,6 +124,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	private def innerPutWithAllAndTranslate(scatterGather :ScatterGather,
 			edges: MemoryChunk[T], translated: MemoryChunk[Long], withPut :Boolean) {
 		val sizeMask = teamSize - 1;
+		scatterGather.reset();
 		Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
 			val counts = scatterGather.getCounts(tid as Int);
 			for(i in r)
@@ -163,12 +164,9 @@ import org.scalegraph.util.DistMemoryChunk;
 	 * @param withPut true: Assigning new number, false: only translation
 	 */
 	public def translateWithAll(edges: MemoryChunk[T], translated :MemoryChunk[Long], withPut :Boolean) {
-		val CHUNK_SIZE = 1L << 23;
+		val CHUNK_SIZE = 1L << 22;
 		val iterations = team.allreduce(teamRank,
 				(edges.size() + CHUNK_SIZE - 1) / CHUNK_SIZE, Team.MAX);
-		
-		Debug.println(toString(), "edges: " + edges + ", kinds: " +  teamSize + "iterations: " + iterations);
-		
 		val scatterGather = new ScatterGather(team);
 		val edgesDist = edges.distributor();
 		val translatedDist = translated.distributor();
@@ -191,16 +189,28 @@ import org.scalegraph.util.DistMemoryChunk;
 			vertices :DistMemoryChunk[T], translated :DistMemoryChunk[Long], withPut :Boolean)
 	{
 		@Pragma(Pragma.FINISH_SPMD) finish for(p in translator().team.placeGroup()) at (p) async {
-			translator().translateWithAll(vertices(), translated(), withPut);
+			try {
+				translator().translateWithAll(vertices(), translated(), withPut);
+			}
+			catch (e : CheckedThrowable) {
+				e.printStackTrace();
+				throw new Exception(e);
+			}
 		}
 	}
 	
 	private static def translate[T](translator :PlaceLocalHandle[VertexTranslator[T]],
 			vertices :DistMemoryChunk[T], withPut :Boolean) :DistMemoryChunk[Long]
 	= new DistMemoryChunk[Long](translator().team.placeGroup(), ()=> {
-			val translated = new MemoryChunk[Long](vertices().size());
-			translator().translateWithAll(vertices(), translated, withPut);
-			return translated;
+			try {
+				val translated = new MemoryChunk[Long](vertices().size());
+				translator().translateWithAll(vertices(), translated, withPut);
+				return translated;
+			}
+			catch (e : CheckedThrowable) {
+				e.printStackTrace();
+				throw new Exception(e);
+			}
 		});
 	
 	/** Translates vertex IDs without assigning new vertex number.

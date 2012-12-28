@@ -154,21 +154,34 @@ import org.scalegraph.concurrent.Dist2D;
 		val edgeList_ = edgeList;
 		
 		team.placeGroup().broadcastFlat(()=> {
-			var translated :MemoryChunk[Long];
-			var numOfVertices :Long = 0;
-			if(vt_ != null) {
-				val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Long]])();
-				translated = new MemoryChunk[Long](edges().size());
-				vtt_.translateWithAll(edges(), translated, true);
-				numOfVertices = vtt_.size();
+			try {
+				Console.OUT.println("Place: " + here.id + ", addEdges");
+				var translated :MemoryChunk[Long];
+				var numOfVertices :Long = 0;
+				if(vt_ != null) {
+					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Long]])();
+					translated = new MemoryChunk[Long](edges().size());
+					
+					team_.barrier(team_.getRole(here));
+					Console.OUT.println("Place: " + here.id + ", translateWithAll");
+					
+					vtt_.translateWithAll(edges(), translated, true);
+					numOfVertices = vtt_.size();
+					
+					team_.barrier(team_.getRole(here));
+					Console.OUT.println("Place: " + here.id + ", translate complete");
+				}
+				else {
+					val edges_ = edges();
+					numOfVertices = Parallel.reduce[Long](edges_.range(),
+							(i:Long,t:Long)=>Math.max(edges_(i),t), (u:Long,v:Long)=>Math.max(u,v));
+					translated = edges_;
+				}
+				innerAddEdges(team_, numOfVertices, ref, edgeList_(), translated);
 			}
-			else {
-				val edges_ = edges();
-				numOfVertices = Parallel.reduce[Long](edges_.range(),
-						(i:Long,t:Long)=>Math.max(edges_(i),t), (u:Long,v:Long)=>Math.max(u,v));
-				translated = edges_;
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
 			}
-			innerAddEdges(team_, numOfVertices, ref, edgeList_(), translated);
 		});
 	}
 	
@@ -182,22 +195,27 @@ import org.scalegraph.concurrent.Dist2D;
 		val edgeList_ = edgeList;
 		
 		team.placeGroup().broadcastFlat(()=> {
-			val edges_ = edges();
-			val translated = new MemoryChunk[Long](edges_.size());
-			var numOfVertices :Long = 0;
-			if(vt_ != null) {
-				val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Double]])();
-				vtt_.translateWithAll(edges_, translated, true);
-				numOfVertices = vtt_.size();
+			try {
+				val edges_ = edges();
+				val translated = new MemoryChunk[Long](edges_.size());
+				var numOfVertices :Long = 0;
+				if(vt_ != null) {
+					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Double]])();
+					vtt_.translateWithAll(edges_, translated, true);
+					numOfVertices = vtt_.size();
+				}
+				else {
+					numOfVertices = Parallel.reduce[Long](translated.range(),
+							(i:Long,t:Long)=> {
+								translated(i) = edges_(i) as Long;
+								return Math.max(translated(i),t);
+							}, (u:Long,v:Long)=>Math.max(u,v));
+				}
+				innerAddEdges(team_, numOfVertices, ref, edgeList_(), translated);
 			}
-			else {
-				numOfVertices = Parallel.reduce[Long](translated.range(),
-						(i:Long,t:Long)=> {
-							translated(i) = edges_(i) as Long;
-							return Math.max(translated(i),t);
-						}, (u:Long,v:Long)=>Math.max(u,v));
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
 			}
-			innerAddEdges(team_, numOfVertices, ref, edgeList_(), translated);
 		});
 	}
 	/* currently not supported
@@ -271,14 +289,19 @@ import org.scalegraph.concurrent.Dist2D;
 		val team_ = team;
 		val edgeList_ = edgeList;
 		team_.placeGroup().broadcastFlat(() => {
-			val recvdata = scatterAttributeValues(indexes(), values(), team_);
-			val recvIndexes = recvdata.get1();
-			val recvValues = recvdata.get2();
-			val att_ = attValues();
-			att_.setSize(edgeList_().size());
-			Parallel.iter(recvIndexes.range(), (i:Long) => {
-				att_(recvIndexes(i)) = recvValues(i);
-			});
+			try {
+				val recvdata = scatterAttributeValues(indexes(), values(), team_);
+				val recvIndexes = recvdata.get1();
+				val recvValues = recvdata.get2();
+				val att_ = attValues();
+				att_.setSize(edgeList_().size());
+				Parallel.iter(recvIndexes.range(), (i:Long) => {
+					att_(recvIndexes(i)) = recvValues(i);
+				});
+			}
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -312,12 +335,17 @@ import org.scalegraph.concurrent.Dist2D;
 		val vertexType_ = vertexType;
 		
 		team.placeGroup().broadcastFlat(() => {
-			val values_ = values();
-			val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
-			if(actualLocalVertices != values_.size())
-				throw new IllegalArgumentException("The number of attribute values is not match the number of vertices");
-			
-			attValues().setMemory(values_);
+			try {
+				val values_ = values();
+				val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+				if(actualLocalVertices != values_.size())
+					throw new IllegalArgumentException("The number of attribute values is not match the number of vertices");
+				
+				attValues().setMemory(values_);
+			}
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -338,15 +366,20 @@ import org.scalegraph.concurrent.Dist2D;
 		val vertexType_ = vertexType;
 		
 		team_.placeGroup().broadcastFlat(() => {
-			val recvdata = scatterAttributeValues(ids(), values(), team_);
-			val recvIndexes = recvdata.get1();
-			val recvValues = recvdata.get2();
-			val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
-			val att_ = attValues();
-			att_.setSize(actualLocalVertices);
-			Parallel.iter(recvIndexes.range(), (i:Long) => {
-				att_(recvIndexes(i)) = recvValues(i);
-			});
+			try {
+				val recvdata = scatterAttributeValues(ids(), values(), team_);
+				val recvIndexes = recvdata.get1();
+				val recvValues = recvdata.get2();
+				val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+				val att_ = attValues();
+				att_.setSize(actualLocalVertices);
+				Parallel.iter(recvIndexes.range(), (i:Long) => {
+					att_(recvIndexes(i)) = recvValues(i);
+				});
+			}
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 
@@ -478,88 +511,93 @@ import org.scalegraph.concurrent.Dist2D;
 		val ret = GlobalRef[Cell[GlobalRef[Cell[SparseMatrix]]]](
 				new Cell[GlobalRef[Cell[SparseMatrix]]](Zero.get[GlobalRef[Cell[SparseMatrix]]]()));
 		team_.placeGroup().broadcastFlat(() => {
-			val edgelist__ = edgelist_();
-			val numEdges = edgelist__.size() / 2;
-			val sendCount = directed ? numEdges : numEdges * 2;
-			val sendEdges = new MemoryChunk[EDGE](sendCount);
-			val sendIndexes = new MemoryChunk[Long](sendCount);
-			val teamSize = team_.size();
-			val teamRank = team_.getRole(here);
-			Parallel.iter(0..(numEdges - 1), (tid:Long, r:LongRange) => {
-				if(directed) {
-					if(outerOrInner) {
-						for(i in r) {
-							val v0 = edgelist__(i*2 + 0);
-							val v1 = edgelist__(i*2 + 1);
-							sendEdges(i) = EDGE(v0, v1);
-							sendIndexes(i) = i * teamSize + teamRank;
+			try {
+				val edgelist__ = edgelist_();
+				val numEdges = edgelist__.size() / 2;
+				val sendCount = directed ? numEdges : numEdges * 2;
+				val sendEdges = new MemoryChunk[EDGE](sendCount);
+				val sendIndexes = new MemoryChunk[Long](sendCount);
+				val teamSize = team_.size();
+				val teamRank = team_.getRole(here);
+				Parallel.iter(0..(numEdges - 1), (tid:Long, r:LongRange) => {
+					if(directed) {
+						if(outerOrInner) {
+							for(i in r) {
+								val v0 = edgelist__(i*2 + 0);
+								val v1 = edgelist__(i*2 + 1);
+								sendEdges(i) = EDGE(v0, v1);
+								sendIndexes(i) = i * teamSize + teamRank;
+							}
+						}
+						else {
+							for(i in r) {
+								val v0 = edgelist__(i*2 + 0);
+								val v1 = edgelist__(i*2 + 1);
+								sendEdges(i) = EDGE(v1, v0);
+								sendIndexes(i) = i * teamSize + teamRank;
+							}
 						}
 					}
 					else {
-						for(i in r) {
-							val v0 = edgelist__(i*2 + 0);
-							val v1 = edgelist__(i*2 + 1);
-							sendEdges(i) = EDGE(v1, v0);
-							sendIndexes(i) = i * teamSize + teamRank;
+						if(outerOrInner) {
+							for(i in r) {
+								val v0 = edgelist__(i*2 + 0);
+								val v1 = edgelist__(i*2 + 1);
+								sendEdges(i*2 + 0) = EDGE(v0, v1);
+								sendIndexes(i*2 + 0) = i * teamSize + teamRank;
+								sendEdges(i*2 + 1) = EDGE(v1, v0);
+								sendIndexes(i*2 + 1) = i * teamSize + teamRank;
+							}
 						}
+						else {
+							for(i in r) {
+								val v0 = edgelist__(i*2 + 0);
+								val v1 = edgelist__(i*2 + 1);
+								sendEdges(i*2 + 0) = EDGE(v1, v0);
+								sendIndexes(i*2 + 0) = i * teamSize + teamRank;
+								sendEdges(i*2 + 1) = EDGE(v0, v1);
+								sendIndexes(i*2 + 1) = i * teamSize + teamRank;
+							}
+						}
+					}
+				});
+				
+				val team2 = new Team2(team_);
+				
+				val sendNumEdges = new MemoryChunk[Int](1);
+				sendNumEdges(0) = sendEdges.size() as Int;
+				if(place == here) { // root
+					val counts = new MemoryChunk[Int](team_.size(), 0, true);
+					val offsets  = new MemoryChunk[Int](team_.size() + 1);
+					team2.gather(root, sendNumEdges, counts);
+					
+					offsets(0) = 0;
+					for(i in counts.range()) offsets(i + 1) = offsets(i) + counts(i);
+					val recvEdges = new MemoryChunk[EDGE](offsets(team_.size()));
+					val recvIndexes = new MemoryChunk[Long](offsets(team_.size()));
+					team2.gatherv(root, sendEdges, recvEdges, counts, offsets);
+					team2.gatherv(root, sendIndexes, recvIndexes, counts, offsets);
+					
+					val lgl = MathAppend.ceilLog2(numberOfVertices);
+					val sparseMatrix = new SparseMatrix(recvEdges, recvIndexes, lgl);
+					
+					// write result
+					val ref = new GlobalRef[Cell[SparseMatrix]](new Cell[SparseMatrix](sparseMatrix));
+					at(ret.home) {
+						ret()() = ref;
 					}
 				}
-				else {
-					if(outerOrInner) {
-						for(i in r) {
-							val v0 = edgelist__(i*2 + 0);
-							val v1 = edgelist__(i*2 + 1);
-							sendEdges(i*2 + 0) = EDGE(v0, v1);
-							sendIndexes(i*2 + 0) = i * teamSize + teamRank;
-							sendEdges(i*2 + 1) = EDGE(v1, v0);
-							sendIndexes(i*2 + 1) = i * teamSize + teamRank;
-						}
-					}
-					else {
-						for(i in r) {
-							val v0 = edgelist__(i*2 + 0);
-							val v1 = edgelist__(i*2 + 1);
-							sendEdges(i*2 + 0) = EDGE(v1, v0);
-							sendIndexes(i*2 + 0) = i * teamSize + teamRank;
-							sendEdges(i*2 + 1) = EDGE(v0, v1);
-							sendIndexes(i*2 + 1) = i * teamSize + teamRank;
-						}
-					}
-				}
-			});
-			
-			val team2 = new Team2(team_);
-			
-			val sendNumEdges = new MemoryChunk[Int](1);
-			sendNumEdges(0) = sendEdges.size() as Int;
-			if(place == here) { // root
-				val counts = new MemoryChunk[Int](team_.size(), 0, true);
-				val offsets  = new MemoryChunk[Int](team_.size() + 1);
-				team2.gather(root, sendNumEdges, counts);
-				
-				offsets(0) = 0;
-				for(i in counts.range()) offsets(i + 1) = offsets(i) + counts(i);
-				val recvEdges = new MemoryChunk[EDGE](offsets(team_.size()));
-				val recvIndexes = new MemoryChunk[Long](offsets(team_.size()));
-				team2.gatherv(root, sendEdges, recvEdges, counts, offsets);
-				team2.gatherv(root, sendIndexes, recvIndexes, counts, offsets);
-				
-				val lgl = MathAppend.ceilLog2(numberOfVertices);
-				val sparseMatrix = new SparseMatrix(recvEdges, recvIndexes, lgl);
-				
-				// write result
-				val ref = new GlobalRef[Cell[SparseMatrix]](new Cell[SparseMatrix](sparseMatrix));
-				at(ret.home) {
-					ret()() = ref;
+				else { // non-root
+					val nullInt = MemoryChunk.getNull[Int]();
+					val nullEdge = MemoryChunk.getNull[EDGE]();
+					val nullLong = MemoryChunk.getNull[Long]();
+					team2.gather(root, sendNumEdges, nullInt);
+					team2.gatherv(root, sendEdges, nullEdge, nullInt, nullInt);
+					team2.gatherv(root, sendIndexes, nullLong, nullInt, nullInt);
 				}
 			}
-			else { // non-root
-				val nullInt = MemoryChunk.getNull[Int]();
-				val nullEdge = MemoryChunk.getNull[EDGE]();
-				val nullLong = MemoryChunk.getNull[Long]();
-				team2.gather(root, sendNumEdges, nullInt);
-				team2.gatherv(root, sendEdges, nullEdge, nullInt, nullInt);
-				team2.gatherv(root, sendIndexes, nullLong, nullInt, nullInt);
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
 			}
 		});
 		
@@ -592,9 +630,9 @@ import org.scalegraph.concurrent.Dist2D;
 				
 				return distAtt;
 			}
-			catch (e : Exception) {
+			catch (e : CheckedThrowable) {
 				e.printStackTrace();
-				throw e;
+				throw new Exception(e);
 			}
 		});
 	}
