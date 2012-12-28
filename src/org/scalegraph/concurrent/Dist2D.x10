@@ -1,54 +1,239 @@
-package org.scalegraph.concurrent;
+package gimv.graph;
 
 import x10.util.Team;
+import x10.util.ArrayUtils;
+import x10.util.HashMap;
+import x10.compiler.Pragma;
 
-/*
- *  2D Partitioning Distribution
+import org.scalegraph.util.tuple.*;
+import org.scalegraph.util.MathAppend;
+import org.scalegraph.id.IdStruct;
+
+/** 2D Partitioning Distribution. This class provides the parameters for the 
+ * 2D partitioning and the several teams for communications.
+ * In the most case, single 2d distributed plane is enough. The plane means a single R x C distribution.
+ * This class supports the multiple 2d distributed plane. 
  */
+public class Dist2D {
+	public static DISTRIBUTE_ROWS :Int = 1;
+	public static DISTRIBUTE_COLUMNS :Int = 2;
+	
+	static type Rect2D = Region(2){rect==true,zeroBased==true};
+	private static class LocalData (
+			mapping : Rect2D,
+			nreplica : Int,
+			parentTeam : Team,
+			allTeam : Team,
+			rowTeam : Cell[Team],
+			columnTeam : Cell[Team],
+			herePt : Point(2)
+	) {
+		public def this(mapping_ : Rect2D, nreplica_ : Int, parentTeam_ : Team, allTeam_ : Team, rowTeam_ :Cell[Team], columnTeam_ :Cell[Team], herePt_ :Point(2)) {
+			property(mapping_, nreplica_, parentTeam_, allTeam_, rowTeam_, columnTeam_, herePt_);
+		}
+	}
+	
+	private val data :PlaceLocalHandle[LocalData];
+	
+    private def this(mapping : Rect2D, parentTeam :Team, oned :boolean) {
+    	val R = mapping.max(0) + 1;
+    	val C = mapping.max(1) + 1;
+    	val RC = R * C;
+    	val places = parentTeam.places();
+    	val cycles = places.size / RC;
+    	assert R*C == places.size;
 
-public class Dist2D (
-	dist : Dist{region.rect==true, region.zeroBased==true},
-	places : Array[Place](1), // column major addressing
-    allTeam : Team
-//	rowPlaces : Array[Place](1),
-//	columnPlaces : Array[Place](1),
-//	rowTeam : Team,
-//	columnTeam : Team,
-//	hereIdx : Int,
- //   herePt : Point
-) {
-
-    public def this(dist_ : Dist{region.rect==true, region.zeroBased==true}) {
-    //	assert dist.region.rect;
-    //	assert dist.region.zeroBased;
-    	val R = dist_.region.max(0) + 1;
-    	val C = dist_.region.max(1) + 1;
-//    	val herePt_ = dist_(here).minPoint();
-//    	val hereIdx_ = herePt_(0) + herePt_(1)*R;
-    	val places_ = new Array[Place](R*C, (i :Int) => dist_([i%R, i/R] as Point));
-//    	val rowPlaces_ = new Array[Place](C, (i :Int) => dist_([herePt_(0), i] as Point));
-//    	val columnPlaces_ = new Array[Place](R, (i :Int) => dist_([i, herePt_(1)] as Point));
-    	val allTeam_ = new Team(places_);
-    	property(dist_, places_, allTeam_);
-//    	val rowTeam_ = new Team(rowPlaces_);
-//    	val columnTeam_ = new Team(columnPlaces_);
-//    	property(dist_, places_, allTeam_, rowPlaces_, columnPlaces_,
-//    			rowTeam_, columnTeam_, hereIdx_, herePt_);
+    	// checking oned is correct
+    	if(oned && R!=1 && C!=1)
+    		throw new IllegalArgumentException();
+    	
+    	// create mapping from Place to Point.
+    	val placeMap = new HashMap[Place, Point(2)]();
+    	val orderedPlaces = new Array[Place](places.size);
+    	for(c in 0..mapping.max(1)) {
+    		for(r in 0..mapping.max(0)) {
+    			val i = mapping.indexOf(r, c);
+	    		orderedPlaces(r + c*R) = places(i);
+				for(j in 0..(cycles-1)) {
+	    			placeMap.put(places(i + RC*j), Point.make(r, c));
+	    		}
+	    	}
+    	}
+    	
+    	var create_allteam :Boolean = false;
+    	if(cycles > 1)
+    		create_allteam = true;
+    	else {
+    		val pp = parentTeam.places();
+    		for([i] in pp) {
+    			if(pp(i) != orderedPlaces(i)) {
+    				create_allteam = true;
+    				break;
+    			}
+    		}
+    	}
+    	val create_allteam_ = create_allteam;
+    	
+    	data = PlaceLocalHandle.make[LocalData, Point(2)](parentTeam.placeGroup(), (p :Place):Point(2) => placeMap(p)() as Point(2), (p :Point(2)) => {
+    		val r = p(0);
+    		val c = p(1);
+    		val role = r + c*R;
+    		
+    		var allTeam :Team;
+    		if(create_allteam_) {
+    			val z = parentTeam.getRole(here) / RC;
+    			allTeam = parentTeam.split(parentTeam.getRole(here), z, role);
+    		}
+    		else {
+    			allTeam = parentTeam;
+    		}
+    		
+//    		assert role == allTeam.getRole(here);
+    		val rowTeam :Cell[Team];
+    		val columnTeam :Cell[Team];
+    		if(oned) {
+	    		if(R == 1) {
+	    			rowTeam = Cell.make[Team](allTeam);
+	    			columnTeam = null;
+	    		}
+	    		else/* if(C == 1) */{
+	    			rowTeam = null;
+	    			columnTeam = Cell.make[Team](allTeam);
+	    		}
+    		}
+    		else {
+    			rowTeam = Cell.make[Team](allTeam.split(role, r, c));
+    			columnTeam = Cell.make[Team](allTeam.split(role, c, r));
+    		}
+    		return new LocalData(mapping, cycles, parentTeam, allTeam, rowTeam, columnTeam, p);
+    	});
     }
     
-    public def this(C:Int, R:Int) {
-		this(Dist.makeBlockBlock(Region.makeRectangular([0, 0], [C-1, R-1]), 0, 1));
+    /** Creates R x C distribution. If the number of places of parentTeam is more than R x C, 
+     * the same distribution is cycled for extra places.
+     * @param C The number of columns
+     * @param R The number of rows
+     * @param parentTeam The base team from which split into.
+     */
+    public static def make2D(C:Int, R:Int, parentTeam :Team) {
+		return new Dist2D(Region.makeRectangular([0, 0], [C-1, R-1]) as Rect2D, parentTeam, false);
     }
     
-    public def this(R:Int) {
-		this(Dist.makeBlockBlock(Region.makeRectangular([0, 0], [R-1, R-1]), 0, 1));
+    /** Create R x R distribution.
+     * @param R The number of rows and the number of columns
+     * @param parentTeam The base team from which split into.
+     */
+    public static def make2D(R:Int, parentTeam :Team) {
+    	return new Dist2D(Region.makeRectangular([0, 0], [R-1, R-1]) as Rect2D, parentTeam, false);
     }
     
-    public def R() = dist.region.max(0) + 1;
-    public def C() = dist.region.max(1) + 1;
+    /** Creates 2D distribution from the mapping
+     * @param mapping The mapping from point to place
+     * @param parentTeam The base team from which split into.
+     */
+    public static def make2D(mapping :Rect2D, parentTeam :Team) {
+    	return new Dist2D(mapping, parentTeam, false);
+    }
+    
+    /** Creates 1D distribution.
+     * @param parentTeam The base team from which split into.
+     * @param distributionMethod The method for distribution. Avalable method are DISTRIBUTE_ROWS and DISTRIBUTE_COLUMNS.
+     */
+    public static def make1D(parentTeam :Team, distributionMethod :Int) {
+    	val numPlaces = parentTeam.size();
+    	if(distributionMethod == DISTRIBUTE_ROWS)
+    		return new Dist2D(Region.makeRectangular([0, 0], [numPlaces-1, 0]) as Rect2D, parentTeam, true);
+    	else if(distributionMethod == DISTRIBUTE_COLUMNS)
+    		return new Dist2D(Region.makeRectangular([0, 0], [0, numPlaces-1]) as Rect2D, parentTeam, true);
+    	else
+    		throw new IllegalArgumentException();
+    }
+    
+    /** Create 1D distribution.
+     * @param mapping The mapping from point to place
+     * @param parentTeam The base team from which split into.
+     */
+    public static def make1D(mapping :Rect2D, parentTeam :Team) {
+    	return new Dist2D(mapping, parentTeam, true);
+    }
+    
+    /** Returns the number of rows.
+     */
+    public def R() = data().mapping.max(0) + 1;
+    
+    /** Returns the number of columns.
+     */
+    public def C() = data().mapping.max(1) + 1;
+    
+    /** Returns the row rank for the current place.
+     */
+    public def r() = data().herePt(0);
+    
+    /** Returns the column rank for the current place.
+     */
+    public def c() = data().herePt(1);
+    
+    /** Returns the plane wide rank for the current place.
+     */
+    public def idx() = r() + c()*R();
+    
+    /** Returns the number of planes of this distribution.
+     */
+    public def numReplicas() = data().nreplica;
+    
+    /** Returns the base team.
+     */
+    public def parentTeam() = data().parentTeam;
+    
+    /** Returns the team for the current plane.
+     */
+    public def allTeam() = data().allTeam;
+    
+    /** Returns the row team of the current plane.
+     * @throw UnsupportedOperationException If the distribution is 1D column distribution.
+     */
+    public def rowTeam() = data().rowTeam();
+    
+    /** Returns the column tema of the current plane.
+     * @throw UnsupportedOperationException If the distribution is 1D row distribution.
+     */
+    public def columnTeam() = data().columnTeam();
+    
+    /** Returns the place that has the same (r, c) rank and belongs to the z-th plane.
+     * @param z The plane you want to get 
+     */
+    public def getCongruentPlace(z :Int) {
+    	val pid = data().allTeam.size() * z + data().mapping.indexOf(data().herePt);
+    	return data().parentTeam.places()(pid);
+    }
+    
+    /** Creates IdStruct.
+     * @param numberOfVertices: The max vertex id
+     * @param outerOrInner Whether outer edge or inner edge (true: outer, false: inner)
+     */
+    public def getIds(numberOfVertices :Long, outerOrInner :Boolean) {
+    	val R = R();
+    	val C = C();
+    	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))
+    		throw new IllegalArgumentException();
+    	val teamSize = allTeam().size();
+    	val maxLocalId = (numberOfVertices + teamSize - 1) / teamSize;
+    	return new IdStruct(MathAppend.ceilLog2(C), MathAppend.ceilLog2(R),
+    			MathAppend.ceilLog2(maxLocalId), outerOrInner, maxLocalId);
+    }
+    
+    /** Delete Dist2D and related objects.
+     * The all places in allTeam must call this method.
+     */
+    public def del() {
+    	val cachedData = data();
+    	if(cachedData.rowTeam != null) cachedData.rowTeam().del(c());
+    	if(cachedData.columnTeam != null) cachedData.columnTeam().del(c());
+    	data().allTeam.del(idx());
+    }
     
     public def toString() {
-    	return "Dist2D([" + C() + "," + R() + "]," + allTeam.toString() + ")";
+    	return "Dist2D([" + C() + "," + R() + "]," + data().allTeam.toString() + ")";
     }
     
 }

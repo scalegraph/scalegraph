@@ -1,5 +1,7 @@
 package org.scalegraph.util;
 
+import x10.compiler.Native;
+
 public class MathAppend {
 
     public static def floorLog2(var p:Long):Int {
@@ -12,6 +14,7 @@ public class MathAppend {
         return i;
     }
 
+    @Native("c++", "63 - __builtin_clzl(((#p) << 1) - 1)")
     public static def ceilLog2(var p:Long):Int {
         var pow2: long = 1L;
         if (p == 0L) return -1;
@@ -31,9 +34,11 @@ public class MathAppend {
         return pow2;
     }
 
-    public static def powerOf2(p:long) {
+    public static def powerOf2(p:long) :Boolean {
        return (p & -p) == p;
     }
+    
+    @Native("c++", "63 - __builtin_clzl(#p)")
     public static def log2(var p:Long):Long {
         assert powerOf2(p);
         var i:Int = 0;
