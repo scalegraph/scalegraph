@@ -222,8 +222,8 @@ public class GraphTest {
 		normalize_columns_weights(g);
 		print_attribute_list(g);
 
-		val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
-		DistributedReader.write("norm-%d.txt", team, att_names, att_norm);
+	//	val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
+	//	DistributedReader.write("norm-%d.txt", team, null, att_norm);
 		
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
@@ -247,7 +247,7 @@ public class GraphTest {
 		val map = (mij :Double , vj :Double) => c * mij * vj;
 		val combine = (index :Long, xs :MemoryChunk[Double]) => MathAppend.sum(xs);
 		val assign = (i :Long, prev :Double , next :Double) => (1.0 - c) / n + next;
-		val end = (diff :Double) => Math.sqrt(diff) < 0.01;
+		val end = (diff :Double) => Math.sqrt(diff) < 0.00001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
@@ -257,8 +257,16 @@ public class GraphTest {
 			for(i in v.range()) v(i) = 1.0 / n;
 		});
 		
-		org.scalegraph.gimv.Processor.main2DCSR(
-				csr, weight, vector, map, combine, assign, end);
+		if(C == 1) { // 1D
+			Console.OUT.println("Using 1D GIM-V Engine ...");
+			org.scalegraph.gimv.Processor.main1DCSR(
+					csr, weight, vector, map, combine, assign, end);
+		}
+		else {
+			Console.OUT.println("Using 2D GIM-V Engine ...");
+			org.scalegraph.gimv.Processor.main2DCSR(
+					csr, weight, vector, map, combine, assign, end);
+		}
 		
 		g.setVertexAttribute("pagerank", csr, vector);
 		print_attribute_list(g);
@@ -270,6 +278,6 @@ public class GraphTest {
 	}
 	
     public static def main(args: Array[String](1)) {
-    	ditributed_gimv_test(args(1), args(0));
+    	ditributed_pagerank_test(args(1), args(0));
     }
 }

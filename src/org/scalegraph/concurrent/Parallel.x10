@@ -172,22 +172,24 @@ public class Parallel {
     
     static @Inline def qsort[T](a:MemoryChunk[T], proc: Int, lo:Long, hi:Long, cmp:(T,T)=>Long) {
     	if (hi <= lo) return;
-    	var l:Long = lo - 1;
+    	var l:Long = lo;
     	var h:Long = hi;
+    	val pivot = a((l+h)/2); // If we use k(hi), sorting an almost sorted array results stack overflow !!
     	while (true) {
-    		while (cmp(a(++l), a(hi))<0);
-    		while (cmp(a(hi), a(--h))<0 && h>lo); // ????
+    		while (cmp(a(l), pivot)<0) ++l;
+    		while (cmp(pivot, a(h))<0) --h;
     		if (l >= h) break;
-    		exch(a, l, h);
+    		exch(a, l++, h--);
     	}
-    	exch[T](a, l, hi);
+    	if(l == h) { ++l; --h; }
+    	val ll = l;
+    	val hh = h;
     	if (proc > 0) {
-    		val l_ = l;
-    		async qsort[T](a, proc - 1, lo, l_-1, cmp);
-    		qsort[T](a, proc - 1, l+1, hi, cmp);
+    		async qsort[T](a, proc - 1, lo, hh, cmp);
+    		qsort[T](a, proc - 1, ll, hi, cmp);
     	} else {
-    		qsort[T](a, proc - 1, lo, l-1, cmp);
-    		qsort[T](a, proc - 1, l+1, hi, cmp);
+    		qsort[T](a, proc - 1, lo, hh, cmp);
+    		qsort[T](a, proc - 1, ll, hi, cmp);
     	}
     }
 
@@ -207,22 +209,24 @@ public class Parallel {
     
     static @Inline def qsort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], proc: Int, lo:Long, hi:Long, cmp:(T,T)=>Long) {
     	if (hi <= lo) return;
-    	var l:Long = lo - 1;
+    	var l:Long = lo;
     	var h:Long = hi;
+    	val pivot = k((l+h)/2); // If we use k(hi), sorting an almost sorted array results stack overflow !!
     	while (true) {
-    		while (cmp(k(++l), k(hi))<0);
-    		while (cmp(k(hi), k(--h))<0 && h>lo);
+    		while (cmp(k(l), pivot)<0) ++l;
+    		while (cmp(pivot, k(h))<0) --h;
     		if (l >= h) break;
-    		exch(k, v, l, h);
+    		exch(k, v, l++, h--);
     	}
-    	exch(k, v, l, hi);
+    	if(l == h) { ++l; --h; }
     	val ll = l;
+    	val hh = h;
     	if (proc > 0) {
-    		async qsort[T, U](k, v, proc - 1, lo, ll-1, cmp);
-    		qsort[T, U](k, v, proc - 1, ll+1, hi, cmp);
+    		async qsort[T, U](k, v, proc - 1, lo, hh, cmp);
+    		qsort[T, U](k, v, proc - 1, ll, hi, cmp);
     	} else {
-    		qsort[T, U](k, v, proc - 1, lo, ll-1, cmp);
-    		qsort[T, U](k, v, proc - 1, ll+1, hi, cmp);
+    		qsort[T, U](k, v, proc - 1, lo, hh, cmp);
+    		qsort[T, U](k, v, proc - 1, ll, hi, cmp);
     	}
     }
 

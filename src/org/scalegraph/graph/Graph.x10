@@ -203,7 +203,7 @@ import org.scalegraph.concurrent.Dist2D;
 								return Math.max(translated(i),t);
 							}, (u:Long,v:Long)=>Math.max(u,v));
 				}
-				innerAddEdges(team_, numOfVertices, ref, edgeList_(), translated);
+				innerAddEdges(team_, maxVertexID, ref, edgeList_(), translated);
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();

@@ -1,12 +1,15 @@
 package org.scalegraph.gimv;
 
-import org.scalegraph.graph.DistSparseMatrix;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.id.IdStruct;
-import org.scalegraph.util.GrowableMemory;
+import x10.compiler.Inline;
 import x10.util.Team;
+
+import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.id.IdStruct;
+import org.scalegraph.concurrent.Team2;
+import org.scalegraph.concurrent.Parallel;
 
 public class Processor {
 	
@@ -44,7 +47,7 @@ public class Processor {
 	/** 
 	 * T: weight, U: vector
 	 */ 
-	public static def main2DCSR[T, U](
+	public static @Inline def main2DCSR[T, U](
 			matrix : DistSparseMatrix,
 			weight : DistMemoryChunk[T],
 			vector : DistMemoryChunk[U],
@@ -74,34 +77,46 @@ public class Processor {
 			val v = vector();
 			val columnTeam = Team2(matrix.dist().columnTeam());
 			val rowTeam = Team2(matrix.dist().rowTeam());
-			val map_tmp = new GrowableMemory[U](0);
+			val map_tmp_array = new Array[GrowableMemory[U]](Runtime.NTHREADS, (Int)=>new GrowableMemory[U](0));
 			val convergence = new MemoryChunk[U](1);
 			
 			// superstep loop
-			for(loop in 0..9) {
+			for(loop in 0..99) {
 			//while(true) {
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " start");
+				
+				val start_time = System.currentTimeMillis();
 				
 				// expand
 				columnTeam.allgather(v, b.refv);
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " processing map ...");
 				
-				for(i in 0L..(localCsize-1)) {
-					val off = m.offsets(i);
-					val next = m.offsets(i+1);
-					val len = next - off;
-					map_tmp.setSize(len);
-					// map
-					for(j in 0L..(len-1)) {
-						map_tmp(j) = map(w(j+off), b.refv(m.vertexes(j+off)));
-					}
-					// TODO: convert local+C to roundrobin
+				Parallel.iter(0L..(localCsize-1), (tid :Long, range :LongRange) => {
+					val tmp = map_tmp_array(tid as Int);
 					
-					// combine partial result
-					b.tmpsv(i) = combine(i, map_tmp.data());
-				}
+					val localMask = localsize - 1;
+					val lgl = ids.lgl;
+					val lgr = ids.lgr;
+					val lgc = ids.lgc;
+					val dist_r = dist.r();
+					
+					for(i in range) {
+						val off = m.offsets(i);
+						val next = m.offsets(i+1);
+						val len = next - off;
+						tmp.setSize(len);
+						// map
+						for(j in 0L..(len-1)) {
+							tmp(j) = map(w(j+off), b.refv(m.vertexes(j+off)));
+						}
+						// convert local+C to roundrobin
+						val rr = ((((i & localMask) << lgc) | (i >> lgl)) << lgr) | dist_r;
+						// combine partial result
+						b.tmpsv(i) = combine(rr, tmp.data());
+					}
+				});
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " communicating ...");
 				
@@ -110,41 +125,50 @@ public class Processor {
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
 				
-				map_tmp.setSize(C);
-				for(i in 0L..(localsize-1)) {
-					for(j in 0L..(C-1L)) {
-						map_tmp(j) = b.tmprv(i + j*localsize);
+				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
+					val tmp = map_tmp_array(tid as Int);
+					tmp.setSize(C);
+					for(i in r) {
+						for(j in 0L..(C-1L)) {
+							tmp(j) = b.tmprv(i + j*localsize);
+						}
+						// combine final result
+						b.dstv(i) = combine(i * size + rank, tmp.data());
 					}
-					// combine final result
-					b.dstv(i) = combine(i * size + rank, map_tmp.data());
-				}
+				});
 				
-				// converge
-				var sum :U = Zero.get[U]();
-				for(i in v.range()) {
-					val diff = v(i) - b.dstv(i);
-					sum += diff * diff;
+				{
+					// converge
+					var sum :U = Zero.get[U]();
+					for(i in v.range()) {
+						val diff = v(i) - b.dstv(i);
+						sum += diff * diff;
+					}
+					val tmp = map_tmp_array(0);
+					tmp.setSize(1);
+					tmp(0) = sum;
+					allTeam.allreduce(tmp.data(), convergence, Team.ADD);
 				}
-				map_tmp.setSize(1);
-				map_tmp(0) = sum;
-				allTeam.allreduce(map_tmp.data(), convergence, Team.ADD);
-				
+
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " assign ...");
 				
 				// assign
-				for(i in 0L..(localsize-1)) {
-					// old -> new
-					v(i) = assign(i * size + rank, v(i), b.dstv(i));
-				}
+				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
+					for(i in r) {
+						// old -> new
+						v(i) = assign(i * size + rank, v(i), b.dstv(i));
+					}
+				});
 				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
+				val end_time = System.currentTimeMillis();
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " finished TIME: " + (end_time - start_time) + " ms");
 
 				// finish ?
 				if(end(convergence(0))) {
 					break;
 				}
-				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " finished");
 			}
 			
 			// release memory
@@ -182,62 +206,69 @@ public class Processor {
 			val w = weight();
 			val v = vector();
 			val map_tmp = new GrowableMemory[U](0);
+			val map_tmp_array = new Array[GrowableMemory[U]](Runtime.NTHREADS, (Int)=>new GrowableMemory[U](0));
 			val convergence = new MemoryChunk[U](1);
 			
 			// superstep loop
-			for(loop in 0..9) {
+			for(loop in 0..99) {
 				//while(true) {
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " start");
 				
-				// expand
-				team.allgather(v, b.refv);
+				val start_time = System.currentTimeMillis();
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " processing map ...");
 				
-				for(i in 0L..(localsize-1)) {
-					val off = m.offsets(i);
-					val next = m.offsets(i+1);
-					val len = next - off;
-					map_tmp.setSize(len);
-					// map
-					for(j in 0L..(len-1)) {
-						map_tmp(j) = map(w(j+off), v(m.vertexes(j+off)));
+				Parallel.iter(0L..(localsize-1), (tid :Long, range :LongRange) => {
+					val tmp = map_tmp_array(tid as Int);
+					for(i in range) {
+						val off = m.offsets(i);
+						val next = m.offsets(i+1);
+						val len = next - off;
+						tmp.setSize(len);
+						// map
+						for(j in 0L..(len-1)) {
+							tmp(j) = map(w(j+off), v(m.vertexes(j+off)));
+						}
+						// combine result
+						b.dstv(i) = combine(i * size + rank, tmp.data());
 					}
-					// TODO: convert local+C to roundrobin
-					
-					// combine result
-					b.dstv(i) = combine(i, map_tmp.data());
-				}
+				});
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
 				
-				// converge
-				var sum :U = Zero.get[U]();
-				for(i in v.range()) {
-					val diff = v(i) - b.dstv(i);
-					sum += diff * diff;
+				{
+					// converge
+					var sum :U = Zero.get[U]();
+					for(i in v.range()) {
+						val diff = v(i) - b.dstv(i);
+						sum += diff * diff;
+					}
+					val tmp = map_tmp_array(0);
+					tmp.setSize(1);
+					tmp(0) = sum;
+					team.allreduce(tmp.data(), convergence, Team.ADD);
 				}
-				map_tmp.setSize(1);
-				map_tmp(0) = sum;
-				team.allreduce(map_tmp.data(), convergence, Team.ADD);
-				
+
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " assign ...");
 				
 				// assign
-				for(i in 0L..(localsize-1)) {
-					// old -> new
-					v(i) = assign(i * size + rank, v(i), b.dstv(i));
-				}
+				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
+					for(i in r) {
+						// old -> new
+						v(i) = assign(i * size + rank, v(i), b.dstv(i));
+					}
+				});
 				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
+				val end_time = System.currentTimeMillis();
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " finished TIME: " + (end_time - start_time) + " ms");
 
 				// finish ?
 				if(end(convergence(0))) {
 					break;
 				}
-				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " finished");
 			}
 			
 			// release memory
