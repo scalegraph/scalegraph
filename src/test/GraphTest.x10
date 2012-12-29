@@ -54,7 +54,7 @@ public class GraphTest {
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(C, R, team);
+		val dist2d = Dist2D.make2D(R, C, team);
 		
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
@@ -115,7 +115,6 @@ public class GraphTest {
 			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + att2().size());
 		}
 		
-		
 		Console.OUT.println("Complete!!!");
 	}
 	
@@ -139,7 +138,7 @@ public class GraphTest {
 			for(i in 0L..(localsize-1)) {
 				val wl = m.attribute[Double](w, i);
 				val inv = 1.0 / MathAppend.sum(wl);
-				for(j in wl.range()) wl(j) += inv;
+				for(j in wl.range()) wl(j) *= inv;
 			}
 		});
 		
@@ -156,12 +155,75 @@ public class GraphTest {
 		});
 	}
 	
+	private static def print_attribute_list(g :Graph) {
+		var str :String = "Vertex attribute: [";
+		for(key in g.vertexAttributeKeys())
+			str += key + ",";
+		str += "]";
+		Console.OUT.println(str);
+		str = "Edge attribute: [";
+		for(key in g.edgeAttributeKeys())
+			str += key + ",";
+		str += "]";
+		Console.OUT.println(str);
+	}
+	
 	public static def ditributed_gimv_test(srcfile :String, RC :String) {
 		val team = Team.WORLD;
+		val useTranslator = true;
+		val g = read_graph(srcfile, team, useTranslator);
+
+		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
+		
+		val rxc = RC.split("x");
+		val R = Int.parse(rxc(0));
+		val C = Int.parse(rxc(1));
+		val dist2d = Dist2D.make2D(R, C, team);
+		
+		// undirected, inner edge
+		val csr = g.constructDistSparseMatrix(dist2d, true, false);
+		val weight = g.constructDistAttribute[Double](csr, false, "weight");
+
+		// check results
+		for(p in team.placeGroup()) at (p) {
+			val matrix = csr();
+			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + weight().size());
+		}
+
+		val map = (mij :Double , vj :Double) => 1.0;
+		val combine = (index :Long, xs :MemoryChunk[Double]) => MathAppend.sum(xs);
+		val assign = (i :Long, prev :Double , next :Double) => next;
+		val end = (diff :Double) => true;
+		
+		val vector = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
+		
+		org.scalegraph.gimv.Processor.main2DCSR(
+				csr, weight, vector, map, combine, assign, end);
+		
+		g.setVertexAttribute("degree", csr, vector);
+		print_attribute_list(g);
+
+		val att_names = useTranslator ? g.getVertexAttribute[Long]("name") : null;
+		val att_pagerank = g.getVertexAttribute[Double]("degree");
+		DistributedReader.write("degree-%d.txt", team, att_names, att_pagerank);
+		
+		Console.OUT.println("Complete!!!");
+	}
+	
+	public static def ditributed_pagerank_test(srcfile :String, RC :String) {
+		val team = Team.WORLD;
 		val g = read_graph(srcfile, team, true);
+		print_attribute_list(g);
+		
+		val att_names = g.getVertexAttribute[Long]("name");
 		
 		// normalize weight //
 		normalize_columns_weights(g);
+		print_attribute_list(g);
+
+		val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
+		DistributedReader.write("norm-%d.txt", team, att_names, att_norm);
 		
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
@@ -185,36 +247,29 @@ public class GraphTest {
 		val map = (mij :Double , vj :Double) => c * mij * vj;
 		val combine = (index :Long, xs :MemoryChunk[Double]) => MathAppend.sum(xs);
 		val assign = (i :Long, prev :Double , next :Double) => (1.0 - c) / n + next;
-		val converge = (prev :MemoryChunk[Double], next :MemoryChunk[Double]) => {
-			var sum : Double = 0.0;
-			for(i in prev.range()) {
-				val diff = next(i) - prev(i);
-				sum += diff * diff;
-			}
-			return sum;
-		};
-		val end = (diff :Double) => diff < 0.01;
+		val end = (diff :Double) => Math.sqrt(diff) < 0.01;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](weight().size()));
+				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val v = vector();
 			for(i in v.range()) v(i) = 1.0 / n;
 		});
 		
-		org.scalegraph.gimv.Processor.main(
-				csr, weight, vector, map, combine, assign, converge, end);
+		org.scalegraph.gimv.Processor.main2DCSR(
+				csr, weight, vector, map, combine, assign, end);
 		
 		g.setVertexAttribute("pagerank", csr, vector);
+		print_attribute_list(g);
 		
-		DistributedReader.write("output-%d.txt", team,
-				g.getVertexAttribute[Long]("name"), g.getVertexAttribute[Double]("pagerank"));
+		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
+		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
 	
     public static def main(args: Array[String](1)) {
-    	ditributed_1dcsr_test(args(1), args(0));
+    	ditributed_gimv_test(args(1), args(0));
     }
 }

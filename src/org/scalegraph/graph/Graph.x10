@@ -97,7 +97,7 @@ import org.scalegraph.concurrent.Dist2D;
 		vertexTranslator = translator.get2();
 		if(vertexTranslator != null) {
 			val vertexNameAtt = translator.get1();
-			vertexAttributes.put("Name", vertexNameAtt);
+			vertexAttributes.put("name", vertexNameAtt);
 		}
 	}
 	
@@ -127,14 +127,14 @@ import org.scalegraph.concurrent.Dist2D;
 	public def getEdgeAttribute[T](name :String) {T haszero} =
 		edgeAttributes.getOrThrow(name) as Attribute[T];
 	
-	private static def innerAddEdges(team_ :Team, numOfVertices :Long,
+	private static def innerAddEdges(team_ :Team, maxVertexID :Long,
 			ref :GlobalRef[Graph], edgeList_ :GrowableMemory[Long], translated :MemoryChunk[Long])
 	{
-		val globalNumOfVertices = team_.allreduce(team_.getRole(here), numOfVertices, Team.MAX) * team_.size();
+		val globalMaxVertexID = team_.allreduce(team_.getRole(here), maxVertexID, Team.MAX);
 		val globalNumOfEdges = team_.allreduce(team_.getRole(here), translated.size() / 2, Team.ADD);
 		if(here == ref.home) {
 			val g = ref.getLocalOrCopy();
-			g.numberOfVertices = Math.max(globalNumOfVertices, g.numberOfVertices);
+			g.numberOfVertices = Math.max(globalMaxVertexID + 1, g.numberOfVertices);
 			g.numberOfEdges += globalNumOfEdges;
 		}
 		
@@ -156,20 +156,20 @@ import org.scalegraph.concurrent.Dist2D;
 		team.placeGroup().broadcastFlat(()=> {
 			try {
 				var translated :MemoryChunk[Long];
-				var numOfVertices :Long = 0;
+				var maxVertexID :Long = 0;
 				if(vt_ != null) {
 					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Long]])();
 					translated = new MemoryChunk[Long](edges().size());
 					vtt_.translateWithAll(edges(), translated, true);
-					numOfVertices = vtt_.size();
+					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.getRole(here);
 				}
 				else {
 					val edges_ = edges();
-					numOfVertices = Parallel.reduce[Long](edges_.range(),
+					maxVertexID = Parallel.reduce[Long](edges_.range(),
 							(i:Long,t:Long)=>Math.max(edges_(i),t), (u:Long,v:Long)=>Math.max(u,v));
 					translated = edges_;
 				}
-				innerAddEdges(team_, numOfVertices, ref, edgeList_(), translated);
+				innerAddEdges(team_, maxVertexID, ref, edgeList_(), translated);
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();
@@ -190,14 +190,14 @@ import org.scalegraph.concurrent.Dist2D;
 			try {
 				val edges_ = edges();
 				val translated = new MemoryChunk[Long](edges_.size());
-				var numOfVertices :Long = 0;
+				var maxVertexID :Long = 0;
 				if(vt_ != null) {
 					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Double]])();
 					vtt_.translateWithAll(edges_, translated, true);
-					numOfVertices = vtt_.size();
+					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.getRole(here);
 				}
 				else {
-					numOfVertices = Parallel.reduce[Long](translated.range(),
+					maxVertexID = Parallel.reduce[Long](translated.range(),
 							(i:Long,t:Long)=> {
 								translated(i) = edges_(i) as Long;
 								return Math.max(translated(i),t);
@@ -232,15 +232,13 @@ import org.scalegraph.concurrent.Dist2D;
 		val team_ = team;
 		
 		val edgeList_ = edgeList;
-		val verticesPerPlace = numberOfVertices / team.size();
-		val vt_ = vertexTranslator;
-		val vertexType_ = vertexType;
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
 				val att_ = att.values()();
 				if(vertexOrEdge) {
-					val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here));
 					att_.setSize(actualLocalVertices);
 				}
 				else {
@@ -301,9 +299,24 @@ import org.scalegraph.concurrent.Dist2D;
 		internalSetAttributeValues(false, name, ()=>sparseMatrix().edgeIndexes, values);
 	}
 	
-	private static def getLocalNumberOfVertices(verticesPerPlace :Long, vt_ :Any, vertexType_ :Int) :Long {
+	private static struct VertexInfo {
+		val vertexTranslator : Any;
+		val vertexType : Int;
+		val numberOfPlaces : Int;
+		val numberOfVertices : Long;
+		
+		public def this(vertexTranslator :Any, vertexType :Int, numberOfVertices :Long, numberOfPlaces :Int) {
+			this.vertexTranslator = vertexTranslator;
+			this.vertexType = vertexType;
+			this.numberOfVertices = numberOfVertices;
+			this.numberOfPlaces = numberOfPlaces;
+		}
+	}
+	
+	private static def getLocalNumberOfVertices(vi :VertexInfo, role :Int) :Long {
+		val vt_ = vi.vertexTranslator;
 		if(vt_ != null) {
-			switch(vertexType_) {
+			switch(vi.vertexType) {
 			case VertexType.Long:
 				return (vt_ as PlaceLocalHandle[VertexTranslator[Long]])().size();
 			case VertexType.Double:
@@ -314,7 +327,11 @@ import org.scalegraph.concurrent.Dist2D;
 				throw new IllegalArgumentException();
 			}
 		}
-		return verticesPerPlace;
+		else {
+			val g = vi.numberOfVertices;
+			val d = vi.numberOfPlaces;
+			return (g / d + ((g % d) > role ? 1L : 0L));
+		}
 	}
 
 
@@ -325,15 +342,14 @@ import org.scalegraph.concurrent.Dist2D;
 	 */
 	public def setVertexAttribute[T](name :String, values :DistMemoryChunk[T]) {T haszero}
 	{
+		val team_ = team;
 		val attValues = getOrCreateAttribute[T](true, name, false).values();
-		val verticesPerPlace = numberOfVertices / team.size();
-		val vt_ = vertexTranslator;
-		val vertexType_ = vertexType;
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
-		team.placeGroup().broadcastFlat(() => {
+		team_.placeGroup().broadcastFlat(() => {
 			try {
 				val values_ = values();
-				val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here));
 				if(actualLocalVertices != values_.size())
 					throw new IllegalArgumentException("The number of attribute values is not match the number of vertices");
 				
@@ -383,9 +399,7 @@ import org.scalegraph.concurrent.Dist2D;
 	{
 		val attValues = getOrCreateAttribute[T](true, name, false).values();
 		val team_ = team;
-		val verticesPerPlace = numberOfVertices / team.size();
-		val vt_ = vertexTranslator;
-		val vertexType_ = vertexType;
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
@@ -393,7 +407,8 @@ import org.scalegraph.concurrent.Dist2D;
 				val sizeOfGraph = team_.size();
 				val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
 				val att_ = attValues();
-				val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here));
+				att_.setSize(actualLocalVertices);
 				
 				val setter = (i :Long, v :T) => {
 					if(i < actualLocalVertices) att_(i) = v;
@@ -761,5 +776,8 @@ import org.scalegraph.concurrent.Dist2D;
 		numberOfVertices = 0L;
 		numberOfEdges = 0L;
 	}
+
+	public def vertexAttributeKeys() = vertexAttributes.keySet();
+	public def edgeAttributeKeys() = edgeAttributes.keySet();
 }
 

@@ -14,4 +14,15 @@ public struct IdStruct {
 		this.outerOrInner = outerOrInner;
 		this.maxLocalId = maxLocalId;
 	}
+	
+	public def numberOfGlobalVertexes() = 1L << (lgc + lgr + lgl);
+	public def numberOfLocalVertexes() = 1L << lgl;
+	public def numberOfLocalRVertexes() = 1L << (lgr + lgl);
+	public def numberOfLocalCVertexes() = 1L << (lgc + lgl);
+	
+	public def maskLocalID() = (numberOfLocalVertexes() - 1);
+	
+	public def localRbits() = lgr + lgl;
+	public def localCbits() = lgc + lgl;
+	
 }

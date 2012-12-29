@@ -118,8 +118,8 @@ public struct Dist2D {
      * @param R The number of rows
      * @param parentTeam The base team from which split into.
      */
-    public static def make2D(C:Int, R:Int, parentTeam :Team) {
-		return new Dist2D(Region.makeRectangular([0, 0], [C-1, R-1]) as Rect2D, parentTeam, false);
+    public static def make2D(R:Int, C:Int, parentTeam :Team) {
+		return new Dist2D(Region.makeRectangular([0, 0], [R-1, C-1]) as Rect2D, parentTeam, false);
     }
     
     /** Create R x R distribution.
@@ -234,8 +234,12 @@ public struct Dist2D {
      */
     public def del() {
     	val cachedData = data()();
-    	if(cachedData.rowTeam != null) cachedData.rowTeam().del(c());
-    	if(cachedData.columnTeam != null) cachedData.columnTeam().del(r());
+    	if(cachedData.rowTeam != null &&
+    	   cachedData.rowTeam().id() != cachedData.allTeam.id())
+    		cachedData.rowTeam().del(c());
+    	if(cachedData.columnTeam != null &&
+    	   cachedData.columnTeam().id() != cachedData.allTeam.id())
+    		cachedData.columnTeam().del(r());
     	if(cachedData.allTeam.id() != cachedData.parentTeam.id()) cachedData.allTeam.del(idx());
     	data()() = LocalData();
     }

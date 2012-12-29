@@ -97,12 +97,20 @@ public class DistributedReader {
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.getRole(here);
  			val filename = String.format(filenamefmt, [role as Any]);
- 			val names_ = names.values()().data();
  			val values_ = values.values()().data();
  			val writer = new FileWriter(new File(filename));
- 			
- 			for(i in values_.range()) {
- 				writer.write(String.format("%d,%d\n", [names_(i), values_(i)]).bytes());
+
+ 			if(names != null) {
+	 			val names_ = names.values()().data();
+	 			for(i in values_.range()) {
+	 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
+	 			}
+ 			}
+ 			else {
+ 				val size = team.size();
+ 				for(i in values_.range()) {
+ 					writer.write(String.format("%d,%f\n", [i * size + role, values_(i)]).bytes());
+ 				}
  			}
  			
  			writer.close();

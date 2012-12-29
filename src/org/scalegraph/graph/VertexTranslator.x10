@@ -91,6 +91,7 @@ import org.scalegraph.util.DistMemoryChunk;
 				table.put(key, id);
 				vertexNames.add(key);
 				assert (((vertexNames.size() - 1) as Long) == count);
+				translated(i) = id;
 			}
 		}
 		return translated;

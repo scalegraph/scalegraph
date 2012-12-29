@@ -61,6 +61,10 @@ public struct SparseMatrix {
 			val cmask = (1L << lgsize) - 1 - rmask;
 			val lgl = ids.lgl;
 			val lgr = ids.lgr;
+			// for debug
+			val localRsize = 1L << (ids.lgl + ids.lgr);
+			val localCsize = 1L << (ids.lgl + ids.lgc);
+			
 			if(ids.outerOrInner) {
 				for(i in r) {
 					val v0 = edges(i).get1();
@@ -69,6 +73,8 @@ public struct SparseMatrix {
 					val v0_localR = ((v0 & rmask) << lgl) | (v0 >> lgsize);
 					val v1_localC = (((v1 & cmask) >> lgr) << lgl) | (v1 >> lgsize);
 					edges(i) = new Tuple2[Long, Long](v0_localR, v1_localC);
+					assert (v0_localR < localRsize);
+					assert (v1_localC < localCsize);
 				}
 			}
 			else {
@@ -79,6 +85,8 @@ public struct SparseMatrix {
 					val v0_localR = ((v0 & rmask) << lgl) | (v0 >> lgsize);
 					val v1_localC = (((v1 & cmask) >> lgr) << lgl) | (v1 >> lgsize);
 					edges(i) = new Tuple2[Long, Long](v1_localC, v0_localR);
+					assert (v0_localR < localRsize);
+					assert (v1_localC < localCsize);
 				}
 			}
 		});
