@@ -8,7 +8,7 @@ import org.scalegraph.concurrent.Dist2D;
 
 /** Distributed sparse matrix.
  */
-public class DistSparseMatrix {
+public struct DistSparseMatrix {
 
 	private static struct Data {
 		public val dist :Dist2D;
@@ -62,6 +62,14 @@ public class DistSparseMatrix {
 	/** Returns the sparse matrix assigned for the current place.
 	 */
 	public operator this() = data()().matrix;
+
+	/** Delete DistSparseMatrix and related objects.
+	 * The all places in DistSparseMatrix must call this method.
+	 */
+	public def del() {
+		val cache = data()();
+		data()() = Data(cache.dist, cache.ids, Zero.get[SparseMatrix]());
+	}
 
 	/** (Not implemented)
 	 */

@@ -14,6 +14,8 @@ import x10.util.Team;
 
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.tuple.*;
+import org.scalegraph.graph.Attribute;
+import x10.io.FileWriter;
  
 public class DistributedReader {
  
@@ -85,6 +87,27 @@ public class DistributedReader {
 		
 		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[Double]](edgelist, weight);
 	}
+ 	
+ 	public static def write(
+ 			filenamefmt : String,
+ 			team : Team,
+ 			names : Attribute[Long],
+ 			values : Attribute[Double])
+ 	{
+ 		team.placeGroup().broadcastFlat(() => {
+ 			val role = team.getRole(here);
+ 			val filename = String.format(filenamefmt, [role as Any]);
+ 			val names_ = names.values()().data();
+ 			val values_ = values.values()().data();
+ 			val writer = new FileWriter(new File(filename));
+ 			
+ 			for(i in values_.range()) {
+ 				writer.write(String.format("%d,%d\n", [names_(i), values_(i)]).bytes());
+ 			}
+ 			
+ 			writer.close();
+ 		});
+ 	}
  
  }
  

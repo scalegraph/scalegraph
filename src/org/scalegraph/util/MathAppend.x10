@@ -3,6 +3,27 @@ package org.scalegraph.util;
 import x10.compiler.Native;
 
 public class MathAppend {
+	
+	public static def sum[T](vec : MemoryChunk[T]) {T <: Arithmetic[T], T haszero} {
+		var res : T = Zero.get[T]();
+		for(i in vec.range())
+			res += vec(i);
+		return res;
+	}
+	
+	public static def norm(vec : MemoryChunk[Double]) {
+		var res : Double = 0.0;
+		for(i in vec.range())
+			res += vec(i) * vec(i);
+		return Math.sqrt(res);
+	}
+	
+	public static def norm(vec : MemoryChunk[Float]) {
+		var res : Float = 0.0f;
+		for(i in vec.range())
+			res += vec(i) * vec(i);
+		return Math.sqrt(res);
+	}
 
     public static def floorLog2(var p:Long):Int {
         var pow2: long = 1L;

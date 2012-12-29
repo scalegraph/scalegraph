@@ -14,12 +14,12 @@ import org.scalegraph.id.IdStruct;
  * In the most case, single 2d distributed plane is enough. The plane means a single R x C distribution.
  * This class supports the multiple 2d distributed plane. 
  */
-public class Dist2D {
+public struct Dist2D {
 	public static DISTRIBUTE_ROWS :Int = 1;
 	public static DISTRIBUTE_COLUMNS :Int = 2;
 	
 	static type Rect2D = Region(2){rect==true,zeroBased==true};
-	private static class LocalData (
+	private static struct LocalData (
 			mapping : Rect2D,
 			nreplica : Int,
 			parentTeam : Team,
@@ -31,9 +31,12 @@ public class Dist2D {
 		public def this(mapping_ : Rect2D, nreplica_ : Int, parentTeam_ : Team, allTeam_ : Team, rowTeam_ :Cell[Team], columnTeam_ :Cell[Team], herePt_ :Point(2)) {
 			property(mapping_, nreplica_, parentTeam_, allTeam_, rowTeam_, columnTeam_, herePt_);
 		}
+		public def this() {
+			property(null, 0, Team.WORLD, Team.WORLD, null, null, null);
+		}
 	}
 	
-	private val data :PlaceLocalHandle[LocalData];
+	private val data :PlaceLocalHandle[Cell[LocalData]];
 	
     private def this(mapping : Rect2D, parentTeam :Team, oned :boolean) {
     	val R = mapping.max(0) + 1;
@@ -74,7 +77,7 @@ public class Dist2D {
     	}
     	val create_allteam_ = create_allteam;
     	
-    	data = PlaceLocalHandle.make[LocalData, Point(2)](parentTeam.placeGroup(), (p :Place):Point(2) => placeMap(p)() as Point(2), (p :Point(2)) => {
+    	data = PlaceLocalHandle.make[Cell[LocalData], Point(2)](parentTeam.placeGroup(), (p :Place):Point(2) => placeMap(p)() as Point(2), (p :Point(2)) => {
     		val r = p(0);
     		val c = p(1);
     		val role = r + c*R;
@@ -105,7 +108,7 @@ public class Dist2D {
     			rowTeam = Cell.make[Team](allTeam.split(role, r, c));
     			columnTeam = Cell.make[Team](allTeam.split(role, c, r));
     		}
-    		return new LocalData(mapping, cycles, parentTeam, allTeam, rowTeam, columnTeam, p);
+    		return new Cell[LocalData](LocalData(mapping, cycles, parentTeam, allTeam, rowTeam, columnTeam, p));
     	});
     }
     
@@ -159,19 +162,23 @@ public class Dist2D {
     
     /** Returns the number of rows.
      */
-    public def R() = data().mapping.max(0) + 1;
+    public def R() = data()().mapping.max(0) + 1;
     
     /** Returns the number of columns.
      */
-    public def C() = data().mapping.max(1) + 1;
+    public def C() = data()().mapping.max(1) + 1;
+    
+    public def Z() = data()().parentTeam.size() / data()().allTeam.size();
     
     /** Returns the row rank for the current place.
      */
-    public def r() = data().herePt(0);
+    public def r() = data()().herePt(0);
     
     /** Returns the column rank for the current place.
      */
-    public def c() = data().herePt(1);
+    public def c() = data()().herePt(1);
+    
+    public def z() = data()().parentTeam.getRole(here) / data()().allTeam.size();
     
     /** Returns the plane wide rank for the current place.
      */
@@ -179,32 +186,32 @@ public class Dist2D {
     
     /** Returns the number of planes of this distribution.
      */
-    public def numReplicas() = data().nreplica;
+    public def numReplicas() = data()().nreplica;
     
     /** Returns the base team.
      */
-    public def parentTeam() = data().parentTeam;
+    public def parentTeam() = data()().parentTeam;
     
     /** Returns the team for the current plane.
      */
-    public def allTeam() = data().allTeam;
+    public def allTeam() = data()().allTeam;
     
     /** Returns the row team of the current plane.
      * @throw UnsupportedOperationException If the distribution is 1D column distribution.
      */
-    public def rowTeam() = data().rowTeam();
+    public def rowTeam() = data()().rowTeam();
     
     /** Returns the column tema of the current plane.
      * @throw UnsupportedOperationException If the distribution is 1D row distribution.
      */
-    public def columnTeam() = data().columnTeam();
+    public def columnTeam() = data()().columnTeam();
     
     /** Returns the place that has the same (r, c) rank and belongs to the z-th plane.
      * @param z The plane you want to get 
      */
     public def getCongruentPlace(z :Int) {
-    	val pid = data().allTeam.size() * z + data().mapping.indexOf(data().herePt);
-    	return data().parentTeam.places()(pid);
+    	val pid = data()().allTeam.size() * z + data()().mapping.indexOf(data()().herePt);
+    	return data()().parentTeam.places()(pid);
     }
     
     /** Creates IdStruct.
@@ -226,14 +233,15 @@ public class Dist2D {
      * The all places in allTeam must call this method.
      */
     public def del() {
-    	val cachedData = data();
+    	val cachedData = data()();
     	if(cachedData.rowTeam != null) cachedData.rowTeam().del(c());
-    	if(cachedData.columnTeam != null) cachedData.columnTeam().del(c());
-    	data().allTeam.del(idx());
+    	if(cachedData.columnTeam != null) cachedData.columnTeam().del(r());
+    	if(cachedData.allTeam.id() != cachedData.parentTeam.id()) cachedData.allTeam.del(idx());
+    	data()() = LocalData();
     }
     
     public def toString() {
-    	return "Dist2D([" + C() + "," + R() + "]," + data().allTeam.toString() + ")";
+    	return "Dist2D([" + C() + "," + R() + "]," + data()().allTeam.toString() + ")";
     }
     
 }

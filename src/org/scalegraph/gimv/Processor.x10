@@ -9,11 +9,18 @@ import org.scalegraph.util.GrowableMemory;
 
 public class Processor {
 	
-	private static class Buffer[U] {
+	private static struct Buffer[U] {
 		public dstv : MemoryChunk[U]; // destination vector (length: local size for each place)
 		public refv : MemoryChunk[U]; // referece vector (length: local R size for each place)
 		public tmpsv : MemoryChunk[U]; // temporary vector for sending (length: local C size for each place)
 		public tmprv : MemoryChunk[U]; // temporary vector for receiving (length: local C size for each place)
+	
+		public def this() {
+			this.dstv = new MemoryChunk[U](0);
+			this.refv = new MemoryChunk[U](0);
+			this.tmpsv = new MemoryChunk[U](0);
+			this.tmprv = new MemoryChunk[U](0);
+		}
 		
 		public def this(ids : IdStruct) {
 			val localsize = 1L << ids.lgl;
@@ -40,7 +47,7 @@ public class Processor {
 			end : (U)=>Boolean)
 	{
 		val allTeam = Team2(matrix.dist().allTeam());
-		val buffers = PlaceLocalHandle.make[Buffer[U]](allTeam.placeGroup(), () => new Buffer[U](matrix.ids()));
+		val buffers = PlaceLocalHandle.make[Cell[Buffer[U]]](allTeam.placeGroup(), () => new Cell(Buffer[U](matrix.ids())));
 		
 		allTeam.placeGroup().broadcastFlat(() => {
 			val dist = matrix.dist();
@@ -52,7 +59,7 @@ public class Processor {
 			val localCsize = 1L << (ids.lgl + ids.lgc);
 			val rank = dist.allTeam().getRole(here);
 			val size = dist.allTeam().size();
-			val b = buffers();
+			val b = buffers()();
 			val m = matrix();
 			val w = weight();
 			val v = vector();
@@ -61,10 +68,16 @@ public class Processor {
 			val map_tmp = new GrowableMemory[U](0);
 			val convergence = new MemoryChunk[U](1);
 			
+			// superstep loop
 			for(loop in 0..9) {
 			//while(true) {
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " start");
+				
 				// expand
 				columnTeam.allgather(v, b.refv);
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " processing map ...");
 				
 				for(i in 0L..(localCsize-1)) {
 					val off = m.offsets(i);
@@ -75,14 +88,18 @@ public class Processor {
 					for(j in 0L..(len-1)) {
 						map_tmp(j) = map(w(j+off), b.refv(m.vertexes(j+off)));
 					}
-					// convert local+C to roundrobin
+					// TODO: convert local+C to roundrobin
 					
 					// combine partial result
 					b.tmpsv(i) = combine(i, map_tmp.data());
 				}
 				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " communicating ...");
+				
 				// fold
 				rowTeam.alltoall(b.tmpsv, b.tmprv);
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
 				
 				map_tmp.setSize(C);
 				for(i in 0L..(localsize-1)) {
@@ -103,12 +120,19 @@ public class Processor {
 					break;
 				}
 				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " assign ...");
+				
 				// assign
 				for(i in 0L..(localsize-1)) {
 					// old -> new
 					v(i) = assign(i * size + rank, v(i), b.dstv(i));
 				}
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " finished");
 			}
+			
+			// release memory
+			buffers()() = Buffer[U]();
 		});
 	}
 }

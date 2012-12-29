@@ -131,7 +131,7 @@ import org.scalegraph.concurrent.Dist2D;
 			ref :GlobalRef[Graph], edgeList_ :GrowableMemory[Long], translated :MemoryChunk[Long])
 	{
 		val globalNumOfVertices = team_.allreduce(team_.getRole(here), numOfVertices, Team.MAX) * team_.size();
-		val globalNumOfEdges = team_.allreduce(team_.getRole(here), translated.size(), Team.ADD);
+		val globalNumOfEdges = team_.allreduce(team_.getRole(here), translated.size() / 2, Team.ADD);
 		if(here == ref.home) {
 			val g = ref.getLocalOrCopy();
 			g.numberOfVertices = Math.max(globalNumOfVertices, g.numberOfVertices);
@@ -155,21 +155,13 @@ import org.scalegraph.concurrent.Dist2D;
 		
 		team.placeGroup().broadcastFlat(()=> {
 			try {
-				Console.OUT.println("Place: " + here.id + ", addEdges");
 				var translated :MemoryChunk[Long];
 				var numOfVertices :Long = 0;
 				if(vt_ != null) {
 					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Long]])();
 					translated = new MemoryChunk[Long](edges().size());
-					
-					team_.barrier(team_.getRole(here));
-					Console.OUT.println("Place: " + here.id + ", translateWithAll");
-					
 					vtt_.translateWithAll(edges(), translated, true);
 					numOfVertices = vtt_.size();
-					
-					team_.barrier(team_.getRole(here));
-					Console.OUT.println("Place: " + here.id + ", translate complete");
 				}
 				else {
 					val edges_ = edges();
@@ -235,30 +227,41 @@ import org.scalegraph.concurrent.Dist2D;
 				key, ids, false);
 	}
 	
-	private static def scatterAttributeValues[T](indexes_ :MemoryChunk[Long], values_ :MemoryChunk[T], team_ :Team) {
-		val scatter = new ScatterGather(team_);
-		val mask = team_.size() - 1;
-		Parallel.iter(indexes_.range(), (tid:Long, r:LongRange) => {
-			val counts = scatter.getCounts(tid as Int);
-			for(i in r)
-				counts(indexes_(i) & mask)++;
-		});
-		scatter.sum();
-		val sendIndexes = new MemoryChunk[Long](indexes_.size());
-		val sendValues = new MemoryChunk[T](indexes_.size());
-		val teamSize = team_.size();
-		Parallel.iter(indexes_.range(), (tid:Long, r:LongRange) => {
-			val offsets = scatter.getOffsets(tid as Int);
-			for(i in r) {
-				val idx = offsets(indexes_(i) & mask)++;
-				// TODO: optimize ?
-				sendIndexes(idx) = indexes_(i) / teamSize;
-				sendValues(idx) = values_(i);
+	private def internalSetAttributeValues[T](vertexOrEdge :Boolean, name :String, indexes : () => MemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
+		val att = getOrCreateAttribute[T](vertexOrEdge, name, false);
+		val team_ = team;
+		
+		val edgeList_ = edgeList;
+		val verticesPerPlace = numberOfVertices / team.size();
+		val vt_ = vertexTranslator;
+		val vertexType_ = vertexType;
+		
+		team_.placeGroup().broadcastFlat(() => {
+			try {
+				val att_ = att.values()();
+				if(vertexOrEdge) {
+					val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+					att_.setSize(actualLocalVertices);
+				}
+				else {
+					att_.setSize(edgeList_().size());
+				}
+				
+				val mask = team_.size() - 1;
+				val shift = MathAppend.log2(team_.size()) as Int;
+				val indexes_ = indexes();
+				val values_ = values();
+				Remote.put(team_, att_.data(), indexes_.range(),
+						(index:Long, put:(Int, Long,  T)=>void)=> {
+					val dstRole = indexes_(index) & mask;
+					val dstIdx = indexes_(index) >> shift;
+					put(dstRole as Int, dstIdx, values_(index));
+				});
+			}
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
 			}
 		});
-		val recvIndexes = scatter.scatter(sendIndexes);
-		val recvValues = scatter.scatter(sendValues);
-		return Tuple2[MemoryChunk[Long], MemoryChunk[T]](recvIndexes, recvValues);
 	}
 	
 	/** Set edge attribute values. The length of values for each place must be match the length of edge list.
@@ -285,24 +288,17 @@ import org.scalegraph.concurrent.Dist2D;
 	 * @param values The attribute values.
 	 */
 	public def setEdgeAttribute[T](name :String, indexes :DistMemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
-		val attValues = getOrCreateAttribute[T](false, name, false).values();
-		val team_ = team;
-		val edgeList_ = edgeList;
-		team_.placeGroup().broadcastFlat(() => {
-			try {
-				val recvdata = scatterAttributeValues(indexes(), values(), team_);
-				val recvIndexes = recvdata.get1();
-				val recvValues = recvdata.get2();
-				val att_ = attValues();
-				att_.setSize(edgeList_().size());
-				Parallel.iter(recvIndexes.range(), (i:Long) => {
-					att_(recvIndexes(i)) = recvValues(i);
-				});
-			}
-			catch(e : CheckedThrowable) {
-				e.printStackTrace();
-			}
-		});
+		internalSetAttributeValues(false, name, ()=>indexes(), values);
+	}
+	
+	/** Write back attribute values.
+	 * @param name The name of attribute.
+	 * @param sparseMatrix The distributed sparse matrix that contains edge indexes 
+	 * for each attribute values.
+	 * @param values The attribute values.
+	 */
+	public def setEdgeAttribute[T](name :String, sparseMatrix : DistSparseMatrix, values :DistMemoryChunk[T]) {T haszero} {
+		internalSetAttributeValues(false, name, ()=>sparseMatrix().edgeIndexes, values);
 	}
 	
 	private static def getLocalNumberOfVertices(verticesPerPlace :Long, vt_ :Any, vertexType_ :Int) :Long {
@@ -359,23 +355,69 @@ import org.scalegraph.concurrent.Dist2D;
 	public def setVertexAttribute[T](name :String, ids :DistMemoryChunk[Long],
 			values :DistMemoryChunk[T]) {T haszero}
 	{
+		internalSetAttributeValues(true, name, ()=>ids(), values);
+	}
+	
+	/** Set vertex attribute values with vertex IDs.
+	 * The attributes that the values are not provided will be filled with default values.
+	 * If the same attribute values are exist, overwrite the values.
+	 * @param name The name of attribute.
+	 * @param ids The edge indexes for each attribute values.
+	 * @param values The attribute values.
+	 */
+	public def setVertexAttribute[T](name :String, sparseMatrix :DistSparseMatrix,
+			values :DistMemoryChunk[T]) {T haszero}
+	{
+		setVertexAttribute[T](name, sparseMatrix, values, 0);
+	}
+	
+	/** Set vertex attribute values with vertex IDs.
+	 * The attributes that the values are not provided will be filled with default values.
+	 * If the same attribute values are exist, overwrite the values.
+	 * @param name The name of attribute.
+	 * @param ids The edge indexes for each attribute values.
+	 * @param values The attribute values.
+	 */
+	public def setVertexAttribute[T](name :String, sparseMatrix :DistSparseMatrix,
+			values :DistMemoryChunk[T], z :Int) {T haszero}
+	{
 		val attValues = getOrCreateAttribute[T](true, name, false).values();
-		val verticesPerPlace = numberOfVertices / team.size();
 		val team_ = team;
+		val verticesPerPlace = numberOfVertices / team.size();
 		val vt_ = vertexTranslator;
 		val vertexType_ = vertexType;
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
-				val recvdata = scatterAttributeValues(ids(), values(), team_);
-				val recvIndexes = recvdata.get1();
-				val recvValues = recvdata.get2();
-				val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+				val roleInGraph = team_.getRole(here);
+				val sizeOfGraph = team_.size();
+				val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
 				val att_ = attValues();
-				att_.setSize(actualLocalVertices);
-				Parallel.iter(recvIndexes.range(), (i:Long) => {
-					att_(recvIndexes(i)) = recvValues(i);
-				});
+				val actualLocalVertices = getLocalNumberOfVertices(verticesPerPlace, vt_, vertexType_);
+				
+				val setter = (i :Long, v :T) => {
+					if(i < actualLocalVertices) att_(i) = v;
+				};
+
+				if(sparseMatrix.dist().z() == z) {
+					val allTeam = sparseMatrix.dist().allTeam();
+					val roleInDist = allTeam.getRole(here);
+					val sizeOfDist = allTeam.size();
+					val localsize = 1L << sparseMatrix.ids().lgl;
+					val values_ = values();
+					
+					Remote.put(team_, setter, 0L..(localsize-1),
+							(index:Long, put:(Int, Long,  T)=>void)=> {
+						val rr = index * sizeOfDist + roleInDist;
+						val dstRole = rr & (sizeOfGraph - 1);
+						val dstIdx = rr >> logSizeOfGraph;
+						put(dstRole as Int, dstIdx, values_(index));
+					});
+				}
+				else {
+					Remote.put(team_, setter, 0L..0L,
+							(index:Long, put:(Int, Long,  T)=>void)=> { });
+				}
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();
@@ -610,25 +652,47 @@ import org.scalegraph.concurrent.Dist2D;
 	 * @param name The name of attribute
 	 */
 	public def constructDistAttribute[T](sparseMatrix :DistSparseMatrix, vertexOrEdge :boolean, name :String) {T haszero} {
-		// return DistMemoryChunk[T]...
-		
 		val team_ = team;
 		val att = vertexOrEdge ? getVertexAttribute[T](name) : getEdgeAttribute[T](name);
 		
+		val edgeList_ = edgeList;
+		val verticesPerPlace = numberOfVertices / team.size();
+		val vt_ = vertexTranslator;
+		val vertexType_ = vertexType;
+		
 		return new DistMemoryChunk[T](team_.placeGroup(), () => {
 			try {
-				val edgeIndexes = sparseMatrix().edgeIndexes;
-				val distAtt = new MemoryChunk[T](edgeIndexes.size());
-				val ids = sparseMatrix.ids();
-				val shift = ids.lgr + ids.lgc;
-				val rankMask = (1L << shift) - 1;
-				
-				Remote.get(team_, att.values()().data(), distAtt, edgeIndexes.range(), (i :Long, get:(Long, Int, Long)=>void) => {
-					val index = edgeIndexes(i);
-					get(i, (index & rankMask) as Int, index >> shift);
-				});
-				
-				return distAtt;
+				if(vertexOrEdge) {
+					val roleInGraph = team_.getRole(here);
+					val sizeOfGraph = team_.size();
+					val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
+
+					val allTeam = sparseMatrix.dist().allTeam();
+					val roleInDist = allTeam.getRole(here);
+					val sizeOfDist = allTeam.size();
+					val localsize = 1L << sparseMatrix.ids().lgl;
+					
+					val distAtt = new MemoryChunk[T](localsize);
+					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(),
+							(i :Long, get:(Long, Int, Long)=>void) => {
+						val rr = i * sizeOfDist + roleInDist;
+						val dstRole = rr & (sizeOfGraph - 1);
+						val dstIdx = rr >> logSizeOfGraph;
+						get(i, dstRole as Int, dstIdx);
+					});
+					return distAtt;
+				}
+				else {
+					val shift = MathAppend.log2(team_.size()) as Int;
+					val rankMask = (1L << shift) - 1;
+					val edgeIndexes = sparseMatrix().edgeIndexes;
+					val distAtt = new MemoryChunk[T](edgeIndexes.size());
+					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
+						val index = edgeIndexes(i);
+						get(i, (index & rankMask) as Int, index >> shift);
+					});
+					return distAtt;
+				}
 			}
 			catch (e : CheckedThrowable) {
 				e.printStackTrace();
@@ -649,6 +713,53 @@ import org.scalegraph.concurrent.Dist2D;
 		val att = vertexOrEdge ? getVertexAttribute[T](name) : getEdgeAttribute[T](name);
 		
 		
+	}
+
+	/** Delete Graph and related objects.
+	 */
+	public def del() {
+		val edgeList_ = edgeList;
+		val attlist = new ArrayList[Any]();
+		
+		for(key in vertexAttributes.keySet())
+			attlist.add(vertexAttributes(key));
+		for(key in edgeAttributes.keySet())
+			attlist.add(edgeAttributes(key));
+		
+		team.placeGroup().broadcastFlat(()=> {
+			try {
+				edgeList_.del();
+				
+				for(att in attlist) {
+					if(att instanceof Attribute[Byte])
+						(att as Attribute[Byte]).values().del();
+					else if(att instanceof Attribute[Short])
+						(att as Attribute[Short]).values().del();
+					else if(att instanceof Attribute[Int])
+						(att as Attribute[Int]).values().del();
+					else if(att instanceof Attribute[Long])
+						(att as Attribute[Long]).values().del();
+					else if(att instanceof Attribute[Float])
+						(att as Attribute[Float]).values().del();
+					else if(att instanceof Attribute[Double])
+						(att as Attribute[Double]).values().del();
+					else if(att instanceof Attribute[Char])
+						(att as Attribute[Char]).values().del();
+					else if(att instanceof Attribute[String])
+						(att as Attribute[String]).values().del();
+					else if(att instanceof Attribute[Boolean])
+						(att as Attribute[Boolean]).values().del();
+					else 
+						throw new UnsupportedOperationException();
+				}
+			}
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
+			}
+		});
+		
+		numberOfVertices = 0L;
+		numberOfEdges = 0L;
 	}
 }
 

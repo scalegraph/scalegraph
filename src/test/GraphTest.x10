@@ -5,55 +5,216 @@ import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.util.MathAppend;
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.DistMemoryChunk;
 
 public class GraphTest {
 	
-	public static def ditributed_2dcsr_test(srcfile :String, RC :String) {
-		val team = Team.WORLD;
+	public static inputFormat_g1 = (s:String)=> {
+		val elements = s.split(",");
+		return Tuple3[Long, Long, Double](
+				Long.parse(elements(0)),
+				Long.parse(elements(1)),
+				Double.parse(elements(3)));
+	};
+	public static inpurFormat_g2 = (s:String)=> {
+		val elements = s.split(",");
+		return Tuple3[Long, Long, Double](
+				Long.parse(elements(0)),
+				Long.parse(elements(1)),
+				Double.parse(elements(2)));
+	};
+	
+	public static def read_graph(srcfile :String, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
 		val filelist = new Array[String](1); filelist(0) = srcfile;
-		val inputFormat = (s:String)=> {
-			val elements = s.split(",");
-			return Tuple3[Long, Long, Double](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					Double.parse(elements(3)));
-		};
 		Console.OUT.println("Reading file: " + filelist(0) + " ...");
 		
-		val rawdata = DistributedReader.read(team, filelist, inputFormat);
+		val format = srcfile.endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
+		val rawdata = DistributedReader.read(team, filelist, format);
 		val edgelist = rawdata.get1();
 		val weight = rawdata.get2();
 		
 		Console.OUT.println("Creating graph object ...");
 		
-		val g = new Graph(team, Graph.VertexType.Long, true);
+		val g = new Graph(team, Graph.VertexType.Long, useTranslator);
 		g.addEdges(edgelist.data(team.placeGroup()));
 		g.setEdgeAttribute[Double]("weight", weight.data(team.placeGroup()));
 		
 		// chech results
 		Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());
 		
+		return g;
+	}
+	
+	public static def ditributed_2dcsr_test(srcfile :String, RC :String) {
+		val team = Team.WORLD;
+		val g = read_graph(srcfile, team, true);
+		
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
 		val dist2d = Dist2D.make2D(C, R, team);
 		
-		Console.OUT.println("Constructing 2DCSR ...");
+		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
 		// undirected, inner edge
-		val csr = g.constructDistSparseMatrix(dist2d, false, false);
-		val att1 = g.constructDistAttribute[Double](csr, false, "weight");
+		val csr1 = g.constructDistSparseMatrix(dist2d, true, false);
+		val att1 = g.constructDistAttribute[Double](csr1, false, "weight");
 
 		// chech results
 		for(p in team.placeGroup()) at (p) {
-			val matrix = csr();
+			val matrix = csr1();
 			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + att1().size());
 		}
+		
+		Console.OUT.println("Constructing 2DCSR [undirected, outer] ...");
+		
+		// undirected, inner edge
+		val csr2 = g.constructDistSparseMatrix(dist2d, false, true);
+		val att2 = g.constructDistAttribute[Double](csr2, false, "weight");
+
+		// chech results
+		for(p in team.placeGroup()) at (p) {
+			val matrix = csr2();
+			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + att2().size());
+		}
+		
+		
+		Console.OUT.println("Complete!!!");
+	}
+	public static def ditributed_1dcsr_test(srcfile :String, RC :String) {
+		val team = Team.WORLD;
+		val g = read_graph(srcfile, team, true);
+		
+		val distRow = Dist2D.make1D(team, Dist2D.DISTRIBUTE_ROWS);
+		
+		Console.OUT.println("Constructing Row-Distributed CSR [directed, inner] ...");
+		
+		// undirected, inner edge
+		val csr1 = g.constructDistSparseMatrix(distRow, true, false);
+		val att1 = g.constructDistAttribute[Double](csr1, false, "weight");
+
+		// chech results
+		for(p in team.placeGroup()) at (p) {
+			val matrix = csr1();
+			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + att1().size());
+		}
+
+		val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
+		
+		Console.OUT.println("Constructing Column-Distributed CSR [undirected, outer] ...");
+		
+		// undirected, inner edge
+		val csr2 = g.constructDistSparseMatrix(distColumn, false, true);
+		val att2 = g.constructDistAttribute[Double](csr2, false, "weight");
+
+		// chech results
+		for(p in team.placeGroup()) at (p) {
+			val matrix = csr2();
+			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + att2().size());
+		}
+		
+		
+		Console.OUT.println("Complete!!!");
+	}
+	
+	public static def normalize_columns_weights(g : Graph) {
+		val team = Team.WORLD;
+		
+		Console.OUT.println("Constructing column distributed graph ...");
+		
+		val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
+		// directed, outer
+		val columnDistGraph = g.constructDistSparseMatrix(distColumn, true, true);
+		val columnDistWeight = g.constructDistAttribute[Double](columnDistGraph, false, "weight");
+		
+		Console.OUT.println("Normalizing weights ...");
+		
+		team.placeGroup().broadcastFlat(() => {
+			val localsize = 1L << columnDistGraph.ids().lgl;
+			val m = columnDistGraph();
+			val w = columnDistWeight();
+			
+			for(i in 0L..(localsize-1)) {
+				val wl = m.attribute[Double](w, i);
+				val inv = 1.0 / MathAppend.sum(wl);
+				for(j in wl.range()) wl(j) += inv;
+			}
+		});
+		
+		Console.OUT.println("Writing back the weights ...");
+		
+		g.setEdgeAttribute("normalized_weight", columnDistGraph, columnDistWeight);
+		
+		Console.OUT.println("Deleting objects ...");
+		
+		team.placeGroup().broadcastFlat(() => {
+			columnDistWeight.del();
+			columnDistGraph.del();
+			distColumn.del();
+		});
+	}
+	
+	public static def ditributed_gimv_test(srcfile :String, RC :String) {
+		val team = Team.WORLD;
+		val g = read_graph(srcfile, team, true);
+		
+		// normalize weight //
+		normalize_columns_weights(g);
+		
+		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
+		
+		val rxc = RC.split("x");
+		val R = Int.parse(rxc(0));
+		val C = Int.parse(rxc(1));
+		val dist2d = Dist2D.make2D(C, R, team);
+		
+		// undirected, inner edge
+		val csr = g.constructDistSparseMatrix(dist2d, true, false);
+		val weight = g.constructDistAttribute[Double](csr, false, "normalized_weight");
+
+		// check results
+		for(p in team.placeGroup()) at (p) {
+			val matrix = csr();
+			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + weight().size());
+		}
+
+		val n = g.numberOfVertices();
+		val c = 0.85;
+		val map = (mij :Double , vj :Double) => c * mij * vj;
+		val combine = (index :Long, xs :MemoryChunk[Double]) => MathAppend.sum(xs);
+		val assign = (i :Long, prev :Double , next :Double) => (1.0 - c) / n + next;
+		val converge = (prev :MemoryChunk[Double], next :MemoryChunk[Double]) => {
+			var sum : Double = 0.0;
+			for(i in prev.range()) {
+				val diff = next(i) - prev(i);
+				sum += diff * diff;
+			}
+			return sum;
+		};
+		val end = (diff :Double) => diff < 0.01;
+		
+		val vector = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](weight().size()));
+		
+		team.placeGroup().broadcastFlat(() => {
+			val v = vector();
+			for(i in v.range()) v(i) = 1.0 / n;
+		});
+		
+		org.scalegraph.gimv.Processor.main(
+				csr, weight, vector, map, combine, assign, converge, end);
+		
+		g.setVertexAttribute("pagerank", csr, vector);
+		
+		DistributedReader.write("output-%d.txt", team,
+				g.getVertexAttribute[Long]("name"), g.getVertexAttribute[Double]("pagerank"));
 		
 		Console.OUT.println("Complete!!!");
 	}
 	
     public static def main(args: Array[String](1)) {
-    	ditributed_2dcsr_test(args(1), args(0));
+    	ditributed_1dcsr_test(args(1), args(0));
     }
 }

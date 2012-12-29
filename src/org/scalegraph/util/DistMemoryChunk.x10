@@ -21,4 +21,8 @@ public struct DistMemoryChunk[T] {
 	 * @param mc the memory chunk that will be bound to the current place
 	 */
 	public operator this() = (mc :MemoryChunk[T]) { plh()() = mc; }
+	
+	public def del() {
+		plh()() = Zero.get[MemoryChunk[T]]();
+	}
 }

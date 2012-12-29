@@ -148,4 +148,9 @@ public class GrowableMemory[T] {
 		MemoryChunk.copy(mc, 0L, tmp, 0L, size);
 		mc = tmp;
 	}
+	
+	public def del() {
+		size = 0;
+		mc = Zero.get[MemoryChunk[T]]();
+	}
 }
