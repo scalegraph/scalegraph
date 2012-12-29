@@ -81,7 +81,7 @@ public class Processor {
 			val convergence = new MemoryChunk[U](1);
 			
 			// superstep loop
-			for(loop in 0..99) {
+			for(loop in 0..39) {
 			//while(true) {
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " start");
@@ -181,7 +181,7 @@ public class Processor {
 	/** 
 	 * T: weight, U: vector
 	 */ 
-	public static def main1DCSR[T, U](
+	public static @Inline def main1DCSR[T, U](
 			matrix : DistSparseMatrix,
 			weight : DistMemoryChunk[T],
 			vector : DistMemoryChunk[U],
@@ -210,7 +210,7 @@ public class Processor {
 			val convergence = new MemoryChunk[U](1);
 			
 			// superstep loop
-			for(loop in 0..99) {
+			for(loop in 0..39) {
 				//while(true) {
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " start");

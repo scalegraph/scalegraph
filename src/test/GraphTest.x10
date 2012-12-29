@@ -247,7 +247,7 @@ public class GraphTest {
 		val map = (mij :Double , vj :Double) => c * mij * vj;
 		val combine = (index :Long, xs :MemoryChunk[Double]) => MathAppend.sum(xs);
 		val assign = (i :Long, prev :Double , next :Double) => (1.0 - c) / n + next;
-		val end = (diff :Double) => Math.sqrt(diff) < 0.00001;
+		val end = (diff :Double) => false;//Math.sqrt(diff) < 0.0001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
