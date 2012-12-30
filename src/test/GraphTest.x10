@@ -8,6 +8,7 @@ import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.gimv.GIMV;
 
 public class GraphTest {
 	
@@ -198,8 +199,7 @@ public class GraphTest {
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
 		
-		org.scalegraph.gimv.Processor.main2DCSR(
-				csr, weight, vector, map, combine, assign, end);
+		GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
 		
 		g.setVertexAttribute("degree", csr, vector);
 		print_attribute_list(g);
@@ -232,7 +232,7 @@ public class GraphTest {
 		val C = Int.parse(rxc(1));
 		val dist2d = Dist2D.make2D(C, R, team);
 		
-		// undirected, inner edge
+		// directed, inner edge
 		val csr = g.constructDistSparseMatrix(dist2d, true, false);
 		val weight = g.constructDistAttribute[Double](csr, false, "normalized_weight");
 
@@ -253,19 +253,18 @@ public class GraphTest {
 				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
 		
 		team.placeGroup().broadcastFlat(() => {
+			val iv = 1.0 / n;
 			val v = vector();
-			for(i in v.range()) v(i) = 1.0 / n;
+			for(i in v.range()) v(i) = iv;
 		});
 		
 		if(C == 1) { // 1D
 			Console.OUT.println("Using 1D GIM-V Engine ...");
-			org.scalegraph.gimv.Processor.main1DCSR(
-					csr, weight, vector, map, combine, assign, end);
+			GIMV.main1DCSR(csr, weight, vector, map, combine, assign, end);
 		}
 		else {
 			Console.OUT.println("Using 2D GIM-V Engine ...");
-			org.scalegraph.gimv.Processor.main2DCSR(
-					csr, weight, vector, map, combine, assign, end);
+			GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
 		}
 		
 		g.setVertexAttribute("pagerank", csr, vector);
