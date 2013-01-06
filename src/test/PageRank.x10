@@ -109,7 +109,7 @@ public class PageRank {
 			for(i in v.range()) v(i) = iv;
 		});
 		
-		GIMV.main1DCSR(g, weight, vector, map, combine, assign, end);
+		GIMV.main2DCSR(g, weight, vector, map, combine, assign, end);
 		
 		return vector;
 	}
