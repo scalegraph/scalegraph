@@ -118,7 +118,7 @@ public struct Dist2D {
      * @param R The number of rows
      * @param parentTeam The base team from which split into.
      */
-    public static def make2D(R:Int, C:Int, parentTeam :Team) {
+    public static def make2D(parentTeam :Team, R:Int, C:Int) {
 		return new Dist2D(Region.makeRectangular([0, 0], [R-1, C-1]) as Rect2D, parentTeam, false);
     }
     
@@ -126,7 +126,7 @@ public struct Dist2D {
      * @param R The number of rows and the number of columns
      * @param parentTeam The base team from which split into.
      */
-    public static def make2D(R:Int, parentTeam :Team) {
+    public static def make2D(parentTeam :Team, R:Int) {
     	return new Dist2D(Region.makeRectangular([0, 0], [R-1, R-1]) as Rect2D, parentTeam, false);
     }
     
@@ -134,7 +134,7 @@ public struct Dist2D {
      * @param mapping The mapping from point to place
      * @param parentTeam The base team from which split into.
      */
-    public static def make2D(mapping :Rect2D, parentTeam :Team) {
+    public static def make2D(parentTeam :Team, mapping :Rect2D) {
     	return new Dist2D(mapping, parentTeam, false);
     }
     
@@ -156,7 +156,7 @@ public struct Dist2D {
      * @param mapping The mapping from point to place
      * @param parentTeam The base team from which split into.
      */
-    public static def make1D(mapping :Rect2D, parentTeam :Team) {
+    public static def make1D(parentTeam :Team, mapping :Rect2D) {
     	return new Dist2D(mapping, parentTeam, true);
     }
     

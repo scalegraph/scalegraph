@@ -55,7 +55,7 @@ public class GraphTest {
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(R, C, team);
+		val dist2d = Dist2D.make2D(team, R, C);
 		
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
@@ -179,7 +179,7 @@ public class GraphTest {
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(R, C, team);
+		val dist2d = Dist2D.make2D(team, R, C);
 		
 		// undirected, inner edge
 		val csr = g.constructDistSparseMatrix(dist2d, true, false);
@@ -230,7 +230,7 @@ public class GraphTest {
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(C, R, team);
+		val dist2d = Dist2D.make2D(team, C, R);
 		
 		// directed, inner edge
 		val csr = g.constructDistSparseMatrix(dist2d, true, false);

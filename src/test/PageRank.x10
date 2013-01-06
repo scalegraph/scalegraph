@@ -124,7 +124,7 @@ public class PageRank {
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
 		// directed, inner edge
-		val csr = g.constructDistSparseMatrix(Dist2D.make1D(team, Dist2D.DISTRIBUTE_ROWS), true, false);
+		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
 		val weight = g.constructDistAttribute[Double](csr, false, "normalized_weight");
 
 		val vector = pagerank(csr, weight, g.numberOfVertices());
