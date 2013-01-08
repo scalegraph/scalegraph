@@ -50,6 +50,8 @@ import org.scalegraph.concurrent.Dist2D;
 	/** Returns the number of edges.
 	 */
 	public def numberOfEdges() = numberOfEdges;
+	
+	public def team() = team;
 
 	private static def createVertexTranslator[T](team :Team) {T haszero}
 	{
