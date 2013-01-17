@@ -445,7 +445,7 @@ import org.scalegraph.concurrent.Dist2D;
 	/** Constructs distributed 2D partitioned sparse matrix (CSR).
 	 * @param dist2d
 	 * @param directed Directed graph or undirected graph. If false (undirected graph), all edges are duplicated to connect with each direction.
-	 * @param outerOrInner Constructs outer edges or inner edges. This flag is valuable only for directed graph.
+	 * @param outerOrInner Constructs outer edges (true) or inner edges (false). This flag is valuable only for directed graph.
 	 */
 	public def constructDistSparseMatrix(dist2d :Dist2D, directed :Boolean, outerOrInner :Boolean) {
 		val team_ = team;
@@ -559,7 +559,7 @@ import org.scalegraph.concurrent.Dist2D;
 	/** Constructs non-distributed sparse matrix.
 	 * @param place The place where the sparse matrix is created
 	 * @param directed Directed graph or undirected graph. If false (undirected graph), all edges are duplicated to connect with each direction.
-	 * @outerOrInner Constructs outer edges or inner edges. This flag is worth only for directed graph.
+	 * @outerOrInner Constructs outer edges (true) or inner edges (false). This flag is worth only for directed graph.
 	 */
 	public def constructSimpleSparseMatrix(place :Place, directed :Boolean, outerOrInner :Boolean) {
 		// return GlobalRef[SparseMatrix]...
