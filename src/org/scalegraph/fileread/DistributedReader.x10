@@ -16,6 +16,8 @@ import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.graph.Attribute;
 import x10.io.FileWriter;
+import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.concurrent.Parallel;
  
 public class DistributedReader {
  
@@ -67,14 +69,30 @@ public class DistributedReader {
 				val reader = split.open();
 				val edgelist_ = edgelist();
 				val weight_ = weight();
+				val linelist = new ArrayList[String]();
 				try {
 					while(split.getEnd() != reader.getFilePointer()) {
 						val line = reader.readLine();
-						val elt = inputFormat(line);
-						edgelist_.add(elt.get1());
-						edgelist_.add(elt.get2());
-						weight_.add(elt.get3());
+						linelist.add(line);
 					}
+					
+					// for debug
+					//team.barrier(team.getRole(here));
+					//if(team.getRole(here) == 0) Console.OUT.println("finish reading lines");
+					
+					val numEdges = linelist.size();
+					edgelist_.setSize(numEdges*2);
+					weight_.setSize(numEdges);
+					
+					Parallel.iter(0..((linelist.size()-1) as Long), (tid :Long, r :LongRange) => {
+						for(i in r) {
+							val line = linelist(i as Int);
+							val elt = inputFormat(line);
+							edgelist_(i*2+0) = elt.get1();
+							edgelist_(i*2+1) = elt.get2();
+							weight_(i) = elt.get3();
+						}
+					});
 				} catch(eof: x10.io.EOFException) {
 					Console.OUT.println("Done!"); 
 					// Console.OUT.println(m); 
