@@ -13,6 +13,7 @@ import org.scalegraph.util.MemoryChunk;
 import x10.io.SerialData;
 import x10.compiler.Inline;
 import org.scalegraph.graph.SparseMatrix;
+import x10.array.RemoteArray;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -267,7 +268,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
                 val predDistance = distanceMap(localSrc);
                 val orgSrc = LocSrcToOrg(localSrc);
                                                 
-                for(i in neighbors.range()) {
+                finish for(i in neighbors.range()) {
                     
                     val orgDst = LocDstToOrg(neighbors(i));
                                         
@@ -361,20 +362,28 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         if(count == 0)
             return;
         
-        val succ = succBuf(bufId)(targetRole);
-        val preds = predBuf(bufId)(targetRole);
-        val predDist = predDistanceBuf(bufId)(targetRole);
+        val succ = new RemoteArray[Long](succBuf(bufId)(targetRole));
+        val preds = new RemoteArray[Long](predBuf(bufId)(targetRole));
+        val predDist = new RemoteArray[Long](predDistanceBuf(bufId)(targetRole));
         
         if (count > 0) {
             
-            finish {
+            // finish {
                 
-                 at (p)  {
+               at (p) async {
                     
+                  val t_s = new Array[Long](succ.size);
+                  val t_p = new Array[Long](preds.size);
+                  val t_d = new Array[Long](predDist.size);
+                  
+                  Array.asyncCopy(succ, t_s);
+                  Array.asyncCopy(preds, t_p);
+                  Array.asyncCopy(predDist, t_d);
+                  	
                     for (var t: Int = 0; t < count; ++t) {
-                        visit(preds(t), succ(t), predDist(t));
+                        visit(t_s(t), t_p(t), t_d(t));
                     }
-                }
+                // }
             }
         }
         
