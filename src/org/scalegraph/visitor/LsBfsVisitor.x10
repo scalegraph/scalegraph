@@ -31,10 +31,10 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     private val sm: SparseMatrix;
     private val distanceMap: MemoryChunk[Long];
     private val visitMap: Bitmap;
+    private val currentLevel: Cell[Long];
     
     val BUFFER_SIZE: Int;
     val succBuf: Array[Array[Array[Long]]];
-    val predDistanceBuf: Array[Array[Array[Long]]];
     val predBuf: Array[Array[Array[Long]]];
     val bufCount: Array[Array[Int]];
     
@@ -47,12 +47,12 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val _qPointer: Cell[Int];
         val _distanceMap: MemoryChunk[Long];
         val _visitMap: Bitmap;
+        val _currentLevel: Cell[Long];
         val _callback: LsBfsHandler;
         
         // Define buffer
         val _BUFFER_SIZE: Int = (1 << 16);
         val _succBuf: Array[Array[Array[Long]]];
-        val _predDistanceBuf: Array[Array[Array[Long]]];
         val _predBuf: Array[Array[Array[Long]]];
         val _bufCount: Array[Array[Int]];
         val _bufferSlot: Array[Boolean];
@@ -73,6 +73,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             this._queues(1) = new Bitmap(numLocalVertices);
             this._qPointer = new Cell[Int](0);
             this._visitMap = new Bitmap(numLocalVertices);
+            this._currentLevel = new Cell[Long](0);
             this._callback = cb;
             
             // Create distance map
@@ -82,7 +83,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
                 _distanceMap(i) = 0;
             
             _succBuf = new Array[Array[Array[Long]]](Runtime.NTHREADS + 1);
-            _predDistanceBuf = new Array[Array[Array[Long]]](Runtime.NTHREADS + 1);
             _predBuf = new Array[Array[Array[Long]]](Runtime.NTHREADS + 1);
             _bufCount = new Array[Array[Int]](Runtime.NTHREADS + 1);
             _bufferSlot = new Array[Boolean](Runtime.NTHREADS + 1);
@@ -91,7 +91,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
                 
                 val t = dsm.dist().allTeam();
                 _succBuf(k) = new Array[Array[Long]](t.size());
-                _predDistanceBuf(k) = new Array[Array[Long]](t.size());
                 _predBuf(k) = new Array[Array[Long]](t.size());
                 _bufCount(k) = new Array[Int](t.size());
                 
@@ -99,7 +98,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
                 for (i in 0..(_succBuf(k).size -1)) {
                     
                     _succBuf(k)(i) = new Array[Long](_BUFFER_SIZE);
-                    _predDistanceBuf(k)(i) = new Array[Long](_BUFFER_SIZE);
                     _predBuf(k)(i) = new Array[Long](_BUFFER_SIZE);
                     _bufCount(k)(i) = 0;
                     
@@ -130,11 +128,11 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         sm = dsm();
         visitMap = lch()()._visitMap;
         distanceMap = lch()()._distanceMap;
+        currentLevel = lch()()._currentLevel;
         
         // Buffer
         BUFFER_SIZE = lch()()._BUFFER_SIZE;
         succBuf = lch()()._succBuf;
-        predDistanceBuf = lch()()._predDistanceBuf;
         predBuf = lch()()._predBuf;
         bufCount = lch()()._bufCount;
          
@@ -290,6 +288,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             
             	currentQ().examine(traverse);
             	floodAll();
+            	currentLevel(currentLevel() + 1);
             	team.barrier(role);
         }
         
@@ -352,7 +351,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         
         succBuf(bufId)(targetRole)(count) = v;
         predBuf(bufId)(targetRole)(count) = pred;
-        predDistanceBuf(bufId)(targetRole)(count) = predDist;
         bufCount(bufId)(targetRole) = count + 1;
     }
     
@@ -366,28 +364,22 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         
         val succ = new RemoteArray[Long](succBuf(bufId)(targetRole));
         val preds = new RemoteArray[Long](predBuf(bufId)(targetRole));
-        val predDist = new RemoteArray[Long](predDistanceBuf(bufId)(targetRole));
         
         if (count > 0) {
             
-            // finish {
+            at (p) async {
                 
-               at (p) async {
-                    
-                  val t_s = new Array[Long](count);
-                  val t_p = new Array[Long](count);
-                  val t_d = new Array[Long](count);
-                  
-                  finish {
-                      Array.asyncCopy(succ, 0, t_s, 0, count);
-                      Array.asyncCopy(preds, 0, t_p, 0, count);
-                      Array.asyncCopy(predDist, 0, t_d, 0, count);
-                  }
-                  	
-                    for (var t: Int = 0; t < count; ++t) {
-                        visit(t_p(t), t_s(t), t_d(t));
-                    }
-                // }
+                val t_s = new Array[Long](count);
+                val t_p = new Array[Long](count);
+                
+                finish {
+                    Array.asyncCopy(succ, 0, t_s, 0, count);
+                    Array.asyncCopy(preds, 0, t_p, 0, count);
+                }
+                
+                for (var t: Int = 0; t < count; ++t) {
+                    visit(t_p(t), t_s(t), currentLevel());
+                }
             }
         }
         
