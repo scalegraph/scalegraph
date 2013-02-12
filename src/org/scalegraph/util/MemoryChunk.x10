@@ -145,8 +145,7 @@ public struct MemoryChunk[T] implements Iterable[T] {
 	
 	/** Returens the internal pointer object.
 	 */
-	@Native("c++", "(#this).FMGL(data).FMGL(pointer)")
-	public def pointer() :MemoryPointer[T] = MemoryPointer.make[T](data.raw, data.offset);
+	public def pointer() :MemoryPointer[T] = data.pointer();
 
 	/** Returens the number of elements.
 	 */

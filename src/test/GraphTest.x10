@@ -197,7 +197,7 @@ public class GraphTest {
 		val end = (diff :Double) => true;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
+				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
 		
 		GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
 		
@@ -250,7 +250,7 @@ public class GraphTest {
 		val end = (diff :Double) => false;//Math.sqrt(diff) < 0.0001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
+				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val iv = 1.0 / n;
