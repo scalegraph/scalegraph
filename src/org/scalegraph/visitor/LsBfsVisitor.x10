@@ -324,14 +324,14 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         
         val buf = lch()()._bufferSlot;
         
-        for(i in 0..(buf.size - 1)) {
+        finish for(i in 0..(buf.size - 1)) {
             
             for (k in 0..(team.size() - 1)) {
      
                 val p = team.getPlace(k);
                 
                 if (!p.equals(here))
-                	flood(i, p);
+                	async flood(i, p);
             }
         }
     }
@@ -372,16 +372,18 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
                 
                at (p) async {
                     
-                  val t_s = new Array[Long](succ.size);
-                  val t_p = new Array[Long](preds.size);
-                  val t_d = new Array[Long](predDist.size);
+                  val t_s = new Array[Long](count);
+                  val t_p = new Array[Long](count);
+                  val t_d = new Array[Long](count);
                   
-                  Array.asyncCopy(succ, t_s);
-                  Array.asyncCopy(preds, t_p);
-                  Array.asyncCopy(predDist, t_d);
+                  finish {
+                      Array.asyncCopy(succ, 0, t_s, 0, count);
+                      Array.asyncCopy(preds, 0, t_p, 0, count);
+                      Array.asyncCopy(predDist, 0, t_d, 0, count);
+                  }
                   	
                     for (var t: Int = 0; t < count; ++t) {
-                        visit(t_s(t), t_p(t), t_d(t));
+                        visit(t_p(t), t_s(t), t_d(t));
                     }
                 // }
             }
