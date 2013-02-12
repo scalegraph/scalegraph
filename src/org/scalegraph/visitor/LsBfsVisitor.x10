@@ -14,6 +14,8 @@ import x10.io.SerialData;
 import x10.compiler.Inline;
 import org.scalegraph.graph.SparseMatrix;
 import x10.array.RemoteArray;
+import x10.util.concurrent.AtomicLong;
+import x10.compiler.Ifndef;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -446,10 +448,9 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	    protected val bitLength: Long;
 	    protected val data: MemoryChunk[Long];
 	    protected val bitPerWord = 64;
-	    protected val setCount: Cell[Long];
+	    protected val setCount: AtomicLong;
 	    
 	    public def this(length: Long) {
-	        
 	        bitLength = length;
 	        val allocSize = (bitLength >> 6) + 1; // div by 64
 	        data = new MemoryChunk[Long](allocSize); 
@@ -458,41 +459,48 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	        for (i in data.range())	            
 	           data(i) = 0;
 	        
-	        setCount = new Cell[Long](0);
+	        setCount = new AtomicLong(0);
 	    }
 	    
 	    public def set(bit: Long) {
-	        
 	        val bitOffset = bit & ((1L << 6) -1);
 	        val wordOffset = bit >> 6;
 	        val mask = (1L << (bitOffset as Int));
+	        
+	        @Ifndef("NO_BOUNDS_CHECKS") {
+	            if(bit < 0 || bit >= bitLength)
+	                throw new ArrayIndexOutOfBoundsException("bit (" + bit + ") not contained in BitMap");
+	        }
 	        
 	        // If it is already set
 	        // if (((data(wordOffset) as ULong) & mask as ULong) > 0UL)
 	        //     throw new Exception("Bit is already set");
 	       
-	        data(wordOffset) |= mask;
-	        setCount() = setCount() + 1;
+	        data.atomicOr(wordOffset, mask);
+	        setCount.incrementAndGet();
 	    }
 	    
 	    public def clear(bit: Long) {
-	        
 	        val bitOffset = bit & ((1L << 6) -1);
 	        val wordOffset = bit >> 6;
 	        val mask = ~(1L << (bitOffset as Int));
 	        
-	        // // If it is already clear
+	        @Ifndef("NO_BOUNDS_CHECKS") {
+	            if(bit < 0 || bit >= bitLength)
+	                throw new ArrayIndexOutOfBoundsException("bit (" + bit + ") not contained in BitMap");
+	        }
+	        
+	        // If it is already clear
 	        // if ((data(wordOffset) | mask) == 0L)
 	        //     throw new Exception("Bit is already cleared");
 
-	        data(wordOffset) &= mask;
-	        setCount() = setCount() - 1;
+	        data.atomicAnd(wordOffset, mask);
+	        setCount.decrementAndGet();
 	    }
 	    
 	    public def isSet(bit: Long) = !isNotSet(bit);
 	    
 	    public def isNotSet(bit: Long): Boolean {
-	        
 	        val bitOffset = bit & ((1L << 6) -1);
 	        val wordOffset = bit >> 6;
 	        val mask = (1L << (bitOffset as Int));
@@ -501,21 +509,18 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	    }
 	    
 	    public def examine(callback: (i: Long, threadId: Int) => void) {
-	        
 	        val f = (w: Long, threadId: Int) => {
-	            
 	            val word = data(w);
 	            var mask: Long = 0x1;
 	            var callCount: Long = 0;
+	            
 	            if (word == 0L)
 	                return;
 	            
-	            for (var l: Long = 0; l < bitPerWord; ++l) {
-	                
+	            for (var l: Long = 0; l < bitPerWord; ++l) { 
 	                mask = 1L << (l as Int);
 	                
 	                if (((word as ULong) & (mask as ULong)) > 0UL) {
-	                    
 	                    val bitPos = w * bitPerWord+ l;
 	                    
 	                    if (bitPos > bitLength)
@@ -524,25 +529,26 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	                    callback(bitPos , threadId);
 	                    ++callCount;
 	                    
-	                    if (callCount >= setCount())
+	                    if (callCount >= setCount.longValue())
 	                        break;
 	                } 
 	            }
 	        };
 	        
-	        if (setCount() > 0)
+	        if (setCount.longValue() > 0)
 	            iter(data.range(), f);
 	    }
 	    
-	    @Inline
-	    public def iter(range :LongRange, func :(Long, Int)=>void) {
+	    public @Inline def iter(range :LongRange, func :(Long, Int) => void) {
 	        
 	        val size = range.max - range.min + 1;
+	        
 	        if (size == 0L)
 	            return ;
 	        
 	        val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 	        val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
+	        
 	        finish for(i in 0..(nthreads-1)) {
 	            val i_start = range.min + i*chunk_size;
 	            val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
@@ -553,10 +559,9 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	    public def clearAll() {
 	        
 	        Parallel.iter(data.range(), (i: Long) => { data(i) = 0;});
-	        setCount() = 0;
+	        setCount.set(0);
 	    }
 	    
-	    public def setBitCount() = setCount();
-	    
+	    public def setBitCount() = setCount.longValue();
 	}
 }
