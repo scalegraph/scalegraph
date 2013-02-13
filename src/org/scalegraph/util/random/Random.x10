@@ -33,8 +33,8 @@ struct splittable_mrg {
 	@Native("c++", "memcpy(&(#this), &(#src), sizeof(#this));")
 	public native def init(src :splittable_mrg) :void;
 
-	@Native("c++", "memcpy(&(#this), (#arr)->pointer(), sizeof(#this));")
-	public native def init(arr :MemoryChunk[Int]) :void;
+	@Native("c++", "(#this).z1=#t1;(#this).z2=#t2;(#this).z3=#t3;(#this).z4=#t4;(#this).z5=#t5;")
+	public native def init(t1:Int,t2:Int,t3:Int,t4:Int,t5:Int) :void;
 
 	public def this(arr :MemoryChunk[Int]) {
 		z1 = arr(0);
@@ -72,7 +72,8 @@ public class Random implements CustomSerialization {
 	}
 	
 	public def this(data :x10.io.SerialData) {
-		state.init(data.data as MemoryChunk[Int]);
+		val arr = data.data as MemoryChunk[Int];
+		state.init(arr(0),arr(1),arr(2),arr(3),arr(4));
 	}
 
 	public def serialize():x10.io.SerialData {
@@ -90,7 +91,7 @@ public class Random implements CustomSerialization {
 
 	public def clone() = new Random(state);
 
-	@Native("c++", "mrg_skip(&(#this)->FMGL(state), 0, 0, n);")
+	@Native("c++", "mrg_skip(&(#this)->FMGL(state), 0, 0, #n);")
 	public native def skip(n :x10.lang.Long):void;
 
 	/** Returns an integer value in [0, 2^31-1) */

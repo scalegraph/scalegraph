@@ -62,7 +62,7 @@ public class GraphGenerator {
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
-				rnd_.skip(offset * scale);
+				rnd_.skip(offset * scale + r.min);
 				val edgeMem_ = edgeMemory();
 				val vertexMask = numVertices - 1;
 				for(i in r) {
@@ -103,12 +103,14 @@ public class GraphGenerator {
 			sumABC(i) = (a+b+c) / abcd;
 		}
 		
+		Console.OUT.println("finished generating parameters");
+		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.getRole(here);
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
-				rnd_.skip(offset * scale);
+				rnd_.skip(offset * scale + r.min);
 				val edgeMem_ = edgeMemory();
 				for(i in r) {
 					var srcVertex :Long = 0;

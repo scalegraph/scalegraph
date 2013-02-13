@@ -281,7 +281,7 @@ double mrg_get_double_orig(mrg_state* state) {
 }
 
 /* Returns real value in [0, 1) using original transition matrix. */
-float mrg_get_double_orig(mrg_state* state) {
+float mrg_get_float_orig(mrg_state* state) {
   return (float)mrg_get_uint_orig(state) * .000000000465661287524579692f /* (2^31 - 1)^(-1) */
     ;
 }
