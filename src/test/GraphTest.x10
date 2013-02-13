@@ -211,6 +211,68 @@ public class GraphTest {
 		Console.OUT.println("Complete!!!");
 	}
 	
+	public static def ditributed_sssp_test(srcfile :String, RC :String) {
+		val team = Team.WORLD;
+		val g = read_graph(srcfile, team, true);
+		print_attribute_list(g);
+		
+		val att_names = g.getVertexAttribute[Long]("name");
+
+		//	val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
+		//	DistributedReader.write("norm-%d.txt", team, null, att_norm);
+		
+		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
+		
+		val rxc = RC.split("x");
+		val R = Int.parse(rxc(0));
+		val C = Int.parse(rxc(1));
+		val dist2d = Dist2D.make2D(team, C, R);
+		
+		// directed, inner edge
+		val csr = g.constructDistSparseMatrix(dist2d, true, false);
+		val weight = g.constructDistAttribute[Double](csr, false, "weight");
+
+		// check results
+		for(p in team.placeGroup()) at (p) {
+			val matrix = csr();
+			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + weight().size());
+		}
+
+		val n = g.numberOfVertices();
+		val c = 0.85;
+		val map = (mij :Double , vj :Double) => mij + vj;
+		val combine = (index :Long, xs :MemoryChunk[Double]) =>
+				xs.size() == 0L ? Double.POSITIVE_INFINITY : MathAppend.min(xs);
+		val assign = (i :Long, prev :Double , next :Double) => next;
+		val end = (diff :Double) => diff == 0.0;//Math.sqrt(diff) < 0.0001;
+		
+		val vector = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
+		
+		team.placeGroup().broadcastFlat(() => {
+			val v = vector();
+			for(i in v.range()) v(i) = Double.POSITIVE_INFINITY;
+			if(team.getRole(here) == 0) v(0) = 0.0;
+		});
+		
+		if(C == 1) { // 1D
+			Console.OUT.println("Using 1D GIM-V Engine ...");
+			GIMV.main1DCSR(csr, weight, vector, map, combine, assign, end);
+		}
+		else {
+			Console.OUT.println("Using 2D GIM-V Engine ...");
+			GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
+		}
+		
+		g.setVertexAttribute("pagerank", csr, vector);
+		print_attribute_list(g);
+		
+		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
+		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		
+		Console.OUT.println("Complete!!!");
+	}
+	
 	public static def ditributed_pagerank_test(srcfile :String, RC :String) {
 		val team = Team.WORLD;
 		val g = read_graph(srcfile, team, true);
@@ -222,8 +284,8 @@ public class GraphTest {
 		normalize_columns_weights(g);
 		print_attribute_list(g);
 
-	//	val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
-	//	DistributedReader.write("norm-%d.txt", team, null, att_norm);
+		//	val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
+		//	DistributedReader.write("norm-%d.txt", team, null, att_norm);
 		
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
@@ -277,6 +339,6 @@ public class GraphTest {
 	}
 	
     public static def main(args: Array[String](1)) {
-    	ditributed_pagerank_test(args(1), args(0));
+    	ditributed_sssp_test(args(1), args(0));
     }
 }

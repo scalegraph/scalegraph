@@ -1,8 +1,19 @@
 package org.scalegraph.util;
 
 import x10.compiler.Native;
+import x10.util.Ordered;
 
 public class MathAppend {
+	
+	public static def abs[T](a :T) {T <: Arithmetic[T], T <: Ordered[T], T haszero} = a > Zero.get[T]() ? a : -a;
+	
+	public static def min[T](vec : MemoryChunk[T]) {T <: Ordered[T]} {
+		var result :T = vec(0);
+		for(i in 1..(vec.size()-1)) {
+			if(result > vec(i)) result = vec(i);
+		}
+		return result;
+	}
 	
 	public static def sum[T](vec : MemoryChunk[T]) {T <: Arithmetic[T], T haszero} {
 		var res : T = Zero.get[T]();
