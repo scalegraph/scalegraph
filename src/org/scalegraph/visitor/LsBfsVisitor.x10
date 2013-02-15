@@ -52,13 +52,13 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val _callback: LsBfsHandler;
         
         // Define buffer
-        val _BUFFER_SIZE: Int = (1 << 10);
         val _succBuf: Array[Array[Array[Long]]];
         val _predBuf: Array[Array[Array[Long]]];
         val _bufCount: Array[Array[Long]];
-        val _BUFFER_SLOT = Runtime.NTHREADS;
-        val _ALIGN = 64;
-        val _CONGRUENT = false;
+        val _BUFFER_SLOT: Int;
+        static val _BUFFER_SIZE: Int = (1 << 16);
+        static val _ALIGN = 64;
+        static val _CONGRUENT = false;
         
         protected def this(dsm: DistSparseMatrix,
                            src: Vertex,
@@ -85,6 +85,9 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             for (i in _distanceMap.range())
                 _distanceMap(i) = 0;
             
+            _BUFFER_SLOT = Runtime.NTHREADS;
+            Console.OUT.println("Slot: " + _BUFFER_SLOT);
+            Console.OUT.println("Buffer: " + _BUFFER_SIZE);
             _succBuf = new Array[Array[Array[Long]]](_BUFFER_SLOT);
             _predBuf = new Array[Array[Array[Long]]](_BUFFER_SLOT);
             _bufCount = new Array[Array[Long]](_BUFFER_SLOT);
@@ -170,25 +173,18 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val t = dsm.dist().allTeam();
         val places = t.placeGroup();
         
-        // Create global distance storage
-        val createLocalDistance = () => {
-            
+        // Store distance for each vertex
+        val globalDistance = new DistMemoryChunk[Distance](places,() => {
             val ids = dsm.ids();
             val numLocalVertices = ids.numberOfLocalVertexes();
             new MemoryChunk[Distance](numLocalVertices, 64)
-        };
+        });
         
-        val globalDistance = new DistMemoryChunk[Distance](places,
-                createLocalDistance);
-        
-        
-        // Initial function for creating local state
-        val init = () => { 
-
-            return new Cell[LocalState](new LocalState(dsm, src, globalDistance, callback));
-        };
-        
-        val localState = PlaceLocalHandle.make[Cell[LocalState]](places, init);
+        // Creating local state
+        val localState = PlaceLocalHandle.make[Cell[LocalState]](places, () => { 
+            return new Cell[LocalState](
+                    new LocalState(dsm, src, globalDistance, callback));
+        });
         
         val visitor = new LsBfsVisitor(localState);
         
@@ -201,7 +197,10 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         
         finish {
             for (p in placeGroup) {
-                at (p) async internalRun();
+                if(p != here)
+                	at (p) async internalRun();
+                else
+                    async internalRun();
             }
         }
     }
@@ -252,19 +251,20 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             
             succBuf(slotId)(pid) = new Array[Long](
                     IndexedMemoryChunk.allocateZeroed[Long](
-                            lch()()._BUFFER_SIZE, 
-                            lch()()._ALIGN,
-                            lch()()._CONGRUENT));
+                            LocalState._BUFFER_SIZE, 
+                            LocalState._ALIGN,
+                            LocalState._CONGRUENT));
             predBuf(slotId)(pid) = new Array[Long](
                     IndexedMemoryChunk.allocateZeroed[Long](
-                            lch()()._BUFFER_SIZE, 
-                            lch()()._ALIGN,
-                            lch()()._CONGRUENT));
+                            LocalState._BUFFER_SIZE, 
+                            LocalState._ALIGN,
+                            LocalState._CONGRUENT));
             bufCount(slotId)(pid) = 0;
     }
     
     private def internalRun() {
           
+        Console.OUT.println(here.id + " Enter Internal Run");
         lch()()._callback.initialize();
         
         // Putsource
@@ -353,7 +353,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         if(count <= 0)
             return;
         
-            
         val succ = new RemoteArray[Long](succBuf(bufId)(targetRole));
         val preds = new RemoteArray[Long](predBuf(bufId)(targetRole));
         val num = new Cell[Long](count);
