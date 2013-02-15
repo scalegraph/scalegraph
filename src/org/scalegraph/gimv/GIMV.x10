@@ -227,13 +227,15 @@ public class GIMV {
 						val off = m.offsets(i);
 						val next = m.offsets(i+1);
 						val len = next - off;
-						tmp.setSize(len);
-						// map
-						for(j in 0L..(len-1)) {
-							tmp(j) = map(w(j+off), b.refv(m.vertexes(j+off)));
+						if(len > 0) {
+							tmp.setSize(len);
+							// map
+							for(j in 0L..(len-1)) {
+								tmp(j) = map(w(j+off), b.refv(m.vertexes(j+off)));
+							}
+							// combine result
+							b.dstv(i) = combine(i * size + rank, tmp.data());
 						}
-						// combine result
-						b.dstv(i) = combine(i * size + rank, tmp.data());
 					}
 				});
 				

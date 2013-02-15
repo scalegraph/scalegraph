@@ -238,12 +238,13 @@ public class GraphTest {
 			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + weight().size());
 		}
 
+		val initValue = 1000.0;
 		val n = g.numberOfVertices();
 		val c = 0.85;
 		val map = (mij :Double , vj :Double) => mij + vj;
 		val combine = (index :Long, xs :MemoryChunk[Double]) =>
-				xs.size() == 0L ? Double.POSITIVE_INFINITY : MathAppend.min(xs);
-		val assign = (i :Long, prev :Double , next :Double) => next;
+				xs.size() == 0L ? initValue : MathAppend.min(xs);
+		val assign = (i :Long, prev :Double , next :Double) => Math.min(prev, next);
 		val end = (diff :Double) => diff == 0.0;//Math.sqrt(diff) < 0.0001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
@@ -251,7 +252,7 @@ public class GraphTest {
 		
 		team.placeGroup().broadcastFlat(() => {
 			val v = vector();
-			for(i in v.range()) v(i) = Double.POSITIVE_INFINITY;
+			for(i in v.range()) v(i) = initValue;
 			if(team.getRole(here) == 0) v(0) = 0.0;
 		});
 		

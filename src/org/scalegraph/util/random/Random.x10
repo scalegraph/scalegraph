@@ -56,8 +56,7 @@ struct splittable_mrg {
  * <p>nextInt() returns random integer values in [0, 2^31-1)<br>
  * nextLong() returns random integer values in [0, 2^62-2)</p>
  * 
- * <p>Base implementations details: 
- * See notes at top of splittable_mrg.cc for information on this
+ * <p>See notes at top of splittable_mrg.cc for information on the base
  * implementation.</p>
  */
 public class Random implements CustomSerialization {
