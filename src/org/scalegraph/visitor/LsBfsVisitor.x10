@@ -17,6 +17,7 @@ import x10.array.RemoteArray;
 import x10.util.concurrent.AtomicLong;
 import x10.compiler.Ifndef;
 import x10.util.IndexedMemoryChunk;
+import x10.util.concurrent.Lock;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -28,10 +29,10 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     private val lgc: Int;
     private val lgr: Int;
     private val role: Int;
-    private val source: Vertex;
-    private val sm: SparseMatrix;
-    private val distanceMap: MemoryChunk[Long];
-    private val visitMap: Bitmap;
+    private val source: Cell[Vertex];
+    // private val sm: SparseMatrix;
+    // private val distanceMap: MemoryChunk[Long];
+    // private val visitMap: Bitmap;
     private val currentLevel: Cell[Long];
     
     val BUFFER_SIZE: Int;
@@ -50,6 +51,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val _visitMap: Bitmap;
         val _currentLevel: Cell[Long];
         val _callback: LsBfsHandler;
+        val _lock: Lock;
         
         // Define buffer
         val _succBuf: Array[Array[Array[Long]]];
@@ -72,7 +74,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             this._queues = new MemoryChunk[Bitmap](2, _ALIGN);
             
             // Create queues
-            val numLocalVertices = dsm.ids().maxLocalId + 1;
+            val numLocalVertices = dsm.ids().maxLocalId;
             this._queues(0) = new Bitmap(numLocalVertices);
             this._queues(1) = new Bitmap(numLocalVertices);
             this._qPointer = new Cell[Int](0);
@@ -80,12 +82,13 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             this._BUFFER_SIZE = buffSize;
             this._currentLevel = new Cell[Long](0);
             this._callback = cb;
+            this._lock = new Lock();
             
             // Create distance map
             this._distanceMap = this._globalDistance();
             
             for (i in _distanceMap.range())
-                _distanceMap(i) = 0;
+                _distanceMap(i) = 0L;
             
             _BUFFER_SLOT = Runtime.NTHREADS;
             _succBuf = new Array[Array[Array[Long]]](_BUFFER_SLOT);
@@ -122,7 +125,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
                                     _BUFFER_SIZE, 
                                     _ALIGN,
                                     _CONGRUENT));
-                    _bufCount(k)(i) = 0;
+                    _bufCount(k)(i) = 0L;
                     
                 }
             }
@@ -145,17 +148,16 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         lgr = dsm.ids().lgr;
         role = team.getRole(here);
         source = lch()()._source();
-        sm = dsm();
-        visitMap = lch()()._visitMap;
-        distanceMap = lch()()._distanceMap;
+        // sm = dsm();
+        // visitMap = lch()()._visitMap;
+        // distanceMap = lch()()._distanceMap;
         currentLevel = lch()()._currentLevel;
         
         // Buffer
         BUFFER_SIZE = lch()()._BUFFER_SIZE;
         succBuf = lch()()._succBuf;
         predBuf = lch()()._predBuf;
-        bufCount = lch()()._bufCount;
-         
+        bufCount = lch()()._bufCount;    
     }
     
     public def this (serialData: SerialData) {
@@ -176,11 +178,11 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         // Create distance storage for each vertex
         val globalDistance = new DistMemoryChunk[Distance](places,() => {
             val ids = dsm.ids();
-            val numLocalVertices = ids.maxLocalId + 1;
+            val numLocalVertices = ids.maxLocalId;
             val distance = new MemoryChunk[Distance](numLocalVertices, 64);
             
             for (i in distance.range())
-                distance(i) = 0;
+                distance(i) = 0L;
             
             return distance;
         });
@@ -196,8 +198,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         return visitor;
     }
     
-    public def run() {
-        
+    public def run() { 
         val placeGroup = lch()()._distSparseMatrix.dist().allTeam().placeGroup();
         
         finish {
@@ -210,9 +211,37 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         }
     }
     
-    @Inline
-    private def isLocalVertex(orgVertex: Vertex): Boolean {
+    public def reRun(src: Vertex) {
+        val placeGroup = lch()()._distSparseMatrix.dist().allTeam().placeGroup();
+        val func = () => {
+            
+            lch()()._queues(0).clearAll();
+            lch()()._queues(1).clearAll();
+            
+            for (i in lch()()._distanceMap.range())
+                lch()()._distanceMap(i) = 0L;
+            
+            setSource(src);
+            internalRun();
+        };
         
+        finish {
+            for (p in placeGroup) {
+                if(p != here)
+                    at (p) async func();
+                else
+                    async func();
+            }
+        }
+    }
+    
+    public def setSource(v: Vertex) {
+        source() = v;
+        lch()()._source() = v;
+    }
+    
+    
+    @Inline private def isLocalVertex(orgVertex: Vertex): Boolean {
         val vertexPlace = ((1 << (lgc + lgr)) -1) & orgVertex;
         
         if(vertexPlace == role as Long)
@@ -221,32 +250,26 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         return false;
     }
     
-    @Inline
-    private def OrgToLocSrc(v: Vertex) 
+    @Inline public def OrgToLocSrc(v: Vertex) 
     	= (( v & (( 1 << lgr) -1)) << lgl) | (v >> (lgr + lgc));
     
-    @Inline
-    private def LocSrcToOrg(v: Vertex)
+    @Inline public def LocSrcToOrg(v: Vertex)
     	= ((((v & (( 1 << lgl) -1)) << lgc)| role) << lgr) | (v>> lgl);
     
-    @Inline
-    private def LocDstToOrg(v: Vertex)
+    @Inline public def LocDstToOrg(v: Vertex)
     	= ((((v & (( 1 << lgl) -1)) << lgc | (v >> lgl)) << lgr ) | 0);
     
-    @Inline
-    private def currentQ() = lch()()._queues(lch()()._qPointer());
+    @Inline private def currentQ() = lch()()._queues(lch()()._qPointer());
     
-    @Inline
-    private def nextQ() = lch()()._queues((lch()()._qPointer() + 1) & 1);
-    
-    @Inline
-    private def swapQ() {
+    @Inline private def nextQ() = lch()()._queues((lch()()._qPointer() + 1) & 1);
+   
+    @Inline private def swapQ() {
         
         lch()()._qPointer() = (lch()()._qPointer() + 1) & 1;
     }
     
     @Inline
-    private def getVertexPlace(orgVertex: Vertex): Place {
+    public def getVertexPlace(orgVertex: Vertex): Place {
         
         val vertexPlaceId = ((1 << (lgc + lgr)) -1) & orgVertex;
         return team.getPlace(vertexPlaceId as Int);
@@ -272,12 +295,12 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         lch()()._callback.initialize();
         
         // Putsource
-        if (isLocalVertex(source)) {
+        if (isLocalVertex(source())) {
             
-            val locSrc = OrgToLocSrc(source);
+            val locSrc = OrgToLocSrc(source());
             nextQ().set(locSrc);
-            distanceMap(locSrc) = 0;
-            visitMap.set(locSrc);
+            lch()()._distanceMap(locSrc) = 0;
+            lch()()._visitMap.set(locSrc);
         }
         
         // team.barrier(role);
@@ -287,7 +310,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         
         // Start traveling
         while(true) {
-            
             swapQ();
             nextQ().clearAll();
             team.barrier(role);
@@ -297,32 +319,28 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             if (maxVertexCount == 0L)
                 break;
             
-            val traverse = (localSrc: Vertex, threadId: Int) => {
-                              
-                val neighbors = sm.adjacency(localSrc);
-                val predDistance = distanceMap(localSrc);
+            val traverse = (localSrc: Vertex, threadId: Int) => {           
+                val neighbors = lch()()._distSparseMatrix().adjacency(localSrc);
+                val predDistance = lch()()._distanceMap(localSrc);
                 val orgSrc = LocSrcToOrg(localSrc);
                                                 
-                finish for(i in neighbors.range()) {
-                    
+                finish for(i in neighbors.range()) {  
                     val orgDst = LocDstToOrg(neighbors(i));
                                         
                     if (isLocalVertex(orgDst))  {
-                        
                         visit(orgSrc, orgDst, predDistance);
-                        
                     } else {
-                        
                         val bufId = threadId;
                         val p: Place = getVertexPlace(orgDst);
-                        visitRemote(bufId, p, orgSrc, orgDst, predDistance);
+                        at (p) visit(orgSrc, orgDst, predDistance);
+                        // visitRemote(bufId, p, orgSrc, orgDst, predDistance);
                     }    
                     
                 }
             };
             
             	currentQ().examine(traverse);
-            	floodAll();
+            	// floodAll();
             	team.barrier(role);
             	currentLevel(currentLevel() + 1);
         }
@@ -331,26 +349,26 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         lch()()._callback.terminate();
     }
     
-    public atomic def visit(orgSrc: Long, orgDst: Long, predDistance: Long) {
-
+    public def visit(orgSrc: Long, orgDst: Long, predDistance: Long) {
+        lch()()._lock.lock();
         val localDst = OrgToLocSrc(orgDst);
+        val d = predDistance + 1;
         
-        if (visitMap.isNotSet(localDst)) {
-            
+        if (lch()()._visitMap.isNotSet(localDst)) {
             // First visit
-            visitMap.set(localDst);
-            distanceMap(localDst) = predDistance + 1;
-            lch()()._callback.examine(true, orgSrc, orgDst, predDistance + 1);
+            lch()()._visitMap.set(localDst);
+            lch()()._distanceMap.atomicAdd(localDst, d);
+            lch()()._callback.examine(true, orgSrc, orgDst, d);
             nextQ().set(localDst);
 
-        } else if (distanceMap(localDst) == (predDistance + 1)){
+        } else if (lch()()._distanceMap(localDst) == d){
             
             // Found another shortest path
         }
+        lch()()._lock.unlock();
     }
     
     private def flood(bufId: Int, p: Place) {
-        
         val targetRole = team.getRole(p);
         val count = bufCount(bufId)(targetRole) as Int;
         
@@ -363,7 +381,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val level = lch()()._currentLevel();
         
         at (p) {
-            
             val t_s = new Array[Long]( IndexedMemoryChunk.allocateZeroed[Long](
                     count, 
                     lch()()._ALIGN,
@@ -387,15 +404,12 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     }
     
     public def floodAll() {
-
         finish  for(i in 0..(lch()()._BUFFER_SLOT - 1)) {
-            
              for (k in 0..(team.size() - 1)) {
      
                 val p = team.getPlace(k);
                 
                 if (!p.equals(here)){
-                    
                     flood(i, p);
                     allocNewBuffer(i, k); 
                 }
@@ -404,7 +418,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     }
     
     private def visitRemote(bufId: Int, p: Place, pred: Vertex, v: Vertex, predDist: Long) {
-        
         val targetRole = team.getRole(p);
         var count: Int = bufCount(bufId)(targetRole) as Int;
 
@@ -419,6 +432,21 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         succBuf(bufId)(targetRole)(count) = v;
         predBuf(bufId)(targetRole)(count) = pred;
         bufCount(bufId)(targetRole) = count + 1;
+    }
+    
+    public def clear() {
+        val func = () => {
+            lch()()._queues(0).clearAll();
+            lch()()._queues(1).clearAll();
+            
+            for (i in lch()()._distanceMap.range())
+                lch()()._distanceMap(i) = 0L;
+        };
+        
+        finish for (p in team.placeGroup())
+            if (p == here) 
+                async func();
+            else at (p) async func();
     }
 
     public def del() {
@@ -436,11 +464,11 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	    public def this(length: Long) {
 	        bitLength = length;
 	        val allocSize = (bitLength >> 6) + 1; // div by 64
-	        data = new MemoryChunk[Long](allocSize); 
+	        data = new MemoryChunk[Long](allocSize, 64); 
 	        
 	        // Clear bits
 	        for (i in data.range())	            
-	           data(i) = 0;
+	           data(i) = 0L;
 	        
 	        setCount = new AtomicLong(0);
 	    }
@@ -504,9 +532,9 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	                mask = 1L << (l as Int);
 	                
 	                if (((word as ULong) & (mask as ULong)) > 0UL) {
-	                    val bitPos = w * bitPerWord+ l;
+	                    val bitPos = w * bitPerWord + l;
 	                    
-	                    if (bitPos > bitLength)
+	                    if (bitPos >= bitLength)
 	                        break;
 	                    
 	                    callback(bitPos , threadId);
@@ -523,7 +551,6 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	    }
 	    
 	    public @Inline def iter(range :LongRange, func :(Long, Int) => void) {
-	        
 	        val size = range.max - range.min + 1;
 	        
 	        if (size == 0L)
@@ -539,10 +566,9 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
 	        }
 	    }
 	    
-	    public def clearAll() {
-	        
-	        Parallel.iter(data.range(), (i: Long) => { data(i) = 0;});
-	        setCount.set(0);
+	    public def clearAll() {   
+	        Parallel.iter(data.range(), (i: Long) => { data(i) = 0L;});
+	        setCount.set(0L);
 	    }
 	    
 	    public def setBitCount() = setCount.longValue();
