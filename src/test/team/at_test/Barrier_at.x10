@@ -7,8 +7,8 @@ class Barrier_at {
 
     val start_time = System.nanoTime();
     for(i in 1..(loop)) {
-      finish for (p in Place.places()) {
-        at (p) async { }
+      finish for (p in Place.places()) async {
+        val x = at (p) here;
       }
     }
     val end_time = System.nanoTime();
