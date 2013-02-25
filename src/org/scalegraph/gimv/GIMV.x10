@@ -124,8 +124,6 @@ public class GIMV {
 				// fold
 				rowTeam.alltoall(b.tmpsv, b.tmprv);
 				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
-				
 				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
 					val tmp = map_tmp_array(tid as Int);
 					tmp.setSize(C);
@@ -137,29 +135,33 @@ public class GIMV {
 						b.dstv(i) = combine(i * size + rank, tmp.data());
 					}
 				});
-				
-				{
-					// converge
-					var sum :U = Zero.get[U]();
-					for(i in v.range()) {
-						sum += MathAppend.abs(v(i) - b.dstv(i));
-					}
-					val tmp = map_tmp_array(0);
-					tmp.setSize(1);
-					tmp(0) = sum;
-					allTeam.allreduce(tmp.data(), convergence, Team.ADD);
-				}
 
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " assign ...");
-				
+
 				// assign
+				val tmpResult = map_tmp_array(0);
+				tmpResult.setSize(Runtime.NTHREADS);
 				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
+					var tmpSum :U = Zero.get[U]();
 					for(i in r) {
 						// old -> new
-						v(i) = assign(i * size + rank, v(i), b.dstv(i));
+						val newVal = assign(i * size + rank, v(i), b.dstv(i));
+						tmpSum += MathAppend.abs(v(i) - newVal);
+						v(i) = newVal;
 					}
+					tmpResult(tid) = tmpSum;
 				});
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
+				
+				// converge
+				for(i in 1..(tmpResult.size()-1)) {
+					tmpResult(0L) += tmpResult(i);
+				}
+				tmpResult.setSize(1);
+				allTeam.allreduce(tmpResult.data(), convergence, Team.ADD);
+
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				
 				val end_time = System.currentTimeMillis();
 				
@@ -238,31 +240,33 @@ public class GIMV {
 						}
 					}
 				});
-				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
-				
-				{
-					// converge
-					var sum :U = Zero.get[U]();
-					for(i in v.range()) {
-						sum += MathAppend.abs(v(i) - b.dstv(i));
-					}
-					val tmp = map_tmp_array(0);
-					tmp.setSize(1);
-					tmp(0) = sum;
-					team.allreduce(tmp.data(), convergence, Team.ADD);
-				}
 
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " assign ...");
 				
 				// assign
+				val tmpResult = map_tmp_array(0);
+				tmpResult.setSize(Runtime.NTHREADS);
 				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
+					var tmpSum :U = Zero.get[U]();
 					for(i in r) {
 						// old -> new
-						v(i) = assign(i * size + rank, v(i), b.dstv(i));
+						val newVal = assign(i * size + rank, v(i), b.dstv(i));
+						tmpSum += MathAppend.abs(v(i) - newVal);
+						v(i) = newVal;
 					}
+					tmpResult(tid) = tmpSum;
 				});
+
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
+				
+				// converge
+				for(i in 1..(tmpResult.size()-1)) {
+					tmpResult(0L) += tmpResult(i);
+				}
+				tmpResult.setSize(1);
+				team.allreduce(tmpResult.data(), convergence, Team.ADD);
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				
 				val end_time = System.currentTimeMillis();
 				

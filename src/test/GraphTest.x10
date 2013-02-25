@@ -216,17 +216,12 @@ public class GraphTest {
 		val g = read_graph(srcfile, team, true);
 		print_attribute_list(g);
 		
-		val att_names = g.getVertexAttribute[Long]("name");
-
-		//	val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
-		//	DistributedReader.write("norm-%d.txt", team, null, att_norm);
-		
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(team, C, R);
+		val dist2d = Dist2D.make2D(team, R, C);
 		
 		// directed, inner edge
 		val csr = g.constructDistSparseMatrix(dist2d, true, false);
@@ -239,8 +234,6 @@ public class GraphTest {
 		}
 
 		val initValue = 1000.0;
-		val n = g.numberOfVertices();
-		val c = 0.85;
 		val map = (mij :Double , vj :Double) => mij + vj;
 		val combine = (index :Long, xs :MemoryChunk[Double]) =>
 				xs.size() == 0L ? initValue : MathAppend.min(xs);
@@ -265,10 +258,11 @@ public class GraphTest {
 			GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
 		}
 		
-		g.setVertexAttribute("pagerank", csr, vector);
+		g.setVertexAttribute("distance", csr, vector);
 		print_attribute_list(g);
-		
-		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
+
+		val att_names = g.getVertexAttribute[Long]("name");
+		val att_pagerank = g.getVertexAttribute[Double]("distance");
 		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
@@ -293,7 +287,7 @@ public class GraphTest {
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(team, C, R);
+		val dist2d = Dist2D.make2D(team, R, C);
 		
 		// directed, inner edge
 		val csr = g.constructDistSparseMatrix(dist2d, true, false);
