@@ -334,6 +334,6 @@ public class GraphTest {
 	}
 	
     public static def main(args: Array[String](1)) {
-    	ditributed_sssp_test(args(1), args(0));
+    	ditributed_pagerank_test(args(1), args(0));
     }
 }

@@ -86,7 +86,7 @@ public class DistributedReader {
 					
 					Parallel.iter(0..((linelist.size()-1) as Long), (tid :Long, r :LongRange) => {
 						for(i in r) {
-							val line = linelist(i as Int);
+							val line = linelist(i as Int); linelist(i as Int) = null;
 							val elt = inputFormat(line);
 							edgelist_(i*2+0) = elt.get1();
 							edgelist_(i*2+1) = elt.get2();
