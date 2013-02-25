@@ -20,6 +20,7 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.concurrent.Lock;
 import x10.util.ArrayList;
 import x10.util.GrowableIndexedMemoryChunk;
+import x10.compiler.Volatile;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -86,7 +87,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         val _keepPred: ArrayList[ArrayList[Long]];
         val _keepUpdatePred: ArrayList[ArrayList[Long]];
         val _updatePredBuf: MemoryChunk[ArrayList[Long]];
-        val _successorCount: MemoryChunk[Long];
+        val _successorCount: MemoryChunk[AtomicLong];
         val _pathCount: MemoryChunk[Long];
         val _dependency: MemoryChunk[Double];
         
@@ -105,7 +106,8 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         val keepAtmoicCountQ2: AtomicLong;
         val keepAtmoicCountQ3: AtomicLong;
         val keepAtmoicCountQ4: AtomicLong;
-        
+        val keepSuccessorCount: ArrayList[AtomicLong];
+        // val keepSuccBuf: ArrayList[Array[Long]];
         val _succLoc: Lock = new Lock();
         
         protected def this(dsm: DistSparseMatrix,
@@ -136,12 +138,14 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             
             _predMap = new MemoryChunk[ArrayList[Long]](_numLocalVertices, 64);
             _keepPred = new ArrayList[ArrayList[Long]](_numLocalVertices as Int);
-            _successorCount = new MemoryChunk[Long](_numLocalVertices, 64);
+            _successorCount = new MemoryChunk[AtomicLong](_numLocalVertices, 64);
             _pathCount = new MemoryChunk[Long](_numLocalVertices, 64);
             _dependency = new MemoryChunk[Double](_numLocalVertices, 64);
             
             _updatePredBuf = new MemoryChunk[ArrayList[Long]](t.size(), 64);
             _keepUpdatePred =  new ArrayList[ArrayList[Long]](t.size());
+            keepSuccessorCount = new ArrayList[AtomicLong]();
+            // keepSuccBuf = new ArrayList[Array[Long]]();
             
             for (i in _updatePredBuf.range()) {
                 val temp = new ArrayList[Long]();
@@ -161,7 +165,11 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             // Init loop
             for (i in 0..(_numLocalVertices - 1)) {
                 _predMap(i) = null;
-                _successorCount(i) = 0L;
+                
+                val temp = new AtomicLong(0);
+                _successorCount(i) = temp;
+                keepSuccessorCount.add(temp);
+                
                 _pathCount(i) = 0L;
                 _numUpdate(i) = 0;
                 _dependency(i) = 0D;
@@ -248,6 +256,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             for (p in placeGroup) {
                 at (p) async {
                     travelNonIncDist();
+                    countSuccessor();
                     addLeafNodeToUpdate();
                     updateScore();
                 }
@@ -312,6 +321,79 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         lch()._bf(slotId).item(pid) = new Buffer(lch()._BUFFER_SIZE);
     }
     
+    private def countSuccessor() {
+        
+        if (here.id == 0)
+            Console.OUT.println("Count Successor");
+        
+        val bufSize = 256;
+        val predBuf = new Array[ArrayList[Vertex]](team.size(),
+                (int) => new ArrayList[Long](bufSize));
+        
+        // Closure for remote op
+        val clearBuffer = (pid: Int) => {
+            predBuf(pid).clear();
+        };
+        
+        val _flood = (pid: Int) => {
+            // No data return
+            // Console.OUT.println("Flood");
+            if (predBuf(pid).size() == 0)
+                return;
+            // Console.OUT.println("KK");
+            val preds = predBuf(pid).toArray();
+            at (team.getPlace(pid)) {
+                for(var k: Int = 0; k < preds.size; ++k) {
+                    val pred = preds(k);
+                    val locPred = OrgToLocSrc(pred);
+                    // Console.OUT.println("Remote: " + pred);
+                    lch()._successorCount(locPred).incrementAndGet();
+                }
+            }
+            clearBuffer(pid);
+        };
+        
+        val _floodAll = () => {      
+            // Console.OUT.println("Enter flood ALL");
+            for (var i: int = 0; i < team.size(); ++i) {  
+                _flood(i);
+            }
+        };
+        
+        val calRemote = (pid: Int, pred: Vertex) => {
+            if (predBuf(pid).size() >= bufSize) {  
+                _flood(pid);
+            }    
+            predBuf(pid).add(pred);
+        };
+        
+        finish for (i in (0..(lch()._numLocalVertices - 1))) {
+            if (lch()._predMap(i) != null 
+                    && lch()._predMap(i).size() > 0) {
+                
+                val sz = lch()._predMap(i).size();
+                for ( k in 0..(sz -1)) {  
+                    val pred = lch()._predMap(i)(k);
+                    val locPred = OrgToLocSrc(pred);
+                    
+                    if (isLocalVertex(pred))  {
+                        // Console.OUT.println("XX" + LocSrcToOrg(i) + " " + pred);
+                        lch()._successorCount(locPred).incrementAndGet();
+                    } else {
+                        // Console.OUT.println("YY" + LocSrcToOrg(i) + " " + pred);
+                        val targetRole = team.getRole(getVertexPlace(pred));
+                       calRemote(targetRole, pred);
+                    }    
+                }
+            } 
+        }
+        _floodAll();
+        team.barrier(role);
+        // for (i in (0..(lch()._numLocalVertices - 1))) {
+        //     Console.OUT.println(here.id + ":" + LocSrcToOrg(i) + " : succ => " + lch()._successorCount(i));   
+        // }
+    }
+    
     private def travelNonIncDist() {    
         // Putsource
         if (isLocalVertex(source())) {
@@ -328,6 +410,8 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         
         // Start traveling
         while(true) {
+            if(here.id == 0)
+                Console.OUT.println("````````````````````````````````````````");
             swapQ();
             nextQ().clearAll();
             team.barrier(role);
@@ -354,11 +438,17 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                     }    
                 }
             };
-            	currentQ().examine(traverse);
-            	floodAll();
-            	synchNumSuccessor();
-            	team.barrier(role);
-            	currentLevel(currentLevel() + 1);
+            finish currentQ().examine(traverse);
+            finish floodAll();
+            // finish synchNumSuccessor();
+            team.barrier(role);
+            currentLevel(currentLevel() + 1);
+            
+            finish for (k in 0..(team.size() - 1)) {
+                val p = team.getPlace(k);
+                val targetRole = team.getRole(p);
+                lch()._updatePredBuf(targetRole).clear();
+            }
         }
     }
     
@@ -368,7 +458,9 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         
         val f = () => {
             atomic {
-                // Console.OUT.println(orgSrc + "~~~" + orgDst);
+                // if (orgSrc == 1047272L)
+                // 	Console.OUT.println(orgSrc + "~~~" + orgDst);
+                
                 var predMap: ArrayList[Long] = lch()._predMap(localDst);
                 if (predMap == null) {
                     val arr = new ArrayList[Long]();
@@ -382,20 +474,22 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                 // Increase path count
                 lch()._pathCount(localDst) = lch()._pathCount(localDst) + 1;
                 
-                
                 // Increase # of successors
-                val p = getVertexPlace(orgSrc);
-                val targetRole = team.getRole(p);
-                if (p.equals(here)) {
-                    val locPred = OrgToLocSrc(orgSrc);
-                    lch()._successorCount.atomicAdd(locPred, 1);
-                    // increaseSuccessor(locPred);
-                    // lch()._successorCount(locPred) = lch()._successorCount(locPred) + 1;
-                    // Console.OUT.println(here.id + ": " + orgSrc + "~l~" + orgDst);
-                } else {
-                    lch()._updatePredBuf(targetRole).add(orgSrc);
-                    // Console.OUT.println(here.id + ": " + orgSrc + "~~" + orgDst + " R("+targetRole+"): buf " + lch()._updatePredBuf(targetRole));
-                }
+                // val p = getVertexPlace(orgSrc);
+                // val targetRole = team.getRole(p);
+                // if (p.equals(here)) {
+                //     val locPred = OrgToLocSrc(orgSrc);
+                //     // lch()._successorCount.atomicAdd(locPred, 1);
+                //     // lch()._successorCount(locPred).incrementAndGet();
+                //     // increaseSuccessor(locPred);
+                //     // lch()._successorCount(locPred) = lch()._successorCount(locPred) + 1;
+                //     if (orgSrc == 1047272L)
+                //     	Console.OUT.println(here.id + ": " + orgSrc + "~l~" + orgDst);
+                // } else {
+                //     lch()._updatePredBuf(targetRole).add(orgSrc);
+                //     // if (orgSrc == 1047272L)
+                //     // 	Console.OUT.println(here.id + ": " + orgSrc + "~~" + orgDst + " R("+targetRole+"): buf " + lch()._updatePredBuf(targetRole));
+                // }
             }
         };
         
@@ -572,8 +666,10 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             
             val targetRole = team.getRole(p);
             if (lch()._updatePredBuf(targetRole).size() > 0) {
-                val updateSucc = new RemoteArray[Long](lch()._updatePredBuf(targetRole).toArray());
-                val numOfUpdate =  lch()._updatePredBuf(targetRole).size();
+                val orig = lch()._updatePredBuf(targetRole).toArray();
+                val updateSucc = new RemoteArray[Long](orig);
+                val numOfUpdate = orig.size;
+                Console.OUT.println(here.id + ":org " + orig);
                  at (p)  {
                     val t_predToUpdate = new Array[Long](IndexedMemoryChunk.allocateZeroed[Long](
                             numOfUpdate, 
@@ -582,17 +678,18 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                     finish {
                         Array.asyncCopy(updateSucc, 0, t_predToUpdate, 0, numOfUpdate);
                     }
-                    
+                    Console.OUT.println(here.id + ":re " + t_predToUpdate);
                     // Update successors count
                     for (var t: Int = 0; t < numOfUpdate; ++t) {
                         val locPred = OrgToLocSrc(t_predToUpdate(t));
                         // lch()._successorCount(locPred) = lch()._successorCount(locPred) + 1;
                         // increaseSuccessor(locPred);
-                        lch()._successorCount.atomicAdd(locPred, 1);
+                        // lch()._successorCount.atomicAdd(locPred, 1);
+                        lch()._successorCount(locPred).incrementAndGet();
                     }
                     // Console.OUT.println("R-numOfUpdate" + numOfUpdate);
                 }
-                lch()._updatePredBuf(targetRole).clear();
+                // lch()._updatePredBuf(targetRole).clear();
             }
         }
     }
@@ -642,8 +739,9 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         for (i in (0..(lch()._numLocalVertices - 1))) {
             if (lch()._predMap(i) != null 
                     && lch()._predMap(i).size() > 0
-                    && lch()._successorCount(i) == 0L) {
+                    && lch()._successorCount(i).longValue() == 0L) {
                 updateScoreNextQ().set(i);
+                // Console.OUT.println("Add to q: " + LocSrcToOrg(i) + " succ: " + lch()._successorCount(i).longValue());
             } 
         }
         // if (lch()._distSparseMatrix().adjacency(localDst).size() == 0L) {
@@ -696,27 +794,29 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
     }
     
     public def calDependecy(w_theta: Double, w_sigma: Long, v: Vertex) {
-        val locSucc = OrgToLocSrc(v);
-        lch()._numUpdate(locSucc) = lch()._numUpdate(locSucc) + 1;
-        // Console.OUT.println("Cal dep: " + v 
-        //         + " num up: " + lch()._numUpdate(locSucc) 
-        //         + " , succ: " + lch()._successorCount(locSucc));
         
-        lch()._dependency(locSucc) = lch()._dependency(locSucc) 
-        + (lch()._pathCount(locSucc) as Double / w_sigma) * (1 + w_theta);
-        
-        if(lch()._numUpdate(locSucc) as Long == lch()._successorCount(locSucc)) {
-            // Console.OUT.println(v);
-            updateScoreNextQ().set(locSucc);
-        }
-        if(lch()._successorCount(locSucc) > 0 && lch()._numUpdate(locSucc) as Long > lch()._successorCount(locSucc)) {
-            // throw new Exception("Cal dep: " + v 
+            val locSucc = OrgToLocSrc(v);
+            atomic lch()._numUpdate(locSucc) = lch()._numUpdate(locSucc) + 1;
+            // Console.OUT.println("Cal dep: " + v 
             //         + " num up: " + lch()._numUpdate(locSucc) 
             //         + " , succ: " + lch()._successorCount(locSucc));
-        Console.OUT.println("============="+ "Cal dep: " + v 
-                + " num up: " + lch()._numUpdate(locSucc) 
-                + " , succ: " + lch()._successorCount(locSucc) +"============");
-        }
+            
+            lch()._dependency(locSucc) = lch()._dependency(locSucc) 
+            + (lch()._pathCount(locSucc) as Double / w_sigma) * (1 + w_theta);
+            
+            if(lch()._numUpdate(locSucc) as Long == lch()._successorCount(locSucc).longValue()) {
+                // Console.OUT.println(v);
+                updateScoreNextQ().set(locSucc);
+            }
+            if(lch()._successorCount(locSucc).longValue() > 0 && lch()._numUpdate(locSucc) as Long > lch()._successorCount(locSucc).longValue()) {
+                // throw new Exception("Cal dep: " + v 
+                //         + " num up: " + lch()._numUpdate(locSucc) 
+                //         + " , succ: " + lch()._successorCount(locSucc));
+                // if(v == 1047272L)
+                    Console.OUT.println("============="+ "Cal dep: " + v 
+                            + " num up: " + lch()._numUpdate(locSucc) 
+                            + " , succ: " + lch()._successorCount(locSucc) +"============");
+            }
         
     }
     
@@ -729,18 +829,17 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                 val dat = lch()._predMap;
                 for (i in dat.range()) {
                     
-                    // var succCount: Long = lch()._successorCount(i);
-                    // var predCount: Long = -1;
-                    // val path = lch()._pathCount(i);
-                    // 
-                    // if (dat(i) != null)
-                    //     predCount = dat(i).size();
-                    // 
-                    // // if (succCount > 0 || predCount > 0)
+                    var succCount: Long = lch()._successorCount(i).longValue();
+                    var predCount: Long = -1;
+                    val path = lch()._pathCount(i);
+                    
+                    if (dat(i) != null)
+                        predCount = dat(i).size();
+                    
+                    // if (succCount > 0 || predCount > 0)
                     //     Console.OUT.println(LocSrcToOrg(i) + " -> " + predCount 
                     //             + " : " + succCount
-                    //             + " : " + path
-                    //             + );
+                    //             + " : " + path);
                     // if (lch()._dependency(i) > 0D)
                     // 	Console.OUT.println(LocSrcToOrg(i) + " -> " +  lch()._dependency(i));
                 }
