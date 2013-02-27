@@ -264,10 +264,10 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         finish {
             for (p in placeGroup) {
                 at (p) async {
-                    travelNonIncDist();
-                    countSuccessor();
-                    addLeafNodeToUpdate();
-                    updateScore();
+                    travelNonIncDist();     team.barrier(role);
+                    countSuccessor();	      team.barrier(role);
+                    addLeafNodeToUpdate();   team.barrier(role);
+                    updateScore(); 			team.barrier(role);
                 }
             }
         }
@@ -326,7 +326,6 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
     }
     
     private def countSuccessor() {
-        
         if (here.id == 0)
             Console.OUT.println("Count Successor");
         
@@ -389,7 +388,6 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         
         Bitmap.iter(0..(lch()._numLocalVertices - 1), examine);
         _floodAll();
-        team.barrier(role);
     }
     
     private def travelNonIncDist() {    
@@ -441,7 +439,6 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             team.barrier(role);
             currentLevel(currentLevel() + 1);
         }
-        team.barrier(role);
     }
     
     public def visit(orgSrc: Long, orgDst: Long, predDistance: Long) {
@@ -507,18 +504,12 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
     private def flood(bufId: Int, p: Place) {
         val targetRole = team.getRole(p);
         val count = lch()._bf(bufId).item(targetRole).count();
-        // Console.OUT.println(here.id + "Above (" + targetRole+ ") " + lch()._updatePredBuf(targetRole));
-        // if(count <= 0 && (lch()._isInFloodAll() == true && lch()._updatePredBuf(targetRole).size() == 0))
-        //     return;
+
         
         val succ = new RemoteArray[Long](lch()._bf(bufId).item(targetRole)._succ);
         val preds = new RemoteArray[Long](lch()._bf(bufId).item(targetRole)._pred);
         val level = lch()._currentLevel();
         
-        // if (lch()._isInFloodAll() == false 
-        //         || lch()._updatePredBuf(targetRole).size() == 0
-        //         || bufId > 0) {
-            // Flood vertex visit only
             at (p) {
                 val num = count as Int;
                 val t_s = new Array[Long](IndexedMemoryChunk.allocateZeroed[Long](
@@ -541,112 +532,17 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             }
             lch()._bf(bufId).item(targetRole).count() = 0;
             allocNewBuffer(bufId, targetRole);
-            
-            // if (lch()._isInFloodAll() == true && lch()._updatePredBuf(targetRole).size() > 0) {
-            //     val updateSucc = new RemoteArray[Long](lch()._updatePredBuf(targetRole).toArray());
-            //     val numOfUpdate =  lch()._updatePredBuf(targetRole).size();
-            //     at (p) atomic {
-            //         val t_predToUpdate = new Array[Long](IndexedMemoryChunk.allocateZeroed[Long](
-            //                 numOfUpdate, 
-            //                 lch()._ALIGN,
-            //                 lch()._CONGRUENT));
-            //         finish {
-            //             Array.asyncCopy(updateSucc, 0, t_predToUpdate, 0, numOfUpdate);
-            //         }
-            //         
-            //         // Update successors count
-            //         for (var t: Int = 0; t < numOfUpdate; ++t) {
-            //             val locPred = OrgToLocSrc(t_predToUpdate(t));
-            //              lch()._successorCount(locPred) = lch()._successorCount(locPred) + 1;
-            //         }
-            //         // Console.OUT.println("R-numOfUpdate" + numOfUpdate);
-            //     }
-            //     lch()._updatePredBuf(targetRole).clear();
-            // }
-            
-        // } else if (lch()._isInFloodAll() == true){
-        //     
-            // val updateSucc = new RemoteArray[Long](lch()._updatePredBuf(targetRole).toArray());
-            // val numOfUpdate =  lch()._updatePredBuf(targetRole).size();
-            // 
-            // if (count > 0) {
-            //     // Flood and update # of successors
-            //     // Console.OUT.println("L-numOfUpdate" + lch()._updatePredBuf(targetRole));
-            //     at (p) {
-            //         val num = count as Int;
-            //         val t_s = new Array[Long](IndexedMemoryChunk.allocateZeroed[Long](
-            //                 num, 
-            //                 lch()._ALIGN,
-            //                 lch()._CONGRUENT));
-            //         val t_p = new Array[Long](IndexedMemoryChunk.allocateZeroed[Long](
-            //                 num, 
-            //                 lch()._ALIGN,
-            //                 lch()._CONGRUENT));
-            //         
-            //         val t_predToUpdate = new Array[Long](IndexedMemoryChunk.allocateZeroed[Long](
-            //                 numOfUpdate, 
-            //                 lch()._ALIGN,
-            //                 lch()._CONGRUENT));
-            //         finish {
-            //             Array.asyncCopy(succ, 0, t_s, 0, num);
-            //             Array.asyncCopy(preds, 0, t_p, 0, num);
-            //             Array.asyncCopy(updateSucc, 0, t_predToUpdate, 0, numOfUpdate);
-            //         }
-            //         
-            //         for (var t: Int = 0; t < num; ++t) {
-            //             visit(t_p(t), t_s(t), level);
-            //         } 
-            //         
-            //         // Update successors count
-            //         for (var t: Int = 0; t < numOfUpdate; ++t) {
-            //             val locPred = OrgToLocSrc(t_predToUpdate(t));
-            //             lch()._successorCount(locPred) = lch()._successorCount(locPred) + 1;
-            //         }
-            //         Console.OUT.println("R-numOfUpdate: " + numOfUpdate);
-            //     }
-            //     lch()._updatePredBuf(targetRole).clear();
-            //     lch()._bf(bufId).item(targetRole).count() = 0;
-            //     allocNewBuffer(bufId, targetRole);
-        //     } else {
-        //         // Update only sucessor number
-        //         Console.OUT.println("L-numOfUpdate" + lch()._updatePredBuf(targetRole));
-        //         at (p) {
-        //             val t_predToUpdate = new Array[Long](IndexedMemoryChunk.allocateZeroed[Long](
-        //                     numOfUpdate, 
-        //                     lch()._ALIGN,
-        //                     lch()._CONGRUENT));
-        //             finish {
-        //                 Array.asyncCopy(updateSucc, 0, t_predToUpdate, 0, numOfUpdate);
-        //             }
-        //             
-        //             // Update successors count
-        //             for (var t: Int = 0; t < numOfUpdate; ++t) {
-        //                 val locPred = OrgToLocSrc(t_predToUpdate(t));
-        //                 atomic lch()._successorCount(locPred) = lch()._successorCount(locPred) + 1;
-        //             }
-        //             // Console.OUT.println("R-numOfUpdate" + numOfUpdate);
-        //         }
-        //         lch()._updatePredBuf(targetRole).clear();
-        //     }
-        // } 
     }
     
-    public def floodAll() {
-        lch()._isInFloodAll() = true;
-        
+    public def floodAll() {        
         finish  for(i in 0..(lch()._BUFFER_SLOT - 1)) {
              for (k in 0..(team.size() - 1)) {
-     
                 val p = team.getPlace(k);
-                
                 if (!p.equals(here)){
                     flood(i, p);
                 }
-                
             }
         }
-        
-        lch()._isInFloodAll() = false;
     }
     
     public def synchNumSuccessor() {
@@ -730,10 +626,58 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         };
         
         Bitmap.iter(0..(lch()._numLocalVertices - 1), checkNode);
-        team.barrier(role);
     }
     
     public def updateScore() {
+        
+        val bufSize = (1 << 8);
+        val numTask = Runtime.NTHREADS;
+        val predBuf = new Array[Array[ArrayList[Vertex]]](numTask,
+                (int) => new Array[ArrayList[Vertex]](team.size(),
+                        (int) => new ArrayList[Vertex](bufSize)));
+        val thetaBuf = new Array[Array[ArrayList[Double]]](numTask,
+                (int) => new Array[ArrayList[Double]](team.size(),
+                        (int) => new ArrayList[Double](bufSize)));
+        val sigmaBuf = new Array[Array[ArrayList[Long]]](numTask,
+                (int) => new Array[ArrayList[Long]](team.size(),
+                        (int) => new ArrayList[Long](bufSize)));
+        
+        val clearBuffer = (bufId: Int, pid: Int) => {
+            predBuf(bufId)(pid).clear();
+            thetaBuf(bufId)(pid).clear();
+            sigmaBuf(bufId)(pid).clear();
+        };
+        
+        val _flood = (bufId: Int, pid: Int) => {
+            val preds = predBuf(bufId)(pid).toArray();
+            val theta = thetaBuf(bufId)(pid).toArray();
+            val sigma = sigmaBuf(bufId)(pid).toArray();
+            val p = team.getPlace(pid);
+            at (p) {
+                for(k in 0..(preds.size - 1)) {
+                    val pred = preds(k);
+                    calDependency(theta(k), sigma(k), preds(k));
+                }
+            }
+            clearBuffer(bufId, pid);
+        };
+        
+        val _floodAll = () => {
+            finish for (i in 0..(numTask -1))
+                async for ( ii in 0..(team.size() -1)) {
+                    if (predBuf(i)(ii).size() > 0)
+                        _flood(i, ii);
+                }
+        };
+        
+        val calRemote = (bufId: Int,pid: Int, theta: Double, signma: Long, pred: Vertex) => {
+            if (predBuf(bufId)(pid).size() >= bufSize) {  
+                _flood(bufId, pid);
+            } 
+            thetaBuf(bufId)(pid).add(theta);
+            sigmaBuf(bufId)(pid).add(signma);
+            predBuf(bufId)(pid).add(pred);
+        };
         
         if (here.id == 0)
             Console.OUT.println("Update Score");
@@ -760,11 +704,13 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                         val w_sigma = lch()._pathCount(localSucc);
                         val w_theta = lch()._dependency(localSucc);
                         if (isLocalVertex(pred))  {
-                            calDependecy(w_theta, w_sigma, pred);
+                            calDependency(w_theta, w_sigma, pred);
                         } else {
                             val bufId = threadId;
                             val p: Place = getVertexPlace(pred);
-                            at (p) calDependecy(w_theta, w_sigma, pred);
+                            val pid = team.getRole(p);
+                            // at (p) calDependency(w_theta, w_sigma, pred);
+                            calRemote(threadId, pid, w_theta, w_sigma, pred);
                         }    
                     }
                 }
@@ -774,7 +720,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         }
     }
     
-    public atomic def calDependecy(w_theta: Double, w_sigma: Long, v: Vertex) {
+    public atomic def calDependency(w_theta: Double, w_sigma: Long, v: Vertex) {
             val locSucc = OrgToLocSrc(v);
              lch()._numUpdate(locSucc) = lch()._numUpdate(locSucc) + 1;
             
