@@ -197,7 +197,7 @@ public class GraphTest {
 		val end = (diff :Double) => true;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
+				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
 		
 		GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
 		
@@ -207,63 +207,6 @@ public class GraphTest {
 		val att_names = useTranslator ? g.getVertexAttribute[Long]("name") : null;
 		val att_pagerank = g.getVertexAttribute[Double]("degree");
 		DistributedReader.write("degree-%d.txt", team, att_names, att_pagerank);
-		
-		Console.OUT.println("Complete!!!");
-	}
-	
-	public static def ditributed_sssp_test(srcfile :String, RC :String) {
-		val team = Team.WORLD;
-		val g = read_graph(srcfile, team, true);
-		print_attribute_list(g);
-		
-		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
-		
-		val rxc = RC.split("x");
-		val R = Int.parse(rxc(0));
-		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(team, R, C);
-		
-		// directed, inner edge
-		val csr = g.constructDistSparseMatrix(dist2d, true, false);
-		val weight = g.constructDistAttribute[Double](csr, false, "weight");
-
-		// check results
-		for(p in team.placeGroup()) at (p) {
-			val matrix = csr();
-			Console.OUT.println("Place: " + p.id + ", # of vertices: " + matrix.offsets.size() + ", # of edges: " + matrix.vertexes.size() + ", # of weights: " + weight().size());
-		}
-
-		val initValue = 1000.0;
-		val map = (mij :Double , vj :Double) => mij + vj;
-		val combine = (index :Long, xs :MemoryChunk[Double]) =>
-				xs.size() == 0L ? initValue : MathAppend.min(xs);
-		val assign = (i :Long, prev :Double , next :Double) => Math.min(prev, next);
-		val end = (diff :Double) => diff == 0.0;//Math.sqrt(diff) < 0.0001;
-		
-		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
-		
-		team.placeGroup().broadcastFlat(() => {
-			val v = vector();
-			for(i in v.range()) v(i) = initValue;
-			if(team.getRole(here) == 0) v(0) = 0.0;
-		});
-		
-		if(C == 1) { // 1D
-			Console.OUT.println("Using 1D GIM-V Engine ...");
-			GIMV.main1DCSR(csr, weight, vector, map, combine, assign, end);
-		}
-		else {
-			Console.OUT.println("Using 2D GIM-V Engine ...");
-			GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
-		}
-		
-		g.setVertexAttribute("distance", csr, vector);
-		print_attribute_list(g);
-
-		val att_names = g.getVertexAttribute[Long]("name");
-		val att_pagerank = g.getVertexAttribute[Double]("distance");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
@@ -279,15 +222,15 @@ public class GraphTest {
 		normalize_columns_weights(g);
 		print_attribute_list(g);
 
-		//	val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
-		//	DistributedReader.write("norm-%d.txt", team, null, att_norm);
+	//	val att_norm = g.getEdgeAttribute[Double]("normalized_weight");
+	//	DistributedReader.write("norm-%d.txt", team, null, att_norm);
 		
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
 		val rxc = RC.split("x");
 		val R = Int.parse(rxc(0));
 		val C = Int.parse(rxc(1));
-		val dist2d = Dist2D.make2D(team, R, C);
+		val dist2d = Dist2D.make2D(team, C, R);
 		
 		// directed, inner edge
 		val csr = g.constructDistSparseMatrix(dist2d, true, false);
@@ -307,7 +250,7 @@ public class GraphTest {
 		val end = (diff :Double) => false;//Math.sqrt(diff) < 0.0001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
+				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes()));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val iv = 1.0 / n;

@@ -49,11 +49,6 @@ struct MemoryChunkData[T] {
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
-	
-	@Native("c++", "(#this).FMGL(pointer)")
-	public def pointer() :MemoryPointer[T] {
-		return MemoryPointer.make[T](raw, offset);
-	}
 
 	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#this).FMGL(pointer) + (#offset), (#size))")
 	public def subpart(offset :Long, size :Long) :MemoryChunkData[T] =
