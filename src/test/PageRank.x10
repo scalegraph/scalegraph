@@ -101,7 +101,7 @@ public class PageRank {
 		val end = (diff :Double) => Math.sqrt(diff) < 0.0001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](g.ids().numberOfLocalVertexes()));
+				() => new MemoryChunk[Double](g.ids().numberOfLocalVertexes2N()));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val iv = 1.0 / n;

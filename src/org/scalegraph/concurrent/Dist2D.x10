@@ -224,9 +224,9 @@ public struct Dist2D {
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))
     		throw new IllegalArgumentException();
     	val teamSize = allTeam().size();
-    	val maxLocalId = (numberOfVertices + teamSize - 1) / teamSize;
+    	val numberOfLocalVertices = (numberOfVertices + teamSize - 1) / teamSize;
     	return new IdStruct(MathAppend.ceilLog2(C), MathAppend.ceilLog2(R),
-    			MathAppend.ceilLog2(maxLocalId), outerOrInner, maxLocalId);
+    			MathAppend.ceilLog2(numberOfLocalVertices), outerOrInner, numberOfLocalVertices, numberOfVertices);
     }
     
     /** Delete Dist2D and related objects.

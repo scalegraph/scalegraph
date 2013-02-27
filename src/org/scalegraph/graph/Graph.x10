@@ -17,8 +17,6 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.id.IdStruct;
 import org.scalegraph.concurrent.Remote;
 import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.xpregel.XPregelGraph;
-import org.scalegraph.xpregel.Vertex;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
@@ -783,30 +781,5 @@ import org.scalegraph.xpregel.Vertex;
 
 	public def vertexAttributeKeys() = vertexAttributes.keySet();
 	public def edgeAttributeKeys() = edgeAttributes.keySet();
-	
-	/* 
-	 * this method will creat an instance of XPregelGraph,
-	 * a class specified for processing graph in Pregel model
-	 */
-	public def createXPregelGraph():XPregelGraph[Long,Double,Double] {
-		val edgelist_ = edgeList;
-		val teamSize = team.size()-1;
-		var counter:Long = 0L;
-		val vertices = new HashMap[Long,Vertex]();
-		val team_ = team;
-		val csr = constructDistSparseMatrix(Dist2D.make2D(team, team.size(), 1), true, true);
-		
-		/*
-		if (here.id == 0) {
-			for (i in edgelist_().range()) {
-				if ((counter % 2L) == 0L) {
-					
-				}
-				counter++;
-			}
-		}
-		*/
-		return new XPregelGraph[Long,Double,Double](team,csr);
-	}
 }
 

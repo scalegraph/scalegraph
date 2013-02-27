@@ -2,10 +2,12 @@ package org.scalegraph.gimv;
 
 import x10.compiler.Inline;
 import x10.util.Team;
+import x10.util.Ordered;
 
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.MathAppend;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.id.IdStruct;
 import org.scalegraph.concurrent.Team2;
@@ -31,13 +33,12 @@ public class GIMV {
 			val localRsize = 1L << (ids.lgl + ids.lgr);
 			val localCsize = 1L << (ids.lgl + ids.lgc);
 			this.dstv = new MemoryChunk[U](localsize);
+			this.refv = new MemoryChunk[U](localRsize);
 			if(twod) {
-				this.refv = new MemoryChunk[U](localRsize);
 				this.tmpsv = new MemoryChunk[U](localCsize);
 				this.tmprv = new MemoryChunk[U](localCsize);
 			}
 			else {
-				this.refv = new MemoryChunk[U](0);
 				this.tmpsv = new MemoryChunk[U](0);
 				this.tmprv = new MemoryChunk[U](0);
 			}
@@ -55,7 +56,7 @@ public class GIMV {
 			combine : (Long, MemoryChunk[U])=>U,
 			assign : (Long, U, U)=>U,
 			end : (U)=>Boolean)
-			{ U <: Arithmetic[U], U haszero }
+			{ U <: Arithmetic[U], U <: Ordered[U], U haszero }
 	{
 		val allTeam = Team2(matrix.dist().allTeam());
 		val buffers = PlaceLocalHandle.make[Cell[Buffer[U]]](allTeam.placeGroup(),
@@ -123,8 +124,6 @@ public class GIMV {
 				// fold
 				rowTeam.alltoall(b.tmpsv, b.tmprv);
 				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
-				
 				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
 					val tmp = map_tmp_array(tid as Int);
 					tmp.setSize(C);
@@ -136,30 +135,33 @@ public class GIMV {
 						b.dstv(i) = combine(i * size + rank, tmp.data());
 					}
 				});
-				
-				{
-					// converge
-					var sum :U = Zero.get[U]();
-					for(i in v.range()) {
-						val diff = v(i) - b.dstv(i);
-						sum += diff * diff;
-					}
-					val tmp = map_tmp_array(0);
-					tmp.setSize(1);
-					tmp(0) = sum;
-					allTeam.allreduce(tmp.data(), convergence, Team.ADD);
-				}
 
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " assign ...");
-				
+
 				// assign
+				val tmpResult = map_tmp_array(0);
+				tmpResult.setSize(Runtime.NTHREADS);
 				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
+					var tmpSum :U = Zero.get[U]();
 					for(i in r) {
 						// old -> new
-						v(i) = assign(i * size + rank, v(i), b.dstv(i));
+						val newVal = assign(i * size + rank, v(i), b.dstv(i));
+						tmpSum += MathAppend.abs(v(i) - newVal);
+						v(i) = newVal;
 					}
+					tmpResult(tid) = tmpSum;
 				});
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
+				
+				// converge
+				for(i in 1..(tmpResult.size()-1)) {
+					tmpResult(0L) += tmpResult(i);
+				}
+				tmpResult.setSize(1);
+				allTeam.allreduce(tmpResult.data(), convergence, Team.ADD);
+
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				
 				val end_time = System.currentTimeMillis();
 				
@@ -189,7 +191,7 @@ public class GIMV {
 			combine : (Long, MemoryChunk[U])=>U,
 			assign : (Long, U, U)=>U,
 			end : (U)=>Boolean)
-			{ U <: Arithmetic[U], U haszero }
+			{ U <: Arithmetic[U], U <: Ordered[U], U haszero }
 	{
 		val team = Team2(matrix.dist().allTeam());
 		val buffers = PlaceLocalHandle.make[Cell[Buffer[U]]](team.placeGroup(),
@@ -219,47 +221,52 @@ public class GIMV {
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " processing map ...");
 				
+				team.allgather(v, b.refv);
+				
 				Parallel.iter(0L..(localsize-1), (tid :Long, range :LongRange) => {
 					val tmp = map_tmp_array(tid as Int);
 					for(i in range) {
 						val off = m.offsets(i);
 						val next = m.offsets(i+1);
 						val len = next - off;
-						tmp.setSize(len);
-						// map
-						for(j in 0L..(len-1)) {
-							tmp(j) = map(w(j+off), v(m.vertexes(j+off)));
+						if(len > 0) {
+							tmp.setSize(len);
+							// map
+							for(j in 0L..(len-1)) {
+								tmp(j) = map(w(j+off), b.refv(m.vertexes(j+off)));
+							}
+							// combine result
+							b.dstv(i) = combine(i * size + rank, tmp.data());
 						}
-						// combine result
-						b.dstv(i) = combine(i * size + rank, tmp.data());
 					}
 				});
-				
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
-				
-				{
-					// converge
-					var sum :U = Zero.get[U]();
-					for(i in v.range()) {
-						val diff = v(i) - b.dstv(i);
-						sum += diff * diff;
-					}
-					val tmp = map_tmp_array(0);
-					tmp.setSize(1);
-					tmp(0) = sum;
-					team.allreduce(tmp.data(), convergence, Team.ADD);
-				}
 
-				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " assign ...");
 				
 				// assign
+				val tmpResult = map_tmp_array(0);
+				tmpResult.setSize(Runtime.NTHREADS);
 				Parallel.iter(0L..(localsize-1), (tid :Long, r :LongRange) => {
+					var tmpSum :U = Zero.get[U]();
 					for(i in r) {
 						// old -> new
-						v(i) = assign(i * size + rank, v(i), b.dstv(i));
+						val newVal = assign(i * size + rank, v(i), b.dstv(i));
+						tmpSum += MathAppend.abs(v(i) - newVal);
+						v(i) = newVal;
 					}
+					tmpResult(tid) = tmpSum;
 				});
+
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " gathering results ...");
+				
+				// converge
+				for(i in 1..(tmpResult.size()-1)) {
+					tmpResult(0L) += tmpResult(i);
+				}
+				tmpResult.setSize(1);
+				team.allreduce(tmpResult.data(), convergence, Team.ADD);
+				
+				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				
 				val end_time = System.currentTimeMillis();
 				
