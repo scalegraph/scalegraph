@@ -1,6 +1,10 @@
 package org.scalegraph.graph.id;
 
+/**
+ * ID Converter method collection for 2D distributions.
+ */
 public class Twod {
+	/** Vertex ID to Source ID Converter */
 	public static struct VtoS {
 		val lgl :Int;
 		val lgsize :Int;
@@ -18,6 +22,7 @@ public class Twod {
 		public operator this(id :Long) :Long = ((id & rmask) << lgl) | (id >> lgsize);
 	}
 
+	/** Vertex ID to Destination ID Converter */
 	public static struct VtoD {
 		val lgr :Int;
 		val lgl :Int;
@@ -37,6 +42,7 @@ public class Twod {
 		public operator this(id :Long) :Long = (((id & cmask) >> lgr) << lgl) | (id >> lgsize);
 	}
 
+	/** Source ID to Vertex ID Converter */
 	public static struct StoV {
 		val cshifted :Long;
 		val lgl :Int;
@@ -56,6 +62,7 @@ public class Twod {
 		public operator this(id :Long) :Long = ((id & lmask) << lgsize) | cshifted | (id >> lgl);
 	}
 
+	/** Source ID to Destination ID Converter */
 	public static struct StoD {
 		val cshiftedto :Long;
 		val lmask :Long;
@@ -72,6 +79,7 @@ public class Twod {
 		public operator this(id :Long) :Long = (id & lmask) | cshiftedto;
 	}
 
+	/** Destination ID to Vertex ID Converter */
 	public static struct DtoV {
 		val r :Int;
 		val lgr :Int;
@@ -92,6 +100,7 @@ public class Twod {
 		public operator this(id :Long) :Long = ((id & lmask) << lgsize) | ((id >> lgl) << lgr) | (r as Long);
 	}
 
+	/** Destination ID to Source ID Converter */
 	public static struct DtoS {
 		val rshifted :Long;
 		val lmask :Long;
