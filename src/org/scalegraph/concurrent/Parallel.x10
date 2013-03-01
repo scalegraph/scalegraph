@@ -324,11 +324,9 @@ public class Parallel {
     	}
     }
 
-    /* a(hi - 1)を挿入 */
     private static def pop_heap[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T,T)=>Long) {
         val value = a(hi - 1);
         a(hi - 1) = a(lo);
-        /* index:loを穴に、a(hi - 1)を挿入する */
     	adjustHeap[T](a, lo, 0L, hi - lo - 1, value, cmp);
     }
 
@@ -378,11 +376,10 @@ public class Parallel {
     	var secondChild:Long = 2L * holeIndex + 2L;
 
     	while (secondChild < len) {
-            /* 子同士の比較 */
     		if (cmp(a(lo + secondChild), a(lo + secondChild - 1)) < 0) {
     			secondChild--;
     		}
-            /* 大きい方の子を親にする */
+
     		a(lo + _holeIndex) = a(lo + secondChild);
     		_holeIndex = secondChild;
     		secondChild = 2 * (secondChild + 1);
@@ -400,7 +397,6 @@ public class Parallel {
     	var secondChild:Long = 2L * holeIndex + 2L;
 
     	while (secondChild < len) {
-            /* 子同士の比較 */
     		if (cmp(k(lo + secondChild), k(lo + secondChild - 1)) < 0) {
     			secondChild--;
     		}
