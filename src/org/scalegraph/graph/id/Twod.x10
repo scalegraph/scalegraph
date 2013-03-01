@@ -1,4 +1,4 @@
-package org.scalegraph.id;
+package org.scalegraph.graph.id;
 
 public class Twod {
 	public static struct VtoS {

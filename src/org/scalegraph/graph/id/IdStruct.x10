@@ -1,4 +1,4 @@
-package org.scalegraph.id;
+package org.scalegraph.graph.id;
 
 /**
  * Provides the information of the ID conversion and the number of vertixes for DistSparseMatrix.

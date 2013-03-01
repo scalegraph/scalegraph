@@ -19,7 +19,7 @@ import x10.util.IndexedMemoryChunk;
  * <dt>Direct access with pointer (C++ backend only)</dt> <dd>The generated code for accessing an element of MemoryChunk does not have any function call.
  * Accessing the elements of MemoryChunk is 40% faster than accessing the elements of x10.lang.Array.</dd></p>
  * <p>Limitations: Current memory chunk only support non-reference data. The supports for the class or any data structures which include class members are imcomplete.
- * For the data including reference, you can use at local without problems. However, you can not move it to another place. </p>
+ *  DO NOT USE MEMORYCHUNK TO STORE ANY DATA STRUCTURES THAT INCLUDE REFERENCES. </p>
  */
 public struct MemoryChunk[T] implements Iterable[T] {
 	val data :MemoryChunkData[T];

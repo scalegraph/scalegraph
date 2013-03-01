@@ -1,4 +1,4 @@
-package org.scalegraph.id;
+package org.scalegraph.graph.id;
 
 /**
  * ID Converter method collection for 1D row distributions.
