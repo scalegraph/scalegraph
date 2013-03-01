@@ -14,7 +14,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.concurrent.ScatterGather;
 import org.scalegraph.concurrent.Team2;
 import org.scalegraph.util.MathAppend;
-import org.scalegraph.id.IdStruct;
+import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.concurrent.Remote;
 import org.scalegraph.concurrent.Dist2D;
 

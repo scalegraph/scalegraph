@@ -1,7 +1,7 @@
 package org.scalegraph.graph;
 
 import x10.util.Team;
-import org.scalegraph.id.IdStruct;
+import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.concurrent.Dist2D;

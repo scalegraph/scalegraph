@@ -7,7 +7,7 @@ import x10.compiler.Pragma;
 
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.MathAppend;
-import org.scalegraph.id.IdStruct;
+import org.scalegraph.graph.id.IdStruct;
 
 /** 2D Partitioning Distribution. This class provides the parameters for the 
  * 2D partitioning and the several teams for communications.

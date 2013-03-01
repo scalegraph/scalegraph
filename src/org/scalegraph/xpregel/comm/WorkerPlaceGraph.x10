@@ -10,7 +10,7 @@ import org.scalegraph.xpregel.PregelUtils;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.graph.DistSparseMatrix;
 import x10.util.concurrent.AtomicLong;
-import org.scalegraph.id.IdStruct;
+import org.scalegraph.graph.id.IdStruct;
 
 public class WorkerPlaceGraph[I,V,E]{I haszero, V haszero, E haszero} {
 	val mTeam:Team;
