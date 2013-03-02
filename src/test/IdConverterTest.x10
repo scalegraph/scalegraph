@@ -23,15 +23,18 @@ public class IdConverterTest {
 	}
 	
 	public static def twodTest() {
-		val R = 32, C = 64, r = 17, c = 11;
+		val R = 32, C = 64;
 		val maxVertexID = (1L << 45) - 1L;
 		val ids = new IdStruct(5, 6, 34, false, 0, 0);
 		val rnd = new Random(1, 2);
 		
 		for(i in 0..1000) {
 			val vid = (rnd.nextLong() & maxVertexID);
+			val owner = (vid % (R*C)) as Int;
+			val r = owner % R;
+			val c = owner / R;
 			val s0 = refVtoS(ids, vid);
-			val d0 = refVtoS(ids, vid);
+			val d0 = refVtoD(ids, vid);
 			val s1 = Twod.VtoS(ids)(vid);
 			assert (s1 == s0);
 			val d1 = Twod.VtoD(ids)(vid);
@@ -48,15 +51,18 @@ public class IdConverterTest {
 	}
 	
 	public static def onedCTest() {
-		val R = 1, C = 64, r = 17, c = 11;
+		val R = 1, C = 64;
 		val maxVertexID = (1L << 40) - 1L;
 		val ids = new IdStruct(0, 6, 34, false, 0, 0);
 		val rnd = new Random(1, 2);
 		
 		for(i in 0..1000) {
 			val vid = (rnd.nextLong() & maxVertexID);
+			val owner = (vid % (R*C)) as Int;
+			val r = owner % R;
+			val c = owner / R;
 			val s0 = refVtoS(ids, vid);
-			val d0 = refVtoS(ids, vid);
+			val d0 = refVtoD(ids, vid);
 			val s1 = OnedC.VtoS(ids)(vid);
 			assert (s1 == s0);
 			val d1 = OnedC.VtoD(ids)(vid);
@@ -73,15 +79,18 @@ public class IdConverterTest {
 	}
 	
 	public static def onedRTest() {
-		val R = 32, C = 1, r = 17, c = 11;
+		val R = 32, C = 1;
 		val maxVertexID = (1L << 39) - 1L;
 		val ids = new IdStruct(5, 0, 34, false, 0, 0);
 		val rnd = new Random(1, 2);
 		
 		for(i in 0..1000) {
 			val vid = (rnd.nextLong() & maxVertexID);
+			val owner = (vid % (R*C)) as Int;
+			val r = owner % R;
+			val c = owner / R;
 			val s0 = refVtoS(ids, vid);
-			val d0 = refVtoS(ids, vid);
+			val d0 = refVtoD(ids, vid);
 			val s1 = OnedR.VtoS(ids)(vid);
 			assert (s1 == s0);
 			val d1 = OnedR.VtoD(ids)(vid);
