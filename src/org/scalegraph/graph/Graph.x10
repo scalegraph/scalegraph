@@ -11,7 +11,7 @@ import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.concurrent.ScatterGather;
+import org.scalegraph.concurrent.DistScatterGather;
 import org.scalegraph.concurrent.Team2;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.graph.id.IdStruct;
@@ -460,7 +460,7 @@ import org.scalegraph.concurrent.Dist2D;
 		val rmask = (1L << ids.lgr) - 1;
 		val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
 		return new DistSparseMatrix(dist2d, () => {
-			val scatterGather = new ScatterGather(team_);
+			val scatterGather = new DistScatterGather(team_);
 			val edgelist__ = edgelist_();
 			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);

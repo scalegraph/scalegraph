@@ -4,7 +4,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistGrowableMemory;
-import org.scalegraph.concurrent.ScatterGather;
+import org.scalegraph.concurrent.DistScatterGather;
 import org.scalegraph.concurrent.Parallel;
 import x10.util.Team;
 
@@ -20,7 +20,7 @@ public class Degree {
 			val teamSize = team.size();
 			val m = columnDistGraph();
 			val mOffsets = m.offsets;
-			val scatterGather = new ScatterGather(team);
+			val scatterGather = new DistScatterGather(team);
 			Parallel.iter(m.vertexRange(), (tid :Long, r :LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				for(i in r) {

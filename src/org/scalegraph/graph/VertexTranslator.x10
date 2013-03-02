@@ -12,7 +12,7 @@ import x10.compiler.Pragma;
 import x10.compiler.Inline;
 
 import org.scalegraph.concurrent.Parallel;
-import org.scalegraph.concurrent.ScatterGather;
+import org.scalegraph.concurrent.DistScatterGather;
 import org.scalegraph.util.Debug;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
@@ -22,7 +22,7 @@ import org.scalegraph.util.DistMemoryChunk;
  * The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
 @Pinned public class VertexTranslator[T] {
-	
+
 	static val debug = true;
 	private @Inline static def debugln (str:String) : void {
 		if (debug) {
@@ -42,16 +42,16 @@ import org.scalegraph.util.DistMemoryChunk;
 
 	/** Creates vertex translator.
 	 * @param team The same team with the graph.
-	 * @param vertexNames This object builds vertex ID mapping to the growable memory. 
+	 * @param vertexNames This object builds vertex ID mapping to the growable memory.
 	 * In the most case, vertexNames is the backing storage for the name attribute of the graph.
 	 */
 	public def this(team__:Team, vertexNames__ :GrowableMemory[T]){
 		this(team__, vertexNames__, (x:T)=>x.hashCode());
 	}
-	
+
 	/** Creates vertex translator.
 	 * @param team The same team with the graph.
-	 * @param vertexNames This object builds vertex ID mapping to the growable memory. 
+	 * @param vertexNames This object builds vertex ID mapping to the growable memory.
 	 * In the most case, vertexNames is the backing storage for the name attribute of the graph.
 	 * @param hashFunc Hashing function for distributing vertex IDs.
 	 */
@@ -62,25 +62,25 @@ import org.scalegraph.util.DistMemoryChunk;
 		teamSize = team.size();
 		vertexNames = vertexNames__;
 	}
-	
+
 	/** Returns the local table size.
 	 */
 	public def size() = table.size();
-	
+
 	private def countToId(count:Long) {
 		return count * teamSize + teamRank;
 	}
-	
+
 	private def putLocalAndTranslate(vertices: MemoryChunk[T], translated :MemoryChunk[Long]) {
 		//		val count_origin = count.getAndAdd(vertices.size);
-		
+
 		// TODO: parallelize
 		// TODO: manage the hash bias due to the place distribution
 		// 1. create hashmap for adding elements only in parallel
 		// 2. numbering adding elements
 		// 3. consolidate hashmaps
 		// 4. create translations
-		
+
 		for (i in vertices.range()) {
 			val key = vertices(i);
 			if (table.containsKey(key)) {
@@ -96,7 +96,7 @@ import org.scalegraph.util.DistMemoryChunk;
 		}
 		return translated;
 	}
-	
+
 	private def putLocal(vertices: MemoryChunk[T]) {
 		//		val count_origin = count.getAndAdd(vertices.size);
 		for (i in vertices.range()) {
@@ -108,7 +108,7 @@ import org.scalegraph.util.DistMemoryChunk;
 			assert (vertexNames.size() as Long == count);
 		}
 	}
-	
+
 	private def translateLocal(vertices: MemoryChunk[T], translated :MemoryChunk[Long]) {
 		try {
 			Parallel.iter(vertices.range(), (i:Long)=> {
@@ -121,8 +121,8 @@ import org.scalegraph.util.DistMemoryChunk;
 			throw e;
 		}
 	}
-	
-	private def innerPutWithAllAndTranslate(scatterGather :ScatterGather,
+
+	private def innerPutWithAllAndTranslate(scatterGather :DistScatterGather,
 			edges: MemoryChunk[T], translated: MemoryChunk[Long], withPut :Boolean) {
 		val sizeMask = teamSize - 1;
 		scatterGather.reset();
@@ -145,12 +145,12 @@ import org.scalegraph.util.DistMemoryChunk;
 		});
 		val remoteData = scatterGather.scatter(partitioned);
 		val remoteTranslated = new MemoryChunk[Long](remoteData.size());
-		
+
 		if(withPut)
 			putLocalAndTranslate(remoteData, remoteTranslated);
 		else
 			translateLocal(remoteData, remoteTranslated);
-		
+
 		val recvTranslated = new MemoryChunk[Long](edges.size());
 		scatterGather.gather(remoteTranslated, recvTranslated);
 		Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
@@ -158,7 +158,7 @@ import org.scalegraph.util.DistMemoryChunk;
 				translated(i) = recvTranslated(indexes(i));
 		});
 	}
-	
+
 	/** Translates vertex IDs. All place of the team must call this method in parallel.
 	 * @param edges The vertices which will be translated
 	 * @param translated The storage for translated edge list
@@ -168,7 +168,7 @@ import org.scalegraph.util.DistMemoryChunk;
 		val CHUNK_SIZE = 1L << 22;
 		val iterations = team.allreduce(teamRank,
 				(edges.size() + CHUNK_SIZE - 1) / CHUNK_SIZE, Team.MAX);
-		val scatterGather = new ScatterGather(team);
+		val scatterGather = new DistScatterGather(team);
 		val edgesDist = edges.distributor();
 		val translatedDist = translated.distributor();
 		for(it in 0..(iterations-1)) {
@@ -179,7 +179,7 @@ import org.scalegraph.util.DistMemoryChunk;
 		edgesDist.checkFinish();
 		translatedDist.checkFinish();
 	}
-	
+
 	/** Translates vertex IDs.
 	 * @param translator Translator object
 	 * @param vertices The vertices which will be translated
@@ -199,7 +199,7 @@ import org.scalegraph.util.DistMemoryChunk;
 			}
 		}
 	}
-	
+
 	private static def translate[T](translator :PlaceLocalHandle[VertexTranslator[T]],
 			vertices :DistMemoryChunk[T], withPut :Boolean) :DistMemoryChunk[Long]
 	= new DistMemoryChunk[Long](translator().team.placeGroup(), ()=> {
@@ -213,7 +213,7 @@ import org.scalegraph.util.DistMemoryChunk;
 				throw new Exception(e);
 			}
 		});
-	
+
 	/** Translates vertex IDs without assigning new vertex number.
 	 * @returns A DistMemoryChunk that contains translated vertex IDs.
 	 * @param translator Translator object
@@ -222,7 +222,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	public static def translate[T](translator :PlaceLocalHandle[VertexTranslator[T]],
 			vertices :DistMemoryChunk[T]) :DistMemoryChunk[Long]
 	= translate[T](translator, vertices, false);
-	
+
 	/** Translates vertex IDs with assigning new vertex number.
 	 * @returns A DistMemoryChunk that contains translated vertex IDs.
 	 * @param translator Translator object
@@ -232,4 +232,3 @@ import org.scalegraph.util.DistMemoryChunk;
 			vertices :DistMemoryChunk[T]) :DistMemoryChunk[Long]
 	= translate[T](translator, vertices, true);
 }
-

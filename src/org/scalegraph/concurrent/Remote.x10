@@ -37,7 +37,7 @@ public class Remote {
 		range :LongRange, f: (index:Long, get:(Long, Int, Long)=>void)=>void)
 	{
 		val teamSize = team.size();
-		val scatterGather = new ScatterGather(team);
+		val scatterGather = new DistScatterGather(team);
 		val [nthreads, chunk_size] = splitChunks(range);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
@@ -91,7 +91,7 @@ public class Remote {
 		range :LongRange, f: (index:Long, get:(Long, Int, Long)=>void)=>void)
 	{
 		val teamSize = team.size();
-		val scatterGather = new ScatterGather(team);
+		val scatterGather = new DistScatterGather(team);
 		val [nthreads, chunk_size] = splitChunks(range);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
@@ -143,7 +143,7 @@ public class Remote {
 		range :LongRange, f: (index : Long, put:(Int, Long,  T)=>void)=>void)
 	{
 		val teamSize = team.size();
-		val scatterGather = new ScatterGather(team);
+		val scatterGather = new DistScatterGather(team);
 		val [nthreads, chunk_size] = splitChunks(range);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
@@ -184,7 +184,7 @@ public class Remote {
 		range :LongRange, f: (index:Long, put:(Int, Long,  T)=>void)=>void)
 	{
 		val teamSize = team.size();
-		val scatterGather = new ScatterGather(team);
+		val scatterGather = new DistScatterGather(team);
 		val [nthreads, chunk_size] = splitChunks(range);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
