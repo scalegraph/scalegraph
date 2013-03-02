@@ -41,10 +41,10 @@ public class HashMap[K,V] {K haszero, V haszero} {
         }
     }
 
-    // 分割するチャンクの個数
-    // Todo: スレッド数が2のべきじゃなかった場合
+    // number of chunks
+    // Todo: if NTHREADS isn't power of 2
     val nChunk = Runtime.NTHREADS;
-    // 上何ビットを見るか
+    // number of bit to split table
     val nMaskBits = MathAppend.ceilLog2(nChunk);
 
     /** The actual table, must be of size 2**n */
@@ -99,7 +99,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
  */
     public def put(k: K, v: V): Box[V] = putInternal(k,v);
     @NonEscaping protected final def putInternal(k: K, v: V): Box[V] {
-        // Todo 条件を考える
+        // Todo incomplete condition
         if ((shouldRehash && size >= table.size() / 2))
             rehashInternal();
 
@@ -117,7 +117,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 table(i) = new HashEntry[K,V](k, v, h);
                 size++;
                 return null;
-            } else if (e.hash == h && k.equals(e.key)) { // kをkeyに持つ要素が存在した場合
+            } else if (e.hash == h && k.equals(e.key)) { // already added key k
                 val old = e.value;
                 table(i) = new HashEntry[K, V](e.key, v, e.hash);
                 return new Box[V](old);
@@ -178,13 +178,11 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
     public def put(keys : MemoryChunk[K], values : MemoryChunk[V]) {
         assert(keys.size() == values.size());
-        // チャンク
         var chunk : Array[GrowableMemory[Pair[Int, Long]]] =
             new Array[GrowableMemory[Pair[Int, Long]]](nChunk, (i:Int)=>(new GrowableMemory[Pair[Int, Long]]()));
 
-        // 各チャンクのエントリ数
+        // number of chunk's entry
         val nEntryLocal = keys.size() / nChunk as Long;
-        // あまり
         val rem = keys.size() % nChunk;
         val offset = new Array[Long](nChunk, (i : Int)=>{
             if (i == 0) {return 0L;}
@@ -199,7 +197,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
             Console.OUT.printf("offset, nEntry = %d, %d\n", offset(p), nEntry(p));
         }
 
-        // 上位nMaskBitsにしたがって分割
+        // split according to upper nMaskBit
         // Todo use scatterGather
         for (p in 0..(nChunk -1)) {
             for (idx in offset(p)..(offset(p) + nEntry(p) - 1)) {
@@ -214,7 +212,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
             Console.OUT.printf("chunk(%d) = %d\n", p, chunk(p).size());
         }
 
-        // 分割したchunkをtableに追加
+        // add chunks to table
         for (0..(nChunk - 1)) {
             val nextChunk = new Array[GrowableMemory[Pair[Int, Long]]](nChunk, (i:Int)=>(new GrowableMemory[Pair[Int, Long]]()));
             finish for (p in 0..(nChunk - 1)) async {
@@ -222,7 +220,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
                     val e = chunk(p)(i);
                     val idx = e.second;
                     if (!putLocal(e.first, keys(idx), values(idx))) {
-                        // チャンクからあふれた場合は次のチャンクの先頭から要素を追加
+                        // if flow from table, add next chunk
                         nextChunk((p + 1) % nChunk).add(new Pair[Int, Long](((p + 1) % nChunk) << (32 - nMaskBits), idx));
                     }
                 }
