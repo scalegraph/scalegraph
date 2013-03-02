@@ -4,12 +4,12 @@ package org.scalegraph.graph.id;
  * Provides the information of the ID conversion and the number of vertixes for DistSparseMatrix.
  */
 public struct IdStruct {
-	/** MathAppend.ceilLog2(C)
-	 */
-	public val lgc: Int;
 	/** MathAppend.ceilLog2(R)
 	 */
 	public val lgr: Int;
+	/** MathAppend.ceilLog2(C)
+	 */
+	public val lgc: Int;
 	/** MathAppend.ceilLog2(numberOfLocalVertexes)
 	 */
 	public val lgl: Int;
@@ -24,9 +24,9 @@ public struct IdStruct {
 	 */
 	public val numberOfGlobalVertexes : Long;
 	
-	public def this(lgc: Int, lgr: Int, lgl: Int, outerOrInner :Boolean, numberOfLocalVertexes: Long,  numberOfGlobalVertexes: Long) {
-		this.lgc = lgc;
+	public def this(lgr: Int, lgc: Int, lgl: Int, outerOrInner :Boolean, numberOfLocalVertexes: Long,  numberOfGlobalVertexes: Long) {
 		this.lgr = lgr;
+		this.lgc = lgc;
 		this.lgl = lgl;
 		this.outerOrInner = outerOrInner;
 		this.numberOfLocalVertexes = numberOfLocalVertexes;

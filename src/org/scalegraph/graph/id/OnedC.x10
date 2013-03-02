@@ -49,7 +49,7 @@ public class OnedC {
 		
 		public def this(ids :IdStruct, c :Int) {
 			val lgl = ids.lgl;
-			cshifted = c << lgl;
+			cshifted = (c as Long) << lgl;
 		}
 		
 		public operator this(id :Long) :Long = id | cshifted;

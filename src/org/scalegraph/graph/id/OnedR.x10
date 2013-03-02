@@ -76,7 +76,7 @@ public class OnedR {
 		
 		public def this(ids :IdStruct, r :Int) {
 			val lgl = ids.lgl;
-			rshifted = r << lgl;
+			rshifted = (r as Long) << lgl;
 		}
 		
 		public operator this(id :Long) :Long = id | rshifted;

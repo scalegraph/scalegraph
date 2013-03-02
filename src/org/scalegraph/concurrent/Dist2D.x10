@@ -225,7 +225,7 @@ public struct Dist2D {
     		throw new IllegalArgumentException();
     	val teamSize = allTeam().size();
     	val numberOfLocalVertices = (numberOfVertices + teamSize - 1) / teamSize;
-    	return new IdStruct(MathAppend.ceilLog2(C), MathAppend.ceilLog2(R),
+    	return new IdStruct(MathAppend.ceilLog2(R), MathAppend.ceilLog2(C),
     			MathAppend.ceilLog2(numberOfLocalVertices), outerOrInner, numberOfLocalVertices, numberOfVertices);
     }
     

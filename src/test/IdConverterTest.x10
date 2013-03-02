@@ -110,5 +110,6 @@ public class IdConverterTest {
     	twodTest();
     	onedCTest();
     	onedRTest();
+    	Console.OUT.println("All ID Test Succeeded!");
     }
 }

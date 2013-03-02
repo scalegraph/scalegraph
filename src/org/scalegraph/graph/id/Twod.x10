@@ -54,7 +54,7 @@ public class Twod {
 			val lgr = ids.lgr;
 			lgl = ids.lgl;
 
-			cshifted = c << lgr;
+			cshifted = (c as Long) << lgr;
 			lgsize = lgr + lgc;
 			lmask = ((1L << lgl) - 1L);
 		}
@@ -72,7 +72,7 @@ public class Twod {
 			val lgr = ids.lgr;
 			val lgl = ids.lgl;
 
-			cshiftedto = c << lgl;
+			cshiftedto = (c as Long) << lgl;
 			lmask = ((1L << lgl) - 1L);
 		}
 		
