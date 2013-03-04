@@ -14,7 +14,7 @@ import org.scalegraph.concurrent.HashMap;
 
 public class TestHashMap {
     def run1() {
-        val t = new HashMap[Int, Int](150);
+        val t = new HashMap[Int, Int](100);
         val n = 100L;
 
         val ks = new MemoryChunk[Int](n);
@@ -28,7 +28,8 @@ public class TestHashMap {
 
         for (i in (0..(n - 1))) {
             val key = i as Int;
-            Console.OUT.println(t.get(key));
+            //Console.OUT.printf("%d, %s\n", key, t.get(key));
+            assert(t.get(key) != null && t.get(key).value == key);
         }
         return;
     }
@@ -43,13 +44,45 @@ public class TestHashMap {
 
         for (i in (0..(n - 1))) {
             val key = i as Int;
-            Console.OUT.println(t.get(key));
+            assert(t.get(key) != null && t.get(key).value == key);
         }
         return;
     }
 
+    def run3() {
+        val t = new HashMap[Int, Int](100);
+        val n1 = 50;
+        val n2 = 50;
+
+        val ks1 = new MemoryChunk[Int](n1);
+        val vs1 = new MemoryChunk[Int](n1);
+
+        val ks2 = new MemoryChunk[Int](n2);
+        val vs2 = new MemoryChunk[Int](n2);
+
+        for (i in (0..(n1 - 1))) {
+            ks1(i as Long) = i as Int;
+            vs1(i as Long) = i as Int;
+        }
+        t.put(ks1, vs1);
+
+        for (i in (n1..(n1 + n2 - 1))) {
+            ks2(i as Long) = i as Int;
+            vs2(i as Long) = i as Int;
+        }
+        t.put(ks2, vs2);
+
+        for (i in (0..(n1 + n2 - 1))) {
+            val key = i as Int;
+            assert(t.get(key) != null && t.get(key).value == key);
+        }
+    }
+
     public static def main(Array[String](1)) {
-        new TestHashMap().run1();
-        new TestHashMap().run2();
+        val test = new TestHashMap();
+
+        test.run1();
+        test.run2();
+        //test.run3();
     }
 }

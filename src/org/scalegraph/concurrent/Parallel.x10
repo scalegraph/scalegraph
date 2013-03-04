@@ -69,16 +69,8 @@ public class Parallel {
         finish _sort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) * 4, 0L, a.size(), cmp);
     }
 
-    public static def sort[T](a:MemoryChunk[T], proc : Int, cmp:(T, T)=>Long) {
-        finish _sort[T](a, proc, 0L, a.size(), cmp);
-    }
-
     public static def sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], cmp:(T, T)=>Long) {
         finish _sort[T, U](k, v, MathAppend.ceilLog2(Runtime.NTHREADS as Long) * 4, 0L, k.size(), cmp);
-    }
-
-    public static def sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], proc : Int, cmp:(T, T)=>Long) {
-        finish _sort[T, U](k, v, proc, 0L, k.size(), cmp);
     }
 
     public static def _sort[T](a:MemoryChunk[T], proc:Int, lo:Long, hi:Long, cmp:(T, T)=>Long) {
@@ -387,7 +379,6 @@ public class Parallel {
     		if (cmp(a(lo + secondChild), a(lo + secondChild - 1)) < 0) {
     			secondChild--;
     		}
-
     		a(lo + _holeIndex) = a(lo + secondChild);
     		_holeIndex = secondChild;
     		secondChild = 2 * (secondChild + 1);

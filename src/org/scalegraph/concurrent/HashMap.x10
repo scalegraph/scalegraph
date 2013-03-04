@@ -10,6 +10,7 @@ import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.util.tuple.Tuple3;
 
 struct Pair[T, U] {
 	val first:T;
@@ -43,9 +44,9 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
     // number of chunks
     // Todo: if NTHREADS isn't power of 2
-    val nChunk = Runtime.NTHREADS;
+    private static nChunk = Runtime.NTHREADS as Int;
     // number of bit to split table
-    val nMaskBits = MathAppend.ceilLog2(nChunk);
+    private static nMaskBits = MathAppend.ceilLog2(nChunk) as Int;
 
     /** The actual table, must be of size 2**n */
     var table: MemoryChunk[HashEntry[K,V]];
@@ -87,8 +88,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
         return k.hashCode() * 200000000;
     }
 
-    /** 上位nビットでマスク*/
-    private def hashToIndex(idx : Int, n : Int) {
+    /** mask and shift upper n bits */
+    @NonEscaping protected final def hashToIndex(idx : Int, n : Int) {
         if (n == 0) return 0;
         return ((idx as UInt) >> (32 - n)) as Int;
     }
@@ -177,57 +178,87 @@ public class HashMap[K,V] {K haszero, V haszero} {
     }
 
     public def put(keys : MemoryChunk[K], values : MemoryChunk[V]) {
-        assert(keys.size() == values.size());
-        var chunk : Array[GrowableMemory[Pair[Int, Long]]] =
-            new Array[GrowableMemory[Pair[Int, Long]]](nChunk, (i:Int)=>(new GrowableMemory[Pair[Int, Long]]()));
-
-        // number of chunk's entry
-        val nEntryLocal = keys.size() / nChunk as Long;
-        val rem = keys.size() % nChunk;
-        val offset = new Array[Long](nChunk, (i : Int)=>{
-            if (i == 0) {return 0L;}
-            else {return i * nEntryLocal as Long;}
-        });
-        val nEntry = new Array[Long](nChunk, (i : Int) => {
-            if (i == nChunk - 1) {return nEntryLocal + rem;}
-            else {return nEntryLocal;}
-        });
-
-        for (p in 0..(nChunk - 1)) {
-            Console.OUT.printf("offset, nEntry = %d, %d\n", offset(p), nEntry(p));
+        if (size + keys.size() >= table.size() / 2) {
+            rehashInternal();
         }
+        assert(keys.size() == values.size());
+        val chunk = new MemoryChunk[Pair[Int, Long]](keys.size());
 
+        val scatterGather = new ScatterGather(nChunk);
+        Parallel.iter(keys.range(), (tid: Long, r : LongRange)=> {
+            val counts = scatterGather.getCounts(tid as Int);
+            for (i in r) {
+                val h = hash(keys(i));
+                val chunkIdx = hashToIndex(h, nMaskBits) as Int;
+                counts(chunkIdx)++;
+            }
+        });
+        scatterGather.sum();
         // split according to upper nMaskBit
         // Todo use scatterGather
-        for (p in 0..(nChunk -1)) {
-            for (idx in offset(p)..(offset(p) + nEntry(p) - 1)) {
-                val h = hash(keys(idx));
+        Parallel.iter(keys.range(), (tid: Long, r : LongRange)=> {
+            val offsets = scatterGather.getOffsets(tid as Int);
 
+            for (i in r) {
+                val k = keys(i);
+                val v = values(i);
+                val h = hash(keys(i));
                 val chunkIdx = hashToIndex(h, nMaskBits) as Int;
-                chunk(chunkIdx).add(new Pair[Int, Long](h, idx as Long));
+                val idx = offsets(chunkIdx)++;
+                chunk(idx) = new Pair[Int, Long](h, i);
+            }
+        });
+
+        val offsets = scatterGather.getChunkOffset();
+        val counts = scatterGather.getChunkCounts();
+        // add chunks to table
+
+        var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]] =
+            new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk, (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+        finish for (p in (0..(nChunk - 1))) async {
+            Console.OUT.printf("offset, counts = %d, %d\n", offsets(p), counts(p));
+            for (i in (0..(counts(p) - 1))) {
+                val pair = chunk(offsets(p) + i);
+                currentChunk(p).add(new Tuple3[Int, Long, Int](pair.first, pair.second, pair.first));
             }
         }
 
-        for (p in 0..(nChunk - 1)) {
-            Console.OUT.printf("chunk(%d) = %d\n", p, chunk(p).size());
+        for (p in (0..(nChunk - 1))) {
+            Console.OUT.printf("%d\n", p);
+            for (i in currentChunk(p).range()) {
+                Console.OUT.println(currentChunk(p)(i));
+            }
         }
 
-        // add chunks to table
+        val sz = MathAppend.ceilLog2(table.size());
+
         for (0..(nChunk - 1)) {
-            val nextChunk = new Array[GrowableMemory[Pair[Int, Long]]](nChunk, (i:Int)=>(new GrowableMemory[Pair[Int, Long]]()));
+            val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+                (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
             finish for (p in 0..(nChunk - 1)) async {
-                for (i in chunk(p).range()) {
-                    val e = chunk(p)(i);
-                    val idx = e.second;
-                    if (!putLocal(e.first, keys(idx), values(idx))) {
+                for (i in (currentChunk(p).range())) {
+                    val e = currentChunk(p)(i);
+                    val idx = e.val2;
+                    if (!putLocal(e.val1, e.val3, keys(idx), values(idx))) {
                         // if flow from table, add next chunk
-                        nextChunk((p + 1) % nChunk).add(new Pair[Int, Long](((p + 1) % nChunk) << (32 - nMaskBits), idx));
+                        nextChunk((p + 1) % nChunk).add(
+                            new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+                        /*
+                        Console.OUT.println("nextChunk");
+                        Console.OUT.println(e);
+                        Console.OUT.println(e.first);
+                        Console.OUT.println(keys(idx));
+                        Console.OUT.println(values(idx));
+                        Console.OUT.println(((e.first as UInt) >> (32 - sz)) as Int);
+                        Console.OUT.println(p);
+                        Console.OUT.println("nextChunk");
+                         */
                     }
                 }
             }
-            chunk = nextChunk;
-            if (chunk.reduce(((acc:Boolean, x:GrowableMemory[Pair[Int, Long]])=>x.size()==0L && acc), true)) {break;}
-            nextChunk.map((x:GrowableMemory[Pair[Int, Long]])=>{Console.OUT.printf("%d\n", x.size());return 0;});
+            currentChunk = nextChunk;
+            if (currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true)) {break;}
+            nextChunk.map((x:GrowableMemory[Tuple3[Int, Long, Int]])=>{Console.OUT.printf("%d\n", x.size());return 0;});
         }
 
         for (i in 0..(table.size() - 1)) {
@@ -235,12 +266,12 @@ public class HashMap[K,V] {K haszero, V haszero} {
         }
 
         for (p in 0..(nChunk -1)) {
-            assert(chunk(p).size() == 0L);
+            assert(currentChunk(p).size() == 0L);
         }
     }
 
     // Todo: if elements already stored?
-    private def putLocal(h : Int, key : K, value : V) {
+    private def putLocal(h : Int, proper_h : Int, key : K, value : V) {
         // current working upper bits
         val currentBits = hashToIndex(h, nMaskBits);
         // upper bit of table size
@@ -257,7 +288,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 if (cnt > MAX_PROBES) {
                     shouldRehash = true;
                 }
-                table(cur) = new HashEntry[K, V](key, value, h);
+                table(cur) = new HashEntry[K, V](key, value, proper_h);
                 size++;
                 return true;
             }
@@ -267,26 +298,106 @@ public class HashMap[K,V] {K haszero, V haszero} {
         return false;
     }
 
-    // Todo: implement
     public def rehash():void { rehashInternal(); }
     @NonEscaping protected final def rehashInternal(): void {
-        /*
-        modCount++;
         val t = table;
         val oldSize = size;
         table = new MemoryChunk[HashEntry[K, V]](t.size() * 2);
-        size = 0;
-        shouldRehash = false;
 
-        for (var i: int = 0; i < t.size(); i++) {
-            if (t(i).occupied) {
-                put(t(i).key, t(i).value);
-                shouldRehash = false;
+        val scatterGather = new ScatterGather(nChunk);
+        Parallel.iter(t.range(), (tid: Long, r : LongRange)=> {
+            val counts = scatterGather.getCounts(tid as Int);
+            for (i in r) {
+                val e = t(i);
+                if (e.occupied) {
+                    val h = e.hash;
+                    // Todo : NonEscaping
+                    val chunkIdx : Int = ((nMaskBits == 0) ? (0 as Int) : (((h as UInt) >> (32 - nMaskBits)) as Int));
+                    counts(chunkIdx)++;
+                }
+            }
+        });
+        scatterGather.sum();
+
+        val chunk = new MemoryChunk[Pair[Int, Long]](scatterGather.getChunkSize());
+
+        // split according to upper nMaskBit
+        // Todo use scatterGather
+        Parallel.iter(t.range(), (tid: Long, r : LongRange)=> {
+            val offsets = scatterGather.getOffsets(tid as Int);
+
+            for (i in r) {
+                val k = t(i).key;
+                val v = t(i).value;
+                val h = t(i).hash;
+                // Todo : NonEscaping
+                val chunkIdx : Int = ((nMaskBits == 0) ? (0 as Int) : (((h as UInt) >> (32 - nMaskBits)) as Int));
+                val idx = offsets(chunkIdx)++;
+                chunk(idx) = new Pair[Int, Long](h, i);
+            }
+        });
+
+
+        val offsets = scatterGather.getChunkOffset();
+        val counts = scatterGather.getChunkCounts();
+        // add chunks to table
+
+        var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]] =
+            new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk, (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+        finish for (p in (0..(nChunk - 1))) async {
+            Console.OUT.printf("offset, counts = %d, %d\n", offsets(p), counts(p));
+            for (i in (0..(counts(p) - 1))) {
+                val pair = chunk(offsets(p) + i);
+                currentChunk(p).add(new Tuple3[Int, Long, Int](pair.first, pair.second, pair.first));
             }
         }
-        assert size == oldSize;
-        size = oldSize;
-              */
 
+        for (p in (0..(nChunk - 1))) {
+            Console.OUT.printf("%d\n", p);
+            for (i in currentChunk(p).range()) {
+                Console.OUT.println(currentChunk(p)(i));
+            }
+        }
+
+        val sz = MathAppend.ceilLog2(table.size());
+
+        for (0..(nChunk - 1)) {
+            val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+                (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+
+            finish for (p in 0..(nChunk - 1)) async {
+                for (i in (currentChunk(p).range())) {
+                    val e = currentChunk(p)(i);
+                    val idx = e.val2;
+                    if (!putLocal(e.val1, e.val3, table(idx).key, table(idx).value)) {
+                        // if flow from table, add next chunk
+                        nextChunk((p + 1) % nChunk).add(
+                            new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+                        /*
+                        Console.OUT.println("nextChunk");
+                        Console.OUT.println(e);
+                        Console.OUT.println(e.first);
+                        Console.OUT.println(keys(idx));
+                        Console.OUT.println(values(idx));
+                        Console.OUT.println(((e.first as UInt) >> (32 - sz)) as Int);
+                        Console.OUT.println(p);
+                        Console.OUT.println("nextChunk");
+                         */
+                    }
+                }
+            }
+            currentChunk = nextChunk;
+            if (currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true)) {break;}
+            nextChunk.map((x:GrowableMemory[Tuple3[Int, Long, Int]])=>{Console.OUT.printf("%d\n", x.size());return 0;});
+        }
+
+        for (i in 0..(table.size() - 1)) {
+            Console.OUT.println(table(i));
+        }
+
+        for (p in 0..(nChunk -1)) {
+            assert(currentChunk(p).size() == 0L);
+        }
+        assert(size == oldSize);
     }
 }
