@@ -14,6 +14,7 @@ import org.scalegraph.concurrent.HashMap;
 
 public class TestHashMap {
     def run1() {
+        Console.OUT.println("test1 start");
         val t = new HashMap[Int, Int](100);
         val n = 100L;
 
@@ -31,10 +32,12 @@ public class TestHashMap {
             //Console.OUT.printf("%d, %s\n", key, t.get(key));
             assert(t.get(key) != null && t.get(key).value == key);
         }
+        Console.OUT.println("test1 end");
         return;
     }
 
     def run2() {
+        Console.OUT.println("test2 start");
         val t = new HashMap[Int, Int](300);
         val n = 100L;
 
@@ -46,10 +49,12 @@ public class TestHashMap {
             val key = i as Int;
             assert(t.get(key) != null && t.get(key).value == key);
         }
+        Console.OUT.println("test2 end");
         return;
     }
 
     def run3() {
+        Console.OUT.println("test3 start");
         val t = new HashMap[Int, Int](100);
         val n1 = 50;
         val n2 = 50;
@@ -66,9 +71,9 @@ public class TestHashMap {
         }
         t.put(ks1, vs1);
 
-        for (i in (n1..(n1 + n2 - 1))) {
-            ks2(i as Long) = i as Int;
-            vs2(i as Long) = i as Int;
+        for (i in (0..(n2 - 1))) {
+            ks2(i as Long) = i + n1 as Int;
+            vs2(i as Long) = i + n1 as Int;
         }
         t.put(ks2, vs2);
 
@@ -76,13 +81,28 @@ public class TestHashMap {
             val key = i as Int;
             assert(t.get(key) != null && t.get(key).value == key);
         }
+        Console.OUT.println("test3 end");
     }
 
+    def run4() {
+        val t = new HashMap[Int, Int](10);
+        val n1 = 5;
+        val ks1 = new MemoryChunk[Int](n1);
+        val vs1 = new MemoryChunk[Int](n1);
+
+        for (i in (0..(n1 - 1))) {
+            ks1(i as Long) = i as Int;
+            vs1(i as Long) = i as Int;
+        }
+        t.put(ks1, vs1);
+        Console.OUT.println("start rehash");
+        t.rehash();
+    }
     public static def main(Array[String](1)) {
         val test = new TestHashMap();
-
         test.run1();
         test.run2();
-        //test.run3();
+        test.run3();
+        test.run4();
     }
 }
