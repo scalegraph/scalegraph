@@ -3,6 +3,7 @@ package org.scalegraph.metrics;
 import x10.array.RemoteArray;
 import x10.compiler.Ifndef;
 import x10.compiler.Inline;
+import x10.compiler.Native;
 import org.scalegraph.fileread.DistributedReader;
 import x10.io.SerialData;
 import x10.util.ArrayList;
@@ -33,14 +34,14 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
     private val lgr: Int;
     private val role: Int;
     private val localGraph: SparseMatrix;
-    private var sources: Array[Vertex] = null;
+    // private var sources: Array[Vertex] = null;
     
     public static class LocalState {
         val _distSparseMatrix: DistSparseMatrix;
         val _currentSource: Cell[Vertex];
         val _queues: IndexedMemoryChunk[Bitmap];
         val _qPointer: Cell[Int];
-        val _distanceMap: IndexedMemoryChunk[AtomicLong];
+        val _distanceMap: IndexedMemoryChunk[Long];
         val _currentLevel: Cell[Long];
         val _numLocalVertices: Long;
         val _score: IndexedMemoryChunk[Double];
@@ -76,12 +77,11 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         val numAddPred: AtomicLong = new AtomicLong(0);
         
         protected def this(dsm: DistSparseMatrix,
-                           src: Vertex,
                            srcs: Array[Vertex],
                            buffSize: Int) {
             val t = dsm.dist().allTeam();
             _distSparseMatrix = dsm;
-            _currentSource = new Cell[Vertex](src);
+            _currentSource = new Cell[Vertex](0);
             _sources = srcs;
             _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap](2,
                             _ALIGN,
@@ -99,7 +99,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                     _numLocalVertices,
                     _ALIGN,
                     _CONGRUENT);
-            _distanceMap = IndexedMemoryChunk.allocateZeroed[AtomicLong](
+            _distanceMap = IndexedMemoryChunk.allocateZeroed[Long](
                     _numLocalVertices,
                     _ALIGN,
                     _CONGRUENT);
@@ -123,7 +123,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             
             // Init loop
             for (i in 0..(_numLocalVertices - 1)) {
-                _distanceMap(i) = new AtomicLong(0);
+                _distanceMap(i) = 0L;
                 _predMap(i) = null;
                 _successorCount(i) = new AtomicLong(0);;
                 _pathCount(i) = 0L;
@@ -161,6 +161,9 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         localGraph = dsm();
     }
     
+    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
+    public static native def compare_and_swap[T](imc: IndexedMemoryChunk[Long], index: Long, oldVal: T, newVal: T): Boolean;
+    
     public def this (serialData: SerialData) {
         this(serialData.data as PlaceLocalHandle[LocalState]);
     }
@@ -178,12 +181,10 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                 true,
                 true);        
         // Create local state for BC
-        val lsBfsBufferSize = (1 << 10);
-        val firstSource = 12;
+        val lsBfsBufferSize = (1 << 14);
         val localState = PlaceLocalHandle.make[LocalState](places, 
                 () => { 
             return (new LocalState(csr,
-                    					firstSource,
                     					_sources,
                     					lsBfsBufferSize));
         });
@@ -194,41 +195,46 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
     private def internalRun() {
         var time: Long = System.currentTimeMillis();
         val placeGroup = team.placeGroup();
-        finish {
-            for (p in placeGroup) {
-                at (p) async {
-                    val sources = lch()._sources;
-                    for (i in 0..(sources.size - 1)) {
+        for (i in 0..(lch()._sources.size - 1)) {
+            val src = lch()._sources(i);
+            finish {
+                for (p in placeGroup) { 
+                    at (p) async {
+                        val sources = lch()._sources;
                         if (i > 0) {
                             clear();
                         }
-                        // Console.OUT.println("Src: " + i);
-                        setLocalSource(sources(i)); team.barrier(role);
+                        Console.OUT.println(here.id + "Src: " + src);
+                        setLocalSource(src); team.barrier(role);
+                        // Console.OUT.println(here.id + "AA");
                         travelNonIncDist();     team.barrier(role);
+                        // Console.OUT.println(here.id + "BB");
                         countSuccessor();	      team.barrier(role);
+                        // Console.OUT.println(here.id + "CC");
                         addLeafNodeToUpdate();   team.barrier(role);
-                        val c = team.allreduce(role, updateScoreNextQ().setBitCount(), Team.ADD);team.barrier(role);
+                        // Console.OUT.println(here.id + "DD");
+                        // val c = team.allreduce(role, updateScoreNextQ().setBitCount(), Team.ADD);team.barrier(role);
                         backtracking(); 			team.barrier(role);
-                        val t1 = lch().numVertexVisit.longValue();
-                        lch().numVertexVisit.set(team.allreduce(role, t1, Team.ADD));
-                        val t2 = lch().numExamine.longValue();
-                        lch().numExamine.set(team.allreduce(role, t2, Team.ADD));
-                        val t3 = lch().numAddPred.longValue();
-                        val d = team.allreduce(role, t3, Team.ADD);
+                        // Console.OUT.println(here.id + "EE");
+                        // val t1 = lch().numVertexVisit.longValue();
+                        // lch().numVertexVisit.set(team.allreduce(role, t1, Team.ADD));
+                        // val t2 = lch().numExamine.longValue();
+                        // lch().numExamine.set(team.allreduce(role, t2, Team.ADD));
+                        // val t3 = lch().numAddPred.longValue();
+                        // val d = team.allreduce(role, t3, Team.ADD);
                         
-                        if (here.id == 0) {
-                            Console.OUT.println("Add Pred: " + d);
-                            Console.OUT.println("Sum set: " + c);
-                            Console.OUT.println("Num visit: " + lch().numVertexVisit.longValue());
-                            Console.OUT.println("Num examine: " + lch().numExamine.longValue());    
-                        }
+                        // if (here.id == 0) {
+                        //     Console.OUT.println("Add Pred: " + d);
+                        //     Console.OUT.println("Sum set: " + c);
+                        //     Console.OUT.println("Num visit: " + lch().numVertexVisit.longValue());
+                        //     Console.OUT.println("Num examine: " + lch().numExamine.longValue());    
+                        // }
                     }
                 }
             }
         }
         time = System.currentTimeMillis() - time;
-        print();
-        
+        // print();
         Console.OUT.println("BC time: " + time);
     }
     
@@ -244,7 +250,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         updateScoreCurrentQ().clearAll();
         updateScoreNextQ().clearAll();
         for (i in 0..(lch()._numLocalVertices - 1)) {
-            lch()._distanceMap(i).set(0);
+            lch()._distanceMap(i) = 0L;
             if (lch()._predMap(i) != null)
                 lch()._predMap(i).clear();
             lch()._successorCount(i).set(0);
@@ -318,9 +324,10 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         val _flood = (bufId: Int, pid: Int) => {
             val preds = predBuf(bufId)(pid).toArray();
             val succs = succBuf(bufId)(pid).toArray();
+            val count = preds.size;
             val p = team.getPlace(pid);
             at (p)  {
-                for(k in 0..(preds.size - 1)) {
+                for(k in 0..(count - 1)) {
                     val lv = lch()._currentLevel();
                     visit(preds(k), succs(k), lv);
                 }
@@ -346,7 +353,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         if (isLocalVertex(src)) {
             val locSrc = OrgToLocSrc(src);
             nextQ().set(locSrc);
-            lch()._distanceMap(locSrc).set(0);
+            lch()._distanceMap(locSrc) = 0L;
         }
         if (here.id == 0)
         	Console.OUT.println("Start BFS");
@@ -362,7 +369,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                 break;
             val traverse = (localSrc: Vertex, threadId: Int) => {           
                 val neighbors = localGraph.adjacency(localSrc);
-                val predDistance = lch()._distanceMap(localSrc).longValue();
+                val predDistance = lch()._distanceMap(localSrc);
                 val orgSrc = LocSrcToOrg(localSrc);                               
                 for(i in neighbors.range()) {
                     lch().numExamine.incrementAndGet();
@@ -402,11 +409,11 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                 lch().numVertexVisit.incrementAndGet();
             }
         };
-        if (lch()._distanceMap(localDst).compareAndSet(0, d)) {
+        if (compare_and_swap(lch()._distanceMap, localDst, 0L, d)) {
             // First visit
             nextQ().set(localDst);
         }         
-        if (lch()._distanceMap(localDst).get() == d){
+        if (lch()._distanceMap(localDst) == d){
             // Another shortest path
             f();
         }
@@ -561,7 +568,6 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
     public def calDependency(w_theta: Double, w_sigma: Long, v: Vertex) {
         val locPred = OrgToLocSrc(v);
         val numUpdates = lch()._numUpdate(locPred).incrementAndGet();
-        
         val sigma = lch()._pathCount(locPred) as Double;
         atomic {
             val dep = lch()._dependency(locPred) + (sigma / w_sigma as Double) * (1 + w_theta);
@@ -580,7 +586,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         // TODO: clear all reference
     }
     
-    public @Inline static def iter(range :LongRange, func :(Long, Int) => void) {
+    public static def iter(range :LongRange, func :(Long, Int) => void) {
         val size = range.max - range.min + 1;
         if (size == 0L)
             return;
