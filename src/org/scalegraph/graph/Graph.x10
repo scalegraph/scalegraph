@@ -132,8 +132,8 @@ import org.scalegraph.concurrent.Dist2D;
 	private static def innerAddEdges(team_ :Team, maxVertexID :Long,
 			ref :GlobalRef[Graph], edgeList_ :GrowableMemory[Long], translated :MemoryChunk[Long])
 	{
-		val globalMaxVertexID = team_.allreduce(team_.getRole(here), maxVertexID, Team.MAX);
-		val globalNumOfEdges = team_.allreduce(team_.getRole(here), translated.size() / 2, Team.ADD);
+		val globalMaxVertexID = team_.allreduce(team_.getRole(here)(0), maxVertexID, Team.MAX);
+		val globalNumOfEdges = team_.allreduce(team_.getRole(here)(0), translated.size() / 2, Team.ADD);
 		if(here == ref.home) {
 			val g = ref.getLocalOrCopy();
 			g.numberOfVertices = Math.max(globalMaxVertexID + 1, g.numberOfVertices);
@@ -163,7 +163,7 @@ import org.scalegraph.concurrent.Dist2D;
 					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Long]])();
 					translated = new MemoryChunk[Long](edges().size());
 					vtt_.translateWithAll(edges(), translated, true);
-					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.getRole(here);
+					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.getRole(here)(0);
 				}
 				else {
 					val edges_ = edges();
@@ -196,7 +196,7 @@ import org.scalegraph.concurrent.Dist2D;
 				if(vt_ != null) {
 					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Double]])();
 					vtt_.translateWithAll(edges_, translated, true);
-					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.getRole(here);
+					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.getRole(here)(0);
 				}
 				else {
 					maxVertexID = Parallel.reduce[Long](translated.range(),
@@ -240,7 +240,7 @@ import org.scalegraph.concurrent.Dist2D;
 			try {
 				val att_ = att.values()();
 				if(vertexOrEdge) {
-					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here));
+					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here)(0));
 					att_.setSize(actualLocalVertices);
 				}
 				else {
@@ -351,7 +351,7 @@ import org.scalegraph.concurrent.Dist2D;
 		team_.placeGroup().broadcastFlat(() => {
 			try {
 				val values_ = values();
-				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here));
+				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here)(0));
 				if(actualLocalVertices != values_.size())
 					throw new IllegalArgumentException("The number of attribute values is not match the number of vertices");
 				
@@ -405,11 +405,11 @@ import org.scalegraph.concurrent.Dist2D;
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
-				val roleInGraph = team_.getRole(here);
+				val roleInGraph = team_.getRole(here)(0);
 				val sizeOfGraph = team_.size();
 				val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
 				val att_ = attValues();
-				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here));
+				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.getRole(here)(0));
 				att_.setSize(actualLocalVertices);
 				
 				val setter = (i :Long, v :T) => {
@@ -418,7 +418,7 @@ import org.scalegraph.concurrent.Dist2D;
 
 				if(sparseMatrix.dist().z() == z) {
 					val allTeam = sparseMatrix.dist().allTeam();
-					val roleInDist = allTeam.getRole(here);
+					val roleInDist = allTeam.getRole(here)(0);
 					val sizeOfDist = allTeam.size();
 					val localsize = 1L << sparseMatrix.ids().lgl;
 					val values_ = values();
@@ -454,7 +454,7 @@ import org.scalegraph.concurrent.Dist2D;
 		val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
 		val places = dist2d.allTeam().places();
 		for([i] in places) {
-			roleMap(i) = team_.getRole(places(i));
+			roleMap(i) = team_.getRole(places(i))(0);
 		}
 		val ids = dist2d.getIds(numberOfVertices, outerOrInner);
 		val rmask = (1L << ids.lgr) - 1;
@@ -481,7 +481,7 @@ import org.scalegraph.concurrent.Dist2D;
 				}
 			});
 			scatterGather.sum();
-			val teamRank = team_.getRole(here);
+			val teamRank = team_.getRole(here)(0);
 			val teamSize = team_.size();
 			val sendCount = scatterGather.sendCount();
 			val sendEdges = new MemoryChunk[EDGE](sendCount);
@@ -565,7 +565,7 @@ import org.scalegraph.concurrent.Dist2D;
 		// return GlobalRef[SparseMatrix]...
 		val team_ = team;
 		val edgelist_ = edgeList;
-		val root = team_.getRole(place);
+		val root = team_.getRole(place)(0);
 		// too complex ...
 		val ret = GlobalRef[Cell[GlobalRef[Cell[SparseMatrix]]]](
 				new Cell[GlobalRef[Cell[SparseMatrix]]](Zero.get[GlobalRef[Cell[SparseMatrix]]]()));
@@ -577,7 +577,7 @@ import org.scalegraph.concurrent.Dist2D;
 				val sendEdges = new MemoryChunk[EDGE](sendCount);
 				val sendIndexes = new MemoryChunk[Long](sendCount);
 				val teamSize = team_.size();
-				val teamRank = team_.getRole(here);
+				val teamRank = team_.getRole(here)(0);
 				Parallel.iter(0..(numEdges - 1), (tid:Long, r:LongRange) => {
 					if(directed) {
 						if(outerOrInner) {
@@ -680,12 +680,12 @@ import org.scalegraph.concurrent.Dist2D;
 		return new DistMemoryChunk[T](team_.placeGroup(), () => {
 			try {
 				if(vertexOrEdge) {
-					val roleInGraph = team_.getRole(here);
+					val roleInGraph = team_.getRole(here)(0);
 					val sizeOfGraph = team_.size();
 					val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
 
 					val allTeam = sparseMatrix.dist().allTeam();
-					val roleInDist = allTeam.getRole(here);
+					val roleInDist = allTeam.getRole(here)(0);
 					val sizeOfDist = allTeam.size();
 					val localsize = 1L << sparseMatrix.ids().lgl;
 					

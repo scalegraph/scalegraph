@@ -58,7 +58,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	public def this(team__:Team, vertexNames__ :GrowableMemory[T], hashFunc__:(T)=>Int){
 		hashFunc = hashFunc__;
 		team = team__;
-		teamRank = team.getRole(here);
+		teamRank = team.getRole(here)(0);
 		teamSize = team.size();
 		vertexNames = vertexNames__;
 	}

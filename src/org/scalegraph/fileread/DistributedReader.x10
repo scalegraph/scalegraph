@@ -113,7 +113,7 @@ public class DistributedReader {
  			values : Attribute[Double])
  	{
  		team.placeGroup().broadcastFlat(() => {
- 			val role = team.getRole(here);
+ 			val role = team.getRole(here)(0);
  			val filename = String.format(filenamefmt, [role as Any]);
  			val values_ = values.values()().data();
  			val writer = new FileWriter(new File(filename));

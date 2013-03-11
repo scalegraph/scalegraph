@@ -70,7 +70,7 @@ public class GIMV {
 			val localsize = 1L << ids.lgl;
 			val localRsize = 1L << (ids.lgl + ids.lgr);
 			val localCsize = 1L << (ids.lgl + ids.lgc);
-			val rank = dist.allTeam().getRole(here);
+			val rank = dist.allTeam().getRole(here)(0);
 			val size = dist.allTeam().size();
 			val b = buffers()();
 			val m = matrix();
@@ -201,7 +201,7 @@ public class GIMV {
 			val dist = matrix.dist();
 			val ids = matrix.ids();
 			val localsize = 1L << ids.lgl;
-			val rank = team.base.getRole(here);
+			val rank = team.base.getRole(here)(0);
 			val size = team.base.size();
 			val b = buffers()();
 			val m = matrix();

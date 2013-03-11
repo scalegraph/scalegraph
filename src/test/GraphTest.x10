@@ -246,7 +246,7 @@ public class GraphTest {
 		team.placeGroup().broadcastFlat(() => {
 			val v = vector();
 			for(i in v.range()) v(i) = initValue;
-			if(team.getRole(here) == 0) v(0) = 0.0;
+			if(team.getRole(here)(0) == 0) v(0) = 0.0;
 		});
 		
 		if(C == 1) { // 1D
@@ -334,6 +334,6 @@ public class GraphTest {
 	}
 	
     public static def main(args: Array[String](1)) {
-    	ditributed_pagerank_test(args(1), args(0));
+        ditributed_sssp_test(args(1), args(0));
     }
 }

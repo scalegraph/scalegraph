@@ -84,8 +84,8 @@ public struct Dist2D {
     		
     		var allTeam :Team;
     		if(create_allteam_) {
-    			val z = parentTeam.getRole(here) / RC;
-    			allTeam = parentTeam.split(parentTeam.getRole(here), z, role);
+    			val z = parentTeam.getRole(here)(0) / RC;
+    			allTeam = parentTeam.split(parentTeam.getRole(here)(0), z, role);
     		}
     		else {
     			allTeam = parentTeam;
@@ -178,7 +178,7 @@ public struct Dist2D {
      */
     public def c() = data()().herePt(1);
     
-    public def z() = data()().parentTeam.getRole(here) / data()().allTeam.size();
+    public def z() = data()().parentTeam.getRole(here)(0) / data()().allTeam.size();
     
     /** Returns the plane wide rank for the current place.
      */
