@@ -93,7 +93,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         table = MemoryChunk[HashEntry[K, V]](init_size as Long);
         this.logSize = MathAppend.ceilLog2(table.size());
-        Console.OUT.printf("logSize = %d\n" logSize);
+        Console.OUT.printf("logSize = %d\n", logSize);
         this.size = 0;
         shouldRehash = false;
     }
@@ -103,7 +103,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
             table(i) = HashEntry[K, V]();
         }
         size = 0;
-        logSize = 0;
+        logSize = MathAppend.ceilLog2(table.size());
         shouldRehash = false;
     }
 
@@ -132,6 +132,10 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         var i : Int = hashToIndex(h, sz);
         var cnt : Int = 0;
+/*
+        Console.OUT.printf("sz = %d\n", sz);
+        Console.OUT.printf("i = %d\n", i);
+ */
 
         while (true) {
             val e = table(i);
@@ -231,8 +235,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
         val offsets = scatterGather.getChunkOffset();
         val counts = scatterGather.getChunkCounts();
         // add chunks to table
-
-        val sz = this.logSize;
 
         // closure__3
         val localSize = new Array[Int](nChunk);
