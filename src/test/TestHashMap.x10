@@ -9,47 +9,57 @@ import x10.util.Random;
 import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.StopWatch;
 import org.scalegraph.concurrent.Parallel;
 import org.scalegraph.concurrent.HashMap;
 
 public class TestHashMap {
+    val n = 1000000;
+    val ne = 400000;
+
+    static nTest = 50;
+
     def run1() {
         Console.OUT.println("test1 start");
-        val t = new HashMap[Int, Int](100);
-        val n = 100L;
-
-        val ks = new MemoryChunk[Int](n);
-        val vs = new MemoryChunk[Int](n);
-
-        for (i in (0..(n - 1))) {
+        var sum : Double = 0.;
+        val t = new HashMap[Int, Int](n);
+        val ks = new MemoryChunk[Int](ne);
+        val vs = new MemoryChunk[Int](ne);
+        for (i in (0..(ne - 1))) {
             ks(i as Long) = i as Int;
             vs(i as Long) = i as Int;
         }
-        t.put(ks, vs);
-
-        for (i in (0..(n - 1))) {
-            val key = i as Int;
-            //Console.OUT.printf("%d, %s\n", key, t.get(key));
-            assert(t.get(key) != null && t.get(key).value == key);
+        for (1..nTest) {
+            System.gc();
+            val startTime = Timer.nanoTime();
+            t.put(ks, vs);
+            val time = (Timer.nanoTime() - startTime) / (1000. * 1000. * 1000.);
+            //Console.OUT.printf("time1 = %f\n", time);
+            sum += time;
+            t.clear();
         }
-        Console.OUT.println("test1 end");
+        Console.OUT.printf("ave time1 = %.16f\n", sum / nTest);
         return;
     }
 
     def run2() {
         Console.OUT.println("test2 start");
-        val t = new HashMap[Int, Int](300);
-        val n = 100L;
 
-        for (i in (0..(n - 1))) {
-            t.put(i as Int, i as Int);
-        }
+        var sum : Double = 0.;
+        val t = new HashMap[Int, Int](n);
+        for (1..nTest) {
+            System.gc();
 
-        for (i in (0..(n - 1))) {
-            val key = i as Int;
-            assert(t.get(key) != null && t.get(key).value == key);
+            val startTime = Timer.nanoTime();
+            for (i in (0..(ne - 1))) {
+                t.put(i as Int, i as Int);
+            }
+            val time = (Timer.nanoTime() - startTime) / (1000. * 1000. * 1000.);
+            //Console.OUT.printf("time2 = %f\n", time);
+            sum += time;
+            t.clear();
         }
-        Console.OUT.println("test2 end");
+        Console.OUT.printf("ave time2 = %.16f\n", sum / nTest);
         return;
     }
 
@@ -98,11 +108,37 @@ public class TestHashMap {
         Console.OUT.println("start rehash");
         t.rehash();
     }
+
+    def run5() {
+        val n = 100000;
+        val e = 40000;
+        val t = new HashMap[Long, Long](n);
+        val ks = new MemoryChunk[Long](e);
+        val vs  = new MemoryChunk[Long](e);
+        val r = new Random(1L);
+        val sw = new StopWatch();
+        for (i in 0..(e - 1)) {
+            val l = r.nextLong();
+            ks(i) = l;
+            vs(i) = l;
+        }
+        sw.start();
+        t.put(ks, vs);
+        sw.stop();
+        sw.print("run5");
+        for (i in (0..(ne - 1))) {
+            val key = ks(i);
+            val value = t.get(key);
+            assert(value != null && value.value == vs(i));
+        }
+    }
+
     public static def main(Array[String](1)) {
         val test = new TestHashMap();
         test.run1();
         test.run2();
-        test.run3();
-        test.run4();
+        //test.run3();
+        //test.run4();
+        //test.run5();
     }
 }
