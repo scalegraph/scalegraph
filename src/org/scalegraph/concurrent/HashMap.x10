@@ -93,6 +93,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         table = MemoryChunk[HashEntry[K, V]](init_size as Long);
         this.logSize = MathAppend.ceilLog2(table.size());
+        Console.OUT.printf("logSize = %d\n" logSize);
         this.size = 0;
         shouldRehash = false;
     }
