@@ -117,7 +117,7 @@ public class RemotePutContext[T] {T haszero}  {
 	 */
 	public def executeAlone() : void {
 		// get request
-		val root = comm.getRole(here);
+		val root = comm.roleHere()(0);
 //		var vertices:Array[T](1) = vertices;
 		finish for (role in 0..(comm.size()-1))  {
 			if (role == root) async {
@@ -127,7 +127,7 @@ public class RemotePutContext[T] {T haszero}  {
 					vertices()(req(i).idx) = req(i).value;
 				});
 				reset();
-			} else async at (comm.getPlace(role)) {
+			} else async at (comm.place(role)) {
 				val req:Array[IntIdx[T]] = comm.scattervRecvAuto[IntIdx[T]](role, root);
 				Parallel.iter(0..(req.size-1),(i:Int)=>{
 					vertices()(req(i).idx) = req(i).value;
@@ -137,7 +137,7 @@ public class RemotePutContext[T] {T haszero}  {
 	}
 	
 	public def executeWithAll() : void {
-		val role = comm.getRole(here);
+		val role = comm.roleHere()(0);
 		val src = actions;
 		val req:Array[IntIdx[T]](1) = comm.alltoallvAuto(role, src);
 		Parallel.iter(0..(req.size-1),(i:Int)=>{

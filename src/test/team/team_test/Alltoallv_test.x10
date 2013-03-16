@@ -22,7 +22,7 @@ class Alltoallv_test {
         team.barrier(role);
         val start_time = System.nanoTime();
         for(i in 1..(loop)) {
-          team.alltoallv(role, root, src, src_offs, src_counts, dst, dst_offs, dst_counts);
+          team.alltoallv(role, src, src_offs, src_counts, dst, dst_offs, dst_counts);
         }
         val end_time = System.nanoTime();
         if(role == root) {

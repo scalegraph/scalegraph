@@ -22,14 +22,14 @@ public class RemoteContextEmulation[T] {
 	private def put(dst_role: Int, dst_ind: Int, src_ind: Int) : void {
 		atomic actions.add(()=>{
 			val v = getter(src_ind);
-			at (comm.getPlace(dst_role)) {
+			at (comm.place(dst_role)) {
 				vertices(dst_ind) = v;
 			}
 		});
 	}
 	private def get(dst_ind: Int, src_role: Int, src_ind: Int) : void {
 		atomic actions.add(()=>{
-			val v = at(comm.getPlace(src_role)) getter(src_ind);
+			val v = at(comm.place(src_role)) getter(src_ind);
 			vertices(dst_ind) = v;
 		});
 	}

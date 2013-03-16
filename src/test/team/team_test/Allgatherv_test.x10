@@ -20,7 +20,7 @@ class Allgatherv_test {
         team.barrier(role);
         val start_time = System.nanoTime();
         for(i in 1..(loop)) {
-          team.allgatherv(role, root, src, 0, count, dst, dst_offs, dst_counts);
+          team.allgatherv(role, src, 0, count, dst, dst_offs, dst_counts);
         }
         val end_time = System.nanoTime();
         if(role == root) {
