@@ -50,7 +50,7 @@ public class WorkerPlaceGraph[I,V,E]{I haszero, V haszero, E haszero} {
 	}
 	
 	public def run[M](computation:ComputationInterface[M],service:MessageCommunicationService[M]) {
-		val role = mTeam.getRole(here);
+		val role = mTeam.role();
 		val [nthreads,chunkSize] = PregelUtils.splitChunk(0..(mVertices.size()-1));
 		val messagesPerThread = new Array[GrowableMemory[Tuple2[Long,M]]](nthreads as Int);
 		for(index in messagesPerThread) {

@@ -157,7 +157,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         lgl = dsm.ids().lgl;
         lgc = dsm.ids().lgc;
         lgr = dsm.ids().lgr;
-        role = team.getRole(here);
+        role = team.role();
         localGraph = dsm();
     }
     
@@ -303,7 +303,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
     
     @Inline
     public def getVertexPlace(orgVertex: Vertex): Place {
-        return team.getPlace(getVertexPlaceRole(orgVertex));
+        return team.place(getVertexPlaceRole(orgVertex));
     }
     
     @Inline
@@ -325,7 +325,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             val preds = predBuf(bufId)(pid).toArray();
             val succs = succBuf(bufId)(pid).toArray();
             val count = preds.size;
-            val p = team.getPlace(pid);
+            val p = team.place(pid);
             at (p)  {
                 for(k in 0..(count - 1)) {
                     val lv = lch()._currentLevel();
@@ -379,7 +379,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                     } else {
                         val bufId = threadId;
                         val p: Place = getVertexPlace(orgDst);
-                        _visitRemote(bufId, team.getRole(p), orgSrc, orgDst);
+                        _visitRemote(bufId, team.role(p), orgSrc, orgDst);
                     }    
                 }
             };
@@ -430,7 +430,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         };        
         val _flood = (bufId: Int, pid: Int) => {
             val preds = predBuf(bufId)(pid).toArray();
-            val p = team.getPlace(pid);
+            val p = team.place(pid);
             at (p) {
                 for(k in 0..(preds.size - 1)) {
                     val pred = preds(k);
@@ -467,7 +467,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
                         lch()._successorCount(locPred).incrementAndGet();
                         lch().numAddPred.incrementAndGet();
                     } else {
-                        val targetRole = team.getRole(getVertexPlace(pred));
+                        val targetRole = team.role(getVertexPlace(pred));
                         addRemote(threadId, targetRole, pred);
                     }    
                 }
@@ -503,7 +503,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             val preds = predBuf(bufId)(pid).toArray();
             val theta = thetaBuf(bufId)(pid).toArray();
             val sigma = sigmaBuf(bufId)(pid).toArray();
-            val p = team.getPlace(pid);
+            val p = team.place(pid);
             at (p) {
                 for(k in 0..(preds.size - 1)) {
                     val pred = preds(k);

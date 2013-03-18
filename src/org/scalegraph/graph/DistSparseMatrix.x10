@@ -24,7 +24,7 @@ public struct DistSparseMatrix {
 	
 	private val data :PlaceLocalHandle[Cell[Data]];
 	
-	/** Creates distributed sparse matrix. Currently there is a limitation that dist.parentTeam().getRole(here) must be the place 0.
+	/** Creates distributed sparse matrix. Currently there is a limitation that dist.parentTeam().role() must be the place 0.
 	 * @param dist Distribution for sparse matrix
 	 * @param init The closure that constructs sparse matrix for plane 0.
 	 */
@@ -42,7 +42,7 @@ public struct DistSparseMatrix {
 		
 		// create z > 0 plane
 		dist.allTeam().placeGroup().broadcastFlat(() => {
-			val z = dist.parentTeam().getRole(here)(0) / dist.allTeam().size();
+			val z = dist.parentTeam().role()(0) / dist.allTeam().size();
 			if(z > 0) {
 				val copy_from = dist.getCongruentPlace(0);
 				val r = at (copy_from) Tuple2(data_()().ids, data_()().matrix);

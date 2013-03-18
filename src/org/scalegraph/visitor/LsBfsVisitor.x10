@@ -132,7 +132,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         lgl = dsm.ids().lgl;
         lgc = dsm.ids().lgc;
         lgr = dsm.ids().lgr;
-        role = team.getRole(here);
+        role = team.role();
         source = lch()()._source();
         currentLevel = lch()()._currentLevel; 
     }
@@ -255,7 +255,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     
     public def getVertexPlace(orgVertex: Vertex): Place {
         val vertexPlaceId = ((1 << (lgc + lgr)) -1) & orgVertex;
-        return team.getPlace(vertexPlaceId as Int);
+        return team.place(vertexPlaceId as Int);
     }
     
     private @Inline def allocNewBuffer(slotId: Int, pid: Int) {  
@@ -333,7 +333,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     }
     
     private def flood(bufId: Int, p: Place) {
-        val targetRole = team.getRole(p);
+        val targetRole = team.role(p);
         val count = lch()()._bf(bufId).item(targetRole).count();
         
         if(count <= 0)
@@ -372,7 +372,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         finish  for(i in 0..(lch()()._BUFFER_SLOT - 1)) {
              for (k in 0..(team.size() - 1)) {
      
-                val p = team.getPlace(k);
+                val p = team.place(k);
                 
                 if (!p.equals(here)){
                     flood(i, p);
@@ -382,7 +382,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     }
     
     private def visitRemote(bufId: Int, p: Place, pred: Vertex, v: Vertex, predDist: Long) {
-        val targetRole = team.getRole(p);
+        val targetRole = team.role(p);
         var count: Int = lch()()._bf(bufId).item(targetRole).count() as Int;
 
         if (count == lch()()._BUFFER_SIZE) {

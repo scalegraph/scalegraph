@@ -246,7 +246,7 @@ public class GraphTest {
 		team.placeGroup().broadcastFlat(() => {
 			val v = vector();
 			for(i in v.range()) v(i) = initValue;
-			if(team.getRole(here)(0) == 0) v(0) = 0.0;
+			if(team.role()(0) == 0) v(0) = 0.0;
 		});
 		
 		if(C == 1) { // 1D

@@ -58,7 +58,7 @@ public class GraphGenerator {
 				() => new MemoryChunk[Long](numLocalEdges*2));
 		
 		team.placeGroup().broadcastFlat(() => {
-			val role = team.getRole(here);
+			val role = team.role();
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
@@ -106,7 +106,7 @@ public class GraphGenerator {
 		Console.OUT.println("finished generating parameters");
 		
 		team.placeGroup().broadcastFlat(() => {
-			val role = team.getRole(here);
+			val role = team.role();
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
