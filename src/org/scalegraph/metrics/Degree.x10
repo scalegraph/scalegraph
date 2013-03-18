@@ -60,7 +60,7 @@ public class Degree {
 					break;
 				}
 			}
-			result().setSize(team.allreduce(team.role(), resultSize, Team.MAX));
+			result().setSize(team.allreduce(team.role()(0), resultSize, Team.MAX));
 			result().shrink(0);
 		});
 		
