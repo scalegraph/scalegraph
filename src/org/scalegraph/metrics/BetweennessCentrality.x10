@@ -157,7 +157,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         lgl = dsm.ids().lgl;
         lgc = dsm.ids().lgc;
         lgr = dsm.ids().lgr;
-        role = team.role();
+        role = team.role()(0);
         localGraph = dsm();
     }
     

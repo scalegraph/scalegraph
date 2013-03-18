@@ -132,7 +132,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         lgl = dsm.ids().lgl;
         lgc = dsm.ids().lgc;
         lgr = dsm.ids().lgr;
-        role = team.role();
+        role = team.role()(0);
         source = lch()()._source();
         currentLevel = lch()()._currentLevel; 
     }
@@ -333,7 +333,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     }
     
     private def flood(bufId: Int, p: Place) {
-        val targetRole = team.role(p);
+        val targetRole = team.role(p)(0);
         val count = lch()()._bf(bufId).item(targetRole).count();
         
         if(count <= 0)
@@ -382,7 +382,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     }
     
     private def visitRemote(bufId: Int, p: Place, pred: Vertex, v: Vertex, predDist: Long) {
-        val targetRole = team.role(p);
+        val targetRole = team.role(p)(0);
         var count: Int = lch()()._bf(bufId).item(targetRole).count() as Int;
 
         if (count == lch()()._BUFFER_SIZE) {

@@ -117,7 +117,7 @@ public class RemotePutContext[T] {T haszero}  {
 	 */
 	public def executeAlone() : void {
 		// get request
-		val root = comm.roleHere()(0);
+		val root = comm.role()(0);
 //		var vertices:Array[T](1) = vertices;
 		finish for (role in 0..(comm.size()-1))  {
 			if (role == root) async {
@@ -137,7 +137,7 @@ public class RemotePutContext[T] {T haszero}  {
 	}
 	
 	public def executeWithAll() : void {
-		val role = comm.roleHere()(0);
+		val role = comm.role()(0);
 		val src = actions;
 		val req:Array[IntIdx[T]](1) = comm.alltoallvAuto(role, src);
 		Parallel.iter(0..(req.size-1),(i:Int)=>{

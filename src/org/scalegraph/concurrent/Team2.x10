@@ -219,7 +219,7 @@ public struct Team2 {
 		@Ifndef("__CPP__") {
 			val srcp = src.pointer();
 			val dstp = dst.pointer();
-			base.allgatherv(role, -1, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
+			base.allgatherv(role, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
 
@@ -247,7 +247,7 @@ public struct Team2 {
 		@Ifndef("__CPP__") {
 			val srcp = src.pointer();
 			val dstp = dst.pointer();
-			base.alltoallv(role, -1, wrapPointer(srcp), wrapOffsets(src_offs, srcp.offset as Int), wrapCounts(src_counts),
+			base.alltoallv(role, wrapPointer(srcp), wrapOffsets(src_offs, srcp.offset as Int), wrapCounts(src_counts),
 					wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }

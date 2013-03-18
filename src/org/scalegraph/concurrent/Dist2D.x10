@@ -91,7 +91,7 @@ public struct Dist2D {
     			allTeam = parentTeam;
     		}
     		
-//    		assert role == allTeam.role();
+//    		assert role == allTeam.role()(0);
     		val rowTeam :Cell[Team];
     		val columnTeam :Cell[Team];
     		if(oned) {
