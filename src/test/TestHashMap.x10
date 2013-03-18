@@ -19,6 +19,8 @@ public class TestHashMap {
 
     static nTest = 50;
 
+    val test = false;
+
     def run1() {
         Console.OUT.println("test1 start");
         var sum : Double = 0.;
@@ -61,6 +63,39 @@ public class TestHashMap {
         }
         Console.OUT.printf("ave time2 = %.16f\n", sum / nTest);
         return;
+    }
+
+    def runGet() {
+        val t = new HashMap[Int, Int](n);
+        val ks = new MemoryChunk[Int](ne);
+        val vs = new MemoryChunk[Int](ne);
+
+        for (i in ks.range()) {
+            ks(i) = i as Int;
+            vs(i) = ks(i);
+        }
+        t.put(ks, vs);
+
+        val getVs = (()=>{
+            val start = Timer.nanoTime();
+            val getVs = t.get(ks, -1);
+            Console.OUT.printf("parallel get time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
+            return getVs;
+        })();
+
+        {
+            val start = Timer.nanoTime();
+            for (i in ks.range()) {
+                t.get(ks(i), -1);
+            }
+            Console.OUT.printf("sequencial get time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
+        }
+
+        if (test) {
+            for (i in getVs.range()) {
+                assert(getVs(i) == vs(i));
+            }
+        }
     }
 
     def run3() {
@@ -137,6 +172,7 @@ public class TestHashMap {
         val test = new TestHashMap();
         test.run1();
         test.run2();
+        test.runGet();
         //test.run3();
         //test.run4();
         //test.run5();
