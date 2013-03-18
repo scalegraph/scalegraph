@@ -151,7 +151,7 @@ public class RemoteGetContext[T] {
 	 */
 	public def executeAlone() : void {
 		// get request
-		val root = comm.roleHere()(0);
+		val root = comm.role()(0);
 //		var vertices:Array[T](1) = vertices;
 		finish for (role in 0..(comm.size()-1))  {
 			if (role == root) async {
@@ -179,7 +179,7 @@ public class RemoteGetContext[T] {
 	}
 	
 	public def executeWithAll() : void {
-		val role = comm.roleHere()(0);
+		val role = comm.role()(0);
 		val src = actions;
 		val req_tuple = comm.alltoallvAutoWithBreakdown(role, src);
 		val req = req_tuple.first;
