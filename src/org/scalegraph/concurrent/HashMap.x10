@@ -156,14 +156,45 @@ public class HashMap[K,V] {K haszero, V haszero} {
     }
 
     public def get(k: K): Box[V] {
-        val e = getEntry(k);
-        if (e == null) return null;
-        return new Box[V](e.value.value);
+        val idx = getEntryIndex(k);
+        if (idx < 0) return null;
+        return new Box[V](table(idx).value);
     }
 
-    protected def getEntry(k: K): Box[HashEntry[K,V]] {
+    public def get(k : K, defValue : V) {
+        val idx = getEntryIndex(k);
+        if (idx < 0) return defValue;
+        return (table(idx).value);
+    }
+
+    public def get(ks : MemoryChunk[K], defValue : V) {
+        val vs = new MemoryChunk[V](ks.size());
+
+        val eachSize = new Array[Long](nChunk, (i:Int)=>{
+            if (i == nChunk - 1) {return ks.size() / nChunk + ks.size() % nChunk;}
+            else {return ks.size() / nChunk;}});
+        val offset = new Array[Long](nChunk + 1);
+        for (i in 1..nChunk) {
+            offset(i) = offset(i - 1) + eachSize(i - 1);
+        }
+
+        eachSize.map((v : Long)=>{Console.OUT.printf("size = %d\n", v); return 0;});
+        offset.map((v : Long)=>{Console.OUT.printf("offset = %d\n", v); return 0;});
+
+        finish for (p in 0..(nChunk - 1)) async {
+            for (i in offset(p)..(offset(p) + eachSize(p) - 1)) {
+                vs(i) = get(ks(i), defValue);
+            }
+        }
+        return vs;
+    }
+
+    public def newKeys() {
+    }
+
+    protected def getEntryIndex(k: K): Int {
         if (size == 0)
-            return null;
+            return -1;
 
 // incompatible with iterators
 //        if (shouldRehash)
@@ -180,18 +211,18 @@ public class HashMap[K,V] {K haszero, V haszero} {
             if (!e.occupied) {
                 if (cnt > MAX_PROBES)
                     shouldRehash = true;
-                return null;
+                return -1;
             }
             if (e.occupied) {
                 if (e.hash == h && k.equals(e.key)) {
                     if (cnt > MAX_PROBES)
                         shouldRehash = true;
-                    return new Box[HashEntry[K, V]](e);
+                    return i;
                 }
                 if (cnt > table.size()) {
                     if (cnt > MAX_PROBES)
                         shouldRehash = true;
-                    return null;
+                    return -1;
                 }
             }
             i = (i + 1) % (table.size() as Int);

@@ -100,8 +100,7 @@ public class TestRemote {
         }
     }
 
-    def createPutData(pg : PlaceGroup, size : Long) =
-        new DistMemoryChunk[Long](pg, ()=>(new MemoryChunk[Long](size)));
+    def createPutData(pg : PlaceGroup, size : Long) = new DistMemoryChunk[Long](pg, ()=>(new MemoryChunk[Long](size)));
 
     def testPut(comm : Team, size : Long) {
         Console.OUT.println("Remote.put test");
@@ -138,6 +137,7 @@ public class TestRemote {
             Console.OUT.printf("Remote.put version time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
             return data;
         })();
+
         // validation code
         finish for (p in pg) at (p) {
             val d1_local = data1();
@@ -152,7 +152,10 @@ public class TestRemote {
     public static def main(args: Array[String]) {
         val test = new TestRemote();
         val comm = Team.WORLD;
-        test.testGet(comm, 100000L);
-        test.testPut(comm, 100000L);
+
+        val size = Int.parse(args(0));
+
+        test.testGet(comm, size);
+        test.testPut(comm, size);
     }
 }
