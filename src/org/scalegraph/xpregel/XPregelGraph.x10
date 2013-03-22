@@ -3,21 +3,32 @@ import org.scalegraph.xpregel.comm.WorkerPlaceGraph;
 import x10.util.Team;
 import org.scalegraph.xpregel.ComputationInterface;
 import org.scalegraph.xpregel.comm.MessageCommunicationService;
+import org.scalegraph.xpregel.comm.SendInEdgeCommunication;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
+import x10.util.HashMap;
+import org.scalegraph.graph.Attribute;
+import org.scalegraph.util.DistGrowableMemory;
 /**
  * a main entry for processing 
  * graph with X-Pregel
  * 
  */
-public class XPregelGraph[I,V,E]{I haszero, V haszero, E haszero} {
-	
-	var mWorkers:PlaceLocalHandle[WorkerPlaceGraph[I,V,E]];
+public class XPregelGraph[V,E]{V haszero, E haszero} {
+
+	var mWorkers:PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam:Team;
+	var mContext:XpregelContext;
+	var vertexAttributes : HashMap[String,Any];
+	var edgeAttributes : HashMap[String,Any];
 	
 	public def this(team:Team, data: DistSparseMatrix) {
 		mTeam = team;
-		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[I,V,E]](mTeam.placeGroup(),() => new WorkerPlaceGraph[I,V,E](mTeam,data));
+		mContext = new XpregelContext(data.ids());
+		val _context = mContext;
+		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),() => new WorkerPlaceGraph[V,E](team,data(),_context));	
 	}
 	
 	public def constructAdjacencyListVertices(graph:Graph) {
@@ -30,18 +41,55 @@ public class XPregelGraph[I,V,E]{I haszero, V haszero, E haszero} {
 	 * 
 	 */
 	public def updateInEdge() {
-		
+		val sendInComputation = new SendInEdgeCommunication();
+		do_computations[Long,Double](sendInComputation);
 	}
 	
-	public def do_computations[M](computation:ComputationInterface[M]) {
-		val service = new MessageCommunicationService[M](mTeam,1000);
+	public def setVertexAttributes(attributes:HashMap[String,Any]) {
+		vertexAttributes = attributes;
+	}
+	
+	public def setEdgeAttributes(attributes:HashMap[String,Any]) {
+		edgeAttributes = attributes;
+	}
+	
+	public def do_computations[M,A](computation:ComputationInterface[V,E,M,A]) {
+		val _team = mTeam;
+		val _context = mContext;
+		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
+				() => new MessageCommunicationService[M,A](_team,1000,_context));
+		
 		val workers_ = mWorkers;
-		mTeam.placeGroup().broadcastFlat(() => {
-		//	workers_().run[M](computation,service);
-			if (here.id == 2) {
-				Console.OUT.println(here.id + " has " + workers_().getVerticesNumber() + " vertices");
-				Console.OUT.println(here.id + " has " + workers_().getEdgesNumber(true) + " edges");
-			}
+		Console.OUT.println("Start processing ...");
+
+		_team.placeGroup().broadcastFlat(() => {
+			workers_().run[M,A](computation,service());
+		});
+		
+		Console.OUT.println("End processing...");
+	}
+	
+	public def do_computations[M,A](computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],_appcontext:XContext[M,A]) => void) {
+		val _team = mTeam;
+		val _context = mContext;
+		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
+				() => new MessageCommunicationService[M,A](_team,1000,_context));
+		val workers_ = mWorkers;
+		Console.OUT.println("Start processing ...");
+
+		_team.placeGroup().broadcastFlat(() => {
+			workers_().run[M,A](computation,service());
+			//workers_().test(service());
+		});
+		
+		Console.OUT.println("End processing...");
+	}
+	
+	public def setAttributes[T](name:String, value:DistGrowableMemory[T], vertexOrEdge:Boolean) {
+		val _value = value;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().setAttributes(name,_value(),vertexOrEdge);
 		});
 	}
 	

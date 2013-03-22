@@ -3,6 +3,10 @@ import x10.util.Team;
 import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.xpregel.Vertex;
+import org.scalegraph.util.*;
+import org.scalegraph.util.tuple.*;
+import org.scalegraph.xpregel.XContext;
 public class TestGraph {
 	
 	public static def main(args:Array[String](1)) {
@@ -29,7 +33,42 @@ public class TestGraph {
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
-		val xpregel = g.createXPregelGraph();
-		xpregel.do_computations[Int](null);
+		val xpregel = g.createXPregelGraph[Double,Double]();
+		val do_computation = (vertex:Vertex[Double,Double],messages:MemoryChunk[Tuple2[Long,Double]],_appcontext:XContext[Double,Double]) => {
+			val c = 0.15;
+			val _context = vertex.getContext();
+			var sum : Double = 0.0;
+			val superstep = _context.getSuperStep();
+			
+			if (superstep > 30) {
+				vertex.voteToHalt();
+				return;
+			}
+			if (messages.size() > 0) {
+				for(i in messages.range()) {
+					sum += messages(i).get2();
+				}
+			}
+			val value = c / _context.getNumberOfVertices() + (1-c) * sum;
+			vertex.setValue(value);
+			if (vertex.getVertexId() == 0L && here.id == 0) {
+				Console.OUT.println("Superstep " + superstep + ", value : " + vertex.getValue());
+			}
+			val message = value / vertex.getEdgesNum(true);
+			val edges = new GrowableMemory[Long]();
+			vertex.getEdgesId(true,edges);
+			if (edges.size() > 0) {
+				for(ind in edges.range()) {
+					if (ind > edges.range().max) continue;
+					val id = edges(ind);
+					_appcontext.putMessage(id,message);
+				}
+			}
+		};
+		val start_time = System.currentTimeMillis();
+		xpregel.do_computations[Double,Double](do_computation);
+		val end_time = System.currentTimeMillis();
+		Console.OUT.println("Finish after =" + (end_time-start_time));
+		Console.OUT.println("Finish application");
 	}
 }
