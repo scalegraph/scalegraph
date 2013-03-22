@@ -11,6 +11,7 @@ import org.scalegraph.util.tuple.Tuple2;
 import x10.util.HashMap;
 import org.scalegraph.graph.Attribute;
 import org.scalegraph.util.DistGrowableMemory;
+import org.scalegraph.xpregel.comm.AggregatorInterface;
 /**
  * a main entry for processing 
  * graph with X-Pregel
@@ -41,8 +42,8 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 	 * 
 	 */
 	public def updateInEdge() {
-		val sendInComputation = new SendInEdgeCommunication();
-		do_computations[Long,Double](sendInComputation);
+		val sendInComputation = new SendInEdgeCommunication[V,E]();
+		do_computations[Tuple2[Long,E],Double](sendInComputation, null);
 	}
 	
 	public def setVertexAttributes(attributes:HashMap[String,Any]) {
@@ -53,7 +54,7 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		edgeAttributes = attributes;
 	}
 	
-	public def do_computations[M,A](computation:ComputationInterface[V,E,M,A]) {
+	public def do_computations[M,A](computation:ComputationInterface[V,E,M,A], aggregator : AggregatorInterface[A]) {
 		val _team = mTeam;
 		val _context = mContext;
 		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
@@ -63,13 +64,13 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		Console.OUT.println("Start processing ...");
 
 		_team.placeGroup().broadcastFlat(() => {
-			workers_().run[M,A](computation,service());
+			workers_().run[M,A](computation, aggregator, service());
 		});
 		
 		Console.OUT.println("End processing...");
 	}
 	
-	public def do_computations[M,A](computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],_appcontext:XContext[M,A]) => void) {
+	public def do_computations[M,A](computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],_appcontext:XContext[M,A]) => void, aggregator : AggregatorInterface[A]) {
 		val _team = mTeam;
 		val _context = mContext;
 		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
@@ -78,7 +79,7 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		Console.OUT.println("Start processing ...");
 
 		_team.placeGroup().broadcastFlat(() => {
-			workers_().run[M,A](computation,service());
+			workers_().run[M,A](computation, aggregator, service());
 			//workers_().test(service());
 		});
 		

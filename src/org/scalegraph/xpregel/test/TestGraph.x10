@@ -7,6 +7,7 @@ import org.scalegraph.xpregel.Vertex;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.xpregel.XContext;
+import org.scalegraph.xpregel.comm.DoubleMaxAggregator;
 public class TestGraph {
 	
 	public static def main(args:Array[String](1)) {
@@ -66,7 +67,8 @@ public class TestGraph {
 			}
 		};
 		val start_time = System.currentTimeMillis();
-		xpregel.do_computations[Double,Double](do_computation);
+		val maxAggregator = new DoubleMaxAggregator();
+		xpregel.do_computations[Double,Double](do_computation,maxAggregator);
 		val end_time = System.currentTimeMillis();
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");

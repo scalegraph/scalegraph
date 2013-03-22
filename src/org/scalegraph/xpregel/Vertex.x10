@@ -3,7 +3,7 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.xpregel.comm.WorkerInterface;
-public class Vertex[V,E]{V haszero, E haszero} {
+public class Vertex[V,E] {
 	
 	var mVertexId	:	Long;
 	var mContext 	:	XpregelContext;
@@ -43,6 +43,10 @@ public class Vertex[V,E]{V haszero, E haszero} {
 	
 	public def getEdgesId(outerOrIn:Boolean,edges:GrowableMemory[Long]) {
 		 mWorkerInterface.getEdges(mVertexId,outerOrIn,edges);
+	}
+	
+	public def getEdgesValue(outerOrIn:Boolean,edgesValue:GrowableMemory[E]) {
+		mWorkerInterface.getEdgesValue(mVertexId,outerOrIn,edgesValue);
 	}
 	
 	public def clearAllEdges(outOrIn:Boolean) {

@@ -24,11 +24,11 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	var mMatrix:SparseMatrix;
 	var mVertexValue:GrowableMemory[V];
 	var mVertexHalt:GrowableMemory[Boolean];
-	var mOutEdgeValue : GrowableMemory[E];
+	var mOutEdgesValue : GrowableMemory[E];
 	
 	/* for in edge */
-	var mInEdgeValue : GrowableMemory[E];
-	var mInEdgeId : GrowableMemory[Long];
+	var mInEdgesValue : GrowableMemory[E];
+	var mInEdgesId : GrowableMemory[Long];
 
 	var mVertexAttribute : HashMap[String,Any];
 	var mEdgeAttribute : HashMap[String,Any];
@@ -50,9 +50,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		val matrix = mMatrix;
 		mVertexValue = new GrowableMemory[V](matrix.offsets.size()-1);
 		mVertexHalt = new GrowableMemory[Boolean](matrix.offsets.size()-1);
-		mOutEdgeValue = new GrowableMemory[E](matrix.vertexes.size()-1);
-		mInEdgeValue = new GrowableMemory[E]();
-		mInEdgeId = new GrowableMemory[Long]();
+		mOutEdgesValue = new GrowableMemory[E](matrix.vertexes.size()-1);
+		mInEdgesValue = new GrowableMemory[E]();
+		mInEdgesId = new GrowableMemory[Long]();
 		
 		val r = 0..(matrix.offsets.size()-1);
 		for(index in r) {
@@ -61,14 +61,16 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		}
 	}
 	
-	public def run[M,A](computation:ComputationInterface[V,E,M,A],service:MessageCommunicationService[M,A]) {
+	public def run[M,A](computation:ComputationInterface[V,E,M,A], aggregator : AggregatorInterface[A], service:MessageCommunicationService[M,A]) {
 		val role = mTeam.getRole(here)(0);
 		val vertexSize = mMatrix.offsets.size()-1;
 		val [nthreads,chunkSize] = PregelUtils.splitChunk(0..(vertexSize-1));
 		
 		val contextPerThreads = new Array[XContext[M,A]](nthreads as Int);
 		for ( i in (0..(nthreads-1))) {
-			contextPerThreads(i as Int) = new XContext[M,A](mContext);
+			val _cont = new XContext[M,A](mContext);
+			_cont.setAggregator(aggregator.clone());
+			contextPerThreads(i as Int) = _cont;
 		}
 		
 		val numActiveVertices = new Array[Long](nthreads as Int);
@@ -147,19 +149,42 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 			/* exchanging messages */
 			_service.exchangeMessages();
 			
+			/* aggregator value here */
+			if (aggregator != null) {
+				aggregator.reset();
+				for(index in contextPerThreads) {
+					val _context = contextPerThreads(index);
+					aggregator.aggregate(_context.getAggregatorValue());
+				}
+				val sendArray = new Array[A](mTeam.size());
+				for(index in sendArray) {
+					sendArray(index) = aggregator.getAggregatorValue();
+				}
+				val recvArray = mTeam.alltoall(role,sendArray);
+				for(index in recvArray) {
+					if (index(0) != role) {
+						aggregator.aggregate(recvArray(index));
+					}
+				}
+			}
+			
 			postComputation();
 			val end_time = System.currentTimeMillis();
 			if (here.id == 0) {
 				Console.OUT.println("Process Superstep " + mContext.getSuperStep() + " : " + (end_time-start_time));
 			}
 		}while(true);
+		if (here.id == 0 && aggregator != null) {
+			Console.OUT.println("Aggregator value = " + aggregator.getAggregatorValue());
+		}
 		}catch (e:CheckedThrowable) {
 			Console.OUT.println(e);
 		}
+		
 	}
 	
 	public def run[M,A](do_computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],context:XContext[M,A]) => void,
-			service:MessageCommunicationService[M,A]) {
+			aggregator : AggregatorInterface[A], service:MessageCommunicationService[M,A]) {
 		val role = mTeam.getRole(here)(0);
 		val vertexSize = mMatrix.offsets.size()-1;
 		val [nthreads,chunkSize] = PregelUtils.splitChunk(0..(vertexSize-1));
@@ -168,7 +193,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		}
 		val contextPerThreads = new Array[XContext[M,A]](nthreads as Int);
 		for ( i in (0..(nthreads-1))) {
-			contextPerThreads(i as Int) = new XContext[M,A](mContext);
+			val _cont = new XContext[M,A](mContext);
+			_cont.setAggregator(aggregator.clone());
+			contextPerThreads(i as Int) = _cont;
 		}
 		
 		val numActiveVertices = new Array[Long](nthreads as Int);
@@ -189,6 +216,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 						assert(i < nthreads);
 						val _context = contextPerThreads([i]);
 						_context.clearBuff();
+						_context.setAggregatorValue(aggregator.getAggregatorValue());
 						val ra = r;
 						val vertex = new Vertex[V,E](0);
 						val messages = new GrowableMemory[Tuple2[Long,M]](1000);
@@ -258,15 +286,37 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 					Console.OUT.println("Sending Time at superstep " + mContext.getSuperStep() + ":" + (end_sending_time-start_sending_time));
 				}
 				
+				/* aggregator value here */
+				if (aggregator != null) {
+					aggregator.reset();
+					for(index in contextPerThreads) {
+						val _context = contextPerThreads(index);
+						aggregator.aggregate(_context.getAggregatorValue());
+					}
+					val sendArray = new Array[A](mTeam.size());
+					for(index in sendArray) {
+						sendArray(index) = aggregator.getAggregatorValue();
+					}
+					val recvArray = mTeam.alltoall(role,sendArray);
+					for(index in recvArray) {
+						if (index(0) != role) {
+							aggregator.aggregate(recvArray(index));
+						}
+					}
+				}
 				postComputation();
 				val end_time = System.currentTimeMillis();
 				if (here.id == 0) {
 					Console.OUT.println("Process Superstep " + mContext.getSuperStep() + " : " + (end_time-start_time));
 				}
 			}while(true);
+			if (here.id == 0 && aggregator != null) {
+				Console.OUT.println("Aggregator value = " + aggregator.getAggregatorValue());
+			}
 		}catch (e:CheckedThrowable) {
 			e.printStackTrace();
 		}
+		
 	}
 	
 	public def preComputation() {
@@ -275,16 +325,6 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	
 	public def postComputation() {
 		
-	}
-	
-	public def getVerticesNumber() = mVertices.size();
-	
-	public def getEdgesNumber(outerOrIn:Boolean) {
-		var length:Long = 0L;
-		for (index in mVertices.range()) {
-			length += mVertices(index).getEdgesNum(outerOrIn);
-		}
-		return length;
 	}
 	
 	public def setAttributes[T](name:String, value:GrowableMemory[T], vertexOrEdge:Boolean) {
@@ -302,14 +342,33 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	/* method of worker interface */
 	public def getVertexId(index:Long):Long = index;
 	public def getEdges(index:Long,outOrIn:Boolean,edges:GrowableMemory[Long]):void {
-		val _offsets = mMatrix.offsets;
-		assert(index < _offsets.size()-1);
-		assert(index >= 0);
-		val _vertexes = mMatrix.vertexes;
-		val start = _offsets(index);
-		val end = _offsets(index+1);
-		if (end-start > 0L) {
-			edges.add(_vertexes.subpart(start,end-start));
+		if (outOrIn) {
+			val _offsets = mMatrix.offsets;
+			assert(index < _offsets.size()-1);
+			assert(index >= 0);
+			val _vertexes = mMatrix.vertexes;
+			val start = _offsets(index);
+			val end = _offsets(index+1);
+			if (end-start > 0L) {
+				edges.add(_vertexes.subpart(start,end-start));
+			}
+		}else {
+			
+		}
+	}
+	
+	public def getEdgesValue(index:Long, outOrIn:Boolean, edges:GrowableMemory[E]):void {
+		if (outOrIn) {
+			val _offsets = mMatrix.offsets;
+			assert(index < _offsets.size()-1);
+			assert(index >= 0);
+			val start = _offsets(index);
+			val end = _offsets(index+1);
+			if (end-start > 0) {
+				edges.add(mOutEdgesValue.data().subpart(start,end-start));
+			}
+		}else {
+			
 		}
 	}
 	
@@ -370,9 +429,5 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	
 	public def addEdges(edges:MemoryChunk[Tuple2[Long,E]],outOrIn : Boolean, vertexId:Long) : void {
 		
-	}
-	
-	public def getVertexValue[V](){V haszero}:V {
-		return Zero.get[V]();
 	}
 }
