@@ -17,6 +17,7 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.concurrent.Remote;
 import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.xpregel.XPregelGraph;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
@@ -781,5 +782,19 @@ import org.scalegraph.concurrent.Dist2D;
 
 	public def vertexAttributeKeys() = vertexAttributes.keySet();
 	public def edgeAttributeKeys() = edgeAttributes.keySet();
+	
+	public def createXPregelGraph[V,E](){V haszero, E haszero}:XPregelGraph[V,E] {
+		val csr = constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val _team = team;
+		val xpregelgraph = new XPregelGraph[V,E](_team,csr);
+		val vertexKeys = vertexAttributeKeys();
+		if (!vertexKeys.isEmpty()) {
+			val iter = vertexKeys.iterator();
+			while(iter.hasNext()) {
+				val name = iter.next();
+			}
+		}
+		return xpregelgraph;
+	}
 }
 

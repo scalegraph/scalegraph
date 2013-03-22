@@ -14,10 +14,10 @@ import org.scalegraph.concurrent.Parallel;
 import org.scalegraph.concurrent.HashMap;
 
 public class TestHashMap {
-    val n = 1000000;
-    val ne = 400000;
+    val n = 10000000;
+    val ne = 4000000;
 
-    static nTest = 50;
+    static nTest = 1;
 
     val test = false;
 
@@ -98,6 +98,40 @@ public class TestHashMap {
         }
     }
 
+    def runNewKeys() {
+        val t = new HashMap[Int, Int](100);
+        val ks = new MemoryChunk[Int](10);
+        val vs = new MemoryChunk[Int](10);
+
+        for (i in ks.range()) {
+            ks(i) = i as Int;
+            vs(i) = ks(i);
+        }
+        t.put(ks, vs);
+
+        val keys = new MemoryChunk[Int](10);
+        keys(0) = 10;
+        keys(1) = 10;
+        keys(2) = 10;
+        keys(3) = 3;
+        keys(4) = 4;
+        keys(5) = 5;
+        keys(6) = 16;
+        keys(7) = 17;
+        keys(8) = 18;
+        keys(9) = 19;
+
+        val newKeys = (()=>{
+            val newKeys = t.newKeys(keys, -1);
+            return newKeys;
+        })();
+        for (i in newKeys.range()) {
+            Console.OUT.printf("newKeys(%d) = %d\n", i as Int, newKeys(i));
+        }
+        assert(newKeys.size() == 5L);
+        return;
+    }
+
     def run3() {
         Console.OUT.println("test3 start");
         val t = new HashMap[Int, Int](100);
@@ -161,7 +195,7 @@ public class TestHashMap {
         t.put(ks, vs);
         sw.stop();
         sw.print("run5");
-        for (i in (0..(ne - 1))) {
+        for (i in (0..(e - 1))) {
             val key = ks(i);
             val value = t.get(key);
             assert(value != null && value.value == vs(i));
@@ -175,6 +209,7 @@ public class TestHashMap {
         test.runGet();
         //test.run3();
         //test.run4();
-        //test.run5();
+        test.run5();
+        test.runNewKeys();
     }
 }
