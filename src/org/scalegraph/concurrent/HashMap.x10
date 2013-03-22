@@ -120,6 +120,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
         shouldRehash = false;
     }
 
+    public def size() = size;
+
     @Inline protected final def hash(k: K): Int = hashInternal(k);
     @NonEscaping @Inline protected final def hashInternal(k: K): Int {
         return k.hashCode() * 200000000;
@@ -202,6 +204,10 @@ public class HashMap[K,V] {K haszero, V haszero} {
         val idx = getEntryIndex(key);
         if (idx < 0) throw new NoSuchElementException("Not Found");
         return (table(idx).value);
+    }
+
+    public def containsKey(key : K) {
+        return getEntryIndex(key) >= 0;
     }
 
     public def newKeys(ks : MemoryChunk[K], defValue : V) {
