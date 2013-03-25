@@ -301,10 +301,11 @@ public class HashMap[K,V] {K haszero, V haszero} {
         val dummysize = localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
 
         Console.OUT.println("1!!!");
+        /*
         for (i in table.range()) {
             Console.OUT.println(table(i));
         }
-
+         */
         val newKeys = new MemoryChunk[K](dummysize);
 
         // Todo : rewrite by ScatterGather
@@ -333,9 +334,11 @@ public class HashMap[K,V] {K haszero, V haszero} {
             }
         });
        Console.OUT.println("2!!!!");
+        /*
         for (i in table.range()) {
             Console.OUT.println(table(i));
         }
+         */
         return newKeys;
     }
 
