@@ -147,8 +147,8 @@ public class TestHashMap {
             ks(i) = i as Int + ne / 2;
         }
         val newKeys = t.newKeys(ks, -1);
-        Parallel.sort(newKeys, (lhs : Int, rhs : Int)=>(lhs as Long - rhs as Long));
-        assert(newKeys(0) == ne / 2);
+        Parallel.sort(newKeys);
+        assert(newKeys(0) == ne);
         for (i in newKeys.range()) {
             if (i > 0L) {
                 assert (newKeys(i) == newKeys(i - 1) + 1);
