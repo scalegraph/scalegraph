@@ -2,6 +2,7 @@ import x10.util.ArrayUtils;
 import x10.util.Team;
 import x10.util.Random;
 import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.MemoryChunk;
 
 public class ParallelExample {
 	static def testscan(): void{
@@ -33,14 +34,17 @@ public class ParallelExample {
 		val n = 5000;
 		finish for (i in 1..n) {
             val len = Math.abs(rand.nextInt() % i);
-		    val input = new Array[Int](len, (Int)=> rand.nextInt() % i);
-		    val result = new Array[Int](input);
+		    val input = new MemoryChunk[Int](len);
+            for ( j in input.range()) {
+                input(j) = rand.nextInt() % i;
+            }
+		    val result = input.clone();
             Parallel.sort[Int](result);
-		    val oracle = new Array[Int](input);
+		    val oracle = new Array[Int](input.toArray());
             ArrayUtils.sort(oracle);
             var isEqual: Boolean = true;
-            for ([j] in input) {
-                isEqual &= result(j) == oracle(j);
+            for (j in input.range()) {
+                isEqual &= result(j) == oracle(j as Int);
             }
             if (!isEqual) {
                 Console.OUT.println("n: " + i + ": input: " + input + ", result: " + result + ", expected: " + oracle);
