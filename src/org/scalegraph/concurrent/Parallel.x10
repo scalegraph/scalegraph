@@ -100,7 +100,7 @@ public class Parallel {
             sample(i) = a(lo + ((hi - lo) / nSample) * i);
         }
         sample.sort((lhs:T, rhs:T)=>{
-                if (cmp(lhs, rhs) > 0L) {return 1;}
+                if (cmp(lhs, rhs) > 0) {return 1;}
                 else if (cmp(lhs, rhs) == 0) {return 0;}
                 else {return -1;}});
         if (proc > 0) {
@@ -147,9 +147,9 @@ public class Parallel {
     	var first:Long = lo;
     	var last:Long = hi;
     	while (true) {
-    		while (cmp(a(first), pivot) < 0L) ++first;
+    		while (cmp(a(first), pivot) < 0) ++first;
     		--last;
-    		while (cmp(pivot, a(last)) < 0L) --last;
+    		while (cmp(pivot, a(last)) < 0) --last;
     		if (!(first < last)) {
     			return first;
     		}
@@ -162,9 +162,9 @@ public class Parallel {
     	var first:Long = lo;
     	var last:Long = hi;
     	while (true) {
-    		while (cmp(k(first), pivot) < 0L) ++first;
+    		while (cmp(k(first), pivot) < 0) ++first;
     		--last;
-    		while (cmp(pivot, k(last)) < 0L) --last;
+    		while (cmp(pivot, k(last)) < 0) --last;
     		if (!(first < last)) {
     			return first;
     		}
@@ -208,7 +208,7 @@ public class Parallel {
 
     	for (var i:Long = lo + 1; i < hi; i++) {
     		val v = a(i);
-    		if (cmp(v, a(lo)) < 0L) {
+    		if (cmp(v, a(lo)) < 0) {
     			var j:Long = i;
     			while (j > lo) {--j; a(j + 1) = a(j);}
     			a(lo) = v;
@@ -224,7 +224,7 @@ public class Parallel {
     	for (var i:Long = lo + 1; i < hi; i++) {
     		val kv = k(i);
             val vv = v(i);
-    		if (cmp(kv, k(lo)) < 0L) {
+    		if (cmp(kv, k(lo)) < 0) {
     			var j:Long = i;
     			while (j > lo) {--j; k(j + 1) = k(j); v(j + 1) = v(j);}
     			k(lo) = kv;
@@ -239,7 +239,7 @@ public class Parallel {
     	var last_:Long = last;
     	var next:Long = last_;
     	--next;
-    	while (cmp(v, a(next)) < 0L) {
+    	while (cmp(v, a(next)) < 0) {
     		a(last_) = a(next);
     		last_ = next;
     		--next;
@@ -251,7 +251,7 @@ public class Parallel {
     	var last_:Long = last;
     	var next:Long = last_;
     	--next;
-    	while (cmp(kv, k(next)) < 0L) {
+    	while (cmp(kv, k(next)) < 0) {
     		k(last_) = k(next);
             v(last_) = v(next);
     		last_ = next;
@@ -263,17 +263,17 @@ public class Parallel {
 
 
     private static def median[T](a:T, b:T, c:T, cmp:(T, T)=>Int) {
-    	if (cmp(a, b) < 0L) {
-    		if (cmp(b, c) < 0L) {
+    	if (cmp(a, b) < 0) {
+    		if (cmp(b, c) < 0) {
     			return b; // a <  b < c
-    		} else if (cmp(a, c) < 0L) {
+    		} else if (cmp(a, c) < 0) {
     			return c; // a < c <= b
     		} else {
     			return a; // c <= a < b
     		}
-    	} else if (cmp(a, c) < 0L) {
+    	} else if (cmp(a, c) < 0) {
     		return a; // b <= a < c
-    	} else if (cmp(b, c) < 0L) {
+    	} else if (cmp(b, c) < 0) {
     		return c; // b < c <= a
     	} else {
     		return b; // c <= b <= a
