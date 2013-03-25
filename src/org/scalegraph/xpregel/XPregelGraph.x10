@@ -87,6 +87,7 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 	}
 	
 	public def setAttributes[T](name:String, value:DistGrowableMemory[T], vertexOrEdge:Boolean) {
+		val _team = mTeam;
 		val _value = value;
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
