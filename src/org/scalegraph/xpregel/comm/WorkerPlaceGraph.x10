@@ -185,7 +185,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	
 	public def run[M,A](do_computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],context:XContext[M,A]) => void,
 			aggregator : AggregatorInterface[A], service:MessageCommunicationService[M,A]) {
-		val role = mTeam.getRole(here)(0);
+		val role = mTeam.role()(0);
 		val vertexSize = mMatrix.offsets.size()-1;
 		val [nthreads,chunkSize] = PregelUtils.splitChunk(0..(vertexSize-1));
 		if (here.id == 0){
