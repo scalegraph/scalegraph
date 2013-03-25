@@ -18,7 +18,7 @@ public class MessageCommunicationService[M,A] {
 	val mContext:XpregelContext;
 	val sendOffsets : MemoryChunk[Int];
 	val sendCounts : MemoryChunk[Int];
-	
+
 	public def this(team:Team,capacity:Long,context:XpregelContext) {
 		mTeam = new Team2(team);
 		mSendBufferMessages = new GrowableMemory[Tuple2[Long,M]](capacity);
@@ -32,16 +32,16 @@ public class MessageCommunicationService[M,A] {
 		sendOffsets = new MemoryChunk[Int](mTeam.size()+1);
 		sendCounts = new MemoryChunk[Int](mTeam.size());
 	}
-	
+
 	public def addSendMessages(buffer:GrowableMemory[Tuple2[Long,M]]) {
 		mSendBufferMessages.add(buffer.data());
 	}
-	
+
 	public def addSendMessages(buffer:MemoryChunk[Tuple2[Long,M]]) {
 		if (buffer.size() > 0)
 			mSendBufferMessages.add(buffer);
 	}
-	
+
 	public def addMessages(contexts:Array[XContext[M,A]]):Long {
 		var sum:Long = 0L;
 		val range = (0..(mTeam.size()-1));
@@ -62,29 +62,29 @@ public class MessageCommunicationService[M,A] {
 		}
 		return sum;
 	}
-	
+
 	public def del() {
 		mSendBufferMessages.del();
 		mReceiveBufferMessages.del();
 	}
-	
+
 	public def clearSendBuffer() {
 		mSendBufferMessages.clear();
 	}
-	
+
 	public def clearReceiveBuffer() {
 		mReceiveBufferMessages.clear();
 	}
-	
+
 	public def exchangeMessages() {
 		val raw = mSendBufferMessages.data();
 		val _context = mContext;
-		
+
 		/*
 		 * uncomment for combiner process
-		 * for this moment, we dont implement 
+		 * for this moment, we dont implement
 		 * combiner yet
-		 * 
+		 *
 		Parallel.sort(raw, (v1:Tuple2[Long,M],v2:Tuple2[Long,M]) => {
 			return v1.get1() - v2.get1();
 		});
@@ -128,7 +128,7 @@ public class MessageCommunicationService[M,A] {
 		if (here.id == 0) {
 			Console.OUT.println("Send Count = " + comm.sendCount());
 		}
-		
+
 		val receiveMessages = comm.scatter(raw);
 		*/
 		val receiveCounts = new MemoryChunk[Int](sendCounts.size());
@@ -139,15 +139,15 @@ public class MessageCommunicationService[M,A] {
 		mTeam.alltoallv(raw, sendOffsets, sendCounts, receiveMessages, receiveOffsets, receiveCounts);
 		mSendBufferMessages.clear();
 		mReceiveBufferMessages.clear();
-		
-		// sort due to src id 
+
+		// sort due to src id
 		Parallel.sort(receiveMessages,(v1:Tuple2[Long,M],v2:Tuple2[Long,M]) => {
-			return _context.getSrcIdFromDstId(v1.get1()) - _context.getSrcIdFromDstId(v2.get1());
+			return _context.getSrcIdFromDstId(v1.get1()).compareTo(_context.getSrcIdFromDstId(v2.get1()));
 		});
-		
+
 		/*
 		 * uncomment to process combiner messages
-		 * 
+		 *
 		var start_re:Long = 0L;
 		while(start_re < receiveMessages.size()-1L) {
 			val range = start_re..(receiveMessages.size()-1L);
@@ -188,7 +188,7 @@ public class MessageCommunicationService[M,A] {
 		}
 		mReceiveBufferMessages.add(receiveMessages);
 	}
-	
+
 	/**
 	 * TODO
 	 * return real messages for particular vertex
@@ -200,7 +200,7 @@ public class MessageCommunicationService[M,A] {
 			assert (vertexId >= 0);
 			assert (vertexId < mOffsets.size());
 			var start_index : Long = mOffsets(vertexId);
-			var end_index : Long = (vertexId == mOffsets.size()-1) ? raw.size() : mOffsets(vertexId+1);			
+			var end_index : Long = (vertexId == mOffsets.size()-1) ? raw.size() : mOffsets(vertexId+1);
 			if (start_index >= 0 && end_index > start_index)
 				messages.add(raw.subpart(start_index,end_index-start_index));
 			}
