@@ -21,7 +21,7 @@ public class TestHashMap {
 
     val test = false;
 
-    def run1() {
+    def benchSeqPut() {
         Console.OUT.println("test1 start");
         var sum : Double = 0.;
         val t = new HashMap[Int, Int](n);
@@ -36,7 +36,7 @@ public class TestHashMap {
             val startTime = Timer.nanoTime();
             t.put(ks, vs);
             val time = (Timer.nanoTime() - startTime) / (1000. * 1000. * 1000.);
-            //Console.OUT.printf("time1 = %f\n", time);
+            Console.OUT.printf("time1 = %f\n", time);
             sum += time;
             t.clear();
         }
@@ -44,7 +44,7 @@ public class TestHashMap {
         return;
     }
 
-    def run2() {
+    def benchParPut() {
         Console.OUT.println("test2 start");
 
         var sum : Double = 0.;
@@ -65,7 +65,7 @@ public class TestHashMap {
         return;
     }
 
-    def runGet() {
+    def benchGet() {
         val t = new HashMap[Int, Int](n);
         val ks = new MemoryChunk[Int](ne);
         val vs = new MemoryChunk[Int](ne);
@@ -130,6 +130,30 @@ public class TestHashMap {
         }
         assert(newKeys.size() == 5L);
         return;
+    }
+
+    def benchNewKeys() {
+        val t = new HashMap[Int, Int](n);
+        val ks = new MemoryChunk[Int](ne);
+        val vs = new MemoryChunk[Int](ne);
+
+        for (i in ks.range()) {
+            ks(i) = i as Int;
+            vs(i) = ks(i);
+        }
+        t.put(ks, vs);
+
+        for (i in ks.range()) {
+            ks(i) = i as Int + ne / 2;
+        }
+        val newKeys = t.newKeys(ks, -1);
+        Parallel.sort(newKeys, (lhs : Int, rhs : Int)=>(lhs as Long - rhs as Long));
+        assert(newKeys(0) == ne / 2);
+        for (i in newKeys.range()) {
+            if (i > 0L) {
+                assert (newKeys(i) == newKeys(i - 1) + 1);
+            }
+        }
     }
 
     def run3() {
@@ -204,12 +228,13 @@ public class TestHashMap {
 
     public static def main(Array[String](1)) {
         val test = new TestHashMap();
-        test.run1();
-        test.run2();
-        test.runGet();
+        test.benchSeqPut();
+        test.benchParPut();
+        test.benchGet();
         //test.run3();
         //test.run4();
         test.run5();
         test.runNewKeys();
+        test.benchNewKeys();
     }
 }
