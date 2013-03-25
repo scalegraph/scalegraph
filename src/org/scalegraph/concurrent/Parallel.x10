@@ -81,6 +81,14 @@ public class Parallel {
         finish _sort[T, U](k, v, proc, 0L, k.size(), cmp);
     }
 
+    public static def sort[T](a : MemoryChunk[T]) {T<:Comparable[T]} {
+        sort[T](a, (x:T, y:T)=> x.compareTo(y));
+    }
+
+    public static def sort[T, U](k : MemoryChunk[T], v : MemoryChunk[U]) {T<:Comparable[T]} {
+        sort[T, U](k, v, (x:T, y:T)=> x.compareTo(y));
+    }
+
     public static def _sort[T](a:MemoryChunk[T], proc:Int, lo:Long, hi:Long, cmp:(T, T)=>Int) {
         debugln("_sort");
         if (lo >= hi - 1) {
@@ -93,7 +101,7 @@ public class Parallel {
         }
         sample.sort((lhs:T, rhs:T)=>{
                 if (cmp(lhs, rhs) > 0L) {return 1;}
-                else if (cmp(lhs, rhs) == 0L) {return 0;}
+                else if (cmp(lhs, rhs) == 0) {return 0;}
                 else {return -1;}});
         if (proc > 0) {
             //val pivot = median[T](a(lo), a((lo + hi) / 2), a(hi - 1), cmp);
