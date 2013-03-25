@@ -297,6 +297,7 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
         currentQ().clearAll();
         updateScoreCurrentQ().clearAll();
         updateScoreNextQ().clearAll();
+        lch()._currentLevel() = 0L;
         for (i in 0..(lch()._numLocalVertices - 1)) {
             lch()._distanceMap(i) = 0L;
             if (lch()._predMap(i) != null)
@@ -736,11 +737,9 @@ public class BetweennessCentrality implements x10.io.CustomSerialization {
             at (p) {
                 val outFile = new File("./result/dat_"+ srcPrefix + "_" + here.id);
                 val writer = outFile.printer();
-                
-                
                 for (i in 0..(lch()._numLocalVertices - 1)) {
                     if(lch()._score(i) > 0)
-                        writer.println(LocSrcToOrg(i) + " " + lch()._score(i));
+                        writer.printf("%ld %.6g\n", LocSrcToOrg(i), lch()._score(i));
                 }
                 writer.close();
             }
