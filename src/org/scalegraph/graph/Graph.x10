@@ -226,7 +226,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 	 * @param ids 
 	 */
 	public def translateVertexIds[T](key :DistMemoryChunk[T], ids :DistMemoryChunk[Long]) {T haszero} {
-		VertexTranslator.translate(vertexTranslator as PlaceLocalHandle[VertexTranslator[T]],
+		VertexTranslator.translate[T](vertexTranslator as PlaceLocalHandle[VertexTranslator[T]],
 				key, ids, false);
 	}
 	
