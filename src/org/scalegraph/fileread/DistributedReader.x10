@@ -77,8 +77,8 @@ public class DistributedReader {
 					}
 					
 					// for debug
-					//team.barrier(team.getRole(here));
-					//if(team.getRole(here) == 0) Console.OUT.println("finish reading lines");
+					//team.barrier(team.role());
+					//if(team.role() == 0) Console.OUT.println("finish reading lines");
 					
 					val numEdges = linelist.size();
 					edgelist_.setSize(numEdges*2);
@@ -113,7 +113,7 @@ public class DistributedReader {
  			values : Attribute[Double])
  	{
  		team.placeGroup().broadcastFlat(() => {
- 			val role = team.getRole(here)(0);
+ 			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);
  			val values_ = values.values()().data();
  			val writer = new FileWriter(new File(filename));

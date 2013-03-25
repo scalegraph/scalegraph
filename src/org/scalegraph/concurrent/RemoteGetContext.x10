@@ -76,7 +76,7 @@ public class RemoteGetContext[T] {
 	}
 	
 	public def put(range: IntRange, f: (index:Int, put:(Int, Int, Int)=>void)=>void) : void {
-		throw new Exception("not impremented");
+		throw new Exception("not implemented");
 	}
 
 	public def pureGet(range: IntRange, pureF: (index:Int, get:(Int, Int, Int)=>void)=>void) : void {
@@ -151,44 +151,44 @@ public class RemoteGetContext[T] {
 	 */
 	public def executeAlone() : void {
 		// get request
-		val root = comm.roleHere()(0);
+		val root = comm.role()(0);
 //		var vertices:Array[T](1) = vertices;
 		finish for (role in 0..(comm.size()-1))  {
 			if (role == root) async {
 				val src = actions;
-				val req:Array[IntIdx[Int]](1) = comm.scattervSendAuto(role, root, src);
+				val req:Array[IntIdx[Int]](1) = comm.scatterv(role, root, src);
 				val res = new Array[IntIdx[T]](req.size);
 				Parallel.iter(0..(req.size-1),(i:Int)=>{
 					res(i) = IntIdx(getter(req(i).idx), req(i).value);
 				});
-				val results:Array[IntIdx[T]](1) = comm.gathervRecvAuto[IntIdx[T]](role, root, res);
+				val results:Array[IntIdx[T]](1) = comm.gatherv[IntIdx[T]](role, root, res);
 				for ([i] in results) {
 					val x = results(i);
 					vertices(x.idx) = x.value;
 				}
 				reset();
 			} else async at (comm.place(role)) {
-				val req:Array[IntIdx[Int]] = comm.scattervRecvAuto[IntIdx[Int]](role, root);
+				val req:Array[IntIdx[Int]] = comm.scatterv[IntIdx[Int]](role, root, null as Array[Array[IntIdx[Int]](1)](1));
 				val res = new Array[IntIdx[T]](req.size);
 				Parallel.iter(0..(req.size-1),(i:Int)=>{
 					res(i) = IntIdx[T](getter(req(i).idx), req(i).value);
 				});
-				comm.gathervSendAuto(role, root, res);
+				comm.gatherv(role, root, res);
 			}
 		}
 	}
 	
 	public def executeWithAll() : void {
-		val role = comm.roleHere()(0);
+		val role = comm.role()(0);
 		val src = actions;
-		val req_tuple = comm.alltoallvAutoWithBreakdown(role, src);
+		val req_tuple = comm.alltoallvWithBreakdown[IntIdx[Int]](role, src);
 		val req = req_tuple.first;
 		val req_from = req_tuple.second;
 		val res = new Array[IntIdx[T]](req.size);
 		Parallel.iter(0..(req.size-1),(i:Int)=>{
 			res(i) = IntIdx[T](getter(req(i).idx), req(i).value);
 		});
-		val results:Array[IntIdx[T]](1) = comm.alltoallvAuto[IntIdx[T]](role, res, req_from);
+		val results:Array[IntIdx[T]](1) = comm.alltoallv[IntIdx[T]](role, res, req_from);
 		for ([i] in results) {
 			val x = results(i);
 			vertices(x.idx) = x.value;

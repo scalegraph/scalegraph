@@ -76,14 +76,14 @@ public class TeamExample {
 		message("Multiple Split Test");
 		val places = Place.places();
 		val func = (old_team : Team)=> {
-			val old_role = team.getRole(here);
+			val old_role = team.role()(0);
 			if (team.size() <= 0) {
 				message(here + ": role: " + old_role + ", team: " + new_team);
 			}
 			finish for (p in Place.places()) async at (p) {
 				val new_team = Team.WORLD.split(old_role, old_role % 2, old_role / 2);
 				val new_role_oracle = old_role / 2;
-				val new_role = new_team.getRole(here);
+				val new_role = new_team.role()(0);
 				message(here + ": old role: " + old_role + ", new role: " + new_role + "(" + new_role_oracle + ")" + " new team: " + new_team);
 				func(new_team);
 			}

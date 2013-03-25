@@ -2,7 +2,6 @@ package org.scalegraph.graph;
 
 import x10.util.ArrayList;
 import x10.util.GrowableIndexedMemoryChunk;
-import x10.util.HashMap;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
 import x10.util.Timer;
@@ -13,6 +12,7 @@ import x10.compiler.Inline;
 
 import org.scalegraph.concurrent.Parallel;
 import org.scalegraph.concurrent.DistScatterGather;
+import org.scalegraph.concurrent.HashMap;
 import org.scalegraph.util.Debug;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
@@ -21,7 +21,7 @@ import org.scalegraph.util.DistMemoryChunk;
 /** Vertex ID translator. The purpose of this class is assigning the small integer number for each vertex.
  * The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
-@Pinned public class VertexTranslator[T] {
+@Pinned public class VertexTranslator[T] {T haszero} {
 
 	static val debug = true;
 	private @Inline static def debugln (str:String) : void {
@@ -58,7 +58,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	public def this(team__:Team, vertexNames__ :GrowableMemory[T], hashFunc__:(T)=>Int){
 		hashFunc = hashFunc__;
 		team = team__;
-		teamRank = team.getRole(here)(0);
+		teamRank = team.role()(0);
 		teamSize = team.size();
 		vertexNames = vertexNames__;
 	}
@@ -96,6 +96,20 @@ import org.scalegraph.util.DistMemoryChunk;
 		}
 		return translated;
 	}
+
+    public def parallelPutLocalAndTranslate(vertices: MemoryChunk[T], translated :MemoryChunk[Long]) {
+        val newKeys = table.newKeys(vertices, -1L);
+        val newIds = new MemoryChunk[Long](newKeys.size());
+        Parallel.iter(newIds.range(), (tid : Long, r : LongRange)=> {
+            for (i in r) {
+                newIds(i) = count.get() + i;
+            }
+        });
+        table.put(newKeys, newIds);
+        val _translated = table.get(vertices, -1L);
+        MemoryChunk.copy(_translated, 0L, translated, 0L, _translated.size());
+        return translated;
+    }
 
 	private def putLocal(vertices: MemoryChunk[T]) {
 		//		val count_origin = count.getAndAdd(vertices.size);
@@ -187,7 +201,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	 * @param withPut true: Assigning new number, false: only translation
 	 */
 	public static def translate[T](translator :PlaceLocalHandle[VertexTranslator[T]],
-			vertices :DistMemoryChunk[T], translated :DistMemoryChunk[Long], withPut :Boolean)
+			vertices :DistMemoryChunk[T], translated :DistMemoryChunk[Long], withPut :Boolean){T haszero}
 	{
 		@Pragma(Pragma.FINISH_SPMD) finish for(p in translator().team.placeGroup()) at (p) async {
 			try {
@@ -201,7 +215,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	}
 
 	private static def translate[T](translator :PlaceLocalHandle[VertexTranslator[T]],
-			vertices :DistMemoryChunk[T], withPut :Boolean) :DistMemoryChunk[Long]
+			vertices :DistMemoryChunk[T], withPut :Boolean) {T haszero} :DistMemoryChunk[Long]
 	= new DistMemoryChunk[Long](translator().team.placeGroup(), ()=> {
 			try {
 				val translated = new MemoryChunk[Long](vertices().size());
@@ -220,7 +234,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	 * @param vertices The vertices which will be translated
 	 */
 	public static def translate[T](translator :PlaceLocalHandle[VertexTranslator[T]],
-			vertices :DistMemoryChunk[T]) :DistMemoryChunk[Long]
+			vertices :DistMemoryChunk[T]){T haszero} :DistMemoryChunk[Long]
 	= translate[T](translator, vertices, false);
 
 	/** Translates vertex IDs with assigning new vertex number.
@@ -229,6 +243,6 @@ import org.scalegraph.util.DistMemoryChunk;
 	 * @param vertices The vertices which will be translated
 	 */
 	public static def putAndTranslate[T](translator :PlaceLocalHandle[VertexTranslator[T]],
-			vertices :DistMemoryChunk[T]) :DistMemoryChunk[Long]
+			vertices :DistMemoryChunk[T]) {T haszero} :DistMemoryChunk[Long]
 	= translate[T](translator, vertices, true);
 }

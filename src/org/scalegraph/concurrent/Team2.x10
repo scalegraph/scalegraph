@@ -121,7 +121,7 @@ public struct Team2 {
 	 * @param root The rank of the place that 
 	 */
 	public def scatter[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		if(role == root && src.size() != dst.size() * base.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -138,7 +138,7 @@ public struct Team2 {
 	/** This is equivalent to MPI_scatterv
 	 */
 	public def scatterv[T] (root:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
 			finish nativeScatterv[T](base.id(), role, root, src.pointer(), src_offs.pointer(), src_counts.pointer(), dst.pointer(), dst.size() as Int);
@@ -153,7 +153,7 @@ public struct Team2 {
 	/** This is equivalent to MPI_gather
 	 */
 	public def gather[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		if(role == root && src.size() * base.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -168,7 +168,7 @@ public struct Team2 {
 	 }
 
 	public def gatherv[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
 			finish nativeGatherv[T](base.id(), role, root, src.pointer(), src.size() as Int, dst.pointer(), dst_offs.pointer(), dst_counts.pointer());
@@ -181,7 +181,7 @@ public struct Team2 {
 	 }
 
 	public def bcast[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		if(role == root && src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -196,7 +196,7 @@ public struct Team2 {
 	 }
 
 	public def allgather[T](src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		if(src.size() * base.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -211,7 +211,7 @@ public struct Team2 {
 	 }
 
 	public def allgatherv[T] (src:MemoryChunk[T], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
 			finish nativeAllgatherv[T](base.id(), role, src.pointer(), src.size() as Int, dst.pointer(), dst_offs.pointer(), dst_counts.pointer());
@@ -219,12 +219,12 @@ public struct Team2 {
 		@Ifndef("__CPP__") {
 			val srcp = src.pointer();
 			val dstp = dst.pointer();
-			base.allgatherv(role, -1, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
+			base.allgatherv(role, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
 
 	public def alltoall[T](src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		if(src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -239,7 +239,7 @@ public struct Team2 {
 	 }
 
 	public def alltoallv[T] (src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
 			finish nativeAlltoallv[T](base.id(), role, src.pointer(), src_offs.pointer(), src_counts.pointer(), dst.pointer(), dst_offs.pointer(), dst_counts.pointer());
@@ -247,13 +247,13 @@ public struct Team2 {
 		@Ifndef("__CPP__") {
 			val srcp = src.pointer();
 			val dstp = dst.pointer();
-			base.alltoallv(role, -1, wrapPointer(srcp), wrapOffsets(src_offs, srcp.offset as Int), wrapCounts(src_counts),
+			base.alltoallv(role, wrapPointer(srcp), wrapOffsets(src_offs, srcp.offset as Int), wrapCounts(src_counts),
 					wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
 
 	public def allreduce[T](src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
-		val role = base.getRole(here)(0);
+		val role = base.role()(0);
 		if(src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
