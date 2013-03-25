@@ -92,7 +92,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             this._queues = new MemoryChunk[Bitmap](2, _ALIGN);
             
             // Create queues
-            val numLocalVertices = dsm.ids().maxLocalId;
+            val numLocalVertices = dsm.ids().numberOfLocalVertexes;
             this._queues(0) = new Bitmap(numLocalVertices);
             this._queues(1) = new Bitmap(numLocalVertices);
             this._visitMap = new Bitmap(numLocalVertices);
@@ -152,7 +152,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         // Create distance storage for each vertex
         val globalDistance = new DistMemoryChunk[Distance](places,() => {
             val ids = dsm.ids();
-            val numLocalVertices = ids.maxLocalId;
+            val numLocalVertices = ids.numberOfLocalVertexes;
             val distance = new MemoryChunk[Distance](numLocalVertices, 64);
             
             for (i in distance.range())

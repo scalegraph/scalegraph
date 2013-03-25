@@ -1,5 +1,5 @@
 package org.scalegraph.xpregel;
-import org.scalegraph.id.IdStruct;
+import org.scalegraph.graph.id.IdStruct;
 
 public struct VertexIdStruct {
 	val mDstId:Long;
