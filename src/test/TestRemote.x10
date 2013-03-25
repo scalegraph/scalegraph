@@ -69,18 +69,14 @@ public class TestRemote {
             val mapping = data.second;
             val start = Timer.nanoTime();
             finish for (p in pg) at (p) async {
-                try {
                 val vs_local = vertices();
-                    Remote.get(comm, mapping(), vs_local, vs_local.range(), (i : Long, get : (Long, Int, Long)=>void) => {
-                        val v = vs_local(i);
-                        //val v = i % (64 * pg.size());
-                        get(i, (v % nPlaces) as Int, v / nPlaces);
+                Console.OUT.println("getting");
+                Remote.get(comm, mapping(), vs_local, vs_local.range(), (i : Long, get : (Long, Int, Long)=>void) => {
+                    val v = vs_local(i);
+                    //val v = i % (64 * pg.size());
+                    get(i, (v % nPlaces) as Int, v / nPlaces);
                 });
-                } catch (e:CheckedThrowable) {
-                    Console.OUT.println("catch exception!!");
-                    Console.OUT.println(e.getMessage());
-                    e.printStackTrace();
-                }
+                Console.OUT.println("getted");
             }
             Console.OUT.printf("Remote.get version time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
             return vertices;
