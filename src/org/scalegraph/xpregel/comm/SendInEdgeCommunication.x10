@@ -17,20 +17,13 @@ public class SendInEdgeCommunication[V,E] implements ComputationInterface[V,E,Tu
 		val edgesValue = new GrowableMemory[E]();
 		vertex.getEdgesId(true,edges);
 		vertex.getEdgesValue(true,edgesValue);
-		if (messages.size() == 0L) { // send its srcID to neighbors
+		if (_context.getSuperStep() == 0L) { // send its srcID to neighbors
 			if (edges.size() > 0) {
 				for (index in edges.range()) {
 					val tuple = new Tuple2[Long,E](vertex.getVertexId(),edgesValue(index));
 					_appContext.putMessage(edges(index),tuple);
 				}
 			}
-		}else {		// refresh it's InEdges
-			val inEdges = new MemoryChunk[Tuple2[Long,E]](messages.size());
-			for (index in messages.range()) {
-				inEdges(index) = messages(index).get2();
-			}
-			vertex.clearAllEdges(false);
-			vertex.addEdges(inEdges,false);
 		}
 		edges.del();
 		edgesValue.del();

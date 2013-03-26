@@ -1,35 +1,41 @@
 package org.scalegraph.xpregel;
 import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
 
 public class EdgesBuffer[E] {
 	
-	var hasChanged : GrowableMemory[Boolean];
-	var mOffset	  : GrowableMemory[Tuple2[Long,Long]];
+	public static val hasChanged  :	 GrowableMemory[Boolean] = new GrowableMemory[Boolean]();
+	public static val mOffset	  :  GrowableMemory[Tuple2[Long,Long]] = new GrowableMemory[Tuple2[Long,Long]]();
 	var edgesId   : GrowableMemory[Long];
 	var edgesValue : GrowableMemory[E];
 	var count	:	Long;
-	
 	var hasModified : Boolean;
+	var range	: LongRange;
+	
+	public static def initShareBuffer(numOfVertex : Long) : void{
+		for(i in (0..(numOfVertex-1))) {
+			hasChanged.add(false);
+			mOffset.add(new Tuple2[Long,Long](0,0));
+		}
+	}
 	
 	public def this(numOfVertex:Long) {
-		hasChanged = new GrowableMemory[Boolean](numOfVertex);
-		mOffset	= new GrowableMemory[Long](numOfVertex);
-		for (i in (0..(numOfVertex-1))) {
-			hasChanged.add(false);
-			mOffset.add(0);
-		}
 		edgesId = new GrowableMemory[Long]();
 		edgesValue  = new GrowableMemory[E]();
 		hasModified = false;
 		count = 0L;
 	}
 	
+	public def setRange(_range : LongRange):void {
+		range = _range;
+	}
+	
 	public def reset() {
 		hasModified = false;
 		count = 0L;
-		for(index in hasChanged.range()) {
-			hasChanged(index) = false;
-		}
+		edgesValue.clear();
+		edgesId.clear();
 	}
 	
 	public def addEdges(vertexId : Long, edges : GrowableMemory[Tuple2[Long,E]]) {
@@ -38,19 +44,19 @@ public class EdgesBuffer[E] {
 		mOffset(vertexId) = tuple;
 		count += edges.size();
 		for(index in edges.range()) {
-			edgesId.add(edges(index).get1();
-			edgesValue.add(edges(index).get2();
+			edgesId.add(edges(index).get1());
+			edgesValue.add(edges(index).get2());
 		}
 	}
 	
-	public def modifiedAt(index:Long):Boolean = hasChanged(index);
-	
+	public def inMyRange(index:Long):Boolean = ( index >= range.min && index <= range.max );
+
 	public def addEdges(vertexId : Long, _edgesId : GrowableMemory[Long], _edgesValue : GrowableMemory[E]) {
 		assert(_edgesId.size() == _edgesValue.size());
 		hasChanged(vertexId) = true;
 		val tuple = new Tuple2[Long,Long](count,edgesId.size());
 		mOffset(vertexId) = tuple;
-		count + = edgesId.size();
+		count += edgesId.size();
 		edgesId.add(_edgesId.data());
 		edgesValue.add(_edgesValue.data());
 	}
@@ -61,28 +67,29 @@ public class EdgesBuffer[E] {
 	
 	public def isModified():Boolean = hasModified;
 	
-	public static def merge(buffers : Array[EdgesBuffer[E]], targetOffset : GrowableMemory[Long], targetId : GrowableMemory[Long]; targetValue : GrowableMemory[E],
+	public static def merge[E](buffers : Array[EdgesBuffer[E]], targetOffset : GrowableMemory[Long], targetId : GrowableMemory[Long], targetValue : GrowableMemory[E],
 		numOfVertex : Long) {
 		val tmpId = new GrowableMemory[Long]();
 		val tmpValues = new GrowableMemory[E]();
 		val tmpOffset = new MemoryChunk[Long](targetOffset.size());
 		tmpOffset(0) = 0L;
-		range = (0..(numOfVertex-1));
+		val range = (0..(numOfVertex-1));
 		for(index in range) {
 			var modified:Boolean = false;
-			for(bufIndex in buffers) {
-				if (buffers(bufIndex).modifiedAt(index)) {
-					modified = true;
-					val tuple = buffers(bufIndex).mOffset(index);
-					val start = tuple.get1();
-					val size =  tuple.get2();
-					tmpId.add(buffers(bufIndex).edgesId.data().subpart(start,size));
-					tmpValues.add(buffers(bufIndex).edgesValue.data().subpart(start,size));
-					tmpOffset(index+1) = tmpOffset(index) + size;
-					break;
+			if (hasChanged(index)) {
+				for(bufIndex in buffers) {
+					if (buffers(bufIndex).inMyRange(index)) {
+						modified = true;
+						val tuple = mOffset(index);
+						val start = tuple.get1();
+						val size =  tuple.get2();
+						tmpId.add(buffers(bufIndex).edgesId.data().subpart(start,size));
+						tmpValues.add(buffers(bufIndex).edgesValue.data().subpart(start,size));
+						tmpOffset(index+1) = tmpOffset(index) + size;
+					}
 				}
-			}
-			if (!modified) {
+				hasChanged(index) = false;
+			}else {
 				val start = targetOffset(index);
 				val size = targetOffset(index+1) - targetOffset(index);
 				tmpId.add(targetId.data().subpart(start,size));
@@ -93,8 +100,10 @@ public class EdgesBuffer[E] {
 		
 		targetOffset.setMemory(tmpOffset);
 		targetId.setMemory(tmpId.data());
-		targetValue.setMemory(tmpValues.data());		
+		targetValue.setMemory(tmpValues.data());
+		
+		for(index in buffers) {
+			buffers(index).reset();
+		}
 	}
-	
-	
 }

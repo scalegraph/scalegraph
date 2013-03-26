@@ -14,7 +14,6 @@ public interface WorkerInterface[V,E] {
 	public def voteToHalt(index:Long):void;
 	public def isHalt(index:Long):Boolean;
 	public def setActive(index:Long):void;
-	public def setVertexShouldBeAlive(index:Long, value:Boolean);
+	public def setVertexShouldBeAlive(index:Long, value:Boolean):void;
 	public def clearAllEdges(outOrIn:Boolean,vertexId:Long):void;
-	public def addEdges(edges:MemoryChunk[Tuple2[Long,E]],outOrIn:Boolean, vertexId:Long):void;
 }

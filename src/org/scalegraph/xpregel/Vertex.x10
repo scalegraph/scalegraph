@@ -3,10 +3,13 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.xpregel.comm.WorkerInterface;
+import org.scalegraph.xpregel.EdgesBuffer;
 public class Vertex[V,E] {
 	
 	var mVertexId	:	Long;
 	var mContext 	:	XpregelContext;
+	var outEdgeBuffer	:	EdgesBuffer[E];
+	var inEdgeBuffer	:	EdgesBuffer[E];
 	var mWorkerInterface : WorkerInterface[V,E];
 	
 	public def this(id:Long) {
@@ -29,6 +32,55 @@ public class Vertex[V,E] {
 	public def postComputation(){
 	}
 	
+	public def updateContext(context:XpregelContext) {
+		mContext = context;
+	}
+	
+	public def getContext() = mContext;
+	
+	/*********************************** 
+	 *  vertex api 
+	 * add edges api
+	 ***********************************/
+	public def setEdgesBuffer(edgebuffer : EdgesBuffer[E], outOrIn : Boolean) {
+		if (outOrIn) {
+			outEdgeBuffer = edgebuffer;
+		}else {
+			inEdgeBuffer = edgebuffer;
+		}
+	}
+	
+	public def addEdges(edges : MemoryChunk[Tuple2[Long,E]], outOrIn : Boolean) {
+		if (outOrIn) {
+			
+		}else {
+			throw new IllegalOperationException("adding InEdges is not available now. Using XPregel.updateInEdges() instead.");
+		}
+	}
+	
+	public def addEdges(edges : GrowableMemory[Tuple2[Long,E]], outOrIn : Boolean) {
+		if (outOrIn) {
+			outEdgeBuffer.addEdges(mVertexId,edges);
+		}else {
+			throw new IllegalOperationException("adding InEdges is not available now. Using XPregel.updateInEdges() instead.");
+		}
+	}
+	public def addEdges(edgesId : GrowableMemory[Long], edgesValue : GrowableMemory[E], outOrIn : Boolean) {
+		if (outOrIn) {
+			outEdgeBuffer.addEdges(mVertexId,edgesId, edgesValue);
+		}else {
+			throw new IllegalOperationException("adding InEdges is not available now. Using XPregel.updateInEdges() instead.");
+		}
+	}
+	/*********************************** 
+	 * end 
+	 * **********************************/
+	
+	
+	/***********************************
+	 * vertex api
+	 * workerinterface binding method
+	 ************************************/
 	public def voteToHalt() {
 		mWorkerInterface.voteToHalt(mVertexId);
 	}
@@ -53,16 +105,6 @@ public class Vertex[V,E] {
 		mWorkerInterface.clearAllEdges(outOrIn,mVertexId);
 	}
 	
-	public def addEdges(edges:MemoryChunk[Tuple2[Long,E]],outOrIn:Boolean) {
-		mWorkerInterface.addEdges(edges,outOrIn,mVertexId);
-	}
-	
-	public def updateContext(context:XpregelContext) {
-		mContext = context;
-	}
-	
-	public def getContext() = mContext;
-	
 	public def getValue():V = mWorkerInterface.getVertexValue(mVertexId);
 	
 	public def setValue(value:V) {
@@ -70,13 +112,8 @@ public class Vertex[V,E] {
 	}
 	
 	public def isHalted() = mWorkerInterface.isHalt(mVertexId);
-	
-	public def getVertexAttribute[T](name:String):T {
-		return mWorkerInterface.getAttribute[T](name,mVertexId,true);
-	}
-	
-	public def getEdgeAttribute[T](name:String):T {
-		return mWorkerInterface.getAttribute[T](name,mVertexId,false);
-	}
+	/**
+	 * end
+	 */
 
 }

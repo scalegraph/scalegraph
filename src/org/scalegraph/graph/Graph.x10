@@ -787,13 +787,6 @@ import org.scalegraph.xpregel.XPregelGraph;
 		val csr = constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val _team = team;
 		val xpregelgraph = new XPregelGraph[V,E](_team,csr);
-		val vertexKeys = vertexAttributeKeys();
-		if (!vertexKeys.isEmpty()) {
-			val iter = vertexKeys.iterator();
-			while(iter.hasNext()) {
-				val name = iter.next();
-			}
-		}
 		return xpregelgraph;
 	}
 }

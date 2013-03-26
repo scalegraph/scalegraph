@@ -32,8 +32,57 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),() => new WorkerPlaceGraph[V,E](team,data(),_context));	
 	}
 	
-	public def constructAdjacencyListVertices(graph:Graph) {
-		
+	public def zipVertexValue[T](a:DistGrowableMemory[T], compute : (v:T) => V){T haszero} {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().zipVertexValue[T](a(),compute);
+		});
+	}
+	
+	public def zipVertexValue[T1,T2](a1:DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], 
+			compute : (v1:T1,v2:T2) => V) {T1 haszero, T2 haszero} {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().zipVertexValue[T1,T2](a1(),a2(),compute);
+		});
+	}
+	
+	public def zipVertexValue[T1,T2,T3](a1:DistGrowableMemory[T1], a2 : DistGrowableMemory[T2],
+			a3 : DistGrowableMemory[T3],
+			compute : (v1:T1,v2:T2,v3:T3) => V) {T1 haszero, T2 haszero, T3 haszero} {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().zipVertexValue[T1,T2,T3](a1(),a2(),a3(),compute);
+		});
+	}
+			
+	public def zipEdgeValue[T] (a : DistGrowableMemory[T], compute : (v : T) => E) {T haszero} {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().zipEdgeValue(a(),compute);
+		});
+	}
+	
+	public def zipEdgeValue[T1,T2] (a1: DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], 
+			compute : (v1 : T1, v2 : T2) => E) {T1 haszero, T2 haszero} {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().zipEdgeValue(a1(),a2(),compute);
+		});
+	}
+			
+	public def zipEdgeValue[T1,T2,T3] (a1: DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], a3 : DistGrowableMemory[T3],
+			compute : (v1 : T1, v2 : T2, v3 : T3) => E) {T1 haszero, T2 haszero, T3 haszero} {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().zipEdgeValue(a1(),a2(),a3(),compute);
+		});
 	}
 	
 	/** 
@@ -42,57 +91,45 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 	 * 
 	 */
 	public def updateInEdge() {
+		val _team = mTeam;
+		val _context = mContext;
 		val sendInComputation = new SendInEdgeCommunication[V,E]();
-		do_computations[Tuple2[Long,E],Double](sendInComputation, null);
-	}
-	
-	public def setVertexAttributes(attributes:HashMap[String,Any]) {
-		vertexAttributes = attributes;
-	}
-	
-	public def setEdgeAttributes(attributes:HashMap[String,Any]) {
-		edgeAttributes = attributes;
-	}
-	
-	public def do_computations[M,A](computation:ComputationInterface[V,E,M,A], aggregator : AggregatorInterface[A]) {
-		val _team = mTeam;
-		val _context = mContext;
-		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
-				() => new MessageCommunicationService[M,A](_team,1000,_context));
-		
-		val workers_ = mWorkers;
-		Console.OUT.println("Start processing ...");
-
-		_team.placeGroup().broadcastFlat(() => {
-			workers_().run[M,A](computation, aggregator, service());
-		});
-		
-		Console.OUT.println("End processing...");
-	}
-	
-	public def do_computations[M,A](computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],_appcontext:XContext[M,A]) => void, aggregator : AggregatorInterface[A]) {
-		val _team = mTeam;
-		val _context = mContext;
-		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
-				() => new MessageCommunicationService[M,A](_team,1000,_context));
-		val workers_ = mWorkers;
-		Console.OUT.println("Start processing ...");
-
-		_team.placeGroup().broadcastFlat(() => {
-			workers_().run[M,A](computation, aggregator, service());
-			//workers_().test(service());
-		});
-		
-		Console.OUT.println("End processing...");
-	}
-	
-	public def setAttributes[T](name:String, value:DistGrowableMemory[T], vertexOrEdge:Boolean) {
-		val _team = mTeam;
-		val _value = value;
+		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[Tuple2[Long,E],Double]](_team.placeGroup(),
+				() => new MessageCommunicationService[Tuple2[Long,E],Double](_team,1000,_context));
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
-			_workers().setAttributes(name,_value(),vertexOrEdge);
+			_workers().run[Tuple2[Long,E],Double](sendInComputation,null,service());
 		});
+		_team.placeGroup().broadcastFlat(() => {
+			_workers().initInEdge(service());
+		});
+	}
+	
+	public def do_computations[M,A](computation:ComputationInterface[V,E,M,A], aggregator : AggregatorInterface[A]){ M haszero, A haszero} {
+		val _team = mTeam;
+		val _context = mContext;
+		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
+				() => new MessageCommunicationService[M,A](_team,1000,_context));
+		val workers_ = mWorkers;
+		Console.OUT.println("Start processing ...");
+		_team.placeGroup().broadcastFlat(() => {
+			workers_().run[M,A](computation, aggregator, service());
+		});
+		Console.OUT.println("End processing...");
+	}
+	
+	public def do_computations[M,A](computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],_appcontext:XContext[M,A]) => void, 
+			aggregator : AggregatorInterface[A]){ M haszero, A haszero} {
+		val _team = mTeam;
+		val _context = mContext;
+		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
+				() => new MessageCommunicationService[M,A](_team,1000,_context));
+		val workers_ = mWorkers;
+		Console.OUT.println("Start processing ...");
+		_team.placeGroup().broadcastFlat(() => {
+			workers_().run[M,A](computation, aggregator, service());
+		});
+		Console.OUT.println("End processing...");
 	}
 	
 }
