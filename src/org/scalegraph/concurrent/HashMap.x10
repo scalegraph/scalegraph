@@ -106,7 +106,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         table = MemoryChunk[HashEntry[K, V]](init_size as Long);
         this.logSize = MathAppend.ceilLog2(table.size());
-        Console.OUT.printf("logSize = %d\n", logSize);
+//        Console.OUT.printf("logSize = %d\n", logSize);
         this.size = 0;
         shouldRehash = false;
     }
@@ -189,8 +189,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
             offset(i) = offset(i - 1) + eachSize(i - 1);
         }
 
-        eachSize.map((v : Long)=>{Console.OUT.printf("size = %d\n", v); return 0;});
-        offset.map((v : Long)=>{Console.OUT.printf("offset = %d\n", v); return 0;});
+//        eachSize.map((v : Long)=>{Console.OUT.printf("size = %d\n", v); return 0;});
+//        offset.map((v : Long)=>{Console.OUT.printf("offset = %d\n", v); return 0;});
 
         finish for (p in 0..(nChunk - 1)) async {
             for (i in offset(p)..(offset(p) + eachSize(p) - 1)) {
@@ -300,7 +300,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
         }
         val dummysize = localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
 
-        Console.OUT.println("1!!!");
         /*
         for (i in table.range()) {
             Console.OUT.println(table(i));
@@ -333,7 +332,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 }
             }
         });
-       Console.OUT.println("2!!!!");
         /*
         for (i in table.range()) {
             Console.OUT.println(table(i));
