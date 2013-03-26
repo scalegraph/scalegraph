@@ -14,10 +14,12 @@ import org.scalegraph.concurrent.Parallel;
 import org.scalegraph.concurrent.HashMap;
 
 public class TestHashMap {
-    val n = 1000000;
-    val ne = 400000;
+    val n = 10000000;
+    val ne = 4000000;
 
-    static nTest = 50;
+    static nTest = 1;
+
+    val test = false;
 
     def run1() {
         Console.OUT.println("test1 start");
@@ -60,6 +62,73 @@ public class TestHashMap {
             t.clear();
         }
         Console.OUT.printf("ave time2 = %.16f\n", sum / nTest);
+        return;
+    }
+
+    def runGet() {
+        val t = new HashMap[Int, Int](n);
+        val ks = new MemoryChunk[Int](ne);
+        val vs = new MemoryChunk[Int](ne);
+
+        for (i in ks.range()) {
+            ks(i) = i as Int;
+            vs(i) = ks(i);
+        }
+        t.put(ks, vs);
+
+        val getVs = (()=>{
+            val start = Timer.nanoTime();
+            val getVs = t.get(ks, -1);
+            Console.OUT.printf("parallel get time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
+            return getVs;
+        })();
+
+        {
+            val start = Timer.nanoTime();
+            for (i in ks.range()) {
+                t.get(ks(i), -1);
+            }
+            Console.OUT.printf("sequencial get time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
+        }
+
+        if (test) {
+            for (i in getVs.range()) {
+                assert(getVs(i) == vs(i));
+            }
+        }
+    }
+
+    def runNewKeys() {
+        val t = new HashMap[Int, Int](100);
+        val ks = new MemoryChunk[Int](10);
+        val vs = new MemoryChunk[Int](10);
+
+        for (i in ks.range()) {
+            ks(i) = i as Int;
+            vs(i) = ks(i);
+        }
+        t.put(ks, vs);
+
+        val keys = new MemoryChunk[Int](10);
+        keys(0) = 10;
+        keys(1) = 10;
+        keys(2) = 10;
+        keys(3) = 3;
+        keys(4) = 4;
+        keys(5) = 5;
+        keys(6) = 16;
+        keys(7) = 17;
+        keys(8) = 18;
+        keys(9) = 19;
+
+        val newKeys = (()=>{
+            val newKeys = t.newKeys(keys, -1);
+            return newKeys;
+        })();
+        for (i in newKeys.range()) {
+            Console.OUT.printf("newKeys(%d) = %d\n", i as Int, newKeys(i));
+        }
+        assert(newKeys.size() == 5L);
         return;
     }
 
@@ -126,7 +195,7 @@ public class TestHashMap {
         t.put(ks, vs);
         sw.stop();
         sw.print("run5");
-        for (i in (0..(ne - 1))) {
+        for (i in (0..(e - 1))) {
             val key = ks(i);
             val value = t.get(key);
             assert(value != null && value.value == vs(i));
@@ -137,8 +206,10 @@ public class TestHashMap {
         val test = new TestHashMap();
         test.run1();
         test.run2();
+        test.runGet();
         //test.run3();
         //test.run4();
-        //test.run5();
+        test.run5();
+        test.runNewKeys();
     }
 }

@@ -4,6 +4,7 @@ import x10.util.Timer;
 import x10.util.Map;
 import x10.util.Box;
 import x10.util.concurrent.AtomicInteger;
+import x10.util.NoSuchElementException;
 import x10.compiler.NonEscaping;
 import x10.compiler.Inline;
 import x10.io.CustomSerialization;
@@ -27,25 +28,37 @@ struct Pair[T, U] {
 // Todo x10doc comment
 public class HashMap[K,V] {K haszero, V haszero} {
     static struct HashEntry[Key, Value] {Key haszero, Value haszero} {
+
+        static EMPTY : Byte = 0 as Byte;
+        static OCCUPIED : Byte = 1 as Byte;
+        static DUMMY : Byte = 2 as Byte;
+
         public def getKey() = key;
         public def getValue() = value;
 
         val key: Key;
         val value: Value;
         val hash: Int;
-        val occupied : Boolean;
+        val flag : Byte;
         def this () {
         	this.key = Zero.get[Key]();
         	this.value = Zero.get[Value]();
         	this.hash = 0;
-        	this.occupied = false;
+        	this.flag = EMPTY; /* not occpied */
         }
 
         def this(key: Key, value: Value, h: Int) {
             this.key = key;
             this.value = value;
             this.hash = h;
-            this.occupied = true;
+            this.flag = OCCUPIED;
+        }
+
+        def this(key : Key, value : Value, h : Int, flag : Byte) {
+            this.key = key;
+            this.value = value;
+            this.hash = h;
+            this.flag = flag;
         }
     }
 
@@ -116,11 +129,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
     @NonEscaping protected final @Inline def hashToIndex(idx : Int, n : Int) {
         return ((idx as UInt) >> (32 - n)) as Int;
     }
-/*
-    private def mask(idx : Int, n :Int) {
-        return (idx >> (64 - n)) << (64 - n);
-    }
- */
+
     public def put(k: K, v: V): Box[V] = putInternal(k,v);
     @NonEscaping protected final def putInternal(k: K, v: V): Box[V] {
         // Todo incomplete condition
@@ -139,7 +148,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         while (true) {
             val e = table(i);
-            if (!e.occupied) {
+            if (e.flag == HashEntry.EMPTY) {
                 if (cnt > MAX_PROBES)
                     shouldRehash = true;
                 table(i) = new HashEntry[K,V](k, v, h);
@@ -156,14 +165,208 @@ public class HashMap[K,V] {K haszero, V haszero} {
     }
 
     public def get(k: K): Box[V] {
-        val e = getEntry(k);
-        if (e == null) return null;
-        return new Box[V](e.value.value);
+        val idx = getEntryIndex(k);
+        if (idx < 0) return null;
+        return new Box[V](table(idx).value);
     }
 
-    protected def getEntry(k: K): Box[HashEntry[K,V]] {
+    public def get(k : K, defValue : V) {
+        val idx = getEntryIndex(k);
+        if (idx < 0) return defValue;
+        return (table(idx).value);
+    }
+
+    public def get(ks : MemoryChunk[K], defValue : V) {
+        val vs = new MemoryChunk[V](ks.size());
+
+        val eachSize = new Array[Long](nChunk, (i:Int)=>{
+            if (i == nChunk - 1) {return ks.size() / nChunk + ks.size() % nChunk;}
+            else {return ks.size() / nChunk;}});
+        val offset = new Array[Long](nChunk + 1);
+        for (i in 1..nChunk) {
+            offset(i) = offset(i - 1) + eachSize(i - 1);
+        }
+
+        eachSize.map((v : Long)=>{Console.OUT.printf("size = %d\n", v); return 0;});
+        offset.map((v : Long)=>{Console.OUT.printf("offset = %d\n", v); return 0;});
+
+        finish for (p in 0..(nChunk - 1)) async {
+            for (i in offset(p)..(offset(p) + eachSize(p) - 1)) {
+                vs(i) = get(ks(i), defValue);
+            }
+        }
+        return vs;
+    }
+
+    public def getOrThrow(key : K) {
+        val idx = getEntryIndex(key);
+        if (idx < 0) throw new NoSuchElementException("Not Found");
+        return (table(idx).value);
+    }
+
+    public def newKeys(ks : MemoryChunk[K], defValue : V) {
+        if (size + ks.size() >= table.size() / 2) {
+            rehashInternal();
+        }
+        val chunk = new MemoryChunk[Pair[Int, Long]](ks.size());
+
+        // closure__1
+        val scatterGather = new ScatterGather(nChunk);
+        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
+            val counts = scatterGather.getCounts(tid as Int);
+            for (i in r) {
+                val h = hash(ks(i));
+                val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+                counts(chunkIdx)++;
+            }
+        });
+        scatterGather.sum();
+        // split according to upper nMaskBit
+        // Todo use scatterGather
+        // closure__2
+        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
+            val offsets = scatterGather.getOffsets(tid as Int);
+            for (i in r) {
+                val k = ks(i);
+                val h = hash(ks(i));
+                val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+                val idx = offsets(chunkIdx)++;
+                chunk(idx) = new Pair[Int, Long](h, i);
+            }
+        });
+
+        val offsets = scatterGather.getChunkOffset();
+        val counts = scatterGather.getChunkCounts();
+        // add chunks to table
+
+        // closure__3
+        val localSize = new Array[Int](nChunk);
+        var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
+            new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+                (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+        // Todo : strange name
+        val pushed = new MemoryChunk[Int](ks.size());
+
+        // Todo : refactoring
+        for (i in pushed.range()) {
+            pushed(i) = -1L;
+        }
+
+        finish for (p in 0..(nChunk - 1)) async {
+            var cnt:Int = 0;
+            for (i in (offsets(p)..(offsets(p) + counts(p) - 1))) {
+                val e = chunk(i);
+                val idx = e.second;
+                val ret = putDummyLocal(e.first, e.first, ks(idx), defValue);
+                if (ret == -2) { // not added on local
+                    // if flow from table, add next chunk
+                    currentChunk((p + 1) % nChunk).add(
+                        new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.first));
+                } else if (ret >= 0) { // added
+                    cnt++;
+                    pushed(i) = ret;
+                }
+            }
+            localSize(p) = cnt;
+        }
+
+        for (var count : Int = 0; count < nChunk - 1 &&
+            !currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+        count++) {
+            val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+                (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+            finish for (p in 0..(nChunk - 1)) async {
+                for (i in currentChunk(p).range()) {
+                    val e = currentChunk(p)(i);
+                    val idx = e.val2;
+                    val ret = putDummyLocal(e.val1, e.val3, ks(idx), defValue);
+                    if (ret == -2) {
+                        // if flow from table, add next chunk
+                        nextChunk((p + 1) % nChunk).add(
+                            new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+                    } else {
+                        pushed(i) = ret;
+                        localSize(p)++;
+                    }
+                }
+            }
+            currentChunk = nextChunk;
+        }
+        val dummysize = localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
+
+        Console.OUT.println("1!!!");
+        for (i in table.range()) {
+            Console.OUT.println(table(i));
+        }
+
+        val newKeys = new MemoryChunk[K](dummysize);
+
+        // Todo : rewrite by ScatterGather
+        // Todo : variable name
+        val counts2 = new Array[Int](nChunk, 0);
+        Parallel.iter(pushed.range(), (tid : Long, r : LongRange) => {
+            for (i in r) {
+                if (pushed(i) >= 0) {
+                    counts2(tid as Int)++;
+                }
+            }
+        });
+        val offsets2 = new Array[Int](nChunk + 1, 0);
+        for (i in (1..nChunk)) {
+            offsets2(i) = offsets2(i - 1) + counts2(i - 1);
+        }
+
+        Parallel.iter(pushed.range(), (tid : Long, r : LongRange) => {
+            for (i in r) {
+                if (pushed(i) >= 0) {
+                    val e = table(pushed(i));
+                    newKeys(offsets2(tid as Int)) = e.key;
+                    offsets2(tid as Int)++;
+                    table(pushed(i)) = new HashEntry[K, V]();
+                }
+            }
+        });
+       Console.OUT.println("2!!!!");
+        for (i in table.range()) {
+            Console.OUT.println(table(i));
+        }
+        return newKeys;
+    }
+
+    // Todo: if elements already stored?
+    @Inline private def putDummyLocal(h : Int, proper_h : Int, key : K, value : V) {
+        // current working upper bits
+        val currentBits = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+        // upper bit of table size
+        val sz = this.logSize;
+
+        var cur : Int = hashToIndex(h, sz);
+        var cnt : Int = 0;
+
+        // while working on current chunk
+        while (cur >> (sz - nMaskBits) == currentBits) {
+            val e = table(cur);
+
+            if (e.flag == HashEntry.EMPTY) {
+                if (cnt > MAX_PROBES) {
+                    shouldRehash = true;
+                }
+                table(cur) = HashEntry[K, V](key, value, proper_h, HashEntry.DUMMY);
+                return cur;
+            } else if (e.flag == HashEntry.OCCUPIED || e.flag == HashEntry.DUMMY) {
+                if (e.key == key) {
+                    return -1; // already added
+                }
+            }
+            cur = (cur + 1) % (table.size() as Int);
+            cnt++;
+        }
+        return -2; // Add on next chunk
+    }
+
+    protected def getEntryIndex(k: K): Int {
         if (size == 0)
-            return null;
+            return -1;
 
 // incompatible with iterators
 //        if (shouldRehash)
@@ -177,21 +380,21 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         while (true) {
             val e = table(i);
-            if (!e.occupied) {
+            if (e.flag == HashEntry.EMPTY) {
                 if (cnt > MAX_PROBES)
                     shouldRehash = true;
-                return null;
+                return -1;
             }
-            if (e.occupied) {
+            if (e.flag == HashEntry.OCCUPIED) {
                 if (e.hash == h && k.equals(e.key)) {
                     if (cnt > MAX_PROBES)
                         shouldRehash = true;
-                    return new Box[HashEntry[K, V]](e);
+                    return i;
                 }
                 if (cnt > table.size()) {
                     if (cnt > MAX_PROBES)
                         shouldRehash = true;
-                    return null;
+                    return -1;
                 }
             }
             i = (i + 1) % (table.size() as Int);
@@ -199,19 +402,19 @@ public class HashMap[K,V] {K haszero, V haszero} {
         }
     }
 
-    public def put(keys : MemoryChunk[K], values : MemoryChunk[V]) {
-        if (size + keys.size() >= table.size() / 2) {
+    public def put(ks : MemoryChunk[K], values : MemoryChunk[V]) {
+        if (size + ks.size() >= table.size() / 2) {
             rehashInternal();
         }
-        assert(keys.size() == values.size());
-        val chunk = new MemoryChunk[Pair[Int, Long]](keys.size());
+        assert(ks.size() == values.size());
+        val chunk = new MemoryChunk[Pair[Int, Long]](ks.size());
 
         // closure__1
         val scatterGather = new ScatterGather(nChunk);
-        Parallel.iter(keys.range(), (tid: Long, r : LongRange)=> {
+        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
             val counts = scatterGather.getCounts(tid as Int);
             for (i in r) {
-                val h = hash(keys(i));
+                val h = hash(ks(i));
                 val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
                 counts(chunkIdx)++;
             }
@@ -220,12 +423,12 @@ public class HashMap[K,V] {K haszero, V haszero} {
         // split according to upper nMaskBit
         // Todo use scatterGather
         // closure__2
-        Parallel.iter(keys.range(), (tid: Long, r : LongRange)=> {
+        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
             val offsets = scatterGather.getOffsets(tid as Int);
             for (i in r) {
-                val k = keys(i);
+                val k = ks(i);
                 val v = values(i);
-                val h = hash(keys(i));
+                val h = hash(ks(i));
                 val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
                 val idx = offsets(chunkIdx)++;
                 chunk(idx) = new Pair[Int, Long](h, i);
@@ -246,7 +449,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
             for (i in (offsets(p)..(offsets(p) + counts(p) - 1))) {
                 val e = chunk(i);
                 val idx = e.second;
-                if (!putLocal(e.first, e.first, keys(idx), values(idx))) {
+                if (!putLocal(e.first, e.first, ks(idx), values(idx))) {
                     // if flow from table, add next chunk
                     currentChunk((p + 1) % nChunk).add(
                         new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.first));
@@ -266,7 +469,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 for (i in currentChunk(p).range()) {
                     val e = currentChunk(p)(i);
                     val idx = e.val2;
-                    if (!putLocal(e.val1, e.val3, keys(idx), values(idx))) {
+                    if (!putLocal(e.val1, e.val3, ks(idx), values(idx))) {
                         // if flow from table, add next chunk
                         nextChunk((p + 1) % nChunk).add(
                             new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
@@ -294,7 +497,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
         while (cur >> (sz - nMaskBits) == currentBits) {
             val e = table(cur);
 
-            if (e.occupied == false) {
+            if (e.flag == HashEntry.EMPTY) {
                 if (cnt > MAX_PROBES) {
                     shouldRehash = true;
                 }
@@ -322,7 +525,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
             val counts = scatterGather.getCounts(tid as Int);
             for (i in r) {
                 val e = t(i);
-                if (e.occupied) {
+                if (e.flag == HashEntry.OCCUPIED) {
                     val h = e.hash;
                     // Todo : NonEscaping
                     val chunkIdx : Int = ((nMaskBits == 0) ? (0 as Int) : (((h as UInt) >> (32 - nMaskBits)) as Int));
@@ -341,7 +544,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
             val offsets = scatterGather.getOffsets(tid as Int);
             for (i in r) {
                 val e = t(i);
-                if (e.occupied) {
+                if (e.flag == HashEntry.OCCUPIED) {
                     val h = e.hash;
                     // Todo : NonEscaping
                     val chunkIdx : Int = ((nMaskBits == 0) ? (0 as Int) : (((h as UInt) >> (32 - nMaskBits)) as Int));
