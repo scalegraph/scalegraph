@@ -13,14 +13,20 @@ import org.scalegraph.concurrent.Parallel;
 import org.scalegraph.concurrent.HashMap;
 
 public class TestHashMap {
-    val n = 10000000;
-    val ne = 4000000;
+    val n : Int;
+    val ne : Int;
 
     static nTest = 1;
 
     val test = false;
 
+    def this(n : Int, m : Int) {
+    	this.n = (n > 0) ? n : 2000000;
+    	this.ne = (m > 0) ?  m : 400000;
+    }
+
     def benchSeqPut() {
+        Console.OUT.printf("%d, %d\n", n, ne);
         Console.OUT.println("test1 start");
         var sum : Double = 0.;
         val t = new HashMap[Int, Int](n);
@@ -145,13 +151,7 @@ public class TestHashMap {
         for (i in ks.range()) {
             ks(i) = i as Int + ne / 2;
         }
-        val newKeys = (()=>{
-            val start = Timer.nanoTime();
-            val newKeys = t.newKeys(ks, -1);
-            Console.OUT.printf("newKeys time = %f\n",
-                (Timer.nanoTime() - start) / 1000. * 1000. * 1000);
-            return newKeys;
-        })();
+        val newKeys = t.newKeys(ks, -1);
         Parallel.sort(newKeys);
         assert(newKeys(0) == ne);
         for (i in newKeys.range()) {
@@ -208,12 +208,14 @@ public class TestHashMap {
     }
 
     def run5() {
+        val n = 100000;
+        val e = 40000;
         val t = new HashMap[Long, Long](n);
-        val ks = new MemoryChunk[Long](ne);
-        val vs  = new MemoryChunk[Long](ne);
+        val ks = new MemoryChunk[Long](e);
+        val vs  = new MemoryChunk[Long](e);
         val r = new Random(1L);
         val sw = new StopWatch();
-        for (i in 0..(ne - 1)) {
+        for (i in 0..(e - 1)) {
             val l = r.nextLong();
             ks(i) = l;
             vs(i) = l;
@@ -222,24 +224,26 @@ public class TestHashMap {
         t.put(ks, vs);
         sw.stop();
         sw.print("run5");
-        if (test) {
-            for (i in (0..(ne - 1))) {
-                val key = ks(i);
-                val value = t.get(key);
-                assert(value != null && value.value == vs(i));
-            }
+        for (i in (0..(e - 1))) {
+            val key = ks(i);
+            val value = t.get(key);
+            assert(value != null && value.value == vs(i));
         }
     }
 
-    public static def main(Array[String](1)) {
-        val test = new TestHashMap();
+    public static def main(args:Array[String](1)) {
+        val n = (args.size > 0) ? Int.parse(args(0)) : -1;
+        val m = (args.size > 0) ? Int.parse(args(1)) : -1;
+
+        val test = new TestHashMap(n, m);
         test.benchSeqPut();
         test.benchParPut();
         test.benchGet();
+
         //test.run3();
         //test.run4();
-        //test.run5();
-        //test.runNewKeys();
+        test.run5();
+        test.runNewKeys();
         test.benchNewKeys();
     }
 }
