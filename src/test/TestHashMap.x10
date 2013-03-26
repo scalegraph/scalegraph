@@ -1,6 +1,5 @@
 package test;
 
-
 import x10.compiler.Inline;
 import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
@@ -146,7 +145,13 @@ public class TestHashMap {
         for (i in ks.range()) {
             ks(i) = i as Int + ne / 2;
         }
-        val newKeys = t.newKeys(ks, -1);
+        val newKeys = (()=>{
+            val start = Timer.nanoTime();
+            val newKeys = t.newKeys(ks, -1);
+            Console.OUT.printf("newKeys time = %f\n",
+                (Timer.nanoTime() - start) / 1000. * 1000. * 1000);
+            return newKeys;
+        })();
         Parallel.sort(newKeys);
         assert(newKeys(0) == ne);
         for (i in newKeys.range()) {
@@ -203,14 +208,12 @@ public class TestHashMap {
     }
 
     def run5() {
-        val n = 100000;
-        val e = 40000;
         val t = new HashMap[Long, Long](n);
-        val ks = new MemoryChunk[Long](e);
-        val vs  = new MemoryChunk[Long](e);
+        val ks = new MemoryChunk[Long](ne);
+        val vs  = new MemoryChunk[Long](ne);
         val r = new Random(1L);
         val sw = new StopWatch();
-        for (i in 0..(e - 1)) {
+        for (i in 0..(ne - 1)) {
             val l = r.nextLong();
             ks(i) = l;
             vs(i) = l;
@@ -219,10 +222,12 @@ public class TestHashMap {
         t.put(ks, vs);
         sw.stop();
         sw.print("run5");
-        for (i in (0..(e - 1))) {
-            val key = ks(i);
-            val value = t.get(key);
-            assert(value != null && value.value == vs(i));
+        if (test) {
+            for (i in (0..(ne - 1))) {
+                val key = ks(i);
+                val value = t.get(key);
+                assert(value != null && value.value == vs(i));
+            }
         }
     }
 
@@ -233,8 +238,8 @@ public class TestHashMap {
         test.benchGet();
         //test.run3();
         //test.run4();
-        test.run5();
-        test.runNewKeys();
+        //test.run5();
+        //test.runNewKeys();
         test.benchNewKeys();
     }
 }
