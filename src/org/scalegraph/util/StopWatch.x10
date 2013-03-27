@@ -15,7 +15,7 @@ public class StopWatch {
     public def reset() {
         resetWorker.set(Runtime.workerId());
         realScore.set(0L);
-        score.clear();
+        score.map((v:AtomicLong)=>{v.set(0L);return 0;});
         nCalled.set(0L);
         realTime.set(Timer.nanoTime());
     }
