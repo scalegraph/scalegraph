@@ -21,11 +21,11 @@ public class TestHashMap {
     val test = false;
 
     def this(n : Int, m : Int) {
-    	this.n = (n > 0) ? n : 2000000;
+    	this.n = (n > 0) ? n :  2000000;
     	this.ne = (m > 0) ?  m : 400000;
     }
 
-    def benchSeqPut() {
+    def benchParPut() {
         Console.OUT.printf("%d, %d\n", n, ne);
         Console.OUT.println("test1 start");
         var sum : Double = 0.;
@@ -49,7 +49,7 @@ public class TestHashMap {
         return;
     }
 
-    def benchParPut() {
+    def benchSeqPut() {
         Console.OUT.println("test2 start");
 
         var sum : Double = 0.;
