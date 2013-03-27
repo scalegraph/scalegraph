@@ -416,6 +416,11 @@ public class HashMap[K,V] {K haszero, V haszero} {
         assert(ks.size() == values.size());
         val chunk = new MemoryChunk[Pair[Int, Long]](ks.size());
 
+        /*
+        val sw = new StopWatch();
+        sw.start();
+         */
+        val start1 = Timer.nanoTime();
         // closure__1
         val scatterGather = new ScatterGather(nChunk);
         Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
@@ -427,9 +432,20 @@ public class HashMap[K,V] {K haszero, V haszero} {
             }
         });
         scatterGather.sum();
+        Console.OUT.printf("1:time = %g\n",
+            (Timer.nanoTime() - start1) / (1000. * 1000. * 1000.));
+        /*
+        sw.stop();
+        sw.print("1:");
+         */
         // split according to upper nMaskBit
         // Todo use scatterGather
         // closure__2
+        /*
+        sw.reset();
+        sw.start();
+         */
+        val start2 = Timer.nanoTime();
         Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
             val offsets = scatterGather.getOffsets(tid as Int);
             for (i in r) {
@@ -441,11 +457,21 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 chunk(idx) = new Pair[Int, Long](h, i);
             }
         });
+        Console.OUT.printf("2:time = %g\n",
+            (Timer.nanoTime() - start2) / (1000. * 1000. * 1000.));
 
+        /*
+        sw.stop();
+        sw.print("2:");
+         */
         val offsets = scatterGather.getChunkOffset();
         val counts = scatterGather.getChunkCounts();
         // add chunks to table
-
+        /*
+        sw.reset();
+        sw.start();
+         */
+        val start3 = Timer.nanoTime();
         // closure__3
         val localSize = new Array[Int](nChunk);
         var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
@@ -466,7 +492,15 @@ public class HashMap[K,V] {K haszero, V haszero} {
             }
             localSize(p) = cnt;
         }
-
+        Console.OUT.printf("3:time = %g\n",
+            (Timer.nanoTime() - start3) / (1000. * 1000. * 1000.));
+        /*
+        sw.stop();
+        sw.print("3:");
+        sw.reset();
+        sw.start();
+         */
+        val start4 = Timer.nanoTime();
         for (var count : Int = 0; count < nChunk - 1 &&
             !currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
         count++) {
@@ -487,6 +521,12 @@ public class HashMap[K,V] {K haszero, V haszero} {
             }
             currentChunk = nextChunk;
         }
+        Console.OUT.printf("4:time = %g\n",
+            (Timer.nanoTime() - start4) / (1000. * 1000. * 1000.));
+        /*
+        sw.stop();
+        sw.print("4:");
+         */
         size += localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
     }
 
