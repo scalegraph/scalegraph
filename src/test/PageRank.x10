@@ -132,7 +132,7 @@ public class PageRank {
 
 		val vector = pagerank(csr, weight, g.numberOfVertices());
 
-		g.setVertexAttribute("pagerank", csr, vector);
+		g.setVertexAttribute("pagerank", vector);
 
 		val att_names = g.getVertexAttribute[Long]("name");
 		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
