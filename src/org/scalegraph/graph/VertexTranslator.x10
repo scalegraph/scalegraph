@@ -97,7 +97,7 @@ import org.scalegraph.util.DistMemoryChunk;
 		return translated;
 	}
 
-    public def parallelPutLocalAndTranslate(vertices: MemoryChunk[T], translated :MemoryChunk[Long]) {
+    private def parallelPutLocalAndTranslate(vertices: MemoryChunk[T], translated :MemoryChunk[Long]) {
         val newKeys = table.newKeys(vertices, -1L);
         val newIds = new MemoryChunk[Long](newKeys.size());
         Parallel.iter(newIds.range(), (tid : Long, r : LongRange)=> {
@@ -106,6 +106,7 @@ import org.scalegraph.util.DistMemoryChunk;
             }
         });
         table.put(newKeys, newIds);
+        count.add(newKeys.size());
         val _translated = table.get(vertices, -1L);
         MemoryChunk.copy(_translated, 0L, translated, 0L, _translated.size());
         return translated;
