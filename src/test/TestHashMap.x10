@@ -146,13 +146,19 @@ public class TestHashMap {
             ks(i) = i as Int;
             vs(i) = ks(i);
         }
+        // put (i -> i) (0<= i < ne)
         t.put(ks, vs);
 
+        // i (ne / 2 <= i < ne + ne / 2)
         for (i in ks.range()) {
             ks(i) = i as Int + ne / 2;
         }
+
         val newKeys = t.newKeys(ks, -1);
+        assert(newKeys.size() ==  ne / 2 as Long);
         Parallel.sort(newKeys);
+        // newKeys = ne, ne + 1, ..., ne - 1 + ne / 2
+        // check newKeys(0) = ne, ,newKeys(i + 1) = newKeys(i) + 1 (i > 0)
         assert(newKeys(0) == ne);
         for (i in newKeys.range()) {
             if (i > 0L) {
@@ -224,6 +230,14 @@ public class TestHashMap {
         t.put(ks, vs);
         sw.stop();
         sw.print("run5");
+
+        for (i in 0..(e - 1)) {
+            ks(i) = r.nextLong();
+            vs(i) = ks(i);
+        }
+
+        t.put(ks, vs);
+
         for (i in (0..(e - 1))) {
             val key = ks(i);
             val value = t.get(key);
@@ -240,8 +254,8 @@ public class TestHashMap {
         test.benchParPut();
         test.benchGet();
 
-        //test.run3();
-        //test.run4();
+        test.run3();
+        test.run4();
         test.run5();
         test.runNewKeys();
         test.benchNewKeys();
