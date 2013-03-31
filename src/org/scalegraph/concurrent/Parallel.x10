@@ -3,6 +3,7 @@ package org.scalegraph.concurrent;
 import x10.compiler.Inline;
 import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
+import x10.util.Pair;
 import x10.util.Timer;
 import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
@@ -69,12 +70,12 @@ public class Parallel {
         finish _sort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1, 0L, a.size(), cmp);
     }
 
-    public static def sort[T](a:MemoryChunk[T], proc : Int, cmp:(T, T)=>Int) {
-        finish _sort[T](a, proc, 0L, a.size(), cmp);
-    }
-
     public static def sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], cmp:(T, T)=>Int) {
         finish _sort[T, U](k, v, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1, 0L, k.size(), cmp);
+    }
+
+    public static def sort[T](a:MemoryChunk[T], proc : Int, cmp:(T, T)=>Int) {
+        finish _sort[T](a, proc, 0L, a.size(), cmp);
     }
 
     public static def sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], proc : Int, cmp:(T, T)=>Int) {
@@ -89,11 +90,29 @@ public class Parallel {
         finish sort[T, U](k, v, (x:T, y:T)=> x.compareTo(y));
     }
 
+    private static @Inline def getMedian[T](a : MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int, skip : Long) {
+        if (a.size() < 10000L) {
+            return median[T](a(lo), a((lo + hi) / 2), a(hi - 1), cmp);
+        }
+        val start = Timer.nanoTime();
+        var cur:Long = lo;
+        val sample = new ArrayList[T]();
+        while (cur < hi) {
+            sample.add(a(cur));
+            cur += skip;
+        }
+        sample.sort(cmp);
+        debugln("time = " + (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
+        return sample.get(sample.size() / 2);
+    }
+
     public static def _sort[T](a:MemoryChunk[T], proc:Int, lo:Long, hi:Long, cmp:(T, T)=>Int) {
         if (lo >= hi - 1) {
             return;
         }
         if (proc > 0) {
+            // val pivot = getMedian[T](a, lo, hi, cmp, 1000L);
+            // currently, sample is  a.size / 1000 elements
             val pivot = median[T](a(lo), a((lo + hi) / 2), a(hi - 1), cmp);
             val cut = unguardedPartition[T](a, lo, hi, pivot, cmp);
             async _sort[T](a, proc - 1, lo, cut, cmp);
