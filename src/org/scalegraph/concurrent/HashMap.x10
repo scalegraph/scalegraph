@@ -25,7 +25,6 @@ struct Pair[T, U] {
 	}
 }
 
-// Todo x10doc comment
 public class HashMap[K,V] {K haszero, V haszero} {
     static struct HashEntry[Key, Value] {Key haszero, Value haszero} {
 
@@ -80,7 +79,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
     /** Number of non-null, non-removed entries in the table. */
     var size: Int;
-    /* Todo : rename */
+    /* Todo : log of table size */
     var logSize : Int;
 
     var shouldRehash: Boolean;
@@ -106,7 +105,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         table = MemoryChunk[HashEntry[K, V]](init_size as Long);
         this.logSize = MathAppend.ceilLog2(table.size());
-//        Console.OUT.printf("logSize = %d\n", logSize);
         this.size = 0;
         shouldRehash = false;
     }
@@ -134,7 +132,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
     public def put(k: K, v: V): Box[V] = putInternal(k,v);
     @NonEscaping protected final def putInternal(k: K, v: V): Box[V] {
-        // Todo incomplete condition
         if ((shouldRehash && size >= table.size() / 2))
             rehashInternal();
 
@@ -143,10 +140,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         var i : Int = hashToIndex(h, sz);
         var cnt : Int = 0;
-/*
-        Console.OUT.printf("sz = %d\n", sz);
-        Console.OUT.printf("i = %d\n", i);
- */
 
         while (true) {
             val e = table(i);
@@ -189,9 +182,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
             offset(i) = offset(i - 1) + eachSize(i - 1);
         }
 
-//        eachSize.map((v : Long)=>{Console.OUT.printf("size = %d\n", v); return 0;});
-//        offset.map((v : Long)=>{Console.OUT.printf("offset = %d\n", v); return 0;});
-
         finish for (p in 0..(nChunk - 1)) async {
             for (i in offset(p)..(offset(p) + eachSize(p) - 1)) {
                 vs(i) = get(ks(i), defValue);
@@ -228,7 +218,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
         });
         scatterGather.sum();
         // split according to upper nMaskBit
-        // Todo use scatterGather
         // closure__2
         Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
             val offsets = scatterGather.getOffsets(tid as Int);
@@ -250,10 +239,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
         var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
             new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
                 (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
-        // Todo : strange name
-        val pushed = new MemoryChunk[Int](ks.size());
 
-        // Todo : refactoring
+        val pushed = new MemoryChunk[Int](ks.size());
         for (i in pushed.range()) {
             pushed(i) = -1L;
         }
@@ -300,15 +287,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
         }
         val dummysize = localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
 
-        /*
-        for (i in table.range()) {
-            Console.OUT.println(table(i));
-        }
-         */
         val newKeys = new MemoryChunk[K](dummysize);
 
-        // Todo : rewrite by ScatterGather
-        // Todo : variable name
         val counts2 = new Array[Int](nChunk, 0);
         Parallel.iter(pushed.range(), (tid : Long, r : LongRange) =>{
             for (i in r) {
@@ -332,15 +312,9 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 }
             }
         });
-        /*
-        for (i in table.range()) {
-            Console.OUT.println(table(i));
-        }
-         */
         return newKeys;
     }
 
-    // Todo: if elements already stored?
     @Inline private def putDummyLocal(h : Int, proper_h : Int, key : K, value : V) {
         // current working upper bits
         val currentBits = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
@@ -489,7 +463,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
         size += localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
     }
 
-    // Todo: if elements already stored?
     @Inline private def putLocal(h : Int, proper_h : Int, key : K, value : V) {
         // current working upper bits
         val currentBits = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
@@ -610,7 +583,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
             Console.OUT.printf("assert %d ok\n", p);
         }
         Console.OUT.printf("old, new = %d, %d\n", oldSize, size);
-        // Todo increment size
         assert(size == oldSize);
         Console.OUT.println("assert ok");
     }
