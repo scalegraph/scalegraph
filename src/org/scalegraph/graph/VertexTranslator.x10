@@ -106,7 +106,7 @@ import org.scalegraph.util.DistMemoryChunk;
             }
         });
         table.put(newKeys, newIds);
-        count.add(newKeys.size());
+        count.getAndAdd(newKeys.size());
         val _translated = table.get(vertices, -1L);
         MemoryChunk.copy(_translated, 0L, translated, 0L, _translated.size());
         return translated;
