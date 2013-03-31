@@ -128,7 +128,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
     }
 
     /** mask and shift upper n bits */
-    @NonEscaping protected final @Inline def hashToIndex(idx : Int, n : Int) {
+    @NonEscaping static protected final @Inline def hashToIndex(idx : Int, n : Int) {
         return ((idx as UInt) >> (32 - n)) as Int;
     }
 
@@ -230,7 +230,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
         // split according to upper nMaskBit
         // Todo use scatterGather
         // closure__2
-        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
+        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
             val offsets = scatterGather.getOffsets(tid as Int);
             for (i in r) {
                 val k = ks(i);
@@ -310,7 +310,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
         // Todo : rewrite by ScatterGather
         // Todo : variable name
         val counts2 = new Array[Int](nChunk, 0);
-        Parallel.iter(pushed.range(), (tid : Long, r : LongRange) => {
+        Parallel.iter(pushed.range(), (tid : Long, r : LongRange) =>{
             for (i in r) {
                 if (pushed(i) >= 0) {
                     counts2(tid as Int)++;
@@ -409,21 +409,15 @@ public class HashMap[K,V] {K haszero, V haszero} {
         }
     }
 
-    public def put(ks : MemoryChunk[K], values : MemoryChunk[V]) {
+    public def put(ks : MemoryChunk[K], vs : MemoryChunk[V]) {
         if (size + ks.size() >= table.size() / 2) {
             rehashInternal();
         }
-        assert(ks.size() == values.size());
+        assert(ks.size() == vs.size());
         val chunk = new MemoryChunk[Pair[Int, Long]](ks.size());
 
-        /*
-        val sw = new StopWatch();
-        sw.start();
-         */
-        val start1 = Timer.nanoTime();
-        // closure__1
         val scatterGather = new ScatterGather(nChunk);
-        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
+        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
             val counts = scatterGather.getCounts(tid as Int);
             for (i in r) {
                 val h = hash(ks(i));
@@ -432,57 +426,35 @@ public class HashMap[K,V] {K haszero, V haszero} {
             }
         });
         scatterGather.sum();
-        Console.OUT.printf("1:time = %g\n",
-            (Timer.nanoTime() - start1) / (1000. * 1000. * 1000.));
-        /*
-        sw.stop();
-        sw.print("1:");
-         */
-        // split according to upper nMaskBit
-        // Todo use scatterGather
-        // closure__2
-        /*
-        sw.reset();
-        sw.start();
-         */
-        val start2 = Timer.nanoTime();
-        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
+
+        // split elements according to upper nMaskBits
+        Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
             val offsets = scatterGather.getOffsets(tid as Int);
             for (i in r) {
                 val k = ks(i);
-                val v = values(i);
+                val v = vs(i);
                 val h = hash(ks(i));
                 val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
                 val idx = offsets(chunkIdx)++;
                 chunk(idx) = new Pair[Int, Long](h, i);
             }
         });
-        Console.OUT.printf("2:time = %g\n",
-            (Timer.nanoTime() - start2) / (1000. * 1000. * 1000.));
 
-        /*
-        sw.stop();
-        sw.print("2:");
-         */
         val offsets = scatterGather.getChunkOffset();
         val counts = scatterGather.getChunkCounts();
-        // add chunks to table
-        /*
-        sw.reset();
-        sw.start();
-         */
-        val start3 = Timer.nanoTime();
-        // closure__3
+
+        // put elements to table parallel
         val localSize = new Array[Int](nChunk);
         var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
             new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
                 (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+
         finish for (p in 0..(nChunk - 1)) async {
             var cnt:Int = 0;
             for (i in (offsets(p)..(offsets(p) + counts(p) - 1))) {
                 val e = chunk(i);
                 val idx = e.second;
-                if (!putLocal(e.first, e.first, ks(idx), values(idx))) {
+                if (!putLocal(e.first, e.first, ks(idx), vs(idx))) {
                     // if flow from table, add next chunk
                     currentChunk((p + 1) % nChunk).add(
                         new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.first));
@@ -492,15 +464,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
             }
             localSize(p) = cnt;
         }
-        Console.OUT.printf("3:time = %g\n",
-            (Timer.nanoTime() - start3) / (1000. * 1000. * 1000.));
-        /*
-        sw.stop();
-        sw.print("3:");
-        sw.reset();
-        sw.start();
-         */
-        val start4 = Timer.nanoTime();
+
+        // put flow elements to table
         for (var count : Int = 0; count < nChunk - 1 &&
             !currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
         count++) {
@@ -510,7 +475,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 for (i in currentChunk(p).range()) {
                     val e = currentChunk(p)(i);
                     val idx = e.val2;
-                    if (!putLocal(e.val1, e.val3, ks(idx), values(idx))) {
+                    if (!putLocal(e.val1, e.val3, ks(idx), vs(idx))) {
                         // if flow from table, add next chunk
                         nextChunk((p + 1) % nChunk).add(
                             new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
@@ -521,12 +486,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
             }
             currentChunk = nextChunk;
         }
-        Console.OUT.printf("4:time = %g\n",
-            (Timer.nanoTime() - start4) / (1000. * 1000. * 1000.));
-        /*
-        sw.stop();
-        sw.print("4:");
-         */
         size += localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
     }
 
@@ -549,7 +508,6 @@ public class HashMap[K,V] {K haszero, V haszero} {
                     shouldRehash = true;
                 }
                 table(cur) = HashEntry[K, V](key, value, proper_h);
-                //	size.incrementAndGet(); // Todo remove
                 return true;
             }
             cur = (cur + 1) % (table.size() as Int);
@@ -566,7 +524,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
         table = new MemoryChunk[HashEntry[K, V]](t.size() * 2);
         this.logSize = MathAppend.ceilLog2(table.size());
 
-        Console.OUT.printf("size = %d\n", oldSize);
+
         val scatterGather = new ScatterGather(nChunk);
         Parallel.iter(t.range(), (tid: Long, r : LongRange)=> {
             val counts = scatterGather.getCounts(tid as Int);
@@ -574,8 +532,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
                 val e = t(i);
                 if (e.flag == HashEntry.OCCUPIED) {
                     val h = e.hash;
-                    // Todo : NonEscaping
-                    val chunkIdx : Int = ((nMaskBits == 0) ? (0 as Int) : (((h as UInt) >> (32 - nMaskBits)) as Int));
+                    val chunkIdx = ((nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits));
                     counts(chunkIdx)++;
                 }
             }
@@ -583,18 +540,15 @@ public class HashMap[K,V] {K haszero, V haszero} {
         scatterGather.sum();
 
         val chunk = new MemoryChunk[Pair[Int, Long]](scatterGather.getChunkSize());
-        Console.OUT.printf("sum = %d\n", scatterGather.getChunkSize());
 
-        // split according to upper nMaskBit
-        // Todo use scatterGather
-        Parallel.iter(t.range(), (tid: Long, r : LongRange)=> {
+        // split elements according to upper nMaskBit
+        Parallel.iter(t.range(), (tid: Long, r : LongRange)=>{
             val offsets = scatterGather.getOffsets(tid as Int);
             for (i in r) {
                 val e = t(i);
                 if (e.flag == HashEntry.OCCUPIED) {
                     val h = e.hash;
-                    // Todo : NonEscaping
-                    val chunkIdx : Int = ((nMaskBits == 0) ? (0 as Int) : (((h as UInt) >> (32 - nMaskBits)) as Int));
+                    val chunkIdx = ((nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits));
                     val idx = offsets(chunkIdx)++;
                     chunk(idx) = new Pair[Int, Long](h, i);
                 }
@@ -603,53 +557,60 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
         val offsets = scatterGather.getChunkOffset();
         val counts = scatterGather.getChunkCounts();
-        // add chunks to table
 
+
+        val localSize = new Array[Int](nChunk);
         var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
-            new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk, (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
-        finish for (p in (0..(nChunk - 1))) async {
-            Console.OUT.printf("offset, counts = %d, %d\n", offsets(p), counts(p));
-            for (i in (0..(counts(p) - 1))) {
-                val pair = chunk(offsets(p) + i);
-                currentChunk(p).add(new Tuple3[Int, Long, Int](pair.first, pair.second, pair.first));
+            new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+                (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+
+        // put elements to table parallel
+        finish for (p in 0..(nChunk - 1)) async {
+            var cnt:Int = 0;
+            for (i in (offsets(p)..(offsets(p) + counts(p) - 1))) {
+                val e = chunk(i);
+                val idx = e.second;
+                if (!putLocal(e.first, e.first, t(idx).key, t(idx).value)) {
+                    // if flow from table, add next chunk
+                    currentChunk((p + 1) % nChunk).add(
+                        new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.first));
+                } else {
+                    cnt++;
+                }
             }
+            localSize(p) = cnt;
         }
 
-        for (p in (0..(nChunk - 1))) {
-            Console.OUT.printf("%d\n", p);
-            for (i in currentChunk(p).range()) {
-                Console.OUT.println(currentChunk(p)(i));
-            }
-        }
-
-        val sz = this.logSize;
-
-        for (0..(nChunk - 1)) {
-            val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk, (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+        // put flow elements to table
+        for (var count : Int = 0; count < nChunk - 1 &&
+            !currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+        count++) {
+            val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+                (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
             finish for (p in 0..(nChunk - 1)) async {
-                for (i in (currentChunk(p).range())) {
+                for (i in currentChunk(p).range()) {
                     val e = currentChunk(p)(i);
                     val idx = e.val2;
                     if (!putLocal(e.val1, e.val3, t(idx).key, t(idx).value)) {
                         // if flow from table, add next chunk
-                        nextChunk((p + 1) % nChunk).add(new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+                        nextChunk((p + 1) % nChunk).add(
+                            new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+                    } else {
+                        localSize(p)++;
                     }
                 }
             }
             currentChunk = nextChunk;
-            if (currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true)) {break;}
-            nextChunk.map((x:GrowableMemory[Tuple3[Int, Long, Int]])=>{Console.OUT.printf("%d\n", x.size());return 0;});
         }
 
-        for (i in 0..(table.size() - 1)) {
-            Console.OUT.println(table(i));
-        }
+        size += localSize.reduce((acc : Int, x : Int)=> (acc + x), 0);
 
         for (p in 0..(nChunk -1)) {
             assert(currentChunk(p).size() == 0L);
             Console.OUT.printf("assert %d ok\n", p);
         }
         Console.OUT.printf("old, new = %d, %d\n", oldSize, size);
+        // Todo increment size
         assert(size == oldSize);
         Console.OUT.println("assert ok");
     }
