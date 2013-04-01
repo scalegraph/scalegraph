@@ -353,10 +353,10 @@ import org.scalegraph.xpregel.XPregelGraph;
 			try {
 				val values_ = values();
 				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
-				if(actualLocalVertices != values_.size())
+				if(actualLocalVertices > values_.size())
 					throw new IllegalArgumentException("The number of attribute values is not match the number of vertices");
 				
-				attValues().setMemory(values_);
+				attValues().setMemory(values_.subpart(0, actualLocalVertices));
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();

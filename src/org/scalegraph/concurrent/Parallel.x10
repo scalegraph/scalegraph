@@ -3,6 +3,7 @@ package org.scalegraph.concurrent;
 import x10.compiler.Inline;
 import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
+import x10.util.Pair;
 import x10.util.Timer;
 import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
@@ -66,15 +67,15 @@ public class Parallel {
     }
 
     public static def sort[T](a:MemoryChunk[T], cmp:(T, T)=>Int) {
-        finish _sort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) * 4, 0L, a.size(), cmp);
+        finish _sort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1, 0L, a.size(), cmp);
+    }
+
+    public static def sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], cmp:(T, T)=>Int) {
+        finish _sort[T, U](k, v, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1, 0L, k.size(), cmp);
     }
 
     public static def sort[T](a:MemoryChunk[T], proc : Int, cmp:(T, T)=>Int) {
         finish _sort[T](a, proc, 0L, a.size(), cmp);
-    }
-
-    public static def sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], cmp:(T, T)=>Int) {
-        finish _sort[T, U](k, v, MathAppend.ceilLog2(Runtime.NTHREADS as Long) * 4, 0L, k.size(), cmp);
     }
 
     public static def sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], proc : Int, cmp:(T, T)=>Int) {
@@ -82,30 +83,37 @@ public class Parallel {
     }
 
     public static def sort[T](a : MemoryChunk[T]) {T<:Comparable[T]} {
-        sort[T](a, (x:T, y:T)=> x.compareTo(y));
+        finish sort[T](a, (x:T, y:T)=> x.compareTo(y));
     }
 
     public static def sort[T, U](k : MemoryChunk[T], v : MemoryChunk[U]) {T<:Comparable[T]} {
-        sort[T, U](k, v, (x:T, y:T)=> x.compareTo(y));
+        finish sort[T, U](k, v, (x:T, y:T)=> x.compareTo(y));
+    }
+
+    private static @Inline def getMedian[T](a : MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int, skip : Long) {
+        if (a.size() < 10000L) {
+            return median[T](a(lo), a((lo + hi) / 2), a(hi - 1), cmp);
+        }
+        val start = Timer.nanoTime();
+        var cur:Long = lo;
+        val sample = new ArrayList[T]();
+        while (cur < hi) {
+            sample.add(a(cur));
+            cur += skip;
+        }
+        sample.sort(cmp);
+        debugln("time = " + (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
+        return sample.get(sample.size() / 2);
     }
 
     public static def _sort[T](a:MemoryChunk[T], proc:Int, lo:Long, hi:Long, cmp:(T, T)=>Int) {
-        debugln("_sort");
         if (lo >= hi - 1) {
             return;
         }
-        val nSample = 21;
-        val sample:ArrayList[T] = new ArrayList[T](Math.min(nSample as Long, hi - lo) as Int);
-        for (var i:Int = 0; i < nSample; i++) {
-            sample(i) = a(lo + ((hi - lo) / nSample) * i);
-        }
-        sample.sort((lhs:T, rhs:T)=>{
-                if (cmp(lhs, rhs) > 0) {return 1;}
-                else if (cmp(lhs, rhs) == 0) {return 0;}
-                else {return -1;}});
         if (proc > 0) {
-            //val pivot = median[T](a(lo), a((lo + hi) / 2), a(hi - 1), cmp);
-            val pivot = sample(nSample / 2);
+            // val pivot = getMedian[T](a, lo, hi, cmp, 1000L);
+            // currently, sample is  a.size / 1000 elements
+            val pivot = median[T](a(lo), a((lo + hi) / 2), a(hi - 1), cmp);
             val cut = unguardedPartition[T](a, lo, hi, pivot, cmp);
             async _sort[T](a, proc - 1, lo, cut, cmp);
             _sort[T](a, proc - 1, cut, hi, cmp);
@@ -115,6 +123,7 @@ public class Parallel {
     }
 
     public static def _sort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], proc:Int, lo:Long, hi:Long, cmp:(T, T)=>Int) {
+        assert(k.size() == v.size());
         if (lo >= hi - 1) {
             return;
         }
@@ -129,28 +138,29 @@ public class Parallel {
     }
 
 
-    public static def introSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    public static @Inline def introSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+        debugln("size = " + (hi - lo));
     	if (lo != hi) {
     		introSortLoop[T](a, lo, hi, cmp, MathAppend.ceilLog2(hi - lo) * 2);
             finalInsertionSort[T](a, lo, hi, cmp);
         }
     }
 
-    public static def introSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    public static @Inline def introSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
     	if (lo != hi) {
     		introSortLoop[T, U](k, v, lo, hi, cmp, MathAppend.ceilLog2(hi - lo) * 2);
             finalInsertionSort[T, U](k, v, lo, hi, cmp);
         }
     }
 
-    private static def unguardedPartition[T](a:MemoryChunk[T], lo:Long, hi:Long, pivot:T, cmp:(T, T)=>Int) {
+    private static @Inline def unguardedPartition[T](a:MemoryChunk[T], lo:Long, hi:Long, pivot:T, cmp:(T, T)=>Int) {
     	var first:Long = lo;
     	var last:Long = hi;
     	while (true) {
     		while (cmp(a(first), pivot) < 0) ++first;
     		--last;
     		while (cmp(pivot, a(last)) < 0) --last;
-    		if (!(first < last)) {
+    		if (first >= last) {
     			return first;
     		}
     		exch(a, first, last);
@@ -158,7 +168,7 @@ public class Parallel {
     	}
     }
 
-    private static def unguardedPartition[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, pivot:T, cmp:(T, T)=>Int) {
+    private static @Inline def unguardedPartition[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, pivot:T, cmp:(T, T)=>Int) {
     	var first:Long = lo;
     	var last:Long = hi;
     	while (true) {
@@ -173,7 +183,7 @@ public class Parallel {
     	}
     }
 
-    private static def finalInsertionSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def finalInsertionSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
     	if (hi - lo > threashold1) {
     		insertionSort[T](a, lo, lo + threashold1, cmp);
     		unguardedInsertionSort[T](a, lo + threashold1, hi, cmp);
@@ -182,7 +192,7 @@ public class Parallel {
     	}
     }
 
-    private static def finalInsertionSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def finalInsertionSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
     	if (hi - lo > threashold2) {
     		insertionSort[T, U](k, v, lo, lo + threashold2, cmp);
     		unguardedInsertionSort[T, U](k, v, lo + threashold2, hi, cmp);
@@ -191,19 +201,19 @@ public class Parallel {
     	}
     }
 
-    private static def unguardedInsertionSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def unguardedInsertionSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
         for (var i:Long = lo; i < hi; i++) {
             unguardedLinearInsert[T](a, i, a(i), cmp);
         }
     }
 
-    private static def unguardedInsertionSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def unguardedInsertionSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
         for (var i:Long = lo; i < hi; i++) {
             unguardedLinearInsert[T, U](k, v, i, k(i), v(i), cmp);
         }
     }
 
-    public static def insertionSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    public static @Inline def insertionSort[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
     	if (lo == hi) {return;}
 
     	for (var i:Long = lo + 1; i < hi; i++) {
@@ -218,7 +228,7 @@ public class Parallel {
     	}
     }
 
-    private static def insertionSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def insertionSort[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
     	if (lo == hi) {return;}
 
     	for (var i:Long = lo + 1; i < hi; i++) {
@@ -235,7 +245,7 @@ public class Parallel {
     	}
     }
 
-    private static def unguardedLinearInsert[T](a:MemoryChunk[T], last:Long, v:T, cmp:(T, T)=>Int) {
+    private static @Inline def unguardedLinearInsert[T](a:MemoryChunk[T], last:Long, v:T, cmp:(T, T)=>Int) {
     	var last_:Long = last;
     	var next:Long = last_;
     	--next;
@@ -247,7 +257,7 @@ public class Parallel {
     	a(last_) = v;
     }
 
-    private static def unguardedLinearInsert[T, U](k:MemoryChunk[T], v:MemoryChunk[U], last:Long, kv:T, vv:U, cmp:(T, T)=>Int) {
+    private static @Inline def unguardedLinearInsert[T, U](k:MemoryChunk[T], v:MemoryChunk[U], last:Long, kv:T, vv:U, cmp:(T, T)=>Int) {
     	var last_:Long = last;
     	var next:Long = last_;
     	--next;
@@ -262,7 +272,7 @@ public class Parallel {
     }
 
 
-    private static def median[T](a:T, b:T, c:T, cmp:(T, T)=>Int) {
+    private static @Inline def median[T](a:T, b:T, c:T, cmp:(T, T)=>Int) {
     	if (cmp(a, b) < 0) {
     		if (cmp(b, c) < 0) {
     			return b; // a <  b < c
@@ -273,14 +283,14 @@ public class Parallel {
     		}
     	} else if (cmp(a, c) < 0) {
     		return a; // b <= a < c
-    	} else if (cmp(b, c) < 0) {
+    	} else if (cmp(b, c) < 0) { // b < c && b <= a && c <= a
     		return c; // b < c <= a
     	} else {
     		return b; // c <= b <= a
     	}
     }
 
-    private static def makeHeap[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def makeHeap[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
         if (hi - lo < 2) {
             return;
         }
@@ -296,7 +306,7 @@ public class Parallel {
         }
     }
 
-    private static def makeHeap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def makeHeap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
         if (hi - lo < 2) {
             return;
         }
@@ -340,13 +350,13 @@ public class Parallel {
     	}
     }
 
-    private static def pop_heap[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def pop_heap[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int) {
         val value = a(hi - 1);
         a(hi - 1) = a(lo);
     	adjustHeap[T](a, lo, 0L, hi - lo - 1, value, cmp);
     }
 
-    private static def pop_heap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
+    private static @Inline def pop_heap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int) {
         val valueK = k(hi - 1);
         val valueV = v(hi - 1);
         k(hi - 1) = k(lo);
@@ -354,15 +364,15 @@ public class Parallel {
     	adjustHeap[T, U](k, v, lo, 0L, hi - lo - 1, valueK, valueV, cmp);
     }
 
-    private static def push_heap[T](a:MemoryChunk[T], lo:Long, hi:Long , cmp:(T, T)=>Int) {
+    private static @Inline def push_heap[T](a:MemoryChunk[T], lo:Long, hi:Long , cmp:(T, T)=>Int) {
     	push_heap[T](a, lo, hi - lo - 1, 0, a(hi - 1), cmp);
     }
 
-    private static def push_heap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long , cmp:(T, T)=>Int) {
+    private static @Inline def push_heap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long , cmp:(T, T)=>Int) {
     	push_heap[T, U](k, v, lo, hi - lo - 1, 0, k(hi - 1), v(hi - 1), cmp);
     }
 
-    private static def push_heap[T](a:MemoryChunk[T], lo:Long, holeIndex:Long, topIndex:Long, value:T, cmp:(T, T)=>Int) {
+    private static @Inline def push_heap[T](a:MemoryChunk[T], lo:Long, holeIndex:Long, topIndex:Long, value:T, cmp:(T, T)=>Int) {
     	var parent:Long = (holeIndex - 1) / 2;
     	var _holeIndex:Long = holeIndex;
     	while (_holeIndex > topIndex && cmp(a(lo + parent), value) < 0) {
@@ -373,7 +383,7 @@ public class Parallel {
     	a(lo + _holeIndex) = value;
     }
 
-    private static def push_heap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, holeIndex:Long, topIndex:Long, valueK:T, valueV:U, cmp:(T, T)=>Int) {
+    private static @Inline def push_heap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, holeIndex:Long, topIndex:Long, valueK:T, valueV:U, cmp:(T, T)=>Int) {
     	var parent:Long = (holeIndex - 1) / 2;
     	var _holeIndex:Long = holeIndex;
     	while (_holeIndex > topIndex && cmp(k(lo + parent), valueK) < 0) {
@@ -386,7 +396,7 @@ public class Parallel {
         v(lo + _holeIndex) = valueV;
     }
 
-    private static def adjustHeap[T](a:MemoryChunk[T], lo:Long, holeIndex:Long ,len:Long, value:T, cmp:(T, T)=>Int) {
+    private static @Inline def adjustHeap[T](a:MemoryChunk[T], lo:Long, holeIndex:Long ,len:Long, value:T, cmp:(T, T)=>Int) {
     	var _holeIndex:Long = holeIndex;
     	val topIndex = holeIndex;
     	var secondChild:Long = 2L * holeIndex + 2L;
@@ -402,12 +412,12 @@ public class Parallel {
     	}
     	if (secondChild == len) {
     		a(lo + _holeIndex) = a(lo + secondChild - 1);
-    		_holeIndex = secondChild - 1;
+   		_holeIndex = secondChild - 1;
     	}
     	push_heap[T](a, lo, _holeIndex, topIndex, value, cmp);
     }
 
-    private static def adjustHeap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, holeIndex:Long, len:Long, valueK:T, valueU:U, cmp:(T, T)=>Int) {
+    private static @Inline def adjustHeap[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, holeIndex:Long, len:Long, valueK:T, valueU:U, cmp:(T, T)=>Int) {
     	var _holeIndex:Long = holeIndex;
     	val topIndex = holeIndex;
     	var secondChild:Long = 2L * holeIndex + 2L;
@@ -429,7 +439,7 @@ public class Parallel {
     	push_heap[T, U](k, v, lo, _holeIndex, topIndex, valueK, valueU, cmp);
     }
 
-    private static def introSortLoop[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int, depth_limit:Int) {
+    private static @Inline def introSortLoop[T](a:MemoryChunk[T], lo:Long, hi:Long, cmp:(T, T)=>Int, depth_limit:Int) {
     	var depth_limit_:Int = depth_limit;
     	var hi_:Long = hi;
     	while (hi_ - lo > threashold1) {
@@ -444,7 +454,7 @@ public class Parallel {
     	}
     }
 
-    private static def introSortLoop[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int, depth_limit:Int) {
+    private static @Inline def introSortLoop[T, U](k:MemoryChunk[T], v:MemoryChunk[U], lo:Long, hi:Long, cmp:(T, T)=>Int, depth_limit:Int) {
     	var depth_limit_:Int = depth_limit;
     	var hi_:Long = hi;
     	while (hi_ - lo > threashold2) {
