@@ -136,14 +136,24 @@ public class MessageCommunicationService[M,A] {
 		mTeam.alltoall(sendCounts,receiveCounts);
 		Team2.countOffsets(receiveCounts, receiveOffsets, 0);
 		val receiveMessages = new MemoryChunk[Tuple2[Long,M]](receiveOffsets(mTeam.size()));
+		val start_send_time = System.currentTimeMillis();
 		mTeam.alltoallv(raw, sendOffsets, sendCounts, receiveMessages, receiveOffsets, receiveCounts);
+		val end_send_time = System.currentTimeMillis();
+		if (here.id == 0) {
+			Console.OUT.println("Sending messages takes " + (end_send_time-start_send_time));
+		}
 		mSendBufferMessages.clear();
 		mReceiveBufferMessages.clear();
 
 		// sort due to src id
+		val start_sort = System.currentTimeMillis();
 		Parallel.sort(receiveMessages,(v1:Tuple2[Long,M],v2:Tuple2[Long,M]) => {
 			return _context.getSrcIdFromDstId(v1.get1()).compareTo(_context.getSrcIdFromDstId(v2.get1()));
 		});
+		val end_sort = System.currentTimeMillis();
+		if (here.id == 0) {
+			Console.OUT.println("Sort " + receiveMessages.size() + " messages takses " + (end_sort - start_sort)); 
+		}
 
 		/*
 		 * uncomment to process combiner messages
@@ -169,6 +179,40 @@ public class MessageCommunicationService[M,A] {
 			start_re = next;
 		}
 		 * */
+		val start_offset_cal = System.currentTimeMillis();
+		val tmp = new MemoryChunk[Long](mOffsets.size(),0L,true);
+		mOffsets(0) = 0L;
+		Parallel.iter(receiveMessages.range(), (threadIndex : Long, range : LongRange) => {
+			for (index in range) {
+				if (index < receiveMessages.size()-1) {
+					val src1 = _context.getSrcIdFromDstId(receiveMessages(index).get1());
+					val src2 = _context.getSrcIdFromDstId(receiveMessages(index+1).get1());
+					if (src2 != src1) {
+						tmp(src2) = index+1;
+					}
+				}
+			}
+		});
+		Parallel.iter(mOffsets.range(), (threadIndex : Long, range : LongRange) => {
+			for(index in range) {
+				if (tmp(index) == 0L && index > 0L) {
+					if (index == range.min) {
+						var i:Long = index;
+						while(i > 0 && tmp(--i) == 0L);
+						mOffsets(index) = tmp(i+1);
+					}else {
+						mOffsets(index) = mOffsets(index-1);
+					}
+				}else {
+					mOffsets(index) = tmp(index);
+				}
+			}
+		});
+		val stop_offset_cal = System.currentTimeMillis();
+		if (here.id == 0) {
+			Console.OUT.println("Calculate Offset takes " + (stop_offset_cal-start_offset_cal));
+		}
+		/*
 		if (mContext.getSuperStep() == 0L) {
 			var srcId:Long = -1;
 			var count:Long = 0;
@@ -186,6 +230,7 @@ public class MessageCommunicationService[M,A] {
 				mOffsets(index) = mOffsets(index-1) + counts(index-1);
 			}
 		}
+		 * */
 		mReceiveBufferMessages.add(receiveMessages);
 	}
 
@@ -201,8 +246,9 @@ public class MessageCommunicationService[M,A] {
 			assert (vertexId < mOffsets.size());
 			var start_index : Long = mOffsets(vertexId);
 			var end_index : Long = (vertexId == mOffsets.size()-1) ? raw.size() : mOffsets(vertexId+1);
-			if (start_index >= 0 && end_index > start_index)
+			if (start_index >= 0 && end_index > start_index) {
 				messages.add(raw.subpart(start_index,end_index-start_index));
 			}
+		}
 	}
 }

@@ -111,6 +111,10 @@ public class Vertex[V,E] {
 		mWorkerInterface.setVertexValue(mVertexId,value);
 	}
 	
+	public def setVertexShouldBeAlive(value:Boolean) {
+		mWorkerInterface.setVertexShouldBeAlive(mVertexId,value);
+	}
+	
 	public def isHalted() = mWorkerInterface.isHalt(mVertexId);
 	/**
 	 * end

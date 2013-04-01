@@ -32,6 +32,14 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),() => new WorkerPlaceGraph[V,E](team,data(),_context));	
 	}
 	
+	public def initDefaultVertexValue(value : V) {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat( () => {
+			_workers().initDefaultVertexValue(value);
+		});
+	}
+	
 	public def zipVertexValue[T](a:DistGrowableMemory[T], compute : (v:T) => V){T haszero} {
 		val _team = mTeam;
 		val _workers = mWorkers;
@@ -56,6 +64,14 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
 			_workers().zipVertexValue[T1,T2,T3](a1(),a2(),a3(),compute);
+		});
+	}
+			
+	public def initDefaultEdgeValue(value : E) {
+		val _team = mTeam;
+		val _workers = mWorkers;
+		_team.placeGroup().broadcastFlat( () => {
+			_workers().initDefaultEdgeValue(value);
 		});
 	}
 			

@@ -19,11 +19,14 @@ public class SendInEdgeCommunication[V,E] implements ComputationInterface[V,E,Tu
 		vertex.getEdgesValue(true,edgesValue);
 		if (_context.getSuperStep() == 0L) { // send its srcID to neighbors
 			if (edges.size() > 0) {
+				val dstId = _context.getDstIdFromSrcId(vertex.getVertexId());
 				for (index in edges.range()) {
-					val tuple = new Tuple2[Long,E](vertex.getVertexId(),edgesValue(index));
+					val tuple = new Tuple2[Long,E](dstId,edgesValue(index));
 					_appContext.putMessage(edges(index),tuple);
 				}
 			}
+		}else {
+			vertex.voteToHalt();
 		}
 		edges.del();
 		edgesValue.del();

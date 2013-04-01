@@ -37,8 +37,6 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	/* edges active flag */
 	private var mEdgesActive : GrowableMemory[Boolean];
 
-	var mVertexAttribute : HashMap[String,Any];
-	var mEdgeAttribute : HashMap[String,Any];
 	val mContext : XpregelContext;
 	
 	public def this(team:Team,matrix:SparseMatrix, context:XpregelContext) {
@@ -75,6 +73,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	
 	public def initInEdge(service : MessageCommunicationService[Tuple2[Long,E],Double]) {
 		val tmp1 = service.mReceiveBufferMessages;
+		if (here.id == 0) {
+			Console.OUT.println("Worker 0: " + tmp1.size() + " in edges");
+		}
 		val tmp2 = service.mOffsets;
 		val tmpEdgeId = new MemoryChunk[Long](tmp1.size());
 		val tmpEdgeValues = new MemoryChunk[E](tmp1.size());
@@ -91,8 +92,15 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		mInEdgesOffset.add(tmp2.data());
 	}
 	
+	public def initDefaultVertexValue(value : V) {
+		val tmp = new MemoryChunk[V](mMatrix.offsets.size()-1);
+		Parallel.iter(tmp.range(), (index : Long) => {
+			tmp(index) = value;
+		});
+		mVertexValue.setMemory(tmp);
+	}
+	
 	public def zipVertexValue[T](a:GrowableMemory[T], compute : (v:T) => V){T haszero} {
-		assert (a.size() <= mVertexValue.size());
 		val tmp = new MemoryChunk[V](a.size());
 		Parallel.iter(a.range(),(index:Long) => {
 			val v = a(index);
@@ -104,7 +112,6 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	public def zipVertexValue[T1,T2](a1:GrowableMemory[T1],
 			a2:GrowableMemory[T2], compute : (v1:T1,v2:T2) => V){T1 haszero, T2 haszero} {
 		assert(a1.size() == a2.size());
-		assert(a1.size() <= mVertexValue.size());
 		val tmp = new MemoryChunk[V](a1.size());
 		Parallel.iter(a1.range(),(index : Long) => {
 			tmp(index) = compute(a1(index),a2(index));
@@ -115,7 +122,6 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	public def zipVertexValue[T1,T2,T3](a1:GrowableMemory[T1],a2:GrowableMemory[T2],a3:GrowableMemory[T3], 
 			compute : (v1:T1,v2:T2,v3:T3) => V){T1 haszero, T2 haszero, T3 haszero} {
 		assert(a1.size() == a2.size() && a2.size() == a3.size());
-		assert(a1.size() <= mVertexValue.size());
 		val tmp = new MemoryChunk[V](a1.size());
 		Parallel.iter(a1.range(),(index : Long) => {
 			tmp(index) = compute(a1(index),a2(index),a3(index));
@@ -123,19 +129,33 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		mVertexValue.setMemory(tmp);
 	}
 	
+	public def initDefaultEdgeValue(value : E) {
+		val tmp = new MemoryChunk[E](mMatrix.vertexes.size());
+		Parallel.iter(tmp.range(),(index:Long) => {
+			tmp(index) = value;
+		});
+		mOutEdgesValue.setMemory(tmp);
+	}
+	
 	public def zipEdgeValue[T](a:GrowableMemory[T], compute : (v:T) => E){T haszero} {
-		assert(a.size() <= mOutEdgesValue.size());
+		if (here.id == 0) {
+			Console.OUT.println("a.size = " + a.size());
+		}
 		val tmp = new MemoryChunk[E](a.size());
 		Parallel.iter(a.range(),(index:Long) => {
 			tmp(index) = compute(a(index));
 		});
 		mOutEdgesValue.setMemory(tmp);
+		if (here.id == 0) {
+			Console.OUT.println("edges value size = " + mOutEdgesValue.size());
+			Console.OUT.println("edges id size = " + mMatrix.vertexes.size());
+			Console.OUT.println("edges size = " + mMatrix.edgeIndexes.size());
+		}
 	}
 	
 	public def zipEdgeValue[T1,T2](a1:GrowableMemory[T1], 
 			a2: GrowableMemory[T2], compute : (v1:T1,v2:T2) => E){T1 haszero, T2 haszero} {
 		assert(a1.size() == a2.size());
-		assert(a1.size() <= mOutEdgesValue.size());
 		val tmp = new MemoryChunk[E](a1.size());
 		Parallel.iter(a1.range(),(index:Long) => {
 			tmp(index) = compute(a1(index),a2(index));
@@ -146,7 +166,6 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	public def zipEdgeValue[T1,T2,T3](a1:GrowableMemory[T1], a2: GrowableMemory[T2], 
 			a3 : GrowableMemory[T3], compute : (v1:T1,v2:T2,v3:T3) => E){T1 haszero, T2 haszero, T3 haszero} {
 		assert(a1.size() == a2.size() && a2.size() == a3.size());
-		assert(a1.size() <= mOutEdgesValue.size());
 		val tmp = new MemoryChunk[E](a1.size());
 		Parallel.iter(a1.range(),(index:Long) => {
 			tmp(index) = compute(a1(index),a2(index),a3(index));
@@ -165,7 +184,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		val inEdgesBufferPerThreads = new Array[EdgesBuffer[E]](nthreads as Int);
 		for ( i in (0..(nthreads-1))) {
 			val _cont = new XContext[M,A](mContext);
-			_cont.setAggregator(aggregator.clone());
+			if (aggregator != null) {
+				_cont.setAggregator(aggregator.clone());
+			}
 			contextPerThreads(i as Int) = _cont;
 			val outedge = new EdgesBuffer[E](vertexSize);
 			outEdgesBufferPerThreads(i as Int) = outedge;
@@ -179,6 +200,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		}
 		val _service = service;
 		val range = 0..(mMatrix.offsets.size()-2);
+		mContext.resetSuperStep();
 		try {
 		do {
 			val start_time = System.currentTimeMillis();
@@ -191,7 +213,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 				val ra = r;
 				val _appContext = contextPerThreads(i);
 				_appContext.clearBuff();
-				_appContext.setAggregatorValue(aggregator.getAggregatorValue());
+				if (aggregator != null) {
+					_appContext.setAggregatorValue(aggregator.getAggregatorValue());
+				}
 				val _outEdgeBuffer = outEdgesBufferPerThreads(i);
 				_outEdgeBuffer.setRange(r);
 				val _inEdgeBuffer = inEdgesBufferPerThreads(i);
@@ -200,6 +224,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 				val messages = new GrowableMemory[Tuple2[Long,M]](1000);
 				numActiveVertices([i]) = 0L;
 				val vertex = new Vertex[V,E](0);
+				vertex.setWorkerInterface(this);
 				vertex.setEdgesBuffer(_outEdgeBuffer,true);
 				vertex.setEdgesBuffer(_inEdgeBuffer,false);
 				for (index in ra) {
@@ -227,7 +252,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 					vertex.postComputation();
 				}
 				}catch(e:CheckedThrowable) {
-					Console.OUT.println(e);
+					e.printStackTrace();
 				}
 			});
 			Console.OUT.println("End Process ...at "+here.id);
@@ -264,7 +289,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 			 */
 			val sumAllActiveVertices = mTeam.allreduce(role,sumActiveVertices,Team.ADD);
 			val sumAllSendMessages = mTeam.allreduce(role,sumSendMessages,Team.ADD);
-			Console.OUT.println("active vertices: " + sumAllActiveVertices + ", send messages = " + sumAllSendMessages);
+			if (here.id == 0) {
+				Console.OUT.println("active vertices: " + sumAllActiveVertices + ", send messages = " + sumAllSendMessages);
+			}
 			if (sumAllActiveVertices == 0L && sumAllSendMessages == 0L) {
 				break;
 			}
@@ -304,7 +331,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 			Console.OUT.println("Aggregator value = " + aggregator.getAggregatorValue());
 		}
 		}catch (e:CheckedThrowable) {
-			Console.OUT.println(e);
+			e.printStackTrace();
 		}
 		
 	}
@@ -322,7 +349,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		val inEdgesBufferPerThreads = new Array[EdgesBuffer[E]](nthreads as Int);
 		for ( i in (0..(nthreads-1))) {
 			val _cont = new XContext[M,A](mContext);
-			_cont.setAggregator(aggregator.clone());
+			if (aggregator != null) {
+				_cont.setAggregator(aggregator.clone());
+			}
 			contextPerThreads(i as Int) = _cont;
 			val outedge = new EdgesBuffer[E](vertexSize);
 			outEdgesBufferPerThreads(i as Int) = outedge;
@@ -337,6 +366,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 		}
 		val _service = service;
 		val range = 0..(mMatrix.offsets.size()-2);
+		mContext.resetSuperStep();
 		try {
 			do {
 				val start_time = System.currentTimeMillis();
@@ -348,7 +378,9 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 						assert(i < nthreads);
 						val _context = contextPerThreads([i]);
 						_context.clearBuff();
-						_context.setAggregatorValue(aggregator.getAggregatorValue());
+						if (aggregator != null) {
+							_context.setAggregatorValue(aggregator.getAggregatorValue());
+						}
 						val _outEdgeBuffer = outEdgesBufferPerThreads(i);
 						_outEdgeBuffer.setRange(r);
 						val _inEdgeBuffer = inEdgesBufferPerThreads(i);
@@ -359,7 +391,8 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 						vertex.setWorkerInterface(this);
 						numSendMessages([i]) = 0L;
 						numActiveVertices([i]) = 0L;
-						
+						vertex.setEdgesBuffer(_outEdgeBuffer,true);
+						vertex.setEdgesBuffer(_inEdgeBuffer,false);
 						for (index in ra) {
 							vertex.setVertexId(index);
 							vertex.preComputation();
@@ -461,11 +494,10 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	}
 	
 	public def preComputation() {
-		mContext.increaseSuperStep();
 	}
 	
 	public def postComputation() {
-		
+		mContext.increaseSuperStep();
 	}
 	
 	/* method of worker interface */
@@ -482,15 +514,22 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 				edges.add(_vertexes.subpart(start,end-start));
 			}
 		}else {
-			
+			assert(index < mInEdgesOffset.size());
+			assert(index >= 0);
+			val start = mInEdgesOffset(index);
+			val end = (index == mInEdgesOffset.size()-1) ? mInEdgesOffset.size() : mInEdgesOffset(index+1);
+			if (end-start > 0L) {
+				edges.add(mInEdgesId.data().subpart(start,end-start));
+			}
 		}
 	}
 	
 	public def getEdgesValue(index:Long, outOrIn:Boolean, edges:GrowableMemory[E]):void {
+		try {
 		if (outOrIn) {
 			if (mEdgesActive(index)) {
 				val _offsets = mMatrix.offsets;
-				assert(index < _offsets.size()-1);
+				assert(index <= _offsets.size()-1);
 				assert(index >= 0);
 				val start = _offsets(index);
 				val end = _offsets(index+1);
@@ -499,15 +538,30 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 				}
 			}
 		}else {
-			
+			assert(index < mInEdgesOffset.size());
+			assert(index >= 0);
+			val start = mInEdgesOffset(index);
+			val end = (index == mInEdgesOffset.size()-1) ? mInEdgesOffset.size() : mInEdgesOffset(index+1);
+			if (end-start > 0L) {
+				edges.add(mInEdgesValue.data().subpart(start,end-start));
+			}
+		}
+		}catch (e:CheckedThrowable) {
+			e.printStackTrace();
 		}
 	}
 	
 	public def getEdgesNum(index:Long,outOrIn:Boolean):Long {
-		val _offsets = mMatrix.offsets;
-		assert(index < _offsets.size()-1);
-		assert(index >= 0);
-		return _offsets(index+1) - _offsets(index);
+		if (outOrIn) {
+			val _offsets = mMatrix.offsets;
+			assert(index < _offsets.size()-1);
+			assert(index >= 0);
+			return _offsets(index+1) - _offsets(index);
+		}else {
+			assert(index < mInEdgesOffset.size());
+			assert(index >= 0);
+			return mInEdgesOffset(index+1) - mInEdgesOffset(index);
+		}
 	}
 	
 	public def getVertexValue(index:Long):V {
