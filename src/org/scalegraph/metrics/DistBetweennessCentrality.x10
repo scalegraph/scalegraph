@@ -257,7 +257,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
      * @param normalize normalize result
      */
     public static def calculate(g: Graph, directed: Boolean, attrName: String, normalize: Boolean): void {
-        val sourceRange = 0..(g.numberOfVertices());
+        val sourceRange = 0..(g.numberOfVertices() - 1);
         run(g, directed, attrName, normalize, -1, null, sourceRange, false);
     }
     
