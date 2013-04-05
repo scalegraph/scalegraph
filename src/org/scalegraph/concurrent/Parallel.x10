@@ -15,6 +15,8 @@ public class Parallel {
 	static val threashold1 = 16;
     static val threashold2 = 16;
 	static val debug = false;
+	// prevent from instantiation
+	private def this() {}
 	private static @Inline def debugln (str:String) : void {
 		if (debug) {
 			Console.OUT.println("" + Timer.milliTime() + ":Hash: " + here + "(" + Runtime.workerId() + ")" + str);
