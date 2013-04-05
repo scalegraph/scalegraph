@@ -1,10 +1,12 @@
+package test;
+
 import x10.util.ArrayUtils;
 import x10.util.Team;
 import x10.util.Random;
 import org.scalegraph.concurrent.Parallel;
 import org.scalegraph.util.MemoryChunk;
 
-public class ParallelExample {
+public final class ParallelTest {
 	static def testscan(): void{
 		Console.OUT.println("Scan Test");
 		val n = 1;

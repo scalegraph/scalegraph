@@ -12,7 +12,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.graph.SparseMatrix;
 import org.scalegraph.visitor.LsBfsVisitor;
 
-public class ExampleLsBfsVisitor {
+public class LsBfsVisitorExample {
     
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");
