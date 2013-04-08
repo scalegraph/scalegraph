@@ -1,5 +1,6 @@
 package org.scalegraph.io;
 
+import x10.compiler.Ifdef;
 import x10.compiler.Inline;
 
 import x10.util.Team;
@@ -47,5 +48,12 @@ public class Common {
 	
 	public static def merge[T](team : Team, dmc1 : DistMemoryChunk[T], dmc2 : DistMemoryChunk[T]) : DistMemoryChunk[T] {
 		return new DistMemoryChunk[T](team.placeGroup(), () => merge[T](dmc1(), dmc2()));
+	}
+	
+	
+	public static @Inline def debugprint(str : String) {
+		@Ifdef("DEBUG") {
+			Console.OUT.println(str);
+		}
 	}
 }

@@ -100,12 +100,12 @@ public class BinaryWriter {
 		seclen(3) = 8 + 24 * eBlockInfo_n;
 		
 		var metaSize:Long = headerSize;
-		Console.OUT.println("headerSize = " + headerSize);
+		Common.debugprint("headerSize = " + headerSize);
 		for(var i:Int = 0; i < nsec; i++) {
 			metaSize = Common.align(metaSize, 8) + seclen(i);
-			Console.OUT.println("seclen(" + i + ") = " + seclen(i));
+			Common.debugprint("seclen(" + i + ") = " + seclen(i));
 		}
-		Console.OUT.println("metaSize = " + metaSize);
+		Common.debugprint("metaSize = " + metaSize);
 		
 		
 		// calculate vertex block offset
@@ -265,18 +265,18 @@ public class BinaryWriter {
 	
 	/************************** test function ******************************/
 	private static def printProperty(prop : Property) {
-		Console.OUT.println("n = " + prop.n);
-		Console.OUT.println("nattr = " + prop.nattr);
+		Common.debugprint("n = " + prop.n);
+		Common.debugprint("nattr = " + prop.nattr);
 		for(var i:Int = 0; i < prop.nattr; i++) {
 			val attr = prop.attr(i);
-			Console.OUT.println("attr[" + i + "] = {" + attr.id + ", " + attr.namelen + ", " + attr.getName() + "}");
+			Common.debugprint("attr[" + i + "] = {" + attr.id + ", " + attr.namelen + ", " + attr.getName() + "}");
 		}
 	}
 	private static def printBlockInfo(blockinfo : BlockInfo) {
-		Console.OUT.println("nBlock = " + blockinfo.n);
+		Common.debugprint("nBlock = " + blockinfo.n);
 		for(var i:Int = 0; i < blockinfo.n; i++) {
 			val block = blockinfo.block(i);
-			Console.OUT.println("block[" + i + "] : offset = " + block.offset + ", size = " + block.size + ", n = " + block.n);
+			Common.debugprint("block[" + i + "] : offset = " + block.offset + ", size = " + block.size + ", n = " + block.n);
 		}
 	}
 	

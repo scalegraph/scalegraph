@@ -83,15 +83,15 @@ class ScatteredFileManager extends FileManager {
 	
 	private def makeFileOffset() {
 		val dir = new File(path);
-		Console.OUT.println("dir = " + dir);
-		Console.OUT.println("dir.list = " + dir.list());
+		Common.debugprint("dir = " + dir);
+		Common.debugprint("dir.list = " + dir.list());
 		val nFiles = dir.list().size;
 		this.fileOffset = new Array[Long](nFiles + 1, 0L);
 		for(var i:Int = 0; i < nFiles; i++) {
 			val file = new File(getFileName(i));
 			this.fileOffset(i + 1) = this.fileOffset(i) + file.size();
 		}
-		Console.OUT.println("fileOffset = " + fileOffset);
+		Common.debugprint("fileOffset = " + fileOffset);
 	}
 	
 	public def getFileName(i:Int) : String {

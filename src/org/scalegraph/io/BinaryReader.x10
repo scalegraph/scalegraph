@@ -6,6 +6,7 @@ import x10.io.File;
 import x10.util.Team;
 import x10.util.ArrayList;
 
+import x10.compiler.Ifdef;
 import x10.compiler.Inline;
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
@@ -36,7 +37,7 @@ public class BinaryReader {
 		val filename : String = fm.getHeaderFileName();  // assign a name of a file which includes meta data
 		val nr = NativeReader.make(filename);
 		val header = nr.readHeader();
-		Console.OUT.println("datatype = " + header.datatype(0));
+		Common.debugprint("datatype = " + header.datatype(0));
 		
 		var tuple4 : Tuple4[Array[String], Array[Any], Array[String], Array[Any]];
 		
@@ -59,34 +60,34 @@ public class BinaryReader {
 	private static def readGraph(team : Team, fm : FileManager, nr : NativeReader, header : Header) {
 		// read vertex property
 		var offset : Long = Common.align(header.size as Long, 8);
-		Console.OUT.println("vProp : size = " + header.seclen(0) + ", offset = " + offset);
+		Common.debugprint("vProp : size = " + header.seclen(0) + ", offset = " + offset);
 		val vProp : Property = nr.readProperty(header.seclen(0), offset);
-		Console.OUT.println("vProp loaded");
+		Common.debugprint("vProp loaded");
 		printProperty(vProp);
 		
 		assert(vProp.nattr >= 1);  // vertex ID
 		
 		// read edge property
 		offset = Common.align(offset + header.seclen(0), 8);
-		Console.OUT.println("eProp : size = " + header.seclen(1) + ", offset = " + offset);
+		Common.debugprint("eProp : size = " + header.seclen(1) + ", offset = " + offset);
 		val eProp : Property = nr.readProperty(header.seclen(1), offset);
-		Console.OUT.println("eProp loaded");
+		Common.debugprint("eProp loaded");
 		printProperty(eProp);
 		
 		assert(eProp.nattr >= 2);  // src ID, dst ID
 		
 		// read vertex block info
 		offset = Common.align(offset + header.seclen(1), 8);
-		Console.OUT.println("vBlockinfo : size = " + header.seclen(2) + ", offset = " + offset);
+		Common.debugprint("vBlockinfo : size = " + header.seclen(2) + ", offset = " + offset);
 		val vBlockinfo : BlockInfo = nr.readBlockInfo(header.seclen(2), offset);
-		Console.OUT.println("vBlockinfo loaded");
+		Common.debugprint("vBlockinfo loaded");
 		printBlockInfo(vBlockinfo);
 		
 		// read edge block info
 		offset = Common.align(offset + header.seclen(2), 8);
-		Console.OUT.println("eBlockinfo : size = " + header.seclen(3) + ", offset = " + offset);
+		Common.debugprint("eBlockinfo : size = " + header.seclen(3) + ", offset = " + offset);
 		val eBlockinfo : BlockInfo = nr.readBlockInfo(header.seclen(3), offset);
-		Console.OUT.println("eBlockinfo loaded");
+		Common.debugprint("eBlockinfo loaded");
 		printBlockInfo(eBlockinfo);
 		
 		// read vertex attribute data
@@ -131,7 +132,7 @@ public class BinaryReader {
 			val pid = blockAllocater.next();
 			localArraySize(pid) += blockinfo.block(i).n;
 		}
-		Console.OUT.println("localArraySize = " + localArraySize);
+		Common.debugprint("localArraySize = " + localArraySize);
 		printProperty(prop);
 		
 		// make return data structure
@@ -158,13 +159,13 @@ public class BinaryReader {
 			
 			val filename : String = fm.getDataFileName(block_offset);  // assign a name of a file which corresponds to this block
 			
-			Console.OUT.println("blockdata : size = " + block.size + ", offset = " + block.offset);
+			Common.debugprint("blockdata : size = " + block.size + ", offset = " + block.offset);
 			
 			val arrayOffset = localArrayOffset(pid);
 			localArrayOffset(pid) += block_n;
 			
 			queue(pid).add( () => {
-				Console.OUT.println("block_size = " + block_size + ", block_offset = " + block_offset + ", block_n = " + block_n);
+				Common.debugprint("block_size = " + block_size + ", block_offset = " + block_offset + ", block_n = " + block_n);
 				
 				// read attribute data
 				val nr_ = NativeReader.make(filename);
@@ -197,18 +198,18 @@ public class BinaryReader {
 	
 	/************************** test function ******************************/
 	private static def printProperty(prop : Property) {
-		Console.OUT.println("n = " + prop.n);
-		Console.OUT.println("nattr = " + prop.nattr);
+		Common.debugprint("n = " + prop.n);
+		Common.debugprint("nattr = " + prop.nattr);
 		for(var i:Int = 0; i < prop.nattr; i++) {
 			val attr = prop.attr(i);
-			Console.OUT.println("attr[" + i + "] = {" + attr.id + ", " + attr.namelen + ", " + attr.getName() + "}");
+			Common.debugprint("attr[" + i + "] = {" + attr.id + ", " + attr.namelen + ", " + attr.getName() + "}");
 		}
 	}
 	private static def printBlockInfo(blockinfo : BlockInfo) {
-		Console.OUT.println("nBlock = " + blockinfo.n);
+		Common.debugprint("nBlock = " + blockinfo.n);
 		for(var i:Int = 0; i < blockinfo.n; i++) {
 			val block = blockinfo.block(i);
-			Console.OUT.println("block[" + i + "] : offset = " + block.offset + ", size = " + block.size + ", n = " + block.n);
+			Common.debugprint("block[" + i + "] : offset = " + block.offset + ", size = " + block.size + ", n = " + block.n);
 		}
 	}
 	

@@ -186,7 +186,7 @@ public:
 		return prop;
 	}
 
-	void printProp(NativeProperty *p) {
+	/*void printProp(NativeProperty *p) {
 		printf("n = %lld\n", p->n);
 		printf("nattr = %d\n", p->nattr);
 		for(int i = 0; i < p->nattr; i++) {
@@ -197,7 +197,7 @@ public:
 			printf("attr[%d] = {%d, %d, %s}\n", i, p->attr[i]->id, p->attr[i]->namelen, s);
 			free(s);
 		}
-	}
+	}*/
 };
 
 }}} // namespace org { namespace scalegraph { namespace io {
