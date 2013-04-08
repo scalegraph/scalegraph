@@ -7,17 +7,20 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.concurrent.Lock;
 import x10.util.GrowableIndexedMemoryChunk;
 import x10.util.Team;
+import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.concurrent.Dist2D;
 import x10.compiler.Inline;
 import org.scalegraph.metrics.DistBetweennessCentrality.Bitmap;
-
+import org.scalegraph.util.DistMemoryChunk;
+import x10.compiler.Native;
 
 
 public class DistBetweennessCentralityWeighted implements x10.io.CustomSerialization{
 
     private static type Vertex = Long;
-    private static type Buckets = GrowableIndexedMemoryChunk[ArrayList[Vertex]];
-    private static type Bucket = ArrayList[Vertex];
+    // private static type Bucket = ArrayList[Vertex];
+    private static type Bucket = Array[Bitmap]{self.size == 2};
+    private static type Buckets = GrowableIndexedMemoryChunk[Bucket];
     private static type BucketIndex = Int;
     
     private val MAX_BUCKET_INDEX = Int.MAX_VALUE;
@@ -57,7 +60,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private static class LocalState {
         
         val gCsr: DistSparseMatrix;
+        val gWeight: DistMemoryChunk[Double];
         val csr: SparseMatrix;
+        val weight: MemoryChunk[Double];
         val distance: IndexedMemoryChunk[Long];
         val geodesicPath: IndexedMemoryChunk[Long];
         val predecessors: IndexedMemoryChunk[ArrayList[Vertex]];
@@ -65,17 +70,18 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val deferredVertex: Bitmap;
         val delta: Int;
         
-        // the number of local vertices
         val currentSource: Cell[Vertex];
         val currentBucketIndex: Cell[Int];
+        val bucketQueuePointer: Cell[Int];
         val numLocalVertices: Long;
         
         val ALIGN = 64;
         val CONGRUENT = false;
         val BUFFER_SIZE: Int;
-        val INIT_BUCKET_SIZE = 8;
+        val INIT_BUCKET_SIZE = 32;
         val buckets: Buckets;
         
+        val semaphore: IndexedMemoryChunk[Long];
         // val lcPathCount: BigArray[Long];
         // val lcPredecessor: BigArray[ArrayList[VertexId]];
         // val lcSuccessor: BigArray[ArrayList[VertexId]];
@@ -97,14 +103,18 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         // var lcNonIncreaseDistanceNextQ: FixedVertexQueue;
         
         protected def this (csr_: DistSparseMatrix,
+                            weight_: DistMemoryChunk[Double],
                             transferBufSize: Int,
                             delta_: Int) {
             gCsr = csr_;
             csr = gCsr();
+            gWeight = weight_;
+            weight = gWeight();
             BUFFER_SIZE = transferBufSize;
             numLocalVertices = gCsr.ids().numberOfLocalVertexes();
             currentSource = new Cell[Vertex](0);
             currentBucketIndex = new Cell[Int](0);
+            bucketQueuePointer = new Cell[Int](0);
             delta = delta_;
             
             distance = IndexedMemoryChunk.allocateZeroed[Long](
@@ -119,10 +129,15 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                     numLocalVertices,
                     ALIGN,
                     CONGRUENT);
+            semaphore = IndexedMemoryChunk.allocateZeroed[Long](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
             
             buckets = new Buckets(INIT_BUCKET_SIZE);
+            val nVertices = numLocalVertices;
             for (i in 0..(INIT_BUCKET_SIZE - 1))
-                buckets(i) = new Bucket();
+                buckets(i) = new Array[Bitmap](2, (Int) => new Bitmap(nVertices));
             deletedVertexMap = new Bitmap(numLocalVertices);
             deferredVertex = new Bitmap(numLocalVertices);
             
@@ -247,7 +262,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         // val dist = Dist.makeUnique();
         // val lch = PlaceLocalHandle.make[LocalState](dist, initBigBc);
         // val bc = new BigBetweennessCentralityWeighted(lch);
-        
+        var time: Long = System.currentTimeMillis();
         val team = g.team();
         val places = team.placeGroup();
         val transBuf = 1 << 10;
@@ -256,16 +271,23 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val csr = g.constructDistSparseMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
-                                              true);        
+                                              true);
+        // Construct attribute
+        val weightAttr = g.constructDistAttribute[Double](csr, false, "weight");
         // create local state for bc on each place
         val localState = PlaceLocalHandle.make[LocalState](places, () => {
-            return new LocalState(csr, transBuf, delta);
+            return new LocalState(csr, weightAttr, transBuf, delta);
         });
         val bc = new DistBetweennessCentralityWeighted(localState);
         bc.internalRun();
-        
+        time = System.currentTimeMillis() - time;
+        Console.OUT.println("BC time: " + time);
         // return bc.score();
     }
+    
+    /* GCC Built-in atomic function interface */
+    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
+    private static native def compare_and_swap[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): Boolean;
     
     @Inline
     public def isLocalVertex(orgVertex: Vertex): Boolean {
@@ -322,6 +344,22 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     @Inline
     private def predecessors() = lch().predecessors;
     
+    @Inline
+    private def weight() = lch().weight;
+    
+    @Inline
+    private def currentBucketQueue() 
+    = lch().buckets(lch().currentBucketIndex())(lch().bucketQueuePointer());
+    
+    @Inline
+    private def nextBucketQueue() 
+    = lch().buckets(lch().currentBucketIndex())((lch().bucketQueuePointer() + 1) & 1);
+    
+    @Inline
+    private def swapBucket() {
+        lch().bucketQueuePointer() = (lch().bucketQueuePointer() + 1) & 1;
+    }
+    
     private def internalRun() {
         // cal complete BC
         val startVertex = 0;
@@ -331,7 +369,8 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             // set current source
             finish for(p in places) {
                 val curSrc = v;
-                 at (p) async {     
+                at (p) async {     
+                    clear();
                     calBC(curSrc);
                 }
             }
@@ -363,32 +402,14 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private def calBC(src: Vertex) {
         Console.OUT.println("Cal BC for source: " + src);
         Console.OUT.println("Start Delta stepping");
-
-        // finish { 
-        //     for (p in Place.places()) {
-        //         at (p) async {
-                    // deltaSteppingInit();
-        clear();
+      
         lch().currentSource() = src;
         deltaStepping();
-        //         }
-        //     }
-        // }
-        printPred();
-        // predecessors().print();
-        // Console.OUT.println("Find Successors");
-        
-        // finish {
-        //     
-        //     for(p in Place.places()) {
-        //         
-        //         at(p) async {
-        //             
-        //             deriveSuccessor();
-        //         }
-        //     }
-        // }
-        // 
+        Runtime.x10rtBlockingProbe();
+
+        Console.OUT.println("Find Successors");
+        deriveSuccessor();
+
         // 
         // // successors().print();
         // Console.OUT.println("Count Path");
@@ -429,33 +450,18 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         // 
         // // score().printNoZero();
         // Console.OUT.println("********************");
+        
+        // printPred();
     }
     
-    // protected def deltaSteppingInit() {
-    //     
-    //     // Console.OUT.println("Start at " + here.id);
-    //     
-    //     if(here.id == 0) {
-    //         
-    //         distance().fill(Long.MAX_VALUE);
-    //         isDeletedMap().fill(false);
-    //         dependencies().fill(0);        
-    //         updates().fill(0);
-    //     }
-    //     
-    //     localHandle().lcCurrentBucket = 0L;
-    // }
-    
     protected def deltaStepping() {
-        
-        // Structure to keep
         val bufSize = lch().BUFFER_SIZE;
         val bufferV = new Array[ArrayList[Vertex]](team.size(),
                 (int) => new ArrayList[Vertex](bufSize));
         val bufferW = new Array[ArrayList[Vertex]](team.size(),
                 (int) => new ArrayList[Vertex](bufSize));
-        val bufferX = new Array[ArrayList[Vertex]](team.size(),
-                (int) => new ArrayList[Vertex](bufSize));
+        val bufferX = new Array[ArrayList[Long]](team.size(),
+                (int) => new ArrayList[Long](bufSize));
         
         // Declare closures
         val clearBuffer = (pid: Int) => {
@@ -471,7 +477,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             val relaxDataV = bufferV(pid).toArray();
             val relaxDataW = bufferW(pid).toArray();
             val relaxDataX = bufferX(pid).toArray();
-            
             at (Place.place(pid)) {
                 for(k in 0..(relaxDataV.size - 1)) {
                     relax(relaxDataV(k),
@@ -481,14 +486,12 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             }
             clearBuffer(pid);
         };
-        
         val flushAll = () => {
             async for (i in 0..(team.size() - 1)) {
                 val ii = i;
                 flush(ii);
             }
         };
-        
         val remoteRelax = (v: Vertex, w: Vertex, x: Long) => {
             val pid = getVertexPlaceRole(w);
             if (bufferV(pid).size() >= bufSize) {
@@ -497,34 +500,28 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             bufferV(pid).add(v);
             bufferW(pid).add(w);
             bufferX(pid).add(x);
-        };
-        
-        // val isRemoteRelax = (w: Vertex) => {
-        //     return graph().getPlaceId(w) != here.id;
-        // };
-        
+        };       
         // Start delta stepping        
         var dataAvailable: Int = 0;
         val src = lch().currentSource();
         if (role == getVertexPlaceRole(src)) {
-            relax(src, src, -1);
+            relax(src, src, 0);
         }
         do {
-            // Wait other places
+            // clear bucket queue pointer, this makes nextqueue of another buckets deterministic
+            lch().bucketQueuePointer() = 0;
             Team.WORLD.barrier(here.id);
             while (currentBucketIndex()() < buckets().capacity()
                     && (buckets()(currentBucketIndex()()) == null
-                            || buckets()(currentBucketIndex()()).isEmpty())) {
+                            || nextBucketQueue().setBitCount() == 0L)) {
                 
                 currentBucketIndex()() = currentBucketIndex()() + 1;
             }
             if (currentBucketIndex()() >= buckets().capacity()) {
                 currentBucketIndex()() = MAX_BUCKET_INDEX; 
             }
-            
             // Find smallest bucket
             currentBucketIndex()() = Team.WORLD.allreduce(role, currentBucketIndex()(), Team.MIN);
-            
             if (currentBucketIndex()() == MAX_BUCKET_INDEX) {
                 // No more work to do
                 break;
@@ -532,71 +529,47 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             
             deletedVertexMap().clearAll();
             // deletedVertices().clear();
-            
             do {
+                Console.OUT.println(here.id + ":Loop: index-> " + currentBucketIndex());
                 if (currentBucketIndex()() < buckets().capacity()
                         && buckets()(currentBucketIndex()()) != null) {
+                    swapBucket();
+                    nextBucketQueue().clearAll();
                     
-                    val bucket = buckets()(currentBucketIndex()());
-                    
-                    while(!bucket.isEmpty()) {
-                        
-                        val v = bucket.removeFirst();
-                        
-                        // if (!isDeletedMap()(v)) {
-                        //     
-                        //     isDeletedMap()(v) = true;
-                        //     deletedVertices().add(v);
-                        // }
-                        val localV = OrgToLocSrc(v);
+                    // val bucket = buckets()(currentBucketIndex()());
+                    val cBucket = currentBucketQueue();
+                    cBucket.examine((localV: Long, threadId: Int) => {
+                        val v = LocSrcToOrg(localV);
                         if (deletedVertexMap().isNotSet(localV)) {
                             deletedVertexMap().set(localV);
                         }
                         val vDist = distance()(localV);
                         val neighbours = csr().adjacency(localV);
-                        
-                        // if (neighbours != null) {
-                        //     
-                        //     for (var i:Int = 0; i < neighbours.size(); ++i) {
-                        //         
-                        //         val w = neighbours(i);
-                        //         val w_d = graph().getWeight(w);
-                        //         
-                        //         if (w_d <= delta()) {
-                        //             
-                        //             if (isRemoteRelax(w)) {
-                        //                 
-                        //                 addRelax(v, w, v_d + w_d);
-                        //                 
-                        //             } else {
-                        //                 
-                        //                 relax(v, w, v_d + w_d);
-                        //             }
-                        //         }
-                        //     }
-                        // }
-                        for (localW in neighbours) {
+                        val neighboursWeight = csr().attribute(weight(), localV);
+                        for (i in 0..(neighbours.size() - 1)) {
+                            val localW = neighbours(i);
                             val w = LocDstToOrg(localW);
-                            val wWeight = 1;
-                            if (isLocalVertex(w)) {
-                                if (wWeight <= delta()) {
-                                    relax(v, w, vDist);
+                            val wWeight = neighboursWeight(i) as Long;
+                            // val wWeight = 1;
+                            
+                            if (wWeight <= delta()) {
+                                if (isLocalVertex(w)) {
+                                    relax(v, w, vDist + wWeight);
                                 } else {
-                                    // TODO: Add deffered vertex
-                                    deferredVertex().set(localV);
+                                    remoteRelax(v, w, vDist);
+                                    // Console.OUT.println("remoteRelax: " + v + " " + w + " : " + vDist);
                                 }
                             } else {
-                                remoteRelax(v, w, vDist);
-                                Console.OUT.println("remoteRelax: " + v + " " + w + " : " + vDist);
+                                deferredVertex().set(localV);
                             }
                         }
-                    }
+                    });
                     flushAll();
                 }
                 Team.WORLD.barrier(here.id);
                 if (currentBucketIndex()() < buckets().capacity()
                         && buckets()(currentBucketIndex()()) != null
-                        && !buckets()(currentBucketIndex()()).isEmpty()) {
+                        && nextBucketQueue().setBitCount() > 0) {
                     dataAvailable = 1;
                 } else {
                     dataAvailable = 0;
@@ -604,46 +577,22 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                 dataAvailable = Team.WORLD.allreduce(here.id, dataAvailable, Team.MAX);
             } while (dataAvailable > 0);
             
-            // Relax heavy edge 
-            // for(var i: Int = 0; i < deletedVertices().length(); ++i) {
-            //     
-            //     val v = deletedVertices()(i);
-            //     val v_d = distance()(v);
-            //     val neighbours = graph().getOutNeigbours(v);
-            //     
-            //     if (neighbours != null) {
-            //         
-            //         for (var k:Int = 0; k < neighbours.size(); ++k) {
-            //             
-            //             val w = neighbours(k);
-            //             val w_d = graph().getWeight(w);
-            //             
-            //             if (w_d > delta()) {                    
-            //                 
-            //                 if (isRemoteRelax(w)) {
-            //                     
-            //                     addRelax(v, w, v_d + w_d);
-            //                     
-            //                 } else {
-            //                     
-            //                     relax(v, w, v_d + w_d);
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
+   
             // Relax heavy edges
             deferredVertex().examine((localV: Long, threadId: Int) => {;
                 val v = LocSrcToOrg(localV);
                 val vDist = distance()(localV);
                 val neighbours = csr().adjacency(localV);
+                val neighbourWeight = csr().attribute(weight(), localV);
                 for (w in neighbours) {
-                    val wWeight = 1;
-                    if (isLocalVertex(w)) {
-                        if (wWeight > delta()) {
-                            throw new UnsupportedOperationException("Upsupported Yet");
-                            // relax(v, w, vDist);
-                        } 
+                    val wWeight = neighbourWeight(w) as Long;
+                    if (wWeight > delta()) {
+                        if (isLocalVertex(w)) {
+                            relax(v, w, vDist + wWeight);
+                        }  else {
+                            remoteRelax(v, w, vDist);
+                            Console.OUT.println("Heavy remoteRelax: " + v + " " + w + " : " + vDist);
+                        }
                     }
                 }
             });
@@ -652,116 +601,72 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         } while (true);
     }
     
-    protected def relax(v: Vertex, w: Vertex, vDist: Long) {        
-        val localW = OrgToLocSrc(w);
-        var wWeight: Long = 1;
-        val wDist = distance()(localW);
-        var tentative: Long = vDist + wWeight;
-        
-        Console.OUT.println("Relax: " + v + ", " + w +  " : " + vDist);
-        
-        if (vDist == -1L) {
-            // relax src
-            wWeight = 0;
-            tentative = 0;
-        }
-        
-        if (tentative < wDist) {
-            val newIndex = (tentative / delta()) as BucketIndex;
-            if (newIndex >= buckets().capacity()) {
-                val growth = 10;
-                val oldCap = buckets().capacity();
-                val newCap = growth + newIndex;
-                buckets().grow(newCap);
-                for(k in 0..(newCap - oldCap - 1)) {
-                    buckets().add(new ArrayList[Vertex]());
+    private def relax(v: Vertex, w: Vertex, x: Long) {  
+        val localW = OrgToLocSrc(w);  
+        while (true) {
+            // non-blocking mutual exclusion
+            // increase semaphore
+            if (compare_and_swap[Long](lch().semaphore, localW, 0, 1)) {
+                val wDist = distance()(localW);
+                var tentative: Long = x;
+                // Console.OUT.println("Relax: " + v + ", " + w + " : " + x);
+                if (tentative < wDist) {
+                    val newIndex = (tentative / delta()) as BucketIndex;
+                    if (newIndex >= buckets().capacity()) {
+                        atomic {
+                            // recheck after acquiring lock
+                            // TODO: implement non-blocking mutual exclusion, though it may improve the performance
+                            // a little bit
+                            if(newIndex >= buckets().capacity()) {
+                                val growth = 10;
+                                val oldCap = buckets().capacity();
+                                val newCap = growth + newIndex;
+                                buckets().grow(newCap);
+                                for(k in 0..(newCap - oldCap - 1)) {
+                                    buckets().add(new Array[Bitmap](2, 
+                                            (Int) => new Bitmap(lch().numLocalVertices)));
+                                }
+                            }
+                        }
+                    }
+                    val getNextBucket = (index: Int) => {
+                        return index == lch().currentBucketIndex() ?
+                                lch().buckets(index)((lch().bucketQueuePointer() + 1) & 1):                            
+                                    lch().buckets(index)(1); // another index, 1st index is next q
+                    };
+                    if (wDist != Long.MAX_VALUE && deletedVertexMap().isSet(localW)) {
+                        val oldIndex = (wDist / delta()) as BucketIndex;
+                        
+                        if (oldIndex != newIndex) {
+                            // Modifed only if changing bucket
+                            val oldBucket = getNextBucket(oldIndex);
+                            oldBucket.clear(localW);
+                            val nextBucket = getNextBucket(newIndex);
+                            nextBucket.set(localW);
+                        }
+                    } else {
+                        // vertex has not been added to bucket
+                        val nextBucket = getNextBucket(newIndex);
+                        nextBucket.set(localW);
+                    }
+                    
+                    distance()(localW) = tentative;
+                    
+                    if (predecessors()(localW) == null) {
+                        predecessors()(localW) = new ArrayList[Vertex]();
+                    }
+                    predecessors()(localW).clear();
+                    predecessors()(localW).add(v);
+                } else if (tentative == wDist && v != w) {
+                    predecessors()(localW).add(v);
                 }
-            }
-            if (wDist != Long.MAX_VALUE && deletedVertexMap().isSet(localW)) {
-                val oldIndex = (wDist / delta()) as BucketIndex;
-                buckets()(oldIndex).remove(w);
-                buckets()(newIndex).add(w);
-            } else {
-                buckets()(newIndex).add(w);
-            }
-            
-            distance()(localW) = tentative;
-            
-            if (predecessors()(localW) == null) {
-                predecessors()(localW) = new ArrayList[Vertex]();
-            }
-            predecessors()(localW).clear();
-            predecessors()(localW).add(v);
-            
-        } else if (tentative == wDist && v != w) {
-            predecessors()(localW).add(v);
+                while(true){
+                    if(compare_and_swap[Long](lch().semaphore, localW, 1, 0))
+                        break;
+                }
+                break;
+            } 
         }
-        
-//         if (placeId == here.id) {
-// 
-//             val w_d = distance()(w);
-//             
-//             if (x < w_d) {
-//                 
-//                 val newIndex = (x / delta()) as BucketIndex;
-//                 
-//                 if (newIndex >= buckets().capacity()) {
-//                     
-//                     val growth = 10;
-//                     buckets().grow(newIndex + growth);
-//                     val cap = buckets().capacity();
-//                     
-//                     for(var k: Int = buckets().length(); k <= cap; ++k) {
-//                         buckets().add(new ArrayList[VertexId]());
-//                     }
-//                 }
-//                 
-//                 if (buckets()(newIndex) == null) {
-//                     
-//                     buckets()(newIndex) = new ArrayList[VertexId]();
-//                 }
-//                 
-//                 if (w_d != Long.MAX_VALUE && !isDeletedMap()(w)) {
-//                     
-//                     val oldIndex = (w_d / delta()) as BucketIndex;
-//                     
-//                     buckets()(oldIndex).remove(w);
-//                     buckets()(newIndex).add(w);
-//                     
-//                 } else {
-//                     
-//                     buckets()(newIndex).add(w);
-//                 }
-//                 
-//                 distance()(w) = x;
-//                 
-//                 if (predecessors()(w) == null) {
-//                     
-//                     predecessors()(w) = new ArrayList[VertexId]();
-//                 }
-//                 
-//                 predecessors()(w).clear();
-//                 predecessors()(w).add(v);
-//                 
-//             } else if (x == w_d) {
-//                 
-//                 // Found predecessor
-//                 if(w != v) {
-//                     
-//                     // Dont add itself to its successor
-//                     predecessors()(w).add(v);
-//                 }
-//             }
-//             
-//         } else {
-//             
-//             val local = here.id;
-//             
-//             at (Place.place(placeId)) {
-//                 
-//                 relax(v, w, x);
-//             }
-//         }
     }
     
     protected def deriveSuccessor() {
