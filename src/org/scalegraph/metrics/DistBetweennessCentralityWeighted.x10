@@ -66,6 +66,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val distance: IndexedMemoryChunk[Long];
         val geodesicPath: IndexedMemoryChunk[Long];
         val predecessors: IndexedMemoryChunk[ArrayList[Vertex]];
+        val successors: IndexedMemoryChunk[ArrayList[Vertex]];
         val deletedVertexMap: Bitmap;
         val deferredVertex: Bitmap;
         val delta: Int;
@@ -128,6 +129,10 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                     ALIGN,
                     CONGRUENT);
             predecessors = IndexedMemoryChunk.allocateZeroed[ArrayList[Vertex]](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
+            successors = IndexedMemoryChunk.allocateZeroed[ArrayList[Vertex]](
                     numLocalVertices,
                     ALIGN,
                     CONGRUENT);
@@ -344,6 +349,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private def predecessors() = lch().predecessors;
     
     @Inline
+    private def successors() = lch().successors;
+    
+    @Inline
     private def weight() = lch().weight;
     
     @Inline
@@ -410,9 +418,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         deltaStepping();
         Runtime.x10rtBlockingProbe();
 
-        // Console.OUT.println("Find Successors");
-        // deriveSuccessor();
-
+        Console.OUT.println("Find Successors");
+        deriveSuccessor();
+        Runtime.x10rtBlockingProbe();
         // 
         // // successors().print();
         // Console.OUT.println("Count Path");
@@ -673,114 +681,87 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         }
     }
     
-    protected def deriveSuccessor() {
-        
-//         // Closure for managing remote op
-//         val bufSize = 10000;
-//         val bufferP = new Array[ArrayList[VertexId]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[VertexId](bufSize));
-//         val bufferS = new Array[ArrayList[VertexId]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[VertexId](bufSize));
-//         
-//         val addSuccessor = (p: Long, s: Long) => {
-//             
-//             // localHandle().updateSuccessorLock.lock();
-//             // atomic {
-//             
-//             if (successors()(p) == null) {
-//                 
-//                 successors()(p) = new ArrayList[VertexId]();
-//             }
-//             
-//             successors()(p).add(s);
-//             // }
-//             // localHandle().updateSuccessorLock.unlock();
-//         };
-//         
-//         // Closure for remote op
-//         val clearBuffer = (pid: Int) => {
-//             
-//             bufferP(pid).clear();
-//             bufferS(pid).clear();
-// 
-//         };
-//         
-//         val flood = (pid: Int) => {
-//             
-//             // No data return
-//             if (bufferP(pid).size() == 0)
-//                 return;
-//             
-//             val p = bufferP(pid).toArray();
-//             val s = bufferS(pid).toArray();
-//             
-//             at (Place.place(pid)) {
-//                 
-//                 for(var k: Int = 0; k < p.size; ++k) {
-//                     
-//                     addSuccessor(p(k),
-//                                  s(k));
-//                 }
-//             }
-//             
-//             clearBuffer(pid);
-//         };
-//         
-//         val floodAll = () => {
-//             
-//             for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
-//                 
-//                 flood(i);
-//             }
-//         };
-//         
-//         val addRemote = (pid: Int, p: VertexId, s: VertexId) => {
-//             
-//             // val pid = graph().getPlaceId(p);
-//             
-//             if (bufferP(pid).size() >= bufSize) {
-//                 
-//                 flood(pid);
-//             }
-//             
-//             bufferP(pid).add(p);
-//             bufferS(pid).add(s);
-// 
-//         };
-//         
-//         val startLocal = predecessors().getLocalStartIndex();
-//         val endLocal = predecessors().getLocalEndIndex();
-//         
-//         Console.OUT.println(here.id + ":derive index-> pos: " + startLocal + "-" + endLocal);
-//         
-//         // Loop all local index
-//         for (var succ: long = startLocal; succ <= endLocal; ++succ) {
-//             
-//             val preds = predecessors()(succ);
-//             val s = succ;
-//             
-//             if (preds == null)
-//                 continue;
-//             
-//             for (var k: int = 0; k < preds.size(); ++k) {
-//                 
-//                 val pred = preds(k);
-//                 
-//                 val pid = successors().getPlaceId(pred);
-//                 
-//                 if (pid == here.id) {
-//                     
-//                     addSuccessor(pred, succ);
-//                     
-//                 } else {
-//                     
-//                     addRemote(pid, pred, s);
-//                 }
-//                 
-//             }
-//         }
-//         
-//         floodAll();
+    private def deriveSuccessor() {
+        // Closure for managing remote op
+        val bufSize = lch().BUFFER_SIZE;
+        val NUM_TASK = lch().NUM_TASK;        
+        val bufferP = new Array[Array[ArrayList[Vertex]]](NUM_TASK,
+                (int) => new Array[ArrayList[Vertex]](team.size(),
+                        (int) => new ArrayList[Vertex](bufSize)));
+        val bufferS = new Array[Array[ArrayList[Vertex]]](NUM_TASK,
+                (int) => new Array[ArrayList[Vertex]](team.size(),
+                        (int) => new ArrayList[Vertex](bufSize)));
+        val addSuccessor = (p: Long, s: Long) => {
+            val localP = OrgToLocSrc(p);
+            while (true) {
+                // non-blocking mutual exclusion
+                // increase semaphore
+                if (compare_and_swap[Long](lch().semaphore, localP, 0, 1)) {
+                    if (successors()(localP) == null) {
+                        successors()(localP) = new ArrayList[Vertex]();
+                    }
+                    successors()(localP).add(s);
+                    while(true){
+                        if(compare_and_swap[Long](lch().semaphore, localP, 1, 0))
+                            break;
+                    }
+                    break;
+                }
+            }
+        };
+        // Closure for remote op
+        val clearBuffer = (threadId: Int, pid: Int) => {
+            bufferP(threadId)(pid).clear();
+            bufferS(threadId)(pid).clear();
+        };
+        val flush = (threadId: Int, pid: Int) => {
+            // No data return
+            if (bufferP(threadId)(pid).size() == 0)
+                return;
+            val p = bufferP(threadId)(pid).toArray();
+            val s = bufferS(threadId)(pid).toArray();
+            val count = p.size;
+            at (Place.place(pid)) {
+                for(k in 0..(count - 1)) {
+                    addSuccessor(p(k),
+                                 s(k));
+                }
+            }
+            clearBuffer(threadId, pid);
+        };
+        val flushAll = () => {
+            finish  for (i in 0..(NUM_TASK - 1)) {
+                val k = i;
+                async for (ii in 0..(team.size() - 1)) {
+                    val kk = ii;
+                    flush(k, kk);
+                }
+            }
+        };
+        val remoteAddSuccessor = (threadId: Int, pid: Int, p: Vertex, s: Vertex) => {
+            if (bufferP(threadId)(pid).size() >= bufSize) {
+                flush(threadId, pid);
+            }
+            bufferP(threadId)(pid).add(p);
+            bufferS(threadId)(pid).add(s);
+        };
+        DistBetweennessCentrality.iter(0..(lch().numLocalVertices - 1),
+                                       (localS: Long, threadId: Int) => {
+                                          val preds = predecessors()(localS);
+                                          if (preds != null) {
+                                              val succ = LocSrcToOrg(localS);
+                                              for (i in 0..(preds.size() - 1)) {
+                                                  val pred = preds(i);
+                                                  if (isLocalVertex(pred)) {
+                                                      addSuccessor(pred, succ);
+                                                  } else {
+                                                      val pid = getVertexPlaceRole(pred);
+                                                      remoteAddSuccessor(threadId, pid, pred, succ);
+                                                  }
+                                              }
+                                          }
+                                       });
+        flushAll();
     }
     
     protected def travelInNonIncreasingOrder() {
@@ -1139,7 +1120,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             for (i in 0..(lch().numLocalVertices - 1)) {
                 if (predecessors()(i) != null)
                     if(predecessors()(i).size() > 0) {
-                        Console.OUT.println(LocSrcToOrg(i) + " " + predecessors()(i));
+                        Console.OUT.println(LocSrcToOrg(i) + " " + successors()(i));
                     }
             }
         }
