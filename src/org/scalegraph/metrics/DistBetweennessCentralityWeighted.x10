@@ -64,12 +64,16 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val csr: SparseMatrix;
         val weight: MemoryChunk[Double];
         val distance: IndexedMemoryChunk[Long];
+        val dependencies: IndexedMemoryChunk[Double];
+        val score: IndexedMemoryChunk[Double];
         val geodesicPath: IndexedMemoryChunk[Long];
         val predecessors: IndexedMemoryChunk[ArrayList[Vertex]];
         val successors: IndexedMemoryChunk[ArrayList[Vertex]];
+        val successorCount: IndexedMemoryChunk[Int];
         val deletedVertexMap: Bitmap;
         val deferredVertex: Bitmap;
         val delta: Int;
+        val linearScale: Boolean = false;
         
         val currentSource: Cell[Vertex];
         val currentBucketIndex: Cell[Int];
@@ -84,6 +88,28 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val buckets: Buckets;
         
         val semaphore: IndexedMemoryChunk[Long];
+        
+        // traverse in non-increasing order of distance staff
+        val currentLevel: Cell[Long];
+        val queues: IndexedMemoryChunk[Bitmap];
+        val pathCount: IndexedMemoryChunk[Long];
+        val level: IndexedMemoryChunk[Long];
+        
+        // poniters of current queue and next queue
+        val qPointer: Cell[Int];
+        
+        // Backtracking
+        val numUpdates: IndexedMemoryChunk[Int];
+        val backtrackingQueues: IndexedMemoryChunk[Bitmap];
+        val backtrackingQPointer: Cell[Int];
+        
+        // buffer
+        val predBuf: Array[Array[ArrayList[Vertex]]];
+        val succBuf: Array[Array[ArrayList[Vertex]]];
+        val sigmaBuf: Array[Array[ArrayList[Long]]];
+        val deltaBuf: Array[Array[ArrayList[Double]]];
+        val muBuf: Array[Array[ArrayList[Long]]];
+        
         // val lcPathCount: BigArray[Long];
         // val lcPredecessor: BigArray[ArrayList[VertexId]];
         // val lcSuccessor: BigArray[ArrayList[VertexId]];
@@ -136,6 +162,30 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                     numLocalVertices,
                     ALIGN,
                     CONGRUENT);
+            successorCount = IndexedMemoryChunk.allocateZeroed[Int](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
+            pathCount = IndexedMemoryChunk.allocateZeroed[Long](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
+            level = IndexedMemoryChunk.allocateZeroed[Long](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
+            dependencies = IndexedMemoryChunk.allocateZeroed[Double](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
+            score = IndexedMemoryChunk.allocateZeroed[Double](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
+            numUpdates = IndexedMemoryChunk.allocateZeroed[Int](
+                    numLocalVertices,
+                    ALIGN,
+                    CONGRUENT);
             semaphore = IndexedMemoryChunk.allocateZeroed[Long](
                     numLocalVertices,
                     ALIGN,
@@ -151,6 +201,40 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             for (i in 0..(numLocalVertices - 1)) {
                 predecessors(i) = null;
             }
+            
+            currentLevel = new Cell[Long](0);
+            queues = IndexedMemoryChunk.allocateUninitialized[Bitmap](2,
+                    ALIGN,
+                    CONGRUENT);
+            queues(0) = new Bitmap(numLocalVertices);
+            queues(1) = new Bitmap(numLocalVertices);
+            qPointer = new Cell[Int](0);
+            
+            // Create queue for updating score
+            backtrackingQueues = IndexedMemoryChunk.allocateUninitialized[Bitmap](
+                    2, 
+                    ALIGN,
+                    CONGRUENT);
+            backtrackingQueues(0) = new Bitmap(numLocalVertices);
+            backtrackingQueues(1) = new Bitmap(numLocalVertices);
+            backtrackingQPointer = new Cell[Int](0);
+            
+            val team = gCsr.dist().allTeam();
+            predBuf = new Array[Array[ArrayList[Vertex]]](NUM_TASK,
+                    (int) => new Array[ArrayList[Vertex]](team.size(),
+                            (int) => new ArrayList[Vertex](transferBufSize)));
+            succBuf = new Array[Array[ArrayList[Vertex]]](NUM_TASK,
+                    (int) => new Array[ArrayList[Vertex]](team.size(),
+                            (int) => new ArrayList[Vertex](transferBufSize)));
+            sigmaBuf = new Array[Array[ArrayList[Long]]](NUM_TASK,
+                    (int) => new Array[ArrayList[Long]](team.size(),
+                            (int) => new ArrayList[Long](transferBufSize)));
+            deltaBuf = new Array[Array[ArrayList[Double]]](NUM_TASK,
+                    (int) => new Array[ArrayList[Double]](team.size(),
+                            (int) => new ArrayList[Double](transferBufSize)));
+            muBuf = new Array[Array[ArrayList[Long]]](NUM_TASK,
+                    (int) => new Array[ArrayList[Long]](team.size(),
+                            (int) => new ArrayList[Long](transferBufSize)));
         }
         // public def this(g: BigGraph,
         //                 currentSource: VertexId,
@@ -293,6 +377,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
     private static native def compare_and_swap[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): Boolean;
     
+    @Native("c++", "__sync_add_and_fetch((#imc)->raw() + #index, #value)")
+    private static native def add_and_fetch[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
+    
     @Inline
     public def isLocalVertex(orgVertex: Vertex): Boolean {
         val vertexPlace = ((1 << (lgc + lgr)) -1) & orgVertex;
@@ -351,6 +438,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     @Inline
     private def successors() = lch().successors;
     
+    @Inline 
+    private def successorCount() = lch().successorCount;
+    
     @Inline
     private def weight() = lch().weight;
     
@@ -366,6 +456,39 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private def swapBucket() {
         lch().bucketQueuePointer() = (lch().bucketQueuePointer() + 1) & 1;
     }
+    
+    @Inline
+    private def currentTraverseQ() = lch().queues(lch().qPointer());
+    
+    @Inline
+    private def nextTraverseQ() = lch().queues((lch().qPointer() + 1) & 1);
+    
+    @Inline
+    private def swapTraverseQ() { lch().qPointer() = (lch().qPointer() + 1) & 1; }
+    
+    @Inline
+    private def pathCount() = lch().pathCount;
+    
+    @Inline
+    private def dependencies() = lch().dependencies;
+    
+    @Inline
+    private def level() = lch().level;
+    
+    @Inline
+    private def numUpdates() = lch().numUpdates;
+    
+    @Inline
+    private def score() = lch().score;
+    
+    @Inline
+    private def backtrackingCurrentQ() = lch().backtrackingQueues(lch().backtrackingQPointer());
+    
+    @Inline
+    private def backtrackingNextQ() = lch().backtrackingQueues((lch().backtrackingQPointer() + 1) & 1);
+    
+    @Inline
+    private def swapUpdateScoreQ() { lch().backtrackingQPointer() = (lch().backtrackingQPointer() + 1) & 1; }
     
     private def internalRun() {
         // cal complete BC
@@ -390,20 +513,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     
     private def clear() {
         // clear data local data
-        // val predsIMC = localHandle().lcPredecessor.raw();
-        // val succsIMC = localHandle().lcSuccessor.raw();
-        // for (var k: Int = 0; k < predsIMC.length(); ++k) {
-        //     val pList = predsIMC(k);
-        //     if(pList != null) {
-        //         pList.clear();
-        //     }
-        //     val sList = succsIMC(k);
-        //     if(sList != null) {
-        //         sList.clear();
-        //     }
-        // }
-        // nonIncDistCurrentQ().clear();
-        // nonIncDistNextQ().clear();
         for (i in 0..(lch().numLocalVertices - 1)) {
             lch().distance(i) = Long.MAX_VALUE;
             lch().geodesicPath(i) = 0;
@@ -421,47 +530,14 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         Console.OUT.println("Find Successors");
         deriveSuccessor();
         Runtime.x10rtBlockingProbe();
-        // 
-        // // successors().print();
-        // Console.OUT.println("Count Path");
-        // finish {
-        //     
-        //     for(p in Place.places()) {
-        //         
-        //         at(p) async {
-        //             
-        //             travelInNonIncreasingOrder();
-        //         }
-        //     }
-        // }
-        // 
-        // // Console.OUT.println("Distance Count");
-        // // distance().print();
-        // // 
-        // // Console.OUT.println("Path Count");
-        // // pathCount().print();
-        // // Console.OUT.println("Distance of non inc");
-        // // distance().print();
-        // // 
-        // // Console.OUT.println("Initial non inc dist q");
-        // // nonIncDistNextQ().print();
-        // 
-        // Console.OUT.println("Caluculate Score");
-        // 
-        // finish {
-        //     
-        //     for (p in Place.places()) {
-        //         
-        //         at (p) async {
-        //             
-        //             updateScore();
-        //         }
-        //     }
-        // }
-        // 
-        // // score().printNoZero();
-        // Console.OUT.println("********************");
         
+        Console.OUT.println("Count Path");
+        travelInNonIncreasingOrder();
+        Runtime.x10rtBlockingProbe();
+       
+        Console.OUT.println("Update score");
+        updateScore();
+        Runtime.x10rtBlockingProbe();        
     }
     
     protected def deltaStepping() {
@@ -701,6 +777,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                         successors()(localP) = new ArrayList[Vertex]();
                     }
                     successors()(localP).add(s);
+                    successorCount()(localP) = successorCount()(localP) + 1; 
                     while(true){
                         if(compare_and_swap[Long](lch().semaphore, localP, 1, 0))
                             break;
@@ -764,366 +841,218 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         flushAll();
     }
     
-    protected def travelInNonIncreasingOrder() {
-        
-        // // Clear data 
-        // nonIncDistNextQ().clear();
-        // nextTraverseQ().clear();
-        // currentTraverseQ().clear();
-        // 
-        // // Place 0th init
-        // if (here.id == 0) {
-        //     
-        //     distance().fill(-1L);
-        //     pathCount().fill(0L);
-        //     
-        //     {
-        //         val pid = distance().getPlaceId(currentSource());
-        //         // Console.OUT.println("Current src: " + currentSource() + " - " + s);
-        //         
-        //         val putSource = ()=> {
-        //             
-        //             val s = currentSource();
-        //             distance()(s) = 0L;
-        //             pathCount()(s) = 1L;
-        //             nextTraverseQ().add(s);
-        //             Console.OUT.println("Put source: " + s);
-        //         };
-        //         
-        //         if(pid == here.id) {
-        //             
-        //             putSource();
-        //             
-        //         } else {
-        //             
-        //             at (Place.place(pid)) putSource();
-        //         }
-        //     }
-        //     
-//         }
-//         
-//         
-//         
-//         
-//         val visit = (w: VertexId, vPathCount: Long, vDistance: Long) => {
-//             
-//             val wDistance = distance()(w);
-//             
-//             atomic {
-//                 
-//                 if (wDistance == -1L) {   
-//                     
-//                     // First visit
-//                     distance()(w) = vDistance + 1;
-//                     pathCount()(w) = vPathCount;
-//                     
-//                     nextTraverseQ().add(w);
-//                     
-//                 } else if (wDistance == vDistance + 1L){
-//                     
-//                     val c = pathCount()(w);
-//                     pathCount()(w) = c + vPathCount;
-//                 }
-//             }
-//         };
-//         
-//         // Declare closure for remote op
-//         val bufSize = 10000;
-//         val bufferW = new Array[ArrayList[VertexId]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[VertexId](bufSize));
-//         val bufferVCount = new Array[ArrayList[VertexId]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[VertexId](bufSize));
-//         val bufferVDistance = new Array[ArrayList[VertexId]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[VertexId](bufSize));
-//         
-//         // Closure for remote op
-//         val clearBuffer = (pid: Int) => {
-//             
-//             bufferW(pid).clear();
-//             bufferVCount(pid).clear();
-//             bufferVDistance(pid).clear();
-// 
-//         };
-//         
-//         val flood = (pid: Int) => {
-//             
-//             // No data return
-//             if (bufferW(pid).size() == 0)
-//                 return;
-//             
-//             val w = bufferW(pid).toArray();
-//             val vCount = bufferVCount(pid).toArray();
-//             val vDist = bufferVDistance(pid).toArray();
-//             
-//             at (Place.place(pid)) {
-//                 
-//                 for(var k: Int = 0; k < w.size; ++k) {
-//                     
-//                     visit(w(k), 
-//                           vCount(k),
-//                           vDist(k));
-//                 }
-//             }
-//             
-//             clearBuffer(pid);
-//         };
-//         
-//         val floodAll = () => {
-//             
-//             for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
-//                 
-//                 flood(i);
-//             }
-//         };
-//         
-//         val visitRemote = (pid: Int, w: VertexId, vCount: Long, vDist: Long) => {
-//             
-//             if (bufferW(pid).size() >= bufSize) {
-//                 
-//                 flood(pid);
-//             }
-//             
-//             bufferW(pid).add(w);
-//             bufferVCount(pid).add(vCount);
-//             bufferVDistance(pid).add(vDist);
-// 
-//         };
-//         
-//         var dataAvailable: Int;
-//         
-//         do {
-//             
-//             Team.WORLD.barrier(here.id);
-//             dataAvailable = nextTraverseQ().isEmpty() == true ? 0 : 1;
-//             dataAvailable = Team.WORLD.allreduce(here.id, dataAvailable, Team.MAX);
-//             
-//             if(dataAvailable == 0) {
-//                 
-//                 // No one has vertex to travel
-//                 break;
-//             }
-//             
-//             swapQ();
-//             
-//             Team.WORLD.barrier(here.id);
-//             
-//             while(!currentTraverseQ().isEmpty()) {
-//                 
-//                 val v = currentTraverseQ().removeFirst();
-//                 
-//                 val vDistance = distance()(v);
-//                 val vPathCount = pathCount()(v);
-//                 
-//                 // First visit
-//                 val succList = successors()(v);
-//                 
-//                 if (succList == null || succList.size() == 0) {
-//                     
-//                     nonIncDistNextQ().add(v);
-//                     
-//                 } else {
-//                     
-//                     // Has successor
-//                     
-//                     val len = succList.size();
-//                     
-//                     for (var i: Int = 0; i < len; ++i) {
-//                         
-//                         val w = succList(i);
-//                         
-//                         // Console.OUT.println(here.id + ": " +  v + "Visit: " + w + "v dist: " + vDistance);
-//                         
-//                         val wPid = successors().getPlaceId(w);
-//                         
-//                         if (wPid == here.id) {
-//                             
-//                             visit(w, vPathCount, vDistance);
-//                             
-//                         } else {
-//                             
-//                             // at (Place.place(wPid)) visit(w, vPathCount, vDistance);
-//                             visitRemote(wPid, w, vPathCount, vDistance);
-//                         }
-//                     }
-//                 }
-//             }
-//             floodAll();
-//         }
-//         
-//         while(true);
+    private def visit(orgSrc: Long, orgDst: Long, predDistance: Long, predSigma: Long) {
+        val localDst = OrgToLocSrc(orgDst);
+        val d = predDistance + 1;
+        val f = () => {
+            // increase the number of geodesic paths
+            add_and_fetch[Long](pathCount(), localDst, predSigma);
+        };
+        if (compare_and_swap(level(), localDst, 0L, d)) {
+            // First visit
+            nextTraverseQ().set(localDst);
+        }         
+        if (level()(localDst) == d){
+            // Another shortest path
+            f();
+        }
     }
     
-
-    protected def updateScore() {
+    private def travelInNonIncreasingOrder() {
+        val bufSize = lch().BUFFER_SIZE;
+        val numTask = lch().NUM_TASK;
+        val predBuf = lch().predBuf;
+        val succBuf = lch().succBuf;
+        val sigmaBuf = lch().sigmaBuf;
         
-//         val calDependency = (w_theta: Double, w_sigma: Long, v: VertexId) => {
-// 
-//             updates()(v) = updates()(v) + 1;
-//             dependencies()(v) = dependencies()(v) 
-//             + (pathCount()(v) as Double / w_sigma)
-//             * (1 + w_theta);
-//             
-//             if(updates()(v) >= successors()(v).size()) {
-//                 
-//                 nonIncDistNextQ().add(v);
-// 
-//             }
-//         };
-//         
-//         // Declare closures for remote op
-//         val bufSize = 10000;
-//         val bufferWTheta = new Array[ArrayList[Double]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[Double](bufSize));
-//         val bufferWSigma = new Array[ArrayList[VertexId]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[Long](bufSize));
-//         val bufferV = new Array[ArrayList[VertexId]](Place.MAX_PLACES,
-//                 (int) => new ArrayList[VertexId](bufSize));
-//         
-//         // Closure for remote op
-//         val clearBuffer = (pid: Int) => {
-//             
-//             bufferWTheta(pid).clear();
-//             bufferWSigma(pid).clear();
-//             bufferV(pid).clear();
-// 
-//         };
-//         
-//         val flood = (pid: Int) => {
-//             
-//             // No data return
-//             if (bufferWTheta(pid).size() == 0)
-//                 return;
-//             
-//             val w_theta = bufferWTheta(pid).toArray();
-//             val w_sigma = bufferWSigma(pid).toArray();
-//             val v = bufferV(pid).toArray();
-//             
-//             at (Place.place(pid)) {
-//                 
-//                 for(var k: Int = 0; k < w_theta.size; ++k) {
-//                     
-//                     calDependency(w_theta(k),
-//                                   w_sigma(k),
-//                                   v(k));
-//                 }
-//             }
-//             
-//             clearBuffer(pid);
-//         };
-//         
-//         val floodAll = () => {
-//             
-//             for (var i: int = 0; i < Place.MAX_PLACES; ++i) {
-//                 
-//                 flood(i);
-//             }
-//         };
-//         
-//         val calRemote = (pid: Int, w_theta: Double, w_sigma: Long, v: VertexId) => {
-//             
-//             if (bufferWTheta(pid).size() >= bufSize) {
-//                 
-//                 flood(pid);
-//             }
-//             
-//             bufferWTheta(pid).add(w_theta);
-//             bufferWSigma(pid).add(w_sigma);
-//             bufferV(pid).add(v);
-// 
-//         };
-//         
-//         
-//         
-//         // Swap Queue
-//         val swap = ()=> {
-//             
-//             val temp = localHandle().lcNonIncreaseDistanceCurrentQ;
-//             localHandle().lcNonIncreaseDistanceCurrentQ = localHandle().lcNonIncreaseDistanceNextQ;
-//             localHandle().lcNonIncreaseDistanceNextQ = temp;
-//         };
-//         
-//         var localVertexAvailable: Int;
-//         
-//         do { 
-//             // Console.OUT.println("AAAAAAAAAAAAAAAAAAAAAA");
-//             Team.WORLD.barrier(here.id);
-//             // Console.OUT.println("BBBBBBBBBBBBBBBBBBBB");
-//             localVertexAvailable = nonIncDistNextQ().isEmpty() == true ? 0: 1;            
-//             localVertexAvailable = Team.WORLD.allreduce(here.id, localVertexAvailable, Team.MAX);
-//             
-//             if (localVertexAvailable == 0) {
-//                 
-//                 break;
-//             }
-//             
-//             swap();
-//             // Console.OUT.println("CCCCCCCCCCCCCCCCCCCCCCCCCC");
-//             Team.WORLD.barrier(here.id);
-//             // Console.OUT.println("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
-//             while(!nonIncDistCurrentQ().isEmpty()) {
-//                 
-//                 val w = nonIncDistCurrentQ().removeFirst();
-//                 val preds = predecessors()(w);
-//                 val w_sigma = pathCount()(w);
-//                 val w_theta = dependencies()(w);
-// 
-//                 if(preds == null) {
-//                     
-//                     Console.OUT.println(here.id + ": Attention! Found null pred: " + w);
-//                     // continue;
-//                 }
-//                 // Console.OUT.println("EEEEEEEEEEEEEEEEEEEEEEEEEE");
-//                 assert(preds != null);
-//                 // Console.OUT.println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
-//                 for(var i: Int = 0; i < preds.size(); ++i) {
-//                     
-//                     val v = preds(i);
-//                     val pid = pathCount().getPlaceId(v);
-//                     
-//                     if (pid == here.id) {
-//                         // Console.OUT.println("GGGGGGGGGGGGGGGGGGGGGGG");
-//                         calDependency(w_theta, w_sigma, v);
-//                         
-//                     } else {
-//                         // Console.OUT.println("HHHHHHHHHHHHHHHHHHHHHHHHHHHh");
-//                         // at(Place.place(pid)) calDependency(w_theta, w_sigma, v);
-//                         calRemote(pid, w_theta, w_sigma, v);
-//                     }
-//                 }
-//                 
-//                 if(w != currentSource()) {
-//                     
-//                     score()(w) = score()(w) +  w_theta;
-//                 }
-//             }
-//             // Console.OUT.println("IIIIIIIIIIIIIIIIII"); 
-//             floodAll();
-//             // Console.OUT.println("JJJJJJJJJJJJJJJJJJJJJJJJJJJJ");
-//         } while(true);
+        val clearBuffer = (bufId: Int, pid: Int) => {
+            predBuf(bufId)(pid).clear();
+            succBuf(bufId)(pid).clear();
+            sigmaBuf(bufId)(pid).clear();
+        };
+        val _flush = (bufId: Int, pid: Int) => {
+            val preds = predBuf(bufId)(pid).toArray();
+            val succs = succBuf(bufId)(pid).toArray();
+            val predSigma = sigmaBuf(bufId)(pid).toArray();
+            val count = preds.size;
+            val p = team.place(pid);
+            at (p)  {
+                for(k in 0..(count - 1)) {
+                    val lv = lch().currentLevel();
+                    visit(preds(k), succs(k), lv, predSigma(k));
+                }
+            }
+            clearBuffer(bufId, pid);
+        };
+        val _flushAll = () => {
+            finish for (i in 0..(numTask -1))
+                async for (ii in 0..(team.size() -1)) {
+                    if (predBuf(i)(ii).size() > 0)
+                        _flush(i, ii);
+                }
+        };
+        val _visitRemote = (bufId: Int, pid: Int, pred: Vertex, succ: Vertex, predSigma: Long) => {
+            if (predBuf(bufId)(pid).size() >= bufSize) {  
+                _flush(bufId, pid);
+            } 
+            predBuf(bufId)(pid).add(pred);
+            succBuf(bufId)(pid).add(succ);
+            sigmaBuf(bufId)(pid).add(predSigma);
+        };
+        // put source
+        val src = lch().currentSource();
+        if (isLocalVertex(src)) {
+            val locSrc = OrgToLocSrc(src);
+            nextTraverseQ().set(locSrc);
+            level()(locSrc) = 0L;
+            pathCount()(locSrc) = 1L;
+        }
+        while(true) {
+            swapTraverseQ();
+            nextTraverseQ().clearAll();
+            // Check wether there is a vertex on such a place
+            val maxVertexCount = team.allreduce(role,
+                                                currentTraverseQ().setBitCount(),
+                                                Team.MAX);
+            if (maxVertexCount == 0L)
+                break;
+            val traverse = (localSrc: Vertex, threadId: Int) => {           
+                val neighbors = successors()(localSrc);
+                if (neighbors == null) {
+                    // No successor is leave node
+                    backtrackingNextQ().set(localSrc);
+                } else {
+                    val predDistance = level()(localSrc);
+                    val predSigma = pathCount()(localSrc);
+                    val orgSrc = LocSrcToOrg(localSrc);                        
+                    for(i in 0..(neighbors.size() - 1)) {
+                        val orgDst = LocDstToOrg(neighbors(i));
+                        if (isLocalVertex(orgDst))  {
+                            visit(orgSrc, orgDst, predDistance, predSigma);
+                        } else {
+                            val bufId = threadId;
+                            val p: Place = getVertexPlace(orgDst);
+                            _visitRemote(bufId, team.role(p)(0), orgSrc, orgDst, predSigma);
+                        }    
+                    }
+                }
+            };
+            currentTraverseQ().examine(traverse);
+            _flushAll();
+            team.barrier(role);
+            lch().currentLevel(lch().currentLevel() + 1);
+        }
     }
     
-    protected def putToNextQueue(v: Vertex) {
-        
-        // nextTraverseQ().add(v);
+    private def updateScore() {
+        val bufSize = lch().BUFFER_SIZE;
+        val numTask = lch().NUM_TASK;
+        val predBuf = lch().predBuf;
+        val deltaBuf = lch().deltaBuf;
+        val sigmaBuf = lch().sigmaBuf;
+        val muBuf = lch().muBuf;
+        val clearBuffer = (bufId: Int, pid: Int) => {
+            predBuf(bufId)(pid).clear();
+            deltaBuf(bufId)(pid).clear();
+            sigmaBuf(bufId)(pid).clear();
+            muBuf(bufId)(pid).clear();
+        };
+        val _flush = (bufId: Int, pid: Int) => {
+            val preds = predBuf(bufId)(pid).toArray();
+            val delta = deltaBuf(bufId)(pid).toArray();
+            val sigma = sigmaBuf(bufId)(pid).toArray();
+            val mu = muBuf(bufId)(pid).toArray();
+            val p = team.place(pid);
+            at (p) {
+                for(k in 0..(preds.size - 1)) {
+                    val pred = preds(k);
+                    calDependency(mu(k), delta(k), sigma(k), preds(k));
+                }
+            }
+            clearBuffer(bufId, pid);
+        };
+        val _flushAll = () => {
+            finish for (i in 0..(numTask -1))
+                async for ( ii in 0..(team.size() -1)) {
+                    if (predBuf(i)(ii).size() > 0)
+                        _flush(i, ii);
+                }
+        };
+        val calRemote = (bufId: Int, pid: Int, mu: Long, delta: Double, signma: Long, pred: Vertex) => {
+            if (predBuf(bufId)(pid).size() >= bufSize) {  
+                _flush(bufId, pid);
+            } 
+            muBuf(bufId)(pid).add(mu);
+            deltaBuf(bufId)(pid).add(delta);
+            sigmaBuf(bufId)(pid).add(signma);
+            predBuf(bufId)(pid).add(pred);
+        };
+        while(true) {
+            swapUpdateScoreQ();
+            backtrackingNextQ().clearAll();
+            team.barrier(role);
+            // Check wether there is a vertex on such a place
+            val maxVertexCount = team.allreduce(role, backtrackingCurrentQ().setBitCount(), Team.MAX);
+            if (maxVertexCount == 0L)
+                break;
+            val traverse = (localSucc: Vertex, threadId: Int) => {           
+                val predList = predecessors()(localSucc);
+                val orgSucc = LocSrcToOrg(localSucc);
+                if (predList != null && predList.size() > 0) {
+                    val sz = predList.size();
+                    for (i in 0..(sz -1)) {  
+                        val pred = predList(i);
+                        val w_sigma = pathCount()(localSucc);
+                        val w_delta = dependencies()(localSucc);
+                        val w_mu = distance()(localSucc);
+                        if (isLocalVertex(pred))  {
+                            calDependency(w_mu, w_delta, w_sigma, pred);
+                        } else {
+                            val bufId = threadId;
+                            val pid = getVertexPlaceRole(pred);
+                            calRemote(threadId, pid, w_mu, w_delta, w_sigma, pred);
+                        }    
+                    }
+                }
+            };
+            backtrackingCurrentQ().examine(traverse);
+            _flushAll();
+            team.barrier(role);
+        }
     }
-    
-    protected def swapQ() {
         
-        // val temp = nextTraverseQ();
-        // localHandle().lcNextTraverseQ = currentTraverseQ();
-        // localHandle().lcCurrentTraverseQ = temp;
+    private def calDependency(w_mu: Long, w_delta: Double, w_sigma: Long, v: Vertex) {
+        val locPred = OrgToLocSrc(v);
+        val numUpdates = add_and_fetch[Int](numUpdates(), locPred, 1);
+        val sigma = pathCount()(locPred) as Double;
+        
+        // lch()._dependenciesLock(locPred).lock();
+        atomic {
+            var dep: Double = 0;
+            if (lch().linearScale) {
+                dep = dependencies()(locPred) + (distance()(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
+            } else {
+                dep = dependencies()(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
+            }
+            dependencies()(locPred) = dep;
+        }
+        // lch()._dependenciesLock(locPred).unlock();
+        
+        if(numUpdates == successorCount()(locPred)) {
+            if (LocSrcToOrg(locPred) != lch().currentSource())
+                score()(locPred) = score()(locPred) + dependencies()(locPred);
+            backtrackingNextQ().set(locPred);
+        }
+        assert(successorCount()(locPred) > 0 
+               && numUpdates()(locPred) <= successorCount()(locPred));
     }
-    
     ///***************************** Debug ******************/
     private def print() {
         for (p in team.placeGroup()) {
             for (i in 0..(lch().numLocalVertices - 1)) {
-                if (predecessors()(i) != null)
-                    if(predecessors()(i).size() > 0) {
-                        Console.OUT.println(LocSrcToOrg(i) + " " + successors()(i));
-                    }
+                if (score()(i) > 0)
+                    Console.OUT.println(LocSrcToOrg(i) + " " + score()(i));
             }
         }
     }
-     
 }
