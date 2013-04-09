@@ -66,7 +66,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val distance: IndexedMemoryChunk[Long];
         val dependencies: IndexedMemoryChunk[Double];
         val score: IndexedMemoryChunk[Double];
-        val geodesicPath: IndexedMemoryChunk[Long];
         val predecessors: IndexedMemoryChunk[ArrayList[Vertex]];
         val successors: IndexedMemoryChunk[ArrayList[Vertex]];
         val successorCount: IndexedMemoryChunk[Int];
@@ -110,27 +109,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val deltaBuf: Array[Array[ArrayList[Double]]];
         val muBuf: Array[Array[ArrayList[Long]]];
         
-        // val lcPathCount: BigArray[Long];
-        // val lcPredecessor: BigArray[ArrayList[VertexId]];
-        // val lcSuccessor: BigArray[ArrayList[VertexId]];
-        // val lcIsDeleted: BigArray[Boolean];
-        // val lcDelta: Long;
-        // val lcDeletedVertices: GrowableIndexedMemoryChunk[VertexId];
-        // val lcBuckets: Bucket;
-        // val lcScore: BigArray[Double];
-        // val lcUpdates: BigArray[Int];
-        // val lcDependencies: BigArray[Double];
-        
-        // var lcCurrentBucket: BucketIndex;
-        // var lcCurrentTraverseQ: FixedVertexQueue;
-        // var lcNextTraverseQ: FixedVertexQueue;
-        // var lcCurrentSource: VertexId;
-        // var updateScoreLock: Lock;
-        // var updateSuccessorLock: Lock;
-        // var lcNonIncreaseDistanceCurrentQ: FixedVertexQueue;
-        // var lcNonIncreaseDistanceNextQ: FixedVertexQueue;
-        
-        protected def this (csr_: DistSparseMatrix,
+        private def this (csr_: DistSparseMatrix,
                             weight_: DistMemoryChunk[Double],
                             transferBufSize: Int,
                             delta_: Int) {
@@ -147,10 +126,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             delta = delta_;
             
             distance = IndexedMemoryChunk.allocateZeroed[Long](
-                    numLocalVertices,
-                    ALIGN,
-                    CONGRUENT);
-            geodesicPath = IndexedMemoryChunk.allocateZeroed[Long](
                     numLocalVertices,
                     ALIGN,
                     CONGRUENT);
@@ -236,47 +211,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                     (int) => new Array[ArrayList[Long]](team.size(),
                             (int) => new ArrayList[Long](transferBufSize)));
         }
-        // public def this(g: BigGraph,
-        //                 currentSource: VertexId,
-        //                 distance: BigArray[Long],
-        //                 pathCount: BigArray[Long],
-        //                 predecessor: BigArray[ArrayList[VertexId]],
-        //                 successor: BigArray[ArrayList[VertexId]],
-        //                 isDeleted: BigArray[Boolean],
-        //                 delta: Long,
-        //                 deletedVertices: GrowableIndexedMemoryChunk[VertexId],
-        //                 buckets: Bucket,
-        //                 currentBucket: BucketIndex,
-        //                 currentTraverseQ: FixedVertexQueue,
-        //                 nextTraverseQ: FixedVertexQueue,
-        //                 score: BigArray[Double],
-        //                 nonIncDistCurrentQ: FixedVertexQueue,
-        //                 nonIncDistNextQ: FixedVertexQueue,
-        //                 updates: BigArray[Int],
-        //                 dependencies: BigArray[Double]) {
-            
-            // property(g, 
-            //          distance,
-            //          pathCount,
-            //          predecessor, 
-            //          successor, 
-            //          isDeleted, 
-            //          delta, 
-            //          deletedVertices, 
-            //          buckets,
-            //          score,
-            //          updates,
-            //          dependencies);
-            // 
-            // this.lcCurrentBucket = currentBucket;
-            // this.lcCurrentTraverseQ = currentTraverseQ;
-            // this.lcNextTraverseQ = nextTraverseQ;
-            // this.lcCurrentSource = currentSource;
-            // this.lcNonIncreaseDistanceCurrentQ = nonIncDistCurrentQ;
-            // this.lcNonIncreaseDistanceNextQ = nonIncDistNextQ;
-            // this.updateScoreLock = new Lock();
-            // this.updateSuccessorLock = new Lock();
-        // }
     }
     
     protected def this(lch_: PlaceLocalHandle[LocalState]) {
@@ -299,60 +233,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     }
     
     public static def run(val g: Graph) {
-
-        // val nodes = g.getVertexCount();
-        // val distance = BigArray.make[Long](nodes);
-        // val score = BigArray.make[Double](nodes);
-        // val pathCount = BigArray.make[Long](nodes);
-        // val predecessor = BigArray.make[ArrayList[VertexId]](nodes);
-        // val successor = BigArray.make[ArrayList[VertexId]](nodes);
-        // val isDeleted = BigArray.make[Boolean](nodes);
-        // val updates = BigArray.make[Int](nodes);
-        // val delta = 1;
-        // val initBucketSize = 20;
-        // val currentSource = 1L;
-        // val dependecies = BigArray.make[Double](nodes);
-        // 
-        // val initBigBc = () => {
-        //     
-        //     val currentTraverseQ = new FixedVertexQueue(nodes);
-        //     val nextTraverseQ = new FixedVertexQueue(nodes);
-        //     val nonIncDistCurrentQ = new FixedVertexQueue(nodes);
-        //     val nonIncDistNextQ = new FixedVertexQueue(nodes);
-        //     val buckets = new Bucket(initBucketSize);
-        //     
-        //     // Init bucket
-        //     for (var i: Int = 0; i < buckets.capacity(); ++i) {
-        //         
-        //         buckets.add(new ArrayList[VertexId]());
-        //     }
-        //     
-        //     val initBucketIndex = 0L;
-        //     
-        //     return new LocalState(g,
-        //                           currentSource,
-        //                           distance,
-        //                           pathCount,
-        //                           predecessor,
-        //                           successor,
-        //                           isDeleted,
-        //                           delta,
-        //                           new GrowableIndexedMemoryChunk[VertexId](),
-        //                           buckets,
-        //                           initBucketIndex,
-        //                           currentTraverseQ,
-        //                           nextTraverseQ,
-        //                           score,
-        //                           nonIncDistCurrentQ,
-        //                           nonIncDistNextQ,
-        //                           updates,
-        //                           dependecies);
-        // };
-        // 
-        // // Create struct on each place
-        // val dist = Dist.makeUnique();
-        // val lch = PlaceLocalHandle.make[LocalState](dist, initBigBc);
-        // val bc = new BigBetweennessCentralityWeighted(lch);
         val team = g.team();
         val places = team.placeGroup();
         val transBuf = 1 << 8;
@@ -496,7 +376,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val startVertex = 0;
         val endVertex = 0;
         // for each source
-        for(var v: Int = startVertex; v <= endVertex; ++v) {
+        for(v in startVertex..endVertex) {
             // set current source
             finish for(p in places) {
                 val curSrc = v;
@@ -507,7 +387,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             }
         }
         time = System.currentTimeMillis() - time;
-        print();
+        // print();
         Console.OUT.println("BC time: " + time);
     }
     
@@ -515,7 +395,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         // clear data local data
         for (i in 0..(lch().numLocalVertices - 1)) {
             lch().distance(i) = Long.MAX_VALUE;
-            lch().geodesicPath(i) = 0;
         }
     }
     
@@ -526,18 +405,22 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         lch().currentSource() = src;
         deltaStepping();
         Runtime.x10rtBlockingProbe();
+        team.barrier(role);
 
         Console.OUT.println("Find Successors");
         deriveSuccessor();
         Runtime.x10rtBlockingProbe();
+        team.barrier(role);
         
         Console.OUT.println("Count Path");
         travelInNonIncreasingOrder();
         Runtime.x10rtBlockingProbe();
+        team.barrier(role);
        
         Console.OUT.println("Update score");
         updateScore();
-        Runtime.x10rtBlockingProbe();        
+        Runtime.x10rtBlockingProbe();
+        team.barrier(role);
     }
     
     protected def deltaStepping() {
@@ -841,23 +724,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         flushAll();
     }
     
-    private def visit(orgSrc: Long, orgDst: Long, predDistance: Long, predSigma: Long) {
-        val localDst = OrgToLocSrc(orgDst);
-        val d = predDistance + 1;
-        val f = () => {
-            // increase the number of geodesic paths
-            add_and_fetch[Long](pathCount(), localDst, predSigma);
-        };
-        if (compare_and_swap(level(), localDst, 0L, d)) {
-            // First visit
-            nextTraverseQ().set(localDst);
-        }         
-        if (level()(localDst) == d){
-            // Another shortest path
-            f();
-        }
-    }
-    
     private def travelInNonIncreasingOrder() {
         val bufSize = lch().BUFFER_SIZE;
         val numTask = lch().NUM_TASK;
@@ -885,14 +751,17 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             clearBuffer(bufId, pid);
         };
         val _flushAll = () => {
-            finish for (i in 0..(numTask -1))
-                async for (ii in 0..(team.size() -1)) {
-                    if (predBuf(i)(ii).size() > 0)
-                        _flush(i, ii);
+            finish for (i in 0..(numTask - 1)) {
+                val k = i;
+                async for (ii in 0..(team.size() - 1)) {
+                    val kk = ii;
+                    if (predBuf(k)(kk).size() > 0)
+                        _flush(k, kk);
                 }
+            }
         };
         val _visitRemote = (bufId: Int, pid: Int, pred: Vertex, succ: Vertex, predSigma: Long) => {
-            if (predBuf(bufId)(pid).size() >= bufSize) {  
+            if (predBuf(bufId)(pid).size() == bufSize) {  
                 _flush(bufId, pid);
             } 
             predBuf(bufId)(pid).add(pred);
@@ -917,21 +786,22 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             if (maxVertexCount == 0L)
                 break;
             val traverse = (localSrc: Vertex, threadId: Int) => {           
-                val neighbors = successors()(localSrc);
-                if (neighbors == null) {
+                val succs = successors()(localSrc);
+                if (succs == null || succs.size() == 0) {
                     // No successor is leave node
                     backtrackingNextQ().set(localSrc);
                 } else {
                     val predDistance = level()(localSrc);
                     val predSigma = pathCount()(localSrc);
                     val orgSrc = LocSrcToOrg(localSrc);                        
-                    for(i in 0..(neighbors.size() - 1)) {
-                        val orgDst = LocDstToOrg(neighbors(i));
+                    for(i in 0..(succs.size() - 1)) {
+                        val orgDst = succs(i);
                         if (isLocalVertex(orgDst))  {
                             visit(orgSrc, orgDst, predDistance, predSigma);
                         } else {
                             val bufId = threadId;
                             val p: Place = getVertexPlace(orgDst);
+                            // at (p) visit(orgSrc, orgDst, predDistance, predSigma);
                             _visitRemote(bufId, team.role(p)(0), orgSrc, orgDst, predSigma);
                         }    
                     }
@@ -941,6 +811,23 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             _flushAll();
             team.barrier(role);
             lch().currentLevel(lch().currentLevel() + 1);
+        }
+    }
+    
+    private def visit(orgSrc: Long, orgDst: Long, predDistance: Long, predSigma: Long) {
+        val localDst = OrgToLocSrc(orgDst);
+        val d = predDistance + 1;
+        val f = () => {
+            // increase the number of geodesic paths
+            add_and_fetch[Long](pathCount(), localDst, predSigma);
+        };
+        if (compare_and_swap(level(), localDst, 0L, d)) {
+            // First visit
+            nextTraverseQ().set(localDst);
+        }         
+        if (level()(localDst) == d){
+            // Another shortest path
+            f();
         }
     }
     
@@ -1024,32 +911,44 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private def calDependency(w_mu: Long, w_delta: Double, w_sigma: Long, v: Vertex) {
         val locPred = OrgToLocSrc(v);
         val numUpdates = add_and_fetch[Int](numUpdates(), locPred, 1);
-        val sigma = pathCount()(locPred) as Double;
+        val sigma = pathCount()(locPred);
         
-        // lch()._dependenciesLock(locPred).lock();
-        atomic {
-            var dep: Double = 0;
-            if (lch().linearScale) {
-                dep = dependencies()(locPred) + (distance()(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
-            } else {
-                dep = dependencies()(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
+        while (true) {
+            // non-blocking mutual exclusion
+            // increase semaphore
+            if (compare_and_swap[Long](lch().semaphore, locPred, 0, 1)) {
+                var dep: Double = 0;
+                if (lch().linearScale) {
+                    dep = dependencies()(locPred) + (distance()(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
+                } else {
+                    dep = dependencies()(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
+                }
+                dependencies()(locPred) = dep;
+                while(true){
+                    if(compare_and_swap[Long](lch().semaphore, locPred, 1, 0))
+                        break;
+                }
+                break;
             }
-            dependencies()(locPred) = dep;
         }
-        // lch()._dependenciesLock(locPred).unlock();
-        
         if(numUpdates == successorCount()(locPred)) {
-            if (LocSrcToOrg(locPred) != lch().currentSource())
+            if (v != lch().currentSource())
                 score()(locPred) = score()(locPred) + dependencies()(locPred);
             backtrackingNextQ().set(locPred);
         }
         assert(successorCount()(locPred) > 0 
                && numUpdates()(locPred) <= successorCount()(locPred));
     }
+    
     ///***************************** Debug ******************/
     private def print() {
         for (p in team.placeGroup()) {
-            for (i in 0..(lch().numLocalVertices - 1)) {
+            at (p) for (i in 0..(lch().numLocalVertices - 1)) {
+                // Console.OUT.println(LocSrcToOrg(i) + " " + pathCount()(i));
+                // if (successors()(i) != null && successors()(i).size() > 0)
+                //     Console.OUT.println(LocSrcToOrg(i) + " " + successors()(i));
+                // if (predecessors()(i) != null && predecessors()(i).size() > 0)
+                //     Console.OUT.println(LocSrcToOrg(i) + " " + predecessors()(i));
                 if (score()(i) > 0)
                     Console.OUT.println(LocSrcToOrg(i) + " " + score()(i));
             }
