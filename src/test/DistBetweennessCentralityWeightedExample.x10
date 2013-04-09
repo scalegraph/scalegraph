@@ -34,7 +34,7 @@ public class DistBetweennessCentralityWeightedExample {
         return Tuple3[Long, Long, Double] (
                 Long.parse(items(0).trim()),
                 Long.parse(items(1).trim()),
-                0D
+                1D
         );
     };
     
@@ -52,9 +52,11 @@ public class DistBetweennessCentralityWeightedExample {
         
         // Create graph
         val edgeList = rawData.get1();
+        val weightList = rawData.get2();
+        
         val g = new Graph(team, Graph.VertexType.Long, false);
         g.addEdges(edgeList.data(team.placeGroup()));
-        
+        g.setEdgeAttribute[Double]("weight", weightList.data(team.placeGroup()));
         DistBetweennessCentralityWeighted.run(g);
     }
 }
