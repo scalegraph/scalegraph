@@ -19,18 +19,13 @@ public abstract class FileManager {
 	
 	public abstract def getHeaderFileName() : String;
 	
+	public abstract def getDataFileId(offset : Long) : Int;
+	
 	public abstract def getDataFileName(offset : Long) : String;
 	
+	public abstract def getFileLocalOffset(id : Int, offset : Long) : Long;
+	
 	public abstract def getOffsetAdjuster(offset : Long) : (Long) => Long;
-	
-	public def currentOffset() : Long {
-		return offset;
-	}
-	
-	public def addOffset(i:Long) : Long {
-		offset += i;
-		return offset;
-	}
 	
 	public abstract def nextFile() : String;
 }
@@ -52,10 +47,18 @@ class SingleFileManager extends FileManager {
 		return path;
 	}
 	
+	public def getDataFileId(offset : Long) : Int {
+		return 0;
+	}
+	
 	public def getDataFileName(offset : Long) : String {
 		return path;
 	}
 
+	public def getFileLocalOffset(id : Int, offset : Long) : Long {
+		return offset;
+	}
+	
 	public def getOffsetAdjuster(offset : Long) : (Long) => Long {
 		return (off:Long) => off;
 	}
@@ -105,18 +108,30 @@ class ScatteredFileManager extends FileManager {
 		return getFileName(0);
 	}
 	
-	public def getDataFileName(offset : Long) : String {
+	public def getDataFileId(offset : Long) : Int {
 		if(fileOffset == null) {
 			makeFileOffset();
 		}
 		for(var i:Int = 1; i < fileOffset.size; i++) {
 			if(offset < fileOffset(i)) {
-				return getFileName(i - 1);
+				return i - 1;
 			}
 		}
-		return null;
+		return -1;
 	}
 
+	public def getDataFileName(offset : Long) : String {
+		val id = getDataFileId(offset);
+		if(id == -1) {
+			return null;
+		}
+		return getFileName(id);
+	}
+
+	public def getFileLocalOffset(id : Int, offset : Long) : Long {
+		return offset - fileOffset(id);
+	}
+	
 	public def getOffsetAdjuster(offset : Long) : (Long) => Long {
 		return (off:Long) => off - offset;
 	}

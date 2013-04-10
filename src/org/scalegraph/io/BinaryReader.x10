@@ -157,7 +157,9 @@ public class BinaryReader {
 			val block_size = block.size;
 			val block_n = block.n;
 			
-			val filename : String = fm.getDataFileName(block_offset);  // assign a name of a file which corresponds to this block
+			val fileId = fm.getDataFileId(block_offset);
+			val filename : String = fm.getFileName(fileId);
+			val local_block_offset = fm.getFileLocalOffset(fileId, block_offset);
 			
 			Common.debugprint("blockdata : size = " + block.size + ", offset = " + block.offset);
 			
@@ -169,7 +171,7 @@ public class BinaryReader {
 				
 				// read attribute data
 				val nr_ = NativeReader.make(filename);
-				val blockdata : MemoryPointer[Byte] = nr_.readBlockData(block_size, block_offset);
+				val blockdata : MemoryPointer[Byte] = nr_.readBlockData(block_size, local_block_offset);
 				var dataOffset:Long = 0L;
 				val num = block_n;
 				for(var j:Int = 0; j < nattr; j++) {

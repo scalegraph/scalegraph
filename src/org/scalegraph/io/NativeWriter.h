@@ -25,7 +25,7 @@ public:
 	std::list<void *> malloced;
 
 	NativeWriter(const char *filename) {
-		fd = open(filename, O_WRONLY | O_CREAT, 0666);
+		fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if(fd < 0) {
 			x10aux::throwException(x10::io::FileNotFoundException::_make(x10::lang::String::Lit(filename)));
 		}

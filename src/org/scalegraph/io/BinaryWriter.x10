@@ -45,6 +45,8 @@ public class BinaryWriter {
 		
 		var fm:FileManager;
 		if(scatter) {
+			val dir = new File(path);
+			dir.mkdir();
 			fm = new ScatteredFileManager(path);
 		} else {
 			fm = new SingleFileManager(path);
