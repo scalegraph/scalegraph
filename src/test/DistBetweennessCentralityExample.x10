@@ -20,7 +20,7 @@ import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.util.DistMemoryChunk;
 
 
-public class ExampleDistBetweennessCentrality {
+public class DistBetweennessCentralityExample {
     
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");
