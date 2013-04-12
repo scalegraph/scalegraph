@@ -126,13 +126,14 @@ public:
 		long psize = sysconf(_SC_PAGE_SIZE);
 		int pofs = offset / psize;
 		int ofs = offset % psize;
+		long actualLength = length + ofs;
 
-		void *ptr = mmap(addr, length, prot, flags, fd, psize * pofs);
+		void *ptr = mmap(addr, actualLength, prot, flags, fd, psize * pofs);
 		if(ptr == MAP_FAILED) {
 			x10aux::throwException(x10::lang::Exception::_make(x10::lang::String::Lit("mmap failed")));
 			return ptr;
 		} else {
-			mmaped.push_back(std::pair<void *, size_t>(ptr, length));
+			mmaped.push_back(std::pair<void *, size_t>(ptr, actualLength));
 			return (void *)((int8_t *)ptr + ofs);
 		}
 	}

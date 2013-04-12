@@ -12,10 +12,10 @@ import x10.util.ArrayBuilder;
 import x10.util.Team;
 
 import org.scalegraph.io.format.*;
+import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MemoryPointer;
-import org.scalegraph.util.tuple.*;
 
 
 class TmpBlock {
@@ -53,20 +53,20 @@ public class BinaryWriter {
 		}
 		val filename = fm.getHeaderFileName();
 		val nw = NativeWriter.make(filename);
-		val vAttrInfo = new AttributeInfo(team, vAttrData);
-		val eAttrInfo = new AttributeInfo(team, eAttrData);
+		val vAttrHandler = new Array[AttributeHandler](vAttrData.size, (i:Int) => AttributeHandler.makeFromAny(team, vAttrData(i)));
+		val eAttrHandler = new Array[AttributeHandler](eAttrData.size, (i:Int) => AttributeHandler.makeFromAny(team, eAttrData(i)));
 		
 		// make vertex property
-		val vProp = makeProperty(nw, vAttrInfo, vAttrName, vAttrData);
+		val vProp = makeProperty(nw, vAttrHandler, vAttrName, vAttrData);
 		printProperty(vProp);
 		
 		// make edge property
-		val eProp = makeProperty(nw, eAttrInfo, eAttrName, eAttrData);
+		val eProp = makeProperty(nw, eAttrHandler, eAttrName, eAttrData);
 		printProperty(eProp);
 		
 		
 		// vertex block partitioning
-		val vBlocks = getBlockPartitioning(team, vAttrInfo, vAttrData, minBlockSize);
+		val vBlocks = getBlockPartitioning(team, vAttrHandler, vAttrData, minBlockSize);
 		val vLocalDataSize = getLocalDataSize(team, vBlocks);
 		
 		// calculate vBlockInfo_n
@@ -76,7 +76,7 @@ public class BinaryWriter {
 		}
 		
 		// edge block partitioning
-		val eBlocks = getBlockPartitioning(team, eAttrInfo, eAttrData, minBlockSize);
+		val eBlocks = getBlockPartitioning(team, eAttrHandler, eAttrData, minBlockSize);
 		val eLocalDataSize = getLocalDataSize(team, eBlocks);
 		
 		// calculate eBlockInfo_n
@@ -152,22 +152,22 @@ public class BinaryWriter {
 		
 		// write to file
 		nw.writeMetaData(header, vProp, eProp, vBlockInfo, eBlockInfo);
-		writeAttributeData(team, fm, 1,               vAttrInfo, vAttrData, vBlocks);
-		writeAttributeData(team, fm, team.size() + 1, eAttrInfo, eAttrData, eBlocks);
+		writeAttributeData(team, fm, 1,               vAttrHandler, vAttrData, vBlocks);
+		writeAttributeData(team, fm, team.size() + 1, eAttrHandler, eAttrData, eBlocks);
 		
 		nw.del();
 	}
 	
 	
-	private static def makeProperty(nw : NativeWriter, attrInfo : AttributeInfo, attrName : Array[String], attrData : Array[Any]) : Property {
-		val numVert = attrInfo(0).numElems(attrData(0));
+	private static def makeProperty(nw : NativeWriter, attrHandler : Array[AttributeHandler], attrName : Array[String], attrData : Array[Any]) : Property {
+		val numVert = attrHandler(0).numElems(attrData(0));
 		val numAttr = attrData.size;
-		val id = new Array[Int](numAttr, (i:Int) => attrInfo(i).getId());
+		val id = new Array[Int](numAttr, (i:Int) => attrHandler(i).getId());
 		return nw.makeProperty(numVert, numAttr, id, attrName);
 	}
 	
 	
-	private static def getBlockPartitioning(team : Team, attrInfo : AttributeInfo, attrData : Array[Any], minBlockSize : Long) : Array[Array[TmpBlock]] {
+	private static def getBlockPartitioning(team : Team, attrHandler : Array[AttributeHandler], attrData : Array[Any], minBlockSize : Long) : Array[Array[TmpBlock]] {
 		val numAttr = attrData.size;
 		
 		val blocks = new Array[Array[TmpBlock]](team.size());
@@ -176,20 +176,20 @@ public class BinaryWriter {
 			async {
 				blocks(ii) = at(team.places()(ii)) {
 					
-					val localNumVert = attrInfo(0).localNumElems(attrData(0));
+					val localNumVert = attrHandler(0).localNumElems(attrData(0));
 					val blockBuilder = new ArrayBuilder[TmpBlock]();
 					var blockSize:Long = 0L;
 					var offset:Long = 0L;
 					for(var j:Long = 0L; j < localNumVert; j++) {
 						for(var k:Int = 0; k < numAttr; k++) {
-							blockSize += attrInfo(k).sizeOfElem(attrData(k), j);
+							blockSize += attrHandler(k).sizeOfElem(attrData(k), j);
 						}
 						if(blockSize >= minBlockSize || j == localNumVert - 1L) {
 							val tmpBlock = new TmpBlock();
 							tmpBlock.n = j - offset + 1L;
 							for(var k:Int = 0; k < numAttr; k++) {
 								tmpBlock.size = Common.align(tmpBlock.size, 8);
-								tmpBlock.size += attrInfo(k).sizeOfElems(attrData(k), offset, tmpBlock.n);
+								tmpBlock.size += attrHandler(k).sizeOfElems(attrData(k), offset, tmpBlock.n);
 							}
 							blockBuilder.add(tmpBlock);
 							blockSize = 0L;
@@ -238,7 +238,7 @@ public class BinaryWriter {
 	}
 	
 	
-	private static def writeAttributeData(team : Team, fm : FileManager, startFile : Int, attrInfo : AttributeInfo, attrData : Array[Any], blocks : Array[Array[TmpBlock]]) {
+	private static def writeAttributeData(team : Team, fm : FileManager, startFile : Int, attrHandler : Array[AttributeHandler], attrData : Array[Any], blocks : Array[Array[TmpBlock]]) {
 
 		finish for(var i:Int = 0; i < team.size(); i++) {
 			val ii = i;
@@ -255,7 +255,7 @@ public class BinaryWriter {
 					var fileOffset:Long = adjust(localBlocks(j).offset);
 					val num = localBlocks(j).n;
 					for(var k:Int = 0; k < attrData.size; k++) {
-						fileOffset = attrInfo(k).write(nw_, attrData(k), arrayOffset, fileOffset, num);
+						fileOffset = attrHandler(k).write(nw_, attrData(k), arrayOffset, fileOffset, num);
 					}
 					arrayOffset += num;
 				}
@@ -266,7 +266,7 @@ public class BinaryWriter {
 	
 	
 	/************************** test function ******************************/
-	private static def printProperty(prop : Property) {
+	private @Inline static def printProperty(prop : Property) {
 		Common.debugprint("n = " + prop.n);
 		Common.debugprint("nattr = " + prop.nattr);
 		for(var i:Int = 0; i < prop.nattr; i++) {
@@ -274,53 +274,12 @@ public class BinaryWriter {
 			Common.debugprint("attr[" + i + "] = {" + attr.id + ", " + attr.namelen + ", " + attr.getName() + "}");
 		}
 	}
-	private static def printBlockInfo(blockinfo : BlockInfo) {
+	
+	private @Inline static def printBlockInfo(blockinfo : BlockInfo) {
 		Common.debugprint("nBlock = " + blockinfo.n);
 		for(var i:Int = 0; i < blockinfo.n; i++) {
 			val block = blockinfo.block(i);
 			Common.debugprint("block[" + i + "] : offset = " + block.offset + ", size = " + block.size + ", n = " + block.n);
 		}
-	}
-	
-	private static def makeTestData() {
-		val team = Team.WORLD;
-		
-		val va_name = new Array[String](1);
-		va_name(0) = "hogee";
-		
-		val va_data = new Array[Any](1);
-		va_data(0) = new DistMemoryChunk[Int](team.placeGroup(), () => {
-			val mc = new MemoryChunk[Int](2);
-			mc(0) = here.id * 2 + 1;
-			mc(1) = here.id * 2 + 2;
-			mc
-		});
-		
-		val ea_name = new Array[String](2);
-		ea_name(0) = "hoge";
-		ea_name(1) = "foobar";
-		
-		val ea_data = new Array[Any](2);
-		ea_data(0) = new DistMemoryChunk[Short](team.placeGroup(), () => {
-			val mc = new MemoryChunk[Short](2);
-			mc(0) = (here.id * 2 + 1) as Short;
-			mc(1) = (here.id * 2 + 2) as Short;
-			mc
-		});
-		
-		ea_data(1) = new DistMemoryChunk[Byte](team.placeGroup(), () => {
-			val mc = new MemoryChunk[Byte](2);
-			mc(0) = (here.id * 2 + 1) as Byte;
-			mc(1) = (here.id * 2 + 2) as Byte;
-			mc
-		});
-		
-		return Tuple4[Array[String], Array[Any], Array[String], Array[Any]](va_name, va_data, ea_name, ea_data);
-	}
-	
-	public static def main(args : Array[String]) : void {
-		val team = Team.WORLD;
-		val tuple4 = makeTestData();
-		BinaryWriter.write(team, args(0), 0 as Byte, tuple4.get1(), tuple4.get2(), tuple4.get3(), tuple4.get4(), 4096, true);
 	}
 }
