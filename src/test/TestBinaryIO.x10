@@ -1,7 +1,11 @@
 package test;
 
+import x10.io.File;
 import x10.util.Team;
+import x10.util.Timer;
 
+import org.scalegraph.fileread.*;
+import org.scalegraph.graph.*;
 import org.scalegraph.io.*;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
@@ -23,7 +27,9 @@ public class TestBinaryIO {
 		val fileName = args(1);
 		val team = Team.WORLD;
 		
+		var time : Long = Timer.milliTime();
 		val tuple4 = BinaryReader.read(team, fileName);
+		time = Timer.milliTime() - time;
 		val vAttrInfo = new Array[AttributeHandler](tuple4.get2().size, (i:Int) => AttributeHandler.makeFromAny(team, tuple4.get2()(i)));
 		val eAttrInfo = new Array[AttributeHandler](tuple4.get4().size, (i:Int) => AttributeHandler.makeFromAny(team, tuple4.get4()(i)));
 		for(var i:Int = 0; i < tuple4.get2().size; i++) {
@@ -32,26 +38,38 @@ public class TestBinaryIO {
 		for(var i:Int = 0; i < tuple4.get4().size; i++) {
 			eAttrInfo(i).print(tuple4.get4()(i));
 		}
+		Console.OUT.printf("BinaryReader.read(): %ld msec\n", time);
 	}
 	
 	
 	public static def write(args : Array[String]) {
 		val readFileName = args(1);
 		val writeFileName = args(2);
-		val scatter = Boolean.parse(args(3));
+		val blockSize = Int.parse(args(3));
+		val scatter = Boolean.parse(args(4));
 		val team = Team.WORLD;
 		
-		val tuple2 = org.scalegraph.fileread.DistributedReader.read(team, new Array[String](1, readFileName), (line:String) => {
+		val fileList : Array[String];
+		val file = new File(readFileName);
+		if(file.isDirectory()) {
+			fileList = file.list();
+		} else {
+			fileList = new Array[String](1, readFileName);
+		}
+		
+		val tuple2 = DistributedReader.read(team, fileList, (line:String) => {
 			val list = line.split(" ");
 			Tuple3[Long, Long, Double](Long.parse(list(0)), Long.parse(list(1)), 1.0)
 		});
 		
 		val edgelist = tuple2.get1().data(team.placeGroup());
 		
-		val graph = new org.scalegraph.graph.Graph(team, org.scalegraph.graph.Graph.VertexType.Long, false);
+		val graph = new Graph(team, Graph.VertexType.Long, false);
 		graph.addEdges(edgelist);
 		val numV = graph.numberOfVertices();
+		Console.OUT.println("numV = " + numV);
 		val numE = graph.numberOfEdges();
+		Console.OUT.println("numE = " + numE);
 		val numP = team.size();
 		val splittedEdgeList = Common.split[Long](team, edgelist);
 		
@@ -64,7 +82,10 @@ public class TestBinaryIO {
 		eaData(0) = splittedEdgeList.get1();
 		eaData(1) = splittedEdgeList.get2();
 		
-		BinaryWriter.write(team, writeFileName, 0 as Byte, vaName, vaData, eaName, eaData, 4096, scatter);
+		var time : Long = Timer.milliTime();
+		BinaryWriter.write(team, writeFileName, 0 as Byte, vaName, vaData, eaName, eaData, blockSize, scatter);
+		time = Timer.milliTime() - time;
+		Console.OUT.printf("BinaryWriter.write(): %ld msec\n", time);
 	}
 	
 	
