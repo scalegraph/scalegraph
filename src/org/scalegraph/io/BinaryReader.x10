@@ -6,20 +6,18 @@ import x10.io.File;
 import x10.util.Team;
 import x10.util.ArrayList;
 
-import x10.compiler.Ifdef;
 import x10.compiler.Inline;
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPOutputFile;
 
+import org.scalegraph.io.format.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MemoryPointer;
-
-import org.scalegraph.io.format.*;
 
 
 @NativeCPPInclude("format/struct.h")
@@ -141,8 +139,8 @@ public class BinaryReader {
 		for(var j:Int = 0; j < nattr; j++) {
 			attrId(j) = prop.attr(j).id;
 		}
-		val attrInfo = new AttributeInfo(team, attrId);
-		val attributes = new Array[Any]( nattr, (i:Int) => attrInfo(i).create( () => localArraySize(here.id) ) );
+		val attrHandler = new Array[AttributeHandler](nattr, (i:Int) => AttributeHandler.makeFromId(team, attrId(i)));
+		val attributes = new Array[Any]( nattr, (i:Int) => attrHandler(i).create( () => localArraySize(here.id) ) );
 		
 		// assign closures to each place
 		blockAllocater.reset();
@@ -167,7 +165,7 @@ public class BinaryReader {
 			localArrayOffset(pid) += block_n;
 			
 			queue(pid).add( () => {
-				Common.debugprint("block_size = " + block_size + ", block_offset = " + block_offset + ", block_n = " + block_n);
+				Common.debugprint("block_size = " + block_size + ", local_block_offset = " + local_block_offset + ", block_n = " + block_n);
 				
 				// read attribute data
 				val nr_ = NativeReader.make(filename);
@@ -178,7 +176,7 @@ public class BinaryReader {
 					
 					val array = attributes(j);
 					dataOffset = Common.align(dataOffset, 8);
-					dataOffset += attrInfo(j).read(nr_, array, arrayOffset, blockdata + dataOffset, num);
+					dataOffset += attrHandler(j).read(nr_, array, arrayOffset, blockdata + dataOffset, num);
 				}
 				nr_.del();
 			});
@@ -199,7 +197,7 @@ public class BinaryReader {
 	
 	
 	/************************** test function ******************************/
-	private static def printProperty(prop : Property) {
+	private @Inline static def printProperty(prop : Property) {
 		Common.debugprint("n = " + prop.n);
 		Common.debugprint("nattr = " + prop.nattr);
 		for(var i:Int = 0; i < prop.nattr; i++) {
@@ -207,24 +205,12 @@ public class BinaryReader {
 			Common.debugprint("attr[" + i + "] = {" + attr.id + ", " + attr.namelen + ", " + attr.getName() + "}");
 		}
 	}
-	private static def printBlockInfo(blockinfo : BlockInfo) {
+	
+	private @Inline static def printBlockInfo(blockinfo : BlockInfo) {
 		Common.debugprint("nBlock = " + blockinfo.n);
 		for(var i:Int = 0; i < blockinfo.n; i++) {
 			val block = blockinfo.block(i);
 			Common.debugprint("block[" + i + "] : offset = " + block.offset + ", size = " + block.size + ", n = " + block.n);
-		}
-	}
-	
-	public static def main(args : Array[String]) {
-		val team = Team.WORLD;
-		val tuple4 = BinaryReader.read(team, args(0));
-		val vAttrInfo = new AttributeInfo(team, tuple4.get2());
-		val eAttrInfo = new AttributeInfo(team, tuple4.get4());
-		for(var i:Int = 0; i < tuple4.get2().size; i++) {
-			vAttrInfo(i).print(tuple4.get2()(i));
-		}
-		for(var i:Int = 0; i < tuple4.get4().size; i++) {
-			eAttrInfo(i).print(tuple4.get4()(i));
 		}
 	}
 }

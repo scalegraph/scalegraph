@@ -28,6 +28,8 @@ public abstract class FileManager {
 	public abstract def getOffsetAdjuster(offset : Long) : (Long) => Long;
 	
 	public abstract def nextFile() : String;
+	
+	public abstract def clear() : void;
 }
 
 
@@ -65,6 +67,10 @@ class SingleFileManager extends FileManager {
 	
 	public def nextFile() : String {
 		return path;
+	}
+	
+	public def clear() : void {
+		new File(path).delete();
 	}
 }
 
@@ -140,5 +146,14 @@ class ScatteredFileManager extends FileManager {
 		count++;
 		offset = 0;
 		return getFileName(count);
+	}
+	
+	public def clear() : void {
+		val dir = new File(path);
+		val nFiles = dir.list().size;
+		for(var i:Int = 0; i < nFiles; i++) {
+			val file = new File(getFileName(i));
+			file.delete();
+		}
 	}
 }
