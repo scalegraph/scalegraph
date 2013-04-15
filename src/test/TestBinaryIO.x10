@@ -25,11 +25,18 @@ public class TestBinaryIO {
 	
 	public static def read(args : Array[String]) {
 		val fileName = args(1);
+		val numExec = Int.parse(args(2));
 		val team = Team.WORLD;
 		
-		var time : Long = Timer.milliTime();
-		val tuple4 = BinaryReader.read(team, fileName);
-		time = Timer.milliTime() - time;
+		var acc : Long = 0L;
+		for(var i:Int = 0; i < numExec; i++) {
+			var time : Long = Timer.milliTime();
+			val tuple4 = BinaryReader.read(team, fileName);
+			time = Timer.milliTime() - time;
+			Console.OUT.printf("Test (%d) : %.3lf sec\n", i, time / 1000.0);
+			acc += time;
+		}
+		/*
 		val vAttrInfo = new Array[AttributeHandler](tuple4.get2().size, (i:Int) => AttributeHandler.makeFromAny(team, tuple4.get2()(i)));
 		val eAttrInfo = new Array[AttributeHandler](tuple4.get4().size, (i:Int) => AttributeHandler.makeFromAny(team, tuple4.get4()(i)));
 		for(var i:Int = 0; i < tuple4.get2().size; i++) {
@@ -38,7 +45,8 @@ public class TestBinaryIO {
 		for(var i:Int = 0; i < tuple4.get4().size; i++) {
 			eAttrInfo(i).print(tuple4.get4()(i));
 		}
-		Console.OUT.printf("BinaryReader.read(): %ld msec\n", time);
+		*/
+		Console.OUT.printf("Average : %.3lf sec\n", acc / numExec as Double / 1000.0);
 	}
 	
 	

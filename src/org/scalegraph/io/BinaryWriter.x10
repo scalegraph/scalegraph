@@ -51,6 +51,7 @@ public class BinaryWriter {
 		} else {
 			fm = new SingleFileManager(path);
 		}
+		fm.clear();
 		val filename = fm.getHeaderFileName();
 		val nw = NativeWriter.make(filename);
 		val vAttrHandler = new Array[AttributeHandler](vAttrData.size, (i:Int) => AttributeHandler.makeFromAny(team, vAttrData(i)));
