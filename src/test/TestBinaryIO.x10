@@ -17,6 +17,8 @@ public class TestBinaryIO {
 			read(args);
 		} else if(args(0).equals("write")) {
 			write(args);
+		} else if(args(0).equals("import")) {
+			importFromEdgeList(args);
 		} else {
 			throw new IllegalArgumentException();
 		}
@@ -53,7 +55,7 @@ public class TestBinaryIO {
 	public static def write(args : Array[String]) {
 		val readFileName = args(1);
 		val writeFileName = args(2);
-		val blockSize = Int.parse(args(3));
+		val blockSize = Long.parse(args(3));
 		val scatter = Boolean.parse(args(4));
 		val team = Team.WORLD;
 		
@@ -94,6 +96,18 @@ public class TestBinaryIO {
 		BinaryWriter.write(team, writeFileName, 0 as Byte, vaName, vaData, eaName, eaData, blockSize, scatter);
 		time = Timer.milliTime() - time;
 		Console.OUT.printf("BinaryWriter.write(): %ld msec\n", time);
+	}
+	
+	
+	private static def importFromEdgeList(args : Array[String]) {
+		val readFileName = args(1);
+		val writeFileName = args(2);
+		val separator = args(3);
+		val blockSize = Long.parse(args(4));
+		val scatter = Boolean.parse(args(5));
+		val team = Team.WORLD;
+		
+		Import.fromEdgeList(readFileName, writeFileName, separator, blockSize, scatter);
 	}
 	
 	
