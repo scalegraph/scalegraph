@@ -39,7 +39,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val gWeight: DistMemoryChunk[Double];
         val csr: SparseMatrix;
         val weight: MemoryChunk[Double];
-        val distance: IndexedMemoryChunk[Long];
+        val distance: IndexedMemoryChunk[Double];
         val dependencies: IndexedMemoryChunk[Double];
         val score: IndexedMemoryChunk[Double];
         val predecessors: IndexedMemoryChunk[ArrayList[Vertex]];
@@ -84,7 +84,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val succBuf: Array[Array[ArrayList[Vertex]]];
         val sigmaBuf: Array[Array[ArrayList[Long]]];
         val deltaBuf: Array[Array[ArrayList[Double]]];
-        val muBuf: Array[Array[ArrayList[Long]]];
+        val muBuf: Array[Array[ArrayList[Double]]];
         
         private def this (csr_: DistSparseMatrix,
                             weight_: DistMemoryChunk[Double],
@@ -104,7 +104,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             NUM_TASK = Runtime.NTHREADS;
             delta = delta_;
             
-            distance = IndexedMemoryChunk.allocateZeroed[Long](
+            distance = IndexedMemoryChunk.allocateZeroed[Double](
                     numLocalVertices,
                     ALIGN,
                     CONGRUENT);
@@ -186,9 +186,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             deltaBuf = new Array[Array[ArrayList[Double]]](NUM_TASK,
                     (int) => new Array[ArrayList[Double]](team.size(),
                             (int) => new ArrayList[Double](transferBufSize)));
-            muBuf = new Array[Array[ArrayList[Long]]](NUM_TASK,
-                    (int) => new Array[ArrayList[Long]](team.size(),
-                            (int) => new ArrayList[Long](transferBufSize)));
+            muBuf = new Array[Array[ArrayList[Double]]](NUM_TASK,
+                    (int) => new Array[ArrayList[Double]](team.size(),
+                            (int) => new ArrayList[Double](transferBufSize)));
         }
     }
     
@@ -455,6 +455,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     }
     
     protected def deltaStepping() {
+        // buffer name may not reflec its use
         val bufSize = lch().BUFFER_SIZE;
         val NUM_TASK = lch().NUM_TASK;
         val bufferV = lch().predBuf;
@@ -492,7 +493,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                 }
             }
         };
-        val remoteRelax = (threadId: Int, pid: Int, v: Vertex, w: Vertex, x: Long) => {
+        val remoteRelax = (threadId: Int, pid: Int, v: Vertex, w: Vertex, x: Double) => {
             if (bufferV(threadId)(pid).size() == bufSize) {
                 flush(threadId, pid);
             }
@@ -525,6 +526,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                 break;
             }
             deletedVertexMap().clearAll();
+            deferredVertex().clearAll();
             do {
                 // Console.OUT.println(here.id + ":Loop: index-> " + currentBucketIndex());
                 if (currentBucketIndex()() < buckets().capacity()
@@ -547,7 +549,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                             val wWeight = neighboursWeight(i);
                             // val wWeight = 1L;
                             assert(wWeight > 0.0);
-                            val tentative = vDist + wWeight as Long;
+                            val tentative = vDist + wWeight;
                             if (wWeight <= delta()) {
                                 if (isLocalVertex(w)) {
                                     relax(v, w, tentative);
@@ -557,7 +559,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                                     // Console.OUT.println("remoteRelax: " + v + " " + w + " : " + vDist);
                                 }
                             } else {
-                                deferredVertex().set(localV);
+                                if (deferredVertex().isNotSet(localV)) {
+                                    deferredVertex().set(localV);
+                                }
                             }
                         }
                     });
@@ -580,38 +584,38 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                 val vDist = distance()(localV);
                 val neighbours = csr().adjacency(localV);
                 val neighbourWeight = csr().attribute(weight(), localV);
-                for (w in neighbours) {
-                    val wWeight = neighbourWeight(w);
+                for (i in 0..(neighbours.size() - 1)) {
+                    val w = neighbours(i);
+                    val wWeight = neighbourWeight(i);
                     assert(wWeight > 0.0);
-                    val tentative = vDist + wWeight as Long;
+                    val tentative = vDist + wWeight;
                     if (wWeight > delta()) {
                         if (isLocalVertex(w)) {
                             relax(v, w, tentative);
                         }  else {
                             val pid = getVertexPlaceRole(w);
                             remoteRelax(threadId, pid, v, w, tentative);
-                            Console.OUT.println("Heavy remoteRelax: " + v + " " + w + " : " + vDist);
                         }
                     }
                 }
-                throw new UnsupportedOperationException("have not tested yet");
+                // throw new UnsupportedOperationException("have not tested yet");
             });
             flushAll();
             currentBucketIndex()() = currentBucketIndex()() + 1; 
         } while (true);
     }
     
-    private def relax(v: Vertex, w: Vertex, x: Long) {  
+    private def relax(v: Vertex, w: Vertex, x: Double) {  
         val localW = OrgToLocSrc(w);  
         while (true) {
             // non-blocking mutual exclusion
             // increase semaphore
             if (compare_and_swap[Long](lch().semaphore, localW, 0, 1)) {
                 val wDist = distance()(localW);
-                var tentative: Long = x;
+                var tentative: Double = x;
                 // Console.OUT.println("Relax: " + v + ", " + w + " : " + x);
                 if (tentative < wDist) {
-                    val newIndex = (tentative / delta()) as BucketIndex;
+                    val newIndex = Math.ceil(tentative / delta()) as BucketIndex;
                     if (newIndex >= buckets().capacity()) {
                         atomic {
                             // recheck after acquiring lock
@@ -635,7 +639,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                                 lch().buckets(index)((lch().bucketQueuePointer() + 1) & 1):                            
                                     lch().buckets(index)(1); // another index, 1st index is next q
                     };
-                    if (wDist != Long.MAX_VALUE && deletedVertexMap().isSet(localW)) {
+                    if (wDist != Double.MAX_VALUE && deletedVertexMap().isSet(localW)) {
                         val oldIndex = (wDist / delta()) as BucketIndex;
                         if (oldIndex != newIndex) {
                             // Modifed only if changing bucket
@@ -890,7 +894,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                         _flush(i, ii);
                 }
         };
-        val calRemote = (bufId: Int, pid: Int, mu: Long, delta: Double, signma: Long, pred: Vertex) => {
+        val calRemote = (bufId: Int, pid: Int, mu: Double, delta: Double, signma: Long, pred: Vertex) => {
             if (predBuf(bufId)(pid).size() >= bufSize) {  
                 _flush(bufId, pid);
             } 
@@ -933,7 +937,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         }
     }
         
-    private def calDependency(w_mu: Long, w_delta: Double, w_sigma: Long, v: Vertex) {
+    private def calDependency(w_mu: Double, w_delta: Double, w_sigma: Long, v: Vertex) {
         val locPred = OrgToLocSrc(v);
         val numUpdates = add_and_fetch[Int](numUpdates(), locPred, 1);
         val sigma = pathCount()(locPred);

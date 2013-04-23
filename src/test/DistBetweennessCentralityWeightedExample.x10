@@ -34,7 +34,7 @@ public class DistBetweennessCentralityWeightedExample {
         return Tuple3[Long, Long, Double] (
                 Long.parse(items(0).trim()),
                 Long.parse(items(1).trim()),
-                1.0
+                2.0
         );
     };
     
