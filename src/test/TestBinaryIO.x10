@@ -33,7 +33,7 @@ public class TestBinaryIO {
 		var acc : Long = 0L;
 		for(var i:Int = 0; i < numExec; i++) {
 			var time : Long = Timer.milliTime();
-			val tuple4 = BinaryReader.read(team, fileName);
+			val rawgraph = BinaryReader.read(team, fileName);
 			time = Timer.milliTime() - time;
 			Console.OUT.printf("Test (%d) : %.3lf sec\n", i, time / 1000.0);
 			acc += time;
@@ -83,31 +83,33 @@ public class TestBinaryIO {
 		val numP = team.size();
 		val splittedEdgeList = Common.split[Long](team, edgelist);
 		
-		val vaName = new Array[String](1, "vertexId");
+		val vaName = new Array[String](1, ID.NAME_VERTEX_ID);
 		val vaData = new Array[Any](1, new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](numV / numP + ((numV % numP) > team.role()(0) ? 1L : 0L))));
 		val eaName = new Array[String](2);
-		eaName(0) = "srcId";
-		eaName(1) = "dstId";
+		eaName(0) = ID.NAME_SRC_ID;
+		eaName(1) = ID.NAME_DST_ID;
 		val eaData = new Array[Any](2);
 		eaData(0) = splittedEdgeList.get1();
 		eaData(1) = splittedEdgeList.get2();
 		
+		val rawgraph = RawGraph(vaName, vaData, eaName, eaData);
 		var time : Long = Timer.milliTime();
-		BinaryWriter.write(team, writeFileName, 0 as Byte, vaName, vaData, eaName, eaData, blockSize, scatter);
+		BinaryWriter.write(team, writeFileName, 0 as Byte, rawgraph, blockSize, scatter);
 		time = Timer.milliTime() - time;
 		Console.OUT.printf("BinaryWriter.write(): %ld msec\n", time);
 	}
 	
 	
 	private static def importFromEdgeList(args : Array[String]) {
-		val readFileName = args(1);
-		val writeFileName = args(2);
+		val readPath = args(1);
+		val writePath = args(2);
 		val separator = args(3);
 		val blockSize = Long.parse(args(4));
 		val scatter = Boolean.parse(args(5));
-		val team = Team.WORLD;
+		val team = new Team(new Array[Place](1, here));
 		
-		Import.fromEdgeList(readFileName, writeFileName, separator, blockSize, scatter);
+		val rawgraph = Import.fromEdgeList(readPath, writePath, separator);
+		BinaryWriter.write(team, writePath, ID.TYPE_GRAPH, rawgraph, blockSize, scatter);
 	}
 	
 	
@@ -142,6 +144,6 @@ public class TestBinaryIO {
 			mc
 		});
 		
-		return Tuple4[Array[String], Array[Any], Array[String], Array[Any]](va_name, va_data, ea_name, ea_data);
+		return RawGraph(va_name, va_data, ea_name, ea_data);
 	}
 }

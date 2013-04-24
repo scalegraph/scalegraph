@@ -16,7 +16,7 @@ import org.scalegraph.util.DistMemoryChunk;
 
 public class Import {
 	
-	public static def fromEdgeList(readPath : String, writePath : String, separator : String, minBlockSize : Long, scatter : Boolean) {
+	public static def fromEdgeList(readPath : String, writePath : String, separator : String) {
 		val singleTeam = new Team(new Array[Place](1, here));
 		
 		val reader = new BufferedReader(new FileReader(new File(readPath)));
@@ -58,6 +58,6 @@ public class Import {
 		eaData(0) = src;
 		eaData(1) = dst;
 		
-		BinaryWriter.write(singleTeam, writePath, ID.TYPE_GRAPH, vaName, vaData, eaName, eaData, minBlockSize, scatter);
+		return RawGraph(vaName, vaData, eaName, eaData);
 	}
 }

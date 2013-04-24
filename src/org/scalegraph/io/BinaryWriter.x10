@@ -38,10 +38,13 @@ class TmpBlock {
 @NativeCPPInclude("format/struct.h")
 public class BinaryWriter {
 	
-	public static def write(team : Team, path : String, datatype : Byte,
-			vAttrName : Array[String], vAttrData : Array[Any],
-			eAttrName : Array[String], eAttrData : Array[Any],
+	public static def write(team : Team, path : String, datatype : Byte, rawgraph : RawGraph,
 			minBlockSize : Long, scatter : Boolean) {
+		
+		val vAttrName = rawgraph.vAttrName;
+		val vAttrData = rawgraph.vAttrData;
+		val eAttrName = rawgraph.eAttrName;
+		val eAttrData = rawgraph.eAttrData;
 		
 		var fm:FileManager;
 		if(scatter) {

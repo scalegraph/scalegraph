@@ -23,6 +23,6 @@ public class ID {
 	public static val ATTR_STRING	: Int = 13;
 	
 	public static val NAME_VERTEX_ID	: String = "id";
-	public static val NAME_SRC_ID		: String = "srcId";
-	public static val NAME_DST_ID		: String = "dstId";
+	public static val NAME_SRC_ID		: String = "src";
+	public static val NAME_DST_ID		: String = "dst";
 }
