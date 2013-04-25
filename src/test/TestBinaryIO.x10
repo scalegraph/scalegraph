@@ -92,9 +92,11 @@ public class TestBinaryIO {
 		eaData(0) = splittedEdgeList.get1();
 		eaData(1) = splittedEdgeList.get2();
 		
-		val rawgraph = RawGraph(vaName, vaData, eaName, eaData);
+		val entity = new Array[Entity](2);
+		entity(0) = Entity(vaName, vaData);
+		entity(1) = Entity(eaName, eaData);
 		var time : Long = Timer.milliTime();
-		BinaryWriter.write(team, writeFileName, 0 as Byte, rawgraph, blockSize, scatter);
+		BinaryWriter.write(team, writeFileName, entity, blockSize, scatter);
 		time = Timer.milliTime() - time;
 		Console.OUT.printf("BinaryWriter.write(): %ld msec\n", time);
 	}
@@ -108,8 +110,8 @@ public class TestBinaryIO {
 		val scatter = Boolean.parse(args(5));
 		val team = new Team(new Array[Place](1, here));
 		
-		val rawgraph = Import.fromEdgeList(readPath, writePath, separator);
-		BinaryWriter.write(team, writePath, ID.TYPE_GRAPH, rawgraph, blockSize, scatter);
+		val rawdata = Import.fromEdgeList(readPath, writePath, separator);
+		BinaryWriter.write(team, writePath, rawdata, blockSize, scatter);
 	}
 	
 	
@@ -144,6 +146,9 @@ public class TestBinaryIO {
 			mc
 		});
 		
-		return RawGraph(va_name, va_data, ea_name, ea_data);
+		val rawdata = new Array[Entity](2);
+		rawdata(0) = Entity(va_name, va_data);
+		rawdata(1) = Entity(ea_name, ea_data);
+		return rawdata;
 	}
 }

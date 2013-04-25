@@ -24,7 +24,7 @@ import org.scalegraph.util.MemoryPointer;
 public class BinaryReader {
 	
 	
-	public static def read(team : Team, path : String) : RawGraph {
+	public static def read(team : Team, path : String) : Array[Entity] {
 		
 		var fm:FileManager;
 		if(new File(path).isDirectory()) {
@@ -37,10 +37,10 @@ public class BinaryReader {
 		val header = nr.readHeader();
 		Common.debugprint("datatype = " + header.datatype(0));
 		
-		var rawgraph : RawGraph;
+		var rawdata : Array[Entity];
 		
 		if(header.datatype(0) == ID.TYPE_GRAPH) {
-			rawgraph = readGraph(team, fm, nr, header);
+			rawdata = readGraph(team, fm, nr, header);
 		} else if(header.datatype(0) == ID.TYPE_MATRIX) {
 			throw new IOException("BinaryReader.readMatrix() is not implemented");
 		} else if(header.datatype(0) == ID.TYPE_VECTOR) {
@@ -51,7 +51,7 @@ public class BinaryReader {
 		
 		nr.del();
 		
-		return rawgraph;
+		return rawdata;
 	}
 	
 	
@@ -108,7 +108,10 @@ public class BinaryReader {
 			eNameList(i) = eProp.attr(i).getName();
 		}
 		
-		return RawGraph(vNameList, vAttr, eNameList, eAttr);
+		val entity = new Array[Entity](2);
+		entity(0) = Entity(vNameList, vAttr);
+		entity(1) = Entity(eNameList, eAttr);
+		return entity;
 	}
 	
 	

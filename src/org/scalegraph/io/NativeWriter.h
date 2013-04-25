@@ -61,6 +61,25 @@ public:
 	}
 
 
+	void writeMetaData(NativeHeader *header, NativeProperty **property, NativeBlockInfo **blockinfo, int n_entity) {
+
+		long file_offset = 0L;
+
+		// write header
+		file_offset = writeHeader(header, file_offset);
+
+		// write properties
+		for(int i = 0; i < n_entity; i++) {
+			file_offset = writeProperty(property[i], file_offset);
+		}
+
+		// write block info
+		for(int i = 0; i < n_entity; i++) {
+			file_offset = writeBlockInfo(blockinfo[i], file_offset);
+		}
+	}
+
+
 	long writeHeader(NativeHeader *header, long file_offset) {
 		file_offset = ALIGN(file_offset, 8);
 		lseek(fd, file_offset, SEEK_SET);

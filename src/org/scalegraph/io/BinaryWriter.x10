@@ -38,13 +38,10 @@ class TmpBlock {
 @NativeCPPInclude("format/struct.h")
 public class BinaryWriter {
 	
-	public static def write(team : Team, path : String, datatype : Byte, rawgraph : RawGraph,
+	public static def write(team : Team, path : String, rawdata : Array[Entity],
 			minBlockSize : Long, scatter : Boolean) {
 		
-		val vAttrName = rawgraph.vAttrName;
-		val vAttrData = rawgraph.vAttrData;
-		val eAttrName = rawgraph.eAttrName;
-		val eAttrData = rawgraph.eAttrData;
+		val datatype : Byte = rawdata.size as Byte;
 		
 		var fm:FileManager;
 		if(scatter) {
@@ -57,53 +54,45 @@ public class BinaryWriter {
 		fm.clear();
 		val filename = fm.getHeaderFileName();
 		val nw = NativeWriter.make(filename);
-		val vAttrHandler = new Array[AttributeHandler](vAttrData.size, (i:Int) => AttributeHandler.makeFromAny(team, vAttrData(i)));
-		val eAttrHandler = new Array[AttributeHandler](eAttrData.size, (i:Int) => AttributeHandler.makeFromAny(team, eAttrData(i)));
 		
-		// make vertex property
-		val vProp = makeProperty(nw, vAttrHandler, vAttrName, vAttrData);
-		printProperty(vProp);
+		val attrHandler = new Array[Array[AttributeHandler]](rawdata.size,
+				(i:Int) => new Array[AttributeHandler](rawdata(i).data.size,
+						(j:Int) => AttributeHandler.makeFromAny(team, rawdata(i).data(j))));
 		
-		// make edge property
-		val eProp = makeProperty(nw, eAttrHandler, eAttrName, eAttrData);
-		printProperty(eProp);
-		
-		
-		// vertex block partitioning
-		val vBlocks = getBlockPartitioning(team, vAttrHandler, vAttrData, minBlockSize);
-		val vLocalDataSize = getLocalDataSize(team, vBlocks);
-		
-		// calculate vBlockInfo_n
-		var vBlockInfo_n : Int = 0;
-		for(var i:Int = 0; i < team.size(); i++) {
-			vBlockInfo_n += vBlocks(i).size;
+		// make properties
+		val prop = new MemoryChunk[Property](rawdata.size);
+		for(var i:Int = 0; i < prop.size(); i++) {
+			prop(i) = makeProperty(nw, attrHandler(i), rawdata(i).name, rawdata(i).data);
+			printProperty(prop(i));
 		}
 		
-		// edge block partitioning
-		val eBlocks = getBlockPartitioning(team, eAttrHandler, eAttrData, minBlockSize);
-		val eLocalDataSize = getLocalDataSize(team, eBlocks);
 		
-		// calculate eBlockInfo_n
-		var eBlockInfo_n : Int = 0;
-		for(var i:Int = 0; i < team.size(); i++) {
-			eBlockInfo_n += eBlocks(i).size;
+		// block partitionings
+		val blocks = new Array[Array[Array[TmpBlock]]](rawdata.size);
+		val localDataSize = new Array[PlaceLocalHandle[Cell[Long]]](rawdata.size);
+		val blockInfo_n = new Array[Int](rawdata.size, 0);
+		for(var i:Int = 0; i < prop.size(); i++) {
+			blocks(i) = getBlockPartitioning(team, attrHandler(i), rawdata(i).data, minBlockSize);
+			localDataSize(i) = getLocalDataSize(team, blocks(i));
+			
+			// calculate blockInfo_n
+			for(var j:Int = 0; j < team.size(); j++) {
+				blockInfo_n(i) += blocks(i)(j).size;
+			}
 		}
 		
 		
 		// calculate section sizes
-		val nsec : Int = 4;
+		val nsec : Int = 2 * rawdata.size;
 		val headerSize : Int = 16 + 8 * nsec;
-		val seclen = new Array[Long](nsec, (i:Int) => (i + 1L) as Long);
-		seclen(0) = 12;
-		for(var i:Int = 0; i < vAttrData.size; i++) {
-			seclen(0) = Common.align(seclen(0), 4) + (8 + vAttrName(i).length());
+		val seclen = new Array[Long](nsec);
+		for(var i:Int = 0; i < rawdata.size; i++) {
+			seclen(i) = 12;
+			seclen(i + rawdata.size) = 8 + 24 * blockInfo_n(i);
+			for(var j:Int = 0; j < rawdata(i).data.size; j++) {
+				seclen(i) = Common.align(seclen(i), 4) + (8 + rawdata(i).name(j).length());
+			}
 		}
-		seclen(1) = 12;
-		for(var i:Int = 0; i < eAttrData.size; i++) {
-			seclen(1) = Common.align(seclen(1), 4) + (8 + eAttrName(i).length());
-		}
-		seclen(2) = 8 + 24 * vBlockInfo_n;
-		seclen(3) = 8 + 24 * eBlockInfo_n;
 		
 		var metaSize:Long = headerSize;
 		Common.debugprint("headerSize = " + headerSize);
@@ -114,37 +103,25 @@ public class BinaryWriter {
 		Common.debugprint("metaSize = " + metaSize);
 		
 		
-		// calculate vertex block offset
-		val vDataSize:Long = getBlockOffset(team, fm, vBlocks, vLocalDataSize, metaSize);
-		
-		val vAllBlocks = new MemoryChunk[Block](vBlockInfo_n);
-		var vCount : Int = 0;
-		for(var i:Int = 0; i < team.size(); i++) {
-			val blocks = vBlocks(i);
-			for(var j:Int = 0; j < blocks.size; j++) {
-				vAllBlocks(vCount) = nw.makeBlock(blocks(j).offset, blocks(j).size, blocks(j).n);
-				vCount++;
+		// calculate block offsets
+		val allBlocks = new MemoryChunk[MemoryChunk[Block]](rawdata.size);
+		val blockInfo = new MemoryChunk[BlockInfo](rawdata.size);
+		var globalOffset : Long = metaSize;
+		for(var i:Int = 0; i < rawdata.size; i++) {
+			globalOffset = getBlockOffset(team, fm, blocks(i), localDataSize(i), globalOffset);  // this overwrites blocks(i)(j).offset
+			allBlocks(i) = new MemoryChunk[Block](blockInfo_n(i));
+			var count : Int = 0;
+			for(var j:Int = 0; j < team.size(); j++) {
+				val localBlocks = blocks(i)(j);
+				for(var k:Int = 0; k < localBlocks.size; k++) {
+					allBlocks(i)(count) = nw.makeBlock(localBlocks(k).offset, localBlocks(k).size, localBlocks(k).n);
+					count++;
+				}
 			}
+			
+			blockInfo(i) = nw.makeBlockInfo(blockInfo_n(i), allBlocks(i));
+			printBlockInfo(blockInfo(i));
 		}
-		
-		val vBlockInfo = nw.makeBlockInfo(vBlockInfo_n, vAllBlocks);
-		printBlockInfo(vBlockInfo);
-		
-		// calculate edge block offset
-		getBlockOffset(team, fm, eBlocks, eLocalDataSize, vDataSize);
-		
-		val eAllBlocks = new MemoryChunk[Block](eBlockInfo_n);
-		var eCount : Int = 0;
-		for(var i:Int = 0; i < team.size(); i++) {
-			val blocks = eBlocks(i);
-			for(var j:Int = 0; j < blocks.size; j++) {
-				eAllBlocks(eCount) = nw.makeBlock(blocks(j).offset, blocks(j).size, blocks(j).n);
-				eCount++;
-			}
-		}
-		
-		val eBlockInfo = nw.makeBlockInfo(eBlockInfo_n, eAllBlocks);
-		printBlockInfo(eBlockInfo);
 		
 		
 		// make header
@@ -155,10 +132,10 @@ public class BinaryWriter {
 		
 		
 		// write to file
-		nw.writeMetaData(header, vProp, eProp, vBlockInfo, eBlockInfo);
-		writeAttributeData(team, fm, 1,               vAttrHandler, vAttrData, vBlocks);
-		writeAttributeData(team, fm, team.size() + 1, eAttrHandler, eAttrData, eBlocks);
-		
+		nw.writeMetaData(header, prop, blockInfo, rawdata.size);
+		for(var i:Int = 0; i < rawdata.size; i++) {
+			writeAttributeData(team, fm, i * team.size() + 1, attrHandler(i), rawdata(i).data, blocks(i));
+		}
 		nw.del();
 	}
 	

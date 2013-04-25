@@ -27,8 +27,8 @@ struct NativeWriter {
 	public native def writeMetaData(header : Header, v_prop : Property, e_prop : Property,
 			v_blockinfo : BlockInfo, e_blockinfo : BlockInfo) : void;
 	
-	@Native("c++", "(#this)->writeMetaData(#header, #v_prop)")
-	public native def writeMetaData(header : Header, v_prop : Property) : void;
+	@Native("c++", "(#this)->writeMetaData(#header, (#prop)->pointer(), (#blockinfo)->pointer(), #n_entity)")
+	public native def writeMetaData(header : Header, prop : MemoryChunk[Property], blockinfo : MemoryChunk[BlockInfo], n_entity : Int) : void;
 	
 	@Native("c++", "(#this)->makeHeader(#version, (#datatype)->raw()->raw(), #size, #nsec, (#seclen)->raw()->raw())")
 	public native def makeHeader(version : Byte, datatype : Array[Byte], size : Int, nsec : Int, seclen : Array[Long]) : Header;

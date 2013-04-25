@@ -58,6 +58,9 @@ public class Import {
 		eaData(0) = src;
 		eaData(1) = dst;
 		
-		return RawGraph(vaName, vaData, eaName, eaData);
+		val rawdata = new Array[Entity](2);
+		rawdata(0) = Entity(vaName, vaData);
+		rawdata(1) = Entity(eaName, eaData);
+		return rawdata;
 	}
 }
