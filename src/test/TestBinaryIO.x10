@@ -73,18 +73,14 @@ public class TestBinaryIO {
 		});
 		
 		val edgelist = tuple2.get1().data(team.placeGroup());
+		var numE : Long = 0L;
+		for(p in team.places().values()) {
+			numE += at(p) edgelist().size();
+		}
+		numE /= 2;
 		
-		val graph = new Graph(team, Graph.VertexType.Long, false);
-		graph.addEdges(edgelist);
-		val numV = graph.numberOfVertices();
-		Console.OUT.println("numV = " + numV);
-		val numE = graph.numberOfEdges();
-		Console.OUT.println("numE = " + numE);
-		val numP = team.size();
-		val splittedEdgeList = Common.split[Long](team, edgelist);
+		val splittedEdgeList = Common.split(team, edgelist);
 		
-		val vaName = new Array[String](1, ID.NAME_VERTEX_ID);
-		val vaData = new Array[Any](1, new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](numV / numP + ((numV % numP) > team.role()(0) ? 1L : 0L))));
 		val eaName = new Array[String](2);
 		eaName(0) = ID.NAME_SRC_ID;
 		eaName(1) = ID.NAME_DST_ID;
@@ -92,9 +88,8 @@ public class TestBinaryIO {
 		eaData(0) = splittedEdgeList.get1();
 		eaData(1) = splittedEdgeList.get2();
 		
-		val entity = new Array[Entity](2);
-		entity(0) = Entity(vaName, vaData);
-		entity(1) = Entity(eaName, eaData);
+		val entity = new Array[Entity](1);
+		entity(0) = Entity(eaName, eaData);
 		var time : Long = Timer.milliTime();
 		BinaryWriter.write(team, writeFileName, entity, blockSize, scatter);
 		time = Timer.milliTime() - time;
