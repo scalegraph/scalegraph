@@ -47,12 +47,12 @@ public:
 	// User Defined Header
 	x10::lang::Any* udh;
 
-	NativeHeaders(NativeFile* nf) {
+	NativeHeaders(NativeFile nf) {
 		using namespace fbio;
 		using namespace org::scalegraph::io;
 		using namespace x10::lang;
 
-		FILE* fp = nf->handle();
+		FILE* fp = nf.handle();
 
 		if(fread(&header, sizeof(header), 1, fp) != 1) {
 			x10aux::throwException(IOException::_make(String::Lit("illegal file format")));
@@ -154,21 +154,26 @@ public:
 	~NativeHeaders() { }
 };
 
-static NativeHeaders* readHeaders(NativeFile* nf) {
+static NativeHeaders* readHeaders(NativeFile nf) {
 	return new (x10aux::alloc<NativeHeaders>()) NativeHeaders(nf);
 }
 
-static void writeHeaders(NativeFile* nf) {
+static void writeHeaders(NativeFile nf) {
 	// TODO:
 }
 
-template <typename T> void readPrimitives(NativeFile* nf, T *array, long numElements, long numBytes) {
+template <typename T> void readPrimitives(NativeFile nf, T *array, long numElements, long numBytes) {
 	if(fread(array, sizeof(T) * numElements, 1, nf.handle()) != 1)
+		x10aux::throwException(x10::lang::IOException::_make(
+				x10::lang::String::Lit("error while reading file...")));
+
+	long padding = numBytes - (sizeof(T) * numElements);
+	if(fseek(nf.handle(), padding, SEEK_CUR) != 0)
 		x10aux::throwException(x10::lang::IOException::_make(
 				x10::lang::String::Lit("error while reading file...")));
 }
 
-void readStrings(NativeFile* nf, x10::lang::String **array, long numElements, long numBytes) {
+void readStrings(NativeFile nf, x10::lang::String **array, long numElements, long numBytes) {
 	int8_t* buffer = x10aux::alloc<int8_t>(numBytes, false);
 	if(fread(buffer, numBytes, 1, nf.handle()) != 1) {
 		x10aux::throwException(x10::lang::IOException::_make(
@@ -185,13 +190,18 @@ void readStrings(NativeFile* nf, x10::lang::String **array, long numElements, lo
 	x10aux::dealloc(buffer);
 }
 
-template <typename T> void writePrimitives(NativeFile* nf, T *array, long numElements, long numBytes) {
+template <typename T> void writePrimitives(NativeFile nf, T *array, long numElements, long numBytes) {
 	if(fwrite(array, sizeof(T) * numElements, 1, nf.handle()) != 1)
 		x10aux::throwException(x10::lang::IOException::_make(
 				x10::lang::String::Lit("error while writing file...")));
+
+	long padding = numBytes - (sizeof(T) * numElements);
+	if(fseek(nf.handle(), padding, SEEK_CUR) != 0)
+		x10aux::throwException(x10::lang::IOException::_make(
+				x10::lang::String::Lit("error while reading file...")));
 }
 
-long writeStringAttribute(NativeFile* nf, x10::lang::String **array, long numElements, long numBytes) {
+long writeStringAttribute(NativeFile nf, x10::lang::String **array, long numElements, long numBytes) {
 	int8_t* buffer = x10aux::alloc<int8_t>(numBytes, false);
 	long offset = 0L;
 	for(long i = 0L; i < numElements; ++i) {

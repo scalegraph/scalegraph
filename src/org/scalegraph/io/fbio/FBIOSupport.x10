@@ -18,6 +18,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.io.NativeFile;
 import org.scalegraph.io.NamedDistData;
+import org.scalegraph.util.MemoryPointer;
 
 @NativeCPPInclude("NativeSupport.h")
 @NativeCPPOutputFile("Attribute.h")
@@ -102,6 +103,8 @@ struct NativeHeaders {
 	public native def attributes() : Attributes;
 	@Native("c++", "(#this)->blocks")
 	public native def blocks() : BlockInfo;
+	@Native("c++", "(#this)->udf")
+	public native def userDefinedHeader() : Any;
 }
 
 //////////////////////////////////////////////////////////////
@@ -109,155 +112,87 @@ struct NativeHeaders {
 //////////////////////////////////////////////////////////////
 
 abstract class FileManager {
-	
 	protected val path : String;
-	protected var offset : Long;
-	
 	public def this(path : String) {
 		this.path = path;
 	}
-	
 	public abstract def isScattered() : Boolean;
-	
-	public abstract def getFileName(i:Int) : String;
-	
-	public abstract def getHeaderFileName() : String;
-	
-	public abstract def getDataFileId(offset : Long) : Int;
-	
-	public abstract def getDataFileName(offset : Long) : String;
-	
-	public abstract def getFileLocalOffset(id : Int, offset : Long) : Long;
-	
-	public abstract def getOffsetAdjuster(offset : Long) : (Long) => Long;
-	
-	public abstract def nextFile() : String;
-	
-	public abstract def clear() : void;
+	public abstract def headerFileName() :String;
+	public abstract def fileName(i :Int) :String;
+	public abstract def index(offset :Long) :Int;
+	public abstract def offset(i :Int) :Long;
+	public abstract def deleteFile() :void;
 }
 
 
 class SingleFileManager extends FileManager {
-	
 	public def this(path : String) {
 		super(path);
 	}
-	
 	public def isScattered() = false;
-	
-	public def getFileName(i:Int) : String {
-		return path;
-	}
-	
-	public def getHeaderFileName() : String {
-		return path;
-	}
-	
-	public def getDataFileId(offset : Long) : Int {
-		return 0;
-	}
-	
-	public def getDataFileName(offset : Long) : String {
-		return path;
-	}
-
-	public def getFileLocalOffset(id : Int, offset : Long) : Long {
-		return offset;
-	}
-	
-	public def getOffsetAdjuster(offset : Long) : (Long) => Long {
-		return (off:Long) => off;
-	}
-	
-	public def nextFile() : String {
-		return path;
-	}
-	
-	public def clear() : void {
+	public def headerFileName() = path;
+	public def fileName(i:Int) = path;
+	public def index(offset : Long) = 0;
+	public def offset(i :Int) = 0L;
+	public def deleteFile() : void {
 		new File(path).delete();
 	}
 }
 
-
 class ScatteredFileManager extends FileManager {
-	
-	private val length:Int = 5;
-	private val format:String;
+	private static val format = "%s" + File.SEPARATOR + "part-%05d";
 	private var fileOffset:Array[Long] = null;
 	private var count:Int;
 	
 	public def this(path : String) {
 		super(path);
-		this.format = "%s" + File.SEPARATOR + "%0" + this.length + "d";
 		this.count = 0;
 	}
-	
 	public def isScattered() = true;
-	
 	private def makeFileOffset() {
+		/*
 		val dir = new File(path);
 		FBIOSupport.debugprint("dir = " + dir);
 		FBIOSupport.debugprint("dir.list = " + dir.list());
 		val nFiles = dir.list().size;
 		this.fileOffset = new Array[Long](nFiles + 1, 0L);
 		for(var i:Int = 0; i < nFiles; i++) {
-			val file = new File(getFileName(i));
+			val file = new File(fileName(i));
 			this.fileOffset(i + 1) = this.fileOffset(i) + file.size();
 		}
 		FBIOSupport.debugprint("fileOffset = " + fileOffset);
-	}
-	
-	public def getFileName(i:Int) : String {
-		val args = new Array[Any](2);
-		args(0) = path;
-		args(1) = i;
-		return String.format(format, args);
-	}
-	
-	public def getHeaderFileName() : String {
-		return getFileName(0);
-	}
-	
-	public def getDataFileId(offset : Long) : Int {
-		if(fileOffset == null) {
-			makeFileOffset();
-		}
-		for(var i:Int = 1; i < fileOffset.size; i++) {
-			if(offset < fileOffset(i)) {
-				return i - 1;
+		 */
+		var idx :Int = 0;
+		val fileSize = new ArrayList[Long]();
+		while(true) {
+			val file = new File(fileName(idx));
+			if(file.isFile()) {
+				fileSize.add(file.size());
 			}
+			else {
+				break;
+			}
+		}
+		fileOffset = new Array[Long](fileSize.size()+1, 0L);
+		for(i in 0..(fileSize.size()-1)) {
+			fileOffset(i + 1) = fileOffset(i) + fileSize(i);
+		}
+	}
+	public def headerFileName() = fileName(0);
+	public def fileName(i:Int) = String.format(format, [path, i]);
+	public def index(offset : Long) : Int {
+		if(fileOffset == null) makeFileOffset();
+		for(i in 1..fileOffset.size) {
+			if(offset < fileOffset(i)) return i - 1;
 		}
 		return -1;
 	}
-
-	public def getDataFileName(offset : Long) : String {
-		val id = getDataFileId(offset);
-		if(id == -1) {
-			return null;
-		}
-		return getFileName(id);
-	}
-
-	public def getFileLocalOffset(id : Int, offset : Long) : Long {
-		return offset - fileOffset(id);
-	}
+	public def offset(i :Int) = fileOffset(i);
 	
-	public def getOffsetAdjuster(offset : Long) : (Long) => Long {
-		return (off:Long) => off - offset;
-	}
-	
-	public def nextFile() : String {
-		count++;
-		offset = 0;
-		return getFileName(count);
-	}
-	
-	public def clear() : void {
+	public def deleteFile() : void {
 		val dir = new File(path);
-		val nFiles = dir.list().size;
-		for(var i:Int = 0; i < nFiles; i++) {
-			val file = new File(getFileName(i));
-			file.delete();
+		for(i in 0..(dir.list().size-1)) {
+			new File(fileName(i)).delete();
 		}
 	}
 }
@@ -268,6 +203,10 @@ class ScatteredFileManager extends FileManager {
 
 public class FBIOSupport {
 
+	static @Inline def align(addr : Int, length : Int) : Int = (addr + (length - 1)) & ~(length - 1);
+	
+	static @Inline def align(addr : Long, length : Int) : Long = (addr + (length as Long - 1L)) & ~(length as Long - 1L);
+	
 	static def debugprint(str : String) {
 		@Ifdef("DEBUG") {
 			Console.OUT.println(str);
@@ -275,23 +214,22 @@ public class FBIOSupport {
 	}
 	
 	public static def read(team : Team, path : String) : NamedDistData {
-		
 		// select FileManager
 		val fm = (new File(path).isDirectory()) ? new ScatteredFileManager(path)
 												     : new SingleFileManager(path);
 		
-		val headerFile = new NativeFile(fm.getHeaderFileName(), false, false);  // assign a name of a file which includes meta data
+		val headerFile = new NativeFile(fm.headerFileName(), false, false);  // assign a name of a file which includes meta data
 		val headers = NativeHeaders.make(headerFile);
 		val header = headers.header();
 		val attrs = headers.attributes();
 		val blocks = headers.blocks();
+		headerFile.close();
 		
 		debugprint("datatype = " + header.datatype(0));
 		printProperty(attrs);
 		printBlockInfo(blocks);
 		
 		// read attribute data and make entities
-		val result = new NamedDistData();
 		
 		// calculate local array size
 		val blocksPerPlace = blocks.numBlocks() / team.size();
@@ -304,7 +242,7 @@ public class FBIOSupport {
 		for(pid in 0..(team.size()-1)) {
 			for(bid in 0..(blocksPerPlace + ((pid < extraBlocks) ? 1 : 0) - 1)) {
 				val curBlock = blocks.block(block_idx++);
-				for(aid in 0..(attrs.numAttributes() - 1)) {
+				for(aid in 0..(numAttributes - 1)) {
 					localArraySize(pid)(aid) += curBlock.numElements(aid);
 				}
 			}
@@ -316,68 +254,147 @@ public class FBIOSupport {
 		for(i in 0..(numAttributes-1)) tmpAttrId(i) = attrs.attribute(i).id();
 		val attrHandler = new Array[AttributeHandler](attrs.numAttributes(),
 				(i:Int) => AttributeHandler.makeFromId(team, tmpAttrId(i)));
-		val attributes = new Array[Any]( nattr, (i:Int) => attrHandler(i).create( () => localArraySize(here.id) ) );
+		val attributes = new Array[Any](numAttributes, (i:Int) => 
+				attrHandler(i).create((pid :Int) => localArraySize(pid)(i)));
 		
 		// assign closures to each place
-		blockAllocater.reset();
-		val localArrayOffset = new Array[Long](team.size());
-		val queue = new Array[ArrayList[() => void]](team.size(), (Int) => new ArrayList[() => void]());
-		
-		for(var i:Int = 0; i < blockAllocater.numBlock(); i++) {
-			
-			val pid = blockAllocater.next();
-			val block = blockinfo.block(i);
-			val block_offset = block.offset;
-			val block_size = block.size;
-			val block_n = block.n;
-			
-			val fileId = fm.getDataFileId(block_offset);
-			val filename : String = fm.getFileName(fileId);
-			val local_block_offset = fm.getFileLocalOffset(fileId, block_offset);
-			
-			Common.debugprint("blockdata : size = " + block.size + ", offset = " + block.offset);
-			
-			val arrayOffset = localArrayOffset(pid);
-			localArrayOffset(pid) += block_n;
-			
-			queue(pid).add( () => {
-				Common.debugprint("block_size = " + block_size + ", local_block_offset = " + local_block_offset + ", block_n = " + block_n);
+		block_idx = 0;
+		finish for(pid in 0..(team.size()-1)) {
+			val tasks = new ArrayList[()=>void]();
+			val attrOffset = new Array[Long](numAttributes, 0L);
+			for(bid in 0..(blocksPerPlace + ((pid < extraBlocks) ? 1 : 0) - 1)) {
+				val curBlock = blocks.block(block_idx++);
 				
-				// read attribute data
-				val nr_ = NativeReader.make(filename);
-				val blockdata : MemoryPointer[Byte] = nr_.readBlockData(block_size, local_block_offset);
-				var dataOffset:Long = 0L;
-				val num = block_n;
-				for(var j:Int = 0; j < nattr; j++) {
-					
-					val array = attributes(j);
-					dataOffset = Common.align(dataOffset, 8);
-					dataOffset += attrHandler(j).read(nr_, array, arrayOffset, blockdata + dataOffset, num);
-				}
-				nr_.del();
-			});
-		}
-		
-		// execute closures in parallel
-		finish for(var i:Int = 0; i < team.size(); i++) {
-			val q = queue(i);
-			at(team.places()(i)) async {
-				for(closure in q) {
-					closure();
-				}
+				val fileIndex = fm.index(curBlock.offset());
+				val fileName = fm.fileName(fileIndex);
+				val localBlockOffset = curBlock.offset() - fm.offset(fileIndex);
+				val attrNumBytes = new Array[Long](numAttributes, (i :Int)=>curBlock.numBytes(i));
+				val attrNumElements = new Array[Long](numAttributes, (i :Int)=>curBlock.numElements(i));
+				val tmpAttrOffset = new Array[Long](numAttributes, (i :Int)=>attrOffset(i));
+				for([i] in attrOffset) attrOffset(i) += attrNumElements(i);
+				
+				tasks.add( () => {
+					debugprint("block_size = " + attrNumBytes + ", local_block_offset = " + localBlockOffset + ", block_n = " + attrNumElements);
+					// read attribute data
+					val nf = new NativeFile(fileName, false, false);
+					nf.seek(localBlockOffset, NativeFile.BEGIN);
+					for(aid in 0..(numAttributes - 1)) {
+						attrHandler(aid).read(nf, attributes(aid), tmpAttrOffset(aid),
+								attrNumElements(aid), align(attrNumBytes(aid), 8));
+					}
+					nf.close();
+				});
+			}
+			at(team.places()(pid)) async {
+				for(task in tasks) task();
 			}
 		}
 		
-		for(var j:Int = 0; j < attrs.numAttributes(); ++j) {
-			result.put(attrs.attribute(j).name(), attr(j));
+		val result = new NamedDistData();
+		for(aid in 0..(numAttributes - 1)) {
+			attrHandler(aid).putResult(result,
+					attrs.attribute(aid).name(), attributes(aid));
 		}
-		
-		nr.del();
-		
-		
-		return entity;
+		result.setHeader(headers.userDefinedHeader());
+		return result;
 	}
 	
+	public static def write(team : Team, path : String,
+			data : NamedDistData, minBlockSize : Long, scatter : Boolean) {
+
+		// select FileManager
+		val fm = scatter ? new ScatteredFileManager(path)
+							: new SingleFileManager(path);
+		if(scatter) {
+			new File(path).mkdir();
+		}
+		fm.deleteFile();
+		
+		val headerFile = new NativeFile(fm.headerFileName(), true, false);
+		
+		val attrNames = data.keys();
+		val attrHandler = new Array[AttributeHandler](rattrNames.size,
+						(j:Int) => AttributeHandler.makeFromAny(team, rawdata(i).data(j))));
+		
+		// make properties
+		val prop = new MemoryChunk[Property](rawdata.size);
+		for(var i:Int = 0; i < prop.size(); i++) {
+			prop(i) = makeProperty(nw, attrHandler(i), rawdata(i).name, rawdata(i).data);
+			printProperty(prop(i));
+		}
+		
+		
+		// block partitionings
+		val blocks = new Array[Array[Array[TmpBlock]]](rawdata.size);
+		val localDataSize = new Array[PlaceLocalHandle[Cell[Long]]](rawdata.size);
+		val blockInfo_n = new Array[Int](rawdata.size, 0);
+		for(var i:Int = 0; i < prop.size(); i++) {
+			blocks(i) = getBlockPartitioning(team, attrHandler(i), rawdata(i).data, minBlockSize);
+			localDataSize(i) = getLocalDataSize(team, blocks(i));
+			
+			// calculate blockInfo_n
+			for(var j:Int = 0; j < team.size(); j++) {
+				blockInfo_n(i) += blocks(i)(j).size;
+			}
+		}
+		
+		
+		// calculate section sizes
+		val nsec : Int = 2 * rawdata.size;
+		val headerSize : Int = 16 + 8 * nsec;
+		val seclen = new Array[Long](nsec);
+		for(var i:Int = 0; i < rawdata.size; i++) {
+			seclen(i) = 12;
+			seclen(i + rawdata.size) = 8 + 24 * blockInfo_n(i);
+			for(var j:Int = 0; j < rawdata(i).data.size; j++) {
+				seclen(i) = Common.align(seclen(i), 4) + (8 + rawdata(i).name(j).length());
+			}
+		}
+		
+		var metaSize:Long = headerSize;
+		Common.debugprint("headerSize = " + headerSize);
+		for(var i:Int = 0; i < nsec; i++) {
+			metaSize = Common.align(metaSize, 8) + seclen(i);
+			Common.debugprint("seclen(" + i + ") = " + seclen(i));
+		}
+		Common.debugprint("metaSize = " + metaSize);
+		
+		
+		// calculate block offsets
+		val allBlocks = new MemoryChunk[MemoryChunk[Block]](rawdata.size);
+		val blockInfo = new MemoryChunk[BlockInfo](rawdata.size);
+		var globalOffset : Long = metaSize;
+		for(var i:Int = 0; i < rawdata.size; i++) {
+			globalOffset = getBlockOffset(team, fm, blocks(i), localDataSize(i), globalOffset);  // this overwrites blocks(i)(j).offset
+			allBlocks(i) = new MemoryChunk[Block](blockInfo_n(i));
+			var count : Int = 0;
+			for(var j:Int = 0; j < team.size(); j++) {
+				val localBlocks = blocks(i)(j);
+				for(var k:Int = 0; k < localBlocks.size; k++) {
+					allBlocks(i)(count) = nw.makeBlock(localBlocks(k).offset, localBlocks(k).size, localBlocks(k).n);
+					count++;
+				}
+			}
+			
+			blockInfo(i) = nw.makeBlockInfo(blockInfo_n(i), allBlocks(i));
+			printBlockInfo(blockInfo(i));
+		}
+		
+		
+		// make header
+		val version : Byte = ID.VERSION;
+		val flags = new Array[Byte](3, 0);
+		flags(0) = datatype;
+		val header = nw.makeHeader(version, flags, headerSize, nsec, seclen);
+		
+		
+		// write to file
+		nw.writeMetaData(header, prop, blockInfo, rawdata.size);
+		for(var i:Int = 0; i < rawdata.size; i++) {
+			writeAttributeData(team, fm, i * team.size() + 1, attrHandler(i), rawdata(i).data, blocks(i));
+		}
+		nw.del();
+	}
 	
 	/************************** test function ******************************/
 	private static def printProperty(attrs : Attributes) {

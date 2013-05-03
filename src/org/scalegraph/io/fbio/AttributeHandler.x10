@@ -9,10 +9,9 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MemoryPointer;
 import org.scalegraph.io.ID;
+import org.scalegraph.io.NativeFile;
+import org.scalegraph.io.NamedDistData;
 
-
-@NativeCPPInclude("NativeReader.h")
-@NativeCPPInclude("NativeWriter.h")
 public abstract class AttributeHandler {
 	
 	public val team : Team;
@@ -23,7 +22,7 @@ public abstract class AttributeHandler {
 		this.id = id;
 	}
 	
-	public abstract def create(localSize : () => Long) : Any;
+	public abstract def create(localSize : (Int) => Long) : Any;
 	
 	public abstract def getId() : Int;
 	
@@ -36,10 +35,12 @@ public abstract class AttributeHandler {
 	public abstract def sizeOfElems(dmc : Any, offset : Long, num : Long) : Long;
 	
 	public abstract def localSize(dmc : Any, offset : Long, num : Long) : Long;
+
+	public abstract def read(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) :void;
 	
-	public abstract def read(nr : NativeReader, array : Any, array_offset : Long, data : MemoryPointer[Byte], num : Long) : Long;
+	public abstract def write(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) :void;
 	
-	public abstract def write(nw : NativeWriter, array : Any, array_offset : Long, data_offset : Long, num : Long) : Long;
+	public abstract def putResult(res :NamedDistData, k :String, array :Any) :void;
 	
 	public abstract def print(dmc : Any) : void;
 	
@@ -113,16 +114,16 @@ public abstract class AttributeHandler {
 }
 
 
-@NativeCPPInclude("NativeReader.h")
-@NativeCPPInclude("NativeWriter.h")
+@NativeCPPInclude("NativeSupport.h")
 class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	
 	public def this(team : Team, id : Int) {
 		super(team, id);
 	}
 	
-	public def create(localSize : () => Long) : Any {
-		return new DistMemoryChunk[T](team.placeGroup(), () => new MemoryChunk[T](localSize()));
+	public def create(localSize : (Int) => Long) : Any {
+		return DistMemoryChunk.make[T, Long](
+				team.placeGroup(), localSize, (ls :Long) => new MemoryChunk[T](ls));
 	}
 	
 	public def getId() : Int {
@@ -161,14 +162,21 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 		return num * size;
 	}
 	
-	public def read(nr : NativeReader, any : Any, array_offset : Long, data : MemoryPointer[Byte], num : Long) : Long {
-		val array = (any as DistMemoryChunk[T])().subpart(array_offset, num);
-		return nr.readAttribute[T](array, data, num);
-	}
+	@Native("c++", "org::scalegraph::io::fbio::readPrimitives<#T >(#nf, #dst, #numElements, #numBytes)")
+	private native def nativeRead(nf :NativeFile, dst :MemoryPointer[T], numElements :Long, numBytes :Long) :void;
+	@Native("c++", "org::scalegraph::io::fbio::writePrimitives<#T >(#nf, #dst, #numElements, #numBytes)")
+	private native def nativeWrite(nf :NativeFile, dst :MemoryPointer[T], numElements :Long, numBytes :Long) :void;
 	
-	public def write(nw : NativeWriter, any : Any, array_offset : Long, data_offset : Long, num : Long) : Long {
-		val array = (any as DistMemoryChunk[T])().subpart(array_offset, num);
-		return nw.writeAttribute[T](array, data_offset, num);
+	public def read(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
+		val array_ = (array as DistMemoryChunk[T])().subpart(array_offset, numElements);
+		nativeRead(nf, array_.pointer(), numElements, numBytes);
+	}
+	public def write(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
+		val array_ = (array as DistMemoryChunk[T])().subpart(array_offset, numElements);
+		nativeWrite(nf, array_.pointer(), numElements, numBytes);
+	}
+	public def putResult(res :NamedDistData, k :String, array :Any) {
+		res.put(k, array as DistMemoryChunk[T]);
 	}
 	
 	public def print(any : Any) {
@@ -180,85 +188,16 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	}
 }
 
-
-@NativeCPPInclude("NativeReader.h")
-@NativeCPPInclude("NativeWriter.h")
-class CharAttributeHandler extends AttributeHandler {
-	
-	public def this(team : Team, id : Int) {
-		super(team, id);
-	}
-	
-	public def create(localSize : () => Long) : Any {
-		return new DistMemoryChunk[Char](team.placeGroup(), () => new MemoryChunk[Char](localSize()));
-	}
-	
-	public def getId() : Int {
-		return id << 8;
-	}
-	
-	public def numElems(any : Any) : Long {
-		val dmc = any as DistMemoryChunk[Char];
-		var sum : Long = 0L;
-		for(var i:Int = 0; i < team.size(); i++) {
-			sum += at(team.places()(i)) dmc().size();
-		}
-		return sum;
-	}
-	
-	public def localNumElems(any : Any) : Long {
-		val dmc = any as DistMemoryChunk[Char];
-		return dmc().size();
-	}
-	
-	public def sizeOfElem(any : Any, i : Long) : Long {
-		var size : Int = 0;
-		@Native("c++", "size = sizeof(char);") {}
-		return size;
-	}
-	
-	public def sizeOfElems(any : Any, offset : Long, num : Long) : Long {
-		var size : Int = 0;
-		@Native("c++", "size = sizeof(char);") {}
-		return size * num;
-	}
-	
-	public def localSize(any : Any, offset : Long, num : Long) : Long {
-		var size : Int = 0;
-		@Native("c++", "size = sizeof(char);") {}
-		return num * size;
-	}
-	
-	public def read(nr : NativeReader, any : Any, array_offset : Long, data : MemoryPointer[Byte], num : Long) : Long {
-		val array = (any as DistMemoryChunk[Char])().subpart(array_offset, num);
-		return nr.readCharAttribute(array, data, num);
-	}
-	
-	public def write(nw : NativeWriter, any : Any, array_offset : Long, data_offset : Long, num : Long) : Long {
-		val array = (any as DistMemoryChunk[Char])().subpart(array_offset, num);
-		return nw.writeCharAttribute(array, data_offset, num);
-	}
-	
-	public def print(any : Any) {
-		val dmc = any as DistMemoryChunk[Char];
-		for(var i:Int = 0; i < team.size(); i++) at(team.places()(i)) {
-			Console.OUT.print(dmc().toArray() + " ");
-		}
-		Console.OUT.println("");
-	}
-}
-
-
-@NativeCPPInclude("NativeReader.h")
-@NativeCPPInclude("NativeWriter.h")
+@NativeCPPInclude("NativeSupport.h")
 class StringAttributeHandler extends AttributeHandler {
 	
 	public def this(team : Team, id : Int) {
 		super(team, id);
 	}
 	
-	public def create(localSize : () => Long) : Any {
-		return new DistMemoryChunk[String](team.placeGroup(), () => new MemoryChunk[String](localSize()));
+	public def create(localSize : (Int) => Long) : Any {
+		return DistMemoryChunk.make[String, Long](
+				team.placeGroup(), localSize, (ls :Long) => new MemoryChunk[String](ls));
 	}
 	
 	public def getId() : Int {
@@ -302,15 +241,22 @@ class StringAttributeHandler extends AttributeHandler {
 		}
 		return sum;
 	}
+
+	@Native("c++", "org::scalegraph::io::fbio::readStrings(#nf, #dst, #numElements, #numBytes)")
+	private native def nativeRead(nf :NativeFile, dst :MemoryPointer[String], numElements :Long, numBytes :Long) :void;
+	@Native("c++", "org::scalegraph::io::fbio::writeStrings(#nf, #dst, #numElements, #numBytes)")
+	private native def nativeWrite(nf :NativeFile, dst :MemoryPointer[String], numElements :Long, numBytes :Long) :void;
 	
-	public def read(nr : NativeReader, any : Any, array_offset : Long, data : MemoryPointer[Byte], num : Long) : Long {
-		val array = (any as DistMemoryChunk[String])().subpart(array_offset, num);
-		return nr.readStringAttribute(array, data, num);
+	public def read(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
+		val array_ = (array as DistMemoryChunk[String])().subpart(array_offset, numElements);
+		nativeRead(nf, array_.pointer(), numElements, numBytes);
 	}
-	
-	public def write(nw : NativeWriter, any : Any, array_offset : Long, data_offset : Long, num : Long) : Long {
-		val array = (any as DistMemoryChunk[String])().subpart(array_offset, num);
-		return nw.writeStringAttribute(array, data_offset, num);
+	public def write(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
+		val array_ = (array as DistMemoryChunk[String])().subpart(array_offset, numElements);
+		nativeWrite(nf, array_.pointer(), numElements, numBytes);
+	}
+	public def putResult(res :NamedDistData, k :String, array :Any) {
+		res.put(k, array as DistMemoryChunk[String]);
 	}
 	
 	public def print(any : Any) {
