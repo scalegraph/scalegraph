@@ -34,7 +34,7 @@ public class BinaryReader {
 			fm = new SingleFileManager(path);
 		}
 		
-		val headerFile : String = fm.getHeaderFileName();  // assign a name of a file which includes meta data
+		val headerFile = new NativeFile(fm.getHeaderFileName(), false, false);  // assign a name of a file which includes meta data
 		val nr = NativeReader.make(headerFile);
 		val header = nr.readHeader();
 		Common.debugprint("datatype = " + header.datatype(0));

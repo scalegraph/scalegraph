@@ -4,9 +4,11 @@ public class ID {
 	
 	public static val VERSION = 1;
 	
-	public static val TYPE_GRAPH	: Byte = 0;
-	public static val TYPE_MATRIX	: Byte = 1;
-	public static val TYPE_VECTOR	: Byte = 2;
+	public static val TYPE_NONE		: Byte = 0;
+	public static val TYPE_GRAPH	: Byte = 1;
+	public static val TYPE_MATRIX	: Byte = 2;
+	public static val TYPE_VECTOR	: Byte = 3;
+	public static val TYPE_ANY		: Byte = -128; // Serialized with X10
 	
 	public static val ATTR_BOOLEAN	: Int = 1;
 	public static val ATTR_BYTE		: Int = 2;

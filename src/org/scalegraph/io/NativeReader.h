@@ -23,18 +23,18 @@ struct NativeAttribute {
 	x10::lang::String* name;
 };
 
-typedef NativePropertySize scalegraph::FBIO_PropertySize;
+typedef NativeChunk scalegraph::FBIO_Chunk;
 
 struct NativeBlock {
 	int64_t offset;
-	std::vector<NativePropertySize> propSizes;
+	std::vector<NativeChunk> chunks;
 };
 
 typedef NativeGraphHeader scalegraph::FBIO_GraphHeader;
+typedef NativeMatrixHeader scalegraph::FBIO_MatrixHeader;
+typedef NativeVectorHeader scalegraph::FBIO_VectorHeader;
 
 ////////////
-
-
 
 class NativeHeaders {
 
@@ -44,8 +44,13 @@ class NativeHeaders {
 
 public:
 	NativeHeader header;
-	std::vector<NativeAttribute> properties;
+	std::vector<NativeAttribute> attributes;
 	std::vector<NativeBlock> blocks;
+
+	// User Defined Header
+	NativeGraphHeader graphHeader;
+	NativeMatrixHeader matrixHeader;
+	NativeVectorHeader vectorHeader;
 
 	NativeHeaders(NativeFile* nf) {
 		FILE* fp = nf->handle();
@@ -57,20 +62,25 @@ public:
 			x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
 		}
 
-		int64_t propSize = align(header.seclen[0], 8);
-		int64_t blocInfoSize = align(header.seclen[1], 8);
-		int64_t udfSize = align(header.seclen[2], 8);
-		int64_t remainHeaderSize = propSize + blocInfoSize + udfSize;
+		int64_t propSize = header.seclen[0];
+		int64_t blocInfoSize = header.seclen[1];
+		int64_t udhSize = header.seclen[2];
+
+		int64_t propSectionSize = align(propSize, 8);
+		int64_t blocInfoSectionSize = align(blocInfoSize, 8);
+		int64_t udhSectionSize = align(udhSize, 8);
+
+		int64_t remainHeaderSize = propSectionSize + blocInfoSectionSize + udhSectionSize;
 		int8_t* headerMemory = x10aux::alloc(remainHeaderSize, false);
 		if(fread(headerMemory, remainHeaderSize, 1, fp) != 1) {
 			x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
 		}
 
 		scalegraph::FBIO_Properties* rawProps = reinterpret_cast<scalegraph::FBIO_Properies*>(headerMemory);
-		headerMemory += propSize;
+		headerMemory += propSectionSize;
 		scalegraph::FBIO_Blocks* rawBlocks = reinterpret_cast<scalegraph::FBIO_Blocks*>(headerMemory);
-		headerMemory += blocInfoSize;
-		scalegraph::FBIO_GraphHeader* grawGaphHeader = reinterpret_cast<scalegraph::FBIO_GraphHeader*>(headerMemory);
+		headerMemory += blocInfoSectionSize;
+		int8_t* rawUserDefinedHeader = headerMemory;
 
 		const int numProps = rawProps->numProperties;
 		{
@@ -92,11 +102,31 @@ public:
 				NativeBlock block;
 				block.offset = current->offset;
 				for(int p = 0; p < numProps; ++p) {
-					block.propSizes.push_back(current->propSizes[p]);
+					block.attrSizes.push_back(current->chunks[p]);
 				}
 				blocks.push_back(block);
-				current = (scalegraph::FBIO_Block*)(&current->propSizes[numProps]);
+				current = (scalegraph::FBIO_Block*)(&current->chunks[numProps]);
 			}
+		}
+
+		switch(header.datatype[0]) {
+		case 0: // Graph
+			if(sizeof(graphHeader) != udhSize)
+				x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
+			memcpy(&graphHeader, rawUserDefinedHeader, udhSize);
+			break;
+		case 1: // Matrix
+			if(sizeof(matrixHeader) != udhSize)
+				x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
+			memcpy(&matrixHeader, rawUserDefinedHeader, udhSize);
+			break;
+		case 2: // Vector
+			if(sizeof(vectorHeader) != udhSize)
+				x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
+			memcpy(&vectorHeader, rawUserDefinedHeader, udhSize);
+			break;
+		default:
+			x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("not supported data type")));
 		}
 
 		x10aux::dealloc(props);
