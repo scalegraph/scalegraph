@@ -3,82 +3,106 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <list>
+#include <vector>
+#include <new>
 
 #include <x10rt.h>
 #include <x10/io/FileNotFoundException.h>
+#include <x10/io/IOException.h>
 
-#include "org/scalegraph/io/format/struct.h"
+#include "org/scalegraph/io/format/binaryio_fmt.h"
 
 #define ALIGN(addr, length)		(((addr) + (length) - 1) & ~((length) - 1))
 
 namespace org { namespace scalegraph { namespace io {
 
-class NativeReader {
+typedef NativeHeader scalegraph::FBIO_Header;
+
+struct NativeAttribute {
+	int32_t id;
+	x10::lang::String* name;
+};
+
+typedef NativePropertySize scalegraph::FBIO_PropertySize;
+
+struct NativeBlock {
+	int64_t offset;
+	std::vector<NativePropertySize> propSizes;
+};
+
+typedef NativeGraphHeader scalegraph::FBIO_GraphHeader;
+
+////////////
+
+
+
+class NativeHeaders {
+
+	int64_t align(int64_t offset, int64_t length) {
+		return (offset + length - 1) & ~(length - 1);
+	}
+
 public:
-	int fd;
-	std::list< std::pair<void *, size_t> > mmaped;
-	std::list<void *> malloced;
+	NativeHeader header;
+	std::vector<NativeAttribute> properties;
+	std::vector<NativeBlock> blocks;
 
-	NativeReader(const char *filename) {
-		fd = open(filename, O_RDONLY);
-		if(fd < 0) {
-			x10aux::throwException(x10::io::FileNotFoundException::_make(x10::lang::String::Lit(filename)));
+	NativeHeaders(NativeFile* nf) {
+		FILE* fp = nf->handle();
+
+		if(fread(&header, sizeof(header), 1, fp) != 1) {
+			x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
 		}
-	}
-
-	~NativeReader() {
-		my_free();
-		my_munmap();
-		close(fd);
-	}
-
-
-	NativeHeader *readHeader() {
-
-		int8_t magic[4];
-		read(fd, magic, 4);
-		if(memcmp(magic, "DRBF", 4) != 0) {
-			x10aux::throwException(x10::lang::Exception::_make(x10::lang::String::Lit("illegal file format")));
-			return NULL;
+		if(memcmp(header.magic, "DRBF", 4) != 0) {
+			x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
 		}
 
-		int header_size;
-		read(fd, (int8_t *)&header_size, 4);  // skip 4 bytes
-		read(fd, (int8_t *)&header_size, 4);
-
-		return (NativeHeader *)my_mmap(NULL, header_size, PROT_READ, MAP_PRIVATE, fd, 0);
-	}
-
-
-	NativeProperty *readProperty(int64_t sec_size, int64_t offset) {
-		NativeProperty *prop = (NativeProperty *)my_malloc(sizeof(NativeProperty));
-		int8_t *rawdata = (int8_t *)my_mmap(NULL, sec_size, PROT_READ, MAP_PRIVATE, fd, offset);
-		NativeProperty *propdata = (NativeProperty *)rawdata;
-
-		prop->n = propdata->n;
-		prop->nattr = propdata->nattr;
-		prop->attr = (NativeAttribute **)my_malloc(sizeof(NativeAttribute *) * prop->nattr);
-
-		int ofs = sizeof(int64_t) + sizeof(int32_t);  // skip prop->n & prop->nattr
-		for(int i = 0; i < prop->nattr; i++) {
-			prop->attr[i] = (NativeAttribute *)&rawdata[ofs];
-			ofs += ALIGN(sizeof(int32_t) * 2 + prop->attr[i]->namelen, 4);  // next attribute
+		int64_t propSize = align(header.seclen[0], 8);
+		int64_t blocInfoSize = align(header.seclen[1], 8);
+		int64_t udfSize = align(header.seclen[2], 8);
+		int64_t remainHeaderSize = propSize + blocInfoSize + udfSize;
+		int8_t* headerMemory = x10aux::alloc(remainHeaderSize, false);
+		if(fread(headerMemory, remainHeaderSize, 1, fp) != 1) {
+			x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("illegal file format")));
 		}
-		return prop;
+
+		scalegraph::FBIO_Properties* rawProps = reinterpret_cast<scalegraph::FBIO_Properies*>(headerMemory);
+		headerMemory += propSize;
+		scalegraph::FBIO_Blocks* rawBlocks = reinterpret_cast<scalegraph::FBIO_Blocks*>(headerMemory);
+		headerMemory += blocInfoSize;
+		scalegraph::FBIO_GraphHeader* grawGaphHeader = reinterpret_cast<scalegraph::FBIO_GraphHeader*>(headerMemory);
+
+		const int numProps = rawProps->numProperties;
+		{
+			int offset = offsetof(scalegraph::FBIO_Properties, properties);
+			headerMemory = (int8_t*)rawProps;
+			for(int i = 0; i < numProps; i++) {
+				scalegraph::FBIO_Property* prop = (scalegraph::FBIO_Property*)&headerMemory[offset];
+				x10::lang::String* name = x10::lang::String::Steal(
+						x10aux::alloc_utils::strndup(prop->name.data, prop->name.length));
+				NativeAttribute att = { prop->id, name };
+				properties.push_back(att);
+				offset += align(sizeof(int32_t) * 2 + prop->name.length, 4);  // next attribute
+			}
+		}
+
+		{
+			scalegraph::FBIO_Block *current = rawBlocks->blocks;
+			for(int b = 0; b < rawBlocks->numBlocks; b++) {
+				NativeBlock block;
+				block.offset = current->offset;
+				for(int p = 0; p < numProps; ++p) {
+					block.propSizes.push_back(current->propSizes[p]);
+				}
+				blocks.push_back(block);
+				current = (scalegraph::FBIO_Block*)(&current->propSizes[numProps]);
+			}
+		}
+
+		x10aux::dealloc(props);
 	}
 
-
-	NativeBlockInfo *readBlockInfo(int64_t sec_size, int64_t offset) {
-		NativeBlockInfo *blockinfo = (NativeBlockInfo *)my_mmap(NULL, sec_size, PROT_READ, MAP_PRIVATE, fd, offset);
-		return blockinfo;
-	}
-
+	~NativeHeaders() { }
 
 	int8_t *readBlockData(int64_t sec_size, int64_t offset) {
 		int8_t *rawdata = (int8_t *)my_mmap(NULL, sec_size, PROT_READ, MAP_PRIVATE, fd, offset);
@@ -201,6 +225,70 @@ public:
 	}*/
 };
 
+namespace NativeBIO {
+
+static NativeHeaders* readHeaders(NativeFile* nf) {
+	return new (x10aux::alloc<NativeHeaders>()) NativeHeaders(nf);
+}
+
+static void writeHeaders(NativeFile* nf) {
+	// TODO:
+}
+
+template <typename T> void readPrimitives(NativeFile* nf, T *array, long numElements, long numBytes) {
+	if(fread(array, sizeof(T) * numElements, 1, nf.handle()) != 1)
+		x10aux::throwException(x10::lang::IOException::_make(
+				x10::lang::String::Lit("error while reading file...")));
+}
+
+void readStrings(NativeFile* nf, x10::lang::String **array, long numElements, long numBytes) {
+	int8_t* buffer = x10aux::alloc<int8_t>(numBytes, false);
+	if(fread(buffer, numBytes, 1, nf.handle()) != 1) {
+		x10aux::throwException(x10::lang::IOException::_make(
+				x10::lang::String::Lit("error while reading file...")));
+	}
+	long offset = 0L;
+	for(long i = 0L; i < numElements; ++i) {
+		scalegraph::FBIO_String* str_data = (scalegraph::FBIO_String*)&buffer[offset];
+		int length = str_data->length;
+		array[i] = x10::lang::String::Steal(
+				x10aux::alloc_utils::strndup(str_data->data, length));
+		offset += 4 + ALIGN(length, 4);
+	}
+	x10aux::dealloc(buffer);
+}
+
+template <typename T> void writePrimitives(NativeFile* nf, T *array, long numElements, long numBytes) {
+	if(fwrite(array, sizeof(T) * numElements, 1, nf.handle()) != 1)
+		x10aux::throwException(x10::lang::IOException::_make(
+				x10::lang::String::Lit("error while writing file...")));
+}
+
+long writeStringAttribute(NativeFile* nf, x10::lang::String **array, long numElements, long numBytes) {
+	int8_t* buffer = x10aux::alloc<int8_t>(numBytes, false);
+	long offset = 0L;
+	for(long i = 0L; i < numElements; ++i) {
+		int length = array[i]->length();
+		scalegraph::FBIO_String* str_data = (scalegraph::FBIO_String*)&buffer[offset];
+		str_data->length = length;
+		memcpy(str_data->data, array[i]->c_str(), length);
+		offset += 4 + ALIGN(length, 4);
+	}
+	if(fwrite(buffer, numBytes, 1, nf.handle()) != 1) {
+		x10aux::throwException(x10::lang::IOException::_make(
+				x10::lang::String::Lit("error while writing file...")));
+	}
+	x10aux::dealloc(buffer);
+	if(offset != numBytes) {
+		x10aux::throwException(x10::lang::IOException::_make(
+				x10::lang::String::Lit("offset != numBytes")));
+	}
+}
+
+}; // namespace NativeBIO {
+
 }}} // namespace org { namespace scalegraph { namespace io {
+
+#undef ALIGN
 
 #endif // __ORG_SCALEGRAPH_IO_NATIVEREADER_H

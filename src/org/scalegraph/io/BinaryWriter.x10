@@ -198,7 +198,8 @@ public class BinaryWriter {
 	}
 	
 	
-	private static def getBlockOffset(team : Team, fm : FileManager, blocks : Array[Array[TmpBlock]], localDataSize : PlaceLocalHandle[Cell[Long]], var globalOffset : Long) : Long {
+	private static def getBlockOffset(team : Team, fm : FileManager, blocks : Array[Array[TmpBlock]],
+			localDataSize : PlaceLocalHandle[Cell[Long]], var globalOffset : Long) : Long {
 		finish for(var i:Int = 0; i < team.size(); i++) {
 			if(!fm.isScattered()) {
 				globalOffset = Common.align(globalOffset, 8);
@@ -219,7 +220,8 @@ public class BinaryWriter {
 	}
 	
 	
-	private static def writeAttributeData(team : Team, fm : FileManager, startFile : Int, attrHandler : Array[AttributeHandler], attrData : Array[Any], blocks : Array[Array[TmpBlock]]) {
+	private static def writeAttributeData(team : Team, fm : FileManager, startFile : Int,
+			attrHandler : Array[AttributeHandler], attrData : Array[Any], blocks : Array[Array[TmpBlock]]) {
 
 		finish for(var i:Int = 0; i < team.size(); i++) {
 			val ii = i;

@@ -5,8 +5,7 @@ namespace org { namespace scalegraph { namespace io {
 
 struct NativeBlock {
 	int64_t offset;
-	int64_t size;
-	int64_t n;
+	std::vector<NativePropertySize> propSizes;
 } ;
 
 }}} // namespace org { namespace scalegraph { namespace io {

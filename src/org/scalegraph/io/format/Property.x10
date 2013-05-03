@@ -4,7 +4,7 @@ import x10.compiler.Native;
 import x10.compiler.NativeRep;
 import x10.compiler.NativeCPPInclude;
 
-@NativeCPPInclude("Property.h")
+@NativeCPPInclude("NativeReader.h")
 
 @NativeRep("c++", "org::scalegraph::io::NativeProperty *", "org::scalegraph::io::NativeProperty *", null)
 public class Property {

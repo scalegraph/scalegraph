@@ -50,9 +50,9 @@ struct NativeReader {
 	@Native("c++", "(#this)->printProp(#prop)")
 	public native def printProperty(prop : Property) : void;
 	
-	@Native("c++", "new org::scalegraph::io::NativeReader((#filename)->c_str())")
+	@Native("c++", "new (x10aux::alloc<org::scalegraph::io::NativeReader>()) org::scalegraph::io::NativeReader((#filename)->c_str())")
 	public static native def make(filename : String) : NativeReader;
 	
-	@Native("c++", "delete (#this)")
+	@Native("c++", "(#this)->~NativeReader(); x10aux::dealloc(#this)")
 	public native def del() :void;
 }

@@ -7,9 +7,7 @@ struct NativeHeader {
 	int8_t magic[4];
 	int8_t version;
 	int8_t datatype[3];
-	int32_t size;
-	int32_t nsec;
-	int64_t seclen[1];
+	int64_t seclen[4];
 } ;
 
 }}} // namespace org { namespace scalegraph { namespace io {
