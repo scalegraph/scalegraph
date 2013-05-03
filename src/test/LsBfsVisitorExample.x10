@@ -43,7 +43,7 @@ public class LsBfsVisitorExample {
         val g = new Graph(team, Graph.VertexType.Long, false);
         g.addEdges(edgeList.data(team.placeGroup()));
         
-        // Create dist sparse matrix time
+        // Create dist sparse matrix
         val csr = g.constructDistSparseMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
