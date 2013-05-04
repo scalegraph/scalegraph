@@ -267,3 +267,4 @@ class StringAttributeHandler extends AttributeHandler {
 		Console.OUT.println("");
 	}
 }
+

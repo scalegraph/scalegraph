@@ -311,10 +311,14 @@ public class FBIOSupport {
 		fm.deleteFile();
 		
 		val headerFile = new NativeFile(fm.headerFileName(), true, false);
+		val numAttrs = data.size();
+		val attrNames = new Array[String](numAttrs, data(i).get1());
+		val attrData = new Array[Any](numAttrs, data(i).get2());
+		val attrHandler = new Array[AttributeHandler](numAttrs,
+						(i:Int) => AttributeHandler.makeFromAny(team, attrData(i)));
+		val attrTypeIds = new Array[Int](numAttrs, (i :Int) => attrHandler(i).datatype());
 		
-		val attrNames = data.keys();
-		val attrHandler = new Array[AttributeHandler](rattrNames.size,
-						(j:Int) => AttributeHandler.makeFromAny(team, rawdata(i).data(j))));
+		val blocks = getBlockPartitioning(team, attrHandler, attrData, minBlockSize);
 		
 		// make properties
 		val prop = new MemoryChunk[Property](rawdata.size);
@@ -394,6 +398,96 @@ public class FBIOSupport {
 			writeAttributeData(team, fm, i * team.size() + 1, attrHandler(i), rawdata(i).data, blocks(i));
 		}
 		nw.del();
+	}
+	
+	private static class PartitionedBlocks {
+		public val numBlocks :Int;
+		public val offsets :MemoryChunk[Long];
+		public val chunkSizes :Array[MemoryChunk[Long]];
+		
+		public def this(numAttrs :Int, numBlocks :Int) {
+			this.numBlocks = numBlocks;
+			offsets = new MemoryChunk[Long](numBlocks + 1);
+			chunkSizes = new Array[MemoryChunk[Long]](numBlocks,
+					(i:Int)=>new MemoryChunk[Long](numAttrs * 2));
+		}
+
+		public def this(numBlocks :Int) {
+			this.numBlocks = numBlocks;
+			offsets = new MemoryChunk[Long](numBlocks + 1);
+			chunkSizes = null;
+		}
+	}
+	
+	/**
+	 * blockOffsets, chunkSize
+	 */
+	private static def getBlockPartitioning(team :Team, attrHandler :Array[AttributeHandler],
+			attrData :Array[Any], minBlockSize :Long) : PartitionedBlocks
+	{
+		val numAttr = attrData.size;
+		val teamSize = team.size();
+		val results = new Array[PartitionedBlocks](teamSize);
+		val ref_results = new GlobalRef[Array[PartitionedBlocks]](results);
+		
+		val pg = team.placeGroup();
+		finish for(pid in 0..(teamSize-1)) at (pg(pid)) async {
+			// calculate total number of bytes then determine the number of blocks
+			var numTotalBytes :Long = 0;
+			for(aid in 0..(numAttr-1)) {
+				numTotalBytes += attrHandler(aid).numBytes(attrData(aid));
+			}
+			val numBlocks = ((numTotalBytes + minBlockSize - 1L) / minBlockSize) as Int;
+			val blocks = new PartitionedBlocks(numAttr, numBlocks);
+			
+			// calculate the length of each chunks
+			for(aid in 0..(numAttr-1)) {
+				val elementsHere = attrHandler(aid).numElements(attrData(aid));
+				val elementsPerChunk = elementsHere / numBlocks;
+				val extraElements = elementsHere % numBlocks;
+				var elementsOffset :Long = 0L;
+				for(bid in 0..(numBlocks-1)) {
+					val numElements = elementsPerChunk + ((bid < extraElements) ? 1 : 0);
+					val numBytes = attrHandler(aid).numBytes(attrData(aid), elementsOffset, numElements);
+					blocks.chunkSizes(bid)(aid * 2 + 0) = numBytes;
+					blocks.chunkSizes(bid)(aid * 2 + 1) = numElements;
+					elementsOffset += numElements;
+				}
+			}
+			
+			// calculate block length
+			for(bid in 0..(numBlocks-1)) {
+				var bytesOffset :Long = 0L;
+				for(aid in 0..(numAttr-1)) {
+					bytesOffset += align(blocks.chunkSizes(bid)(aid * 2 + 0), 8);
+				}
+				// Actually, this is the size of the block, not the offset.
+				blocks.offsets(bid) = bytesOffset;
+			}
+			
+			// send the result
+			at(ref_results.home) async {
+				ref_results()(pid) = blocks;
+			}
+		}
+		
+		// merge the results
+		var numBlocks :Int = 0;
+		for(pid in 0..(teamSize-1)) {
+			numBlocks += results(pid).numBlocks;
+		}
+		val ret = new PartitionedBlocks(numBlocks);
+		var blockIdx :Int = 0;
+		ret.offsets(0) = 0L;
+		for(pid in 0..(teamSize-1)) {
+			for(bid in 0..(results(pid).numBlocks - 1)) {
+				ret.offsets(blockIdx + 1) = ret.offsets(blockIdx) + results(pid).offsets(bid);
+				ret.chunkSizes(blockIdx) = results(pid).chunkSizes(bid);
+				++blockIdx;
+			}
+		}
+		
+		return ret;
 	}
 	
 	/************************** test function ******************************/

@@ -47,8 +47,8 @@ struct FBIO_Attribute {
 };
 
 struct FBIO_Attributes {
-	int32_t numProperties;
-	FBIO_Attribute properties[1];
+	int32_t numAttributes;
+	FBIO_Attribute attributes[1];
 };
 
 struct FBIO_Chunk {

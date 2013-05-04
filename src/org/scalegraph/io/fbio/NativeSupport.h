@@ -158,8 +158,64 @@ static NativeHeaders* readHeaders(NativeFile nf) {
 	return new (x10aux::alloc<NativeHeaders>()) NativeHeaders(nf);
 }
 
-static void writeHeaders(NativeFile nf) {
+static void writeHeaders(
+		NativeFile nf,
+		int datatype,
+		int numAttributes,
+		int numBlocks,
+		const int32_t* typeIds,
+		x10::lang::String** attrNames,
+		x10_long* blockOffsets, // in/out
+		org::scalegraph::util::MemoryChunk<x10_long>** chunkSizes,
+		x10::lang::Any* udf)
+{
+	using namespace fbio;
+	using namespace org::scalegraph::io;
+	using namespace x10::lang;
+
 	// TODO:
+
+	// calculate header length
+	int64_t headerSize = sizeof(FBIO_Header);
+	int64_t propSize = 4;
+	for(int i = 0; i < numAttributes; ++i) {
+		propSize += 8 + align(attrNames[i]->length(), 4);
+	}
+	int64_t blockInfoSize = 8 + (8 + (16 * numAttributes)) * numBlocks;
+	int64_t udhSize;
+	switch(datatype) {
+	case Format.TYPE_NONE:
+		udhSize = 0;
+		break;
+	case Format.TYPE_GRAPH:
+		udhSize = sizeof(FBIO_GraphHeader);
+		break;
+	case Format.TYPE_MATRIX:
+		udhSize = sizeof(FBIO_MatrixHeader);
+		break;
+	case Format.TYPE_VECTOR:
+		udhSize = sizeof(FBIO_VectorHeader);
+		break;
+	case Format.TYPE_X10CLASS:
+		// TODO: deserialize
+		x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("not supported data type")));
+		break;
+	default:
+		x10aux::throwException(x10::lang::IOException::_make(x10::lang::String::Lit("not supported data type")));
+	}
+
+	int64_t headerSectionSize = align(headerSize, 8);
+	int64_t propSectionSize = align(propSize, 8);
+	int64_t blocInfoSectionSize = align(blocInfoSize, 8);
+	int64_t udhSectionSize = align(udhSize, 8);
+
+	int64_t totalHeaderSize = headerSectionSize + propSectionSize + blocInfoSectionSize + udhSectionSize;
+	x10_byte* headerMemory = x10aux::alloc<x10_byte*>(totalHeaderSize, false);
+
+	if(fwrite(headerMemory, totalHeaderSize, 1, nf.handle()) != 1)
+		x10aux::throwException(IOException::_make(String::Lit("error while writing file")));
+
+	x10aux::dealloc(headerMemory);
 }
 
 template <typename T> void readPrimitives(NativeFile nf, T *array, long numElements, long numBytes) {

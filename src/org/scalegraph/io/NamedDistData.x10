@@ -4,6 +4,7 @@ import x10.util.ArrayList;
 
 import org.scalegraph.util.DistMemoryChunk;
 import x10.util.NoSuchElementException;
+import org.scalegraph.util.tuple.Tuple2;
 
 public class NamedDistData {
 	val name :ArrayList[String] = new ArrayList[String]();
@@ -42,6 +43,11 @@ public class NamedDistData {
 		if(i == -1) return orelse;
 		return data(i) as DistMemoryChunk[T];
 	}
+	
+	public def size() = name.size();
+	
+	public operator this(i :Int) =
+		new Tuple2[String, Any](name(i), data(i));
 	
 	public def put[T](k: String, v: DistMemoryChunk[T]) {
 		if(containsKey(k)) throw new IllegalOperationException();
