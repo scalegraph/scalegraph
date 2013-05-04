@@ -17,7 +17,7 @@ import org.scalegraph.io.fbio.FBIOSupport;
 
 public class TestBinaryIO {
 	
-	public static def main(args : Array[String]) {
+	public static def main(args : Array[String](1)) {
 		if(args(0).equals("read")) {
 			read(args);
 		} else if(args(0).equals("write")) {
@@ -32,7 +32,7 @@ public class TestBinaryIO {
 	}
 	
 	
-	public static def read(args : Array[String]) {
+	public static def read(args : Array[String](1)) {
 		val fileName = args(1);
 		val numExec = Int.parse(args(2));
 		val team = Team.WORLD;
@@ -58,7 +58,7 @@ public class TestBinaryIO {
 		Console.OUT.printf("Average : %.3lf sec\n", acc / numExec as Double / 1000.0);
 	}
 	
-	public static def write(args : Array[String]) {
+	public static def write(args : Array[String](1)) {
 		val readFileName = args(1);
 		val writeFileName = args(2);
 		val blockSize = Long.parse(args(3));
@@ -93,7 +93,7 @@ public class TestBinaryIO {
 		Console.OUT.printf("FBIOSupport.write(): %ld msec\n", time);
 	}
 	
-	public static def writeTestData(args : Array[String]) {
+	public static def writeTestData(args : Array[String](1)) {
 		val writeFileName = args(1);
 		val blockSize = Long.parse(args(2));
 		val scatter = Boolean.parse(args(3));
@@ -106,7 +106,7 @@ public class TestBinaryIO {
 		Console.OUT.printf("FBIOSupport.write(): %ld msec\n", time);
 	}
 	
-	private static def importFromEdgeList(args : Array[String]) {
+	private static def importFromEdgeList(args : Array[String](1)) {
 		val readPath = args(1);
 		val writePath = args(2);
 		val separator = args(3);

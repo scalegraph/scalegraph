@@ -142,7 +142,7 @@ class SingleFileManager extends FileManager {
 
 class ScatteredFileManager extends FileManager {
 	private static val format = "%s" + File.SEPARATOR + "part-%05d";
-	private var fileOffset:Array[Long] = null;
+	private var fileOffset:Array[Long](1) = null;
 	private var count:Int;
 	
 	public def this(path : String) {
@@ -240,7 +240,7 @@ public class FBIOSupport {
 		val extraBlocks = blocks.numBlocks() % team.size();
 		// local array size for each place and attribute
 		val numAttributes = attrs.numAttributes();
-		val localArraySize = new Array[Array[Long]](team.size(),
+		val localArraySize = new Array[Array[Long](1)](team.size(),
 				(i:Int) => new Array[Long](numAttributes, 0));
 		var block_idx :Int = 0;
 		for(pid in 0..(team.size()-1)) {
@@ -408,13 +408,13 @@ public class FBIOSupport {
 	/**
 	 * blockOffsets, chunkSize
 	 */
-	private static def getBlockPartitioning(team :Team, attrHandler :Array[AttributeHandler],
-			attrData :Array[Any], minBlockSize :Long) : PartitionedBlocks
+	private static def getBlockPartitioning(team :Team, attrHandler :Array[AttributeHandler](1),
+			attrData :Array[Any](1), minBlockSize :Long) : PartitionedBlocks
 	{
 		val numAttr = attrData.size;
 		val teamSize = team.size();
 		val results = new Array[PartitionedBlocks](teamSize);
-		val ref_results = new GlobalRef[Array[PartitionedBlocks]](results);
+		val ref_results = new GlobalRef[Array[PartitionedBlocks](1)](results);
 		
 		val pg = team.placeGroup();
 		finish for(pid in 0..(teamSize-1)) at (pg(pid)) async {
