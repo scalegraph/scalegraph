@@ -27,6 +27,7 @@ public:
 	x10_long read(org::scalegraph::util::MemoryChunk<x10_byte> b);
 	x10_long write(org::scalegraph::util::MemoryChunk<x10_byte> b);
 	void seek(x10_long offset, int origin);
+	x10_long getpos();
 
 	// Serialization
 	static void _serialize(NativeFile this_, x10aux::serialization_buffer& buf) {

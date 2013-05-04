@@ -42,6 +42,13 @@ void NativeFile::seek(x10_long offset, int origin) {
         throwException(FileNotFoundException::_make());
 }
 
+x10_long NativeFile::getpos() {
+	fpos_t pos;
+	if(fgetpos(FMGL(fp), &pos))
+        throwException(FileNotFoundException::_make());
+	return pos;
+}
+
 RTT_CC_DECLS0(NativeFile, "org.scalegraph.io.NativeFile", RuntimeType::class_kind)
 
 }}} // namespace org { namespace scalegraph { namespace io {

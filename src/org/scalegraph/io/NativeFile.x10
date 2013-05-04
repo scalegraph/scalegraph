@@ -19,4 +19,5 @@ public struct NativeFile {
 	public native def read(buffer: MemoryChunk[Byte]): Long;
 	public native def write(buffer: MemoryChunk[Byte]): Long;
 	public native def seek(offset: Long, origin: Int): void;
+	public native def getpos(): Long;
 }

@@ -2,6 +2,7 @@ package org.scalegraph.io.fbio;
 
 import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
+import x10.compiler.NativeCPPCompilationUnit;
 
 import x10.util.Team;
 
@@ -22,24 +23,13 @@ public abstract class AttributeHandler {
 		this.id = id;
 	}
 	
-	public abstract def create(localSize : (Int) => Long) : Any;
-	
-	public abstract def getId() : Int;
-	
-	public abstract def numElems(dmc : Any) : Long;
-	
-	public abstract def localNumElems(dmc : Any) : Long;
-	
-	public abstract def sizeOfElem(dmc : Any, i : Long) : Long;
-	
-	public abstract def sizeOfElems(dmc : Any, offset : Long, num : Long) : Long;
-	
-	public abstract def localSize(dmc : Any, offset : Long, num : Long) : Long;
-
+	public abstract def allocate(localSize : (Int) => Long) : Any;
+	public abstract def typeId() : Int;
+	public abstract def numElements(dmc : Any) : Long;
+	public def numBytes(dmc :Any) = numBytes(dmc, 0, numElements(dmc));
+	public abstract def numBytes(dmc : Any, offset : Long, num : Long) : Long;
 	public abstract def read(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) :void;
-	
 	public abstract def write(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) :void;
-	
 	public abstract def putResult(res :NamedDistData, k :String, array :Any) :void;
 	
 	public abstract def print(dmc : Any) : void;
@@ -115,52 +105,20 @@ public abstract class AttributeHandler {
 
 
 @NativeCPPInclude("NativeSupport.h")
+@NativeCPPCompilationUnit("NativeSupport.cc") 
 class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	
 	public def this(team : Team, id : Int) {
 		super(team, id);
 	}
-	
-	public def create(localSize : (Int) => Long) : Any {
-		return DistMemoryChunk.make[T, Long](
+	public def allocate(localSize :(Int)=>Long) = DistMemoryChunk.make[T, Long](
 				team.placeGroup(), localSize, (ls :Long) => new MemoryChunk[T](ls));
-	}
+	public def typeId() = (id << 8);
+	public def numElements(any : Any) = (any as DistMemoryChunk[T])().size();
 	
-	public def getId() : Int {
-		return id << 8;
-	}
-	
-	public def numElems(any : Any) : Long {
-		val dmc = any as DistMemoryChunk[T];
-		var sum : Long = 0L;
-		for(var i:Int = 0; i < team.size(); i++) {
-			sum += at(team.places()(i)) dmc().size();
-		}
-		return sum;
-	}
-	
-	public def localNumElems(any : Any) : Long {
-		val dmc = any as DistMemoryChunk[T];
-		return dmc().size();
-	}
-	
-	public def sizeOfElem(any : Any, i : Long) : Long {
-		var size : Int = 0;
-		@Native("c++", "size = sizeof(TPMGL(T));") {}
-		return size;
-	}
-	
-	public def sizeOfElems(any : Any, offset : Long, num : Long) : Long {
-		var size : Int = 0;
-		@Native("c++", "size = sizeof(TPMGL(T));") {}
-		return size * num;
-	}
-	
-	public def localSize(any : Any, offset : Long, num : Long) : Long {
-		var size : Int = 0;
-		@Native("c++", "size = sizeof(TPMGL(T));") {}
-		return num * size;
-	}
+	@Native("c++", "sizeof(TPMGL(T))")
+	private native def sizeofT() :Int;
+	public def numBytes(any : Any, offset : Long, num : Long) = (num * sizeofT());
 	
 	@Native("c++", "org::scalegraph::io::fbio::readPrimitives<#T >(#nf, #dst, #numElements, #numBytes)")
 	private native def nativeRead(nf :NativeFile, dst :MemoryPointer[T], numElements :Long, numBytes :Long) :void;
@@ -189,55 +147,22 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 }
 
 @NativeCPPInclude("NativeSupport.h")
+@NativeCPPCompilationUnit("NativeSupport.cc") 
 class StringAttributeHandler extends AttributeHandler {
 	
 	public def this(team : Team, id : Int) {
 		super(team, id);
 	}
-	
-	public def create(localSize : (Int) => Long) : Any {
-		return DistMemoryChunk.make[String, Long](
+	public def allocate(localSize :(Int)=>Long) = DistMemoryChunk.make[String, Long](
 				team.placeGroup(), localSize, (ls :Long) => new MemoryChunk[String](ls));
-	}
+	public def typeId() = (id << 8);	
+	public def numElements(any : Any) = (any as DistMemoryChunk[String])().size();
 	
-	public def getId() : Int {
-		return id << 8;
-	}
-	
-	public def numElems(any : Any) : Long {
-		val dmc = any as DistMemoryChunk[String];
+	public def numBytes(any : Any, offset : Long, num : Long) : Long {
+		val mc = (any as DistMemoryChunk[String])();
 		var sum : Long = 0L;
-		for(var i:Int = 0; i < team.size(); i++) {
-			sum += at(team.places()(i)) dmc().size();
-		}
-		return sum;
-	}
-	
-	public def localNumElems(any : Any) : Long {
-		val dmc = any as DistMemoryChunk[String];
-		return dmc().size();
-	}
-	
-	public def sizeOfElem(any : Any, i : Long) : Long {
-		val dmc = any as DistMemoryChunk[String];
-		return 4 + dmc()(i).length();
-	}
-	
-	public def sizeOfElems(any : Any, offset : Long, num : Long) : Long {
-		val dmc = any as DistMemoryChunk[String];
-		var size:Long = 0L;
-		for(var i:Long = offset; i < offset + num; i++) {
-			size = Common.align(size, 4);
-			size += 4 + dmc()(i).length();
-		}
-		return size;
-	}
-	
-	public def localSize(any : Any, offset : Long, num : Long) : Long {
-		val dmc = any as DistMemoryChunk[String];
-		var sum : Long = 0L;
-		for(var i:Long = offset; i < offset + num; i++) {
-			sum += dmc()(i).length();
+		for(i in offset..(offset+num-1)) {
+			sum += 4 + FBIOSupport.align(mc(i).length(), 4);
 		}
 		return sum;
 	}

@@ -9,6 +9,7 @@ import x10.compiler.Native;
 import x10.compiler.NativeRep;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPOutputFile;
+import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.Ifdef;
 import x10.compiler.Inline;
 
@@ -16,9 +17,9 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.MemoryPointer;
 import org.scalegraph.io.NativeFile;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.util.MemoryPointer;
 
 @NativeCPPInclude("NativeSupport.h")
 @NativeCPPOutputFile("Attribute.h")
@@ -40,9 +41,9 @@ struct Block {
 	public native def offset() : Long;
 	@Native("c++", "(#this)->chunks.size()")
 	public native def numAttributes() : Int;
-	@Native("c++", "(#this)->chunks(#i).numBytes")
+	@Native("c++", "(#this)->chunks[(#i) * 2 + 0]")
 	public native def numBytes(i:Int) : Long;
-	@Native("c++", "(#this)->chunks(#i).numElements")
+	@Native("c++", "(#this)->chunks[(#i) * 2 + 1]")
 	public native def numElements(i:Int) : Long;
 }
 
@@ -201,6 +202,8 @@ class ScatteredFileManager extends FileManager {
 //
 //////////////////////////////////////////////////////////////
 
+@NativeCPPInclude("NativeSupport.h")
+@NativeCPPCompilationUnit("NativeSupport.cc") 
 public class FBIOSupport {
 
 	static @Inline def align(addr : Int, length : Int) : Int = (addr + (length - 1)) & ~(length - 1);
@@ -255,7 +258,7 @@ public class FBIOSupport {
 		val attrHandler = new Array[AttributeHandler](attrs.numAttributes(),
 				(i:Int) => AttributeHandler.makeFromId(team, tmpAttrId(i)));
 		val attributes = new Array[Any](numAttributes, (i:Int) => 
-				attrHandler(i).create((pid :Int) => localArraySize(pid)(i)));
+				attrHandler(i).allocate((pid :Int) => localArraySize(pid)(i)));
 		
 		// assign closures to each place
 		block_idx = 0;
@@ -312,110 +315,89 @@ public class FBIOSupport {
 		
 		val headerFile = new NativeFile(fm.headerFileName(), true, false);
 		val numAttrs = data.size();
-		val attrNames = new Array[String](numAttrs, data(i).get1());
-		val attrData = new Array[Any](numAttrs, data(i).get2());
+		val attrNames = new Array[String](numAttrs, (i :Int) => data(i).get1());
+		val attrData = new Array[Any](numAttrs, (i :Int) => data(i).get2());
 		val attrHandler = new Array[AttributeHandler](numAttrs,
 						(i:Int) => AttributeHandler.makeFromAny(team, attrData(i)));
-		val attrTypeIds = new Array[Int](numAttrs, (i :Int) => attrHandler(i).datatype());
+		val attrTypeIds = new Array[Int](numAttrs, (i :Int) => attrHandler(i).typeId());
 		
 		val blocks = getBlockPartitioning(team, attrHandler, attrData, minBlockSize);
 		
-		// make properties
-		val prop = new MemoryChunk[Property](rawdata.size);
-		for(var i:Int = 0; i < prop.size(); i++) {
-			prop(i) = makeProperty(nw, attrHandler(i), rawdata(i).name, rawdata(i).data);
-			printProperty(prop(i));
-		}
-		
-		
-		// block partitionings
-		val blocks = new Array[Array[Array[TmpBlock]]](rawdata.size);
-		val localDataSize = new Array[PlaceLocalHandle[Cell[Long]]](rawdata.size);
-		val blockInfo_n = new Array[Int](rawdata.size, 0);
-		for(var i:Int = 0; i < prop.size(); i++) {
-			blocks(i) = getBlockPartitioning(team, attrHandler(i), rawdata(i).data, minBlockSize);
-			localDataSize(i) = getLocalDataSize(team, blocks(i));
-			
-			// calculate blockInfo_n
-			for(var j:Int = 0; j < team.size(); j++) {
-				blockInfo_n(i) += blocks(i)(j).size;
+		writeHeaders(headerFile, data.datatype(), numAttrs, blocks.numBlocks,
+				attrTypeIds, attrNames, blocks.offsets, blocks.chunkSizes, data.header());
+		headerFile.close();
+
+		// assign closures to each place
+		var blockIdx :Int = 0;
+		finish for(pid in 0..(team.size()-1)) {
+			val numLocalBlocks = blocks.numLocalBlocks(pid);
+			val tasks = new Array[(NativeFile)=>void](numLocalBlocks);
+			val attrOffset = new Array[Long](numAttrs, 0L);
+			val fileOffset = blocks.offsets(blockIdx);
+			for(bid in 0..(numLocalBlocks - 1)) {
+				val localBlockOffset = blocks.offsets(blockIdx) - fileOffset;
+				val chunkSize = blocks.chunkSizes(blockIdx);
+				val attrNumBytes = new Array[Long](numAttrs, (i :Int)=>chunkSize(i * 2 + 0));
+				val attrNumElements = new Array[Long](numAttrs, (i :Int)=>chunkSize(i * 2 + 1));
+				val tmpAttrOffset = new Array[Long](numAttrs, (i :Int)=>attrOffset(i));
+				for([i] in attrOffset) attrOffset(i) += attrNumElements(i);
+				
+				tasks(bid) = (nf :NativeFile) => {
+					debugprint("block_size = " + attrNumBytes + ", local_block_offset = " + localBlockOffset + ", block_n = " + attrNumElements);
+					// write attribute data
+				//	nf.seek(localBlockOffset, NativeFile.BEGIN);
+					assert (nf.getpos() == localBlockOffset);
+					for(aid in 0..(numAttrs - 1)) {
+						attrHandler(aid).write(nf, attrData(aid), tmpAttrOffset(aid),
+								attrNumElements(aid), align(attrNumBytes(aid), 8));
+					}
+				};
+				++blockIdx;
 			}
-		}
-		
-		
-		// calculate section sizes
-		val nsec : Int = 2 * rawdata.size;
-		val headerSize : Int = 16 + 8 * nsec;
-		val seclen = new Array[Long](nsec);
-		for(var i:Int = 0; i < rawdata.size; i++) {
-			seclen(i) = 12;
-			seclen(i + rawdata.size) = 8 + 24 * blockInfo_n(i);
-			for(var j:Int = 0; j < rawdata(i).data.size; j++) {
-				seclen(i) = Common.align(seclen(i), 4) + (8 + rawdata(i).name(j).length());
-			}
-		}
-		
-		var metaSize:Long = headerSize;
-		Common.debugprint("headerSize = " + headerSize);
-		for(var i:Int = 0; i < nsec; i++) {
-			metaSize = Common.align(metaSize, 8) + seclen(i);
-			Common.debugprint("seclen(" + i + ") = " + seclen(i));
-		}
-		Common.debugprint("metaSize = " + metaSize);
-		
-		
-		// calculate block offsets
-		val allBlocks = new MemoryChunk[MemoryChunk[Block]](rawdata.size);
-		val blockInfo = new MemoryChunk[BlockInfo](rawdata.size);
-		var globalOffset : Long = metaSize;
-		for(var i:Int = 0; i < rawdata.size; i++) {
-			globalOffset = getBlockOffset(team, fm, blocks(i), localDataSize(i), globalOffset);  // this overwrites blocks(i)(j).offset
-			allBlocks(i) = new MemoryChunk[Block](blockInfo_n(i));
-			var count : Int = 0;
-			for(var j:Int = 0; j < team.size(); j++) {
-				val localBlocks = blocks(i)(j);
-				for(var k:Int = 0; k < localBlocks.size; k++) {
-					allBlocks(i)(count) = nw.makeBlock(localBlocks(k).offset, localBlocks(k).size, localBlocks(k).n);
-					count++;
+			val fileName = fm.fileName(pid + 1);
+			at(team.places()(pid)) async {
+				@Ifdef("DEBUG") {
+					for(aid in 0..(numAttrs - 1)) {
+						assert (attrOffset(aid) == attrHandler(aid).numElements(attrData(aid)));
+					}
 				}
+				val nf = new NativeFile(fileName, true, false);
+				for([i] in tasks) tasks(i)(nf);
+				nf.close();
 			}
-			
-			blockInfo(i) = nw.makeBlockInfo(blockInfo_n(i), allBlocks(i));
-			printBlockInfo(blockInfo(i));
 		}
-		
-		
-		// make header
-		val version : Byte = ID.VERSION;
-		val flags = new Array[Byte](3, 0);
-		flags(0) = datatype;
-		val header = nw.makeHeader(version, flags, headerSize, nsec, seclen);
-		
-		
-		// write to file
-		nw.writeMetaData(header, prop, blockInfo, rawdata.size);
-		for(var i:Int = 0; i < rawdata.size; i++) {
-			writeAttributeData(team, fm, i * team.size() + 1, attrHandler(i), rawdata(i).data, blocks(i));
-		}
-		nw.del();
 	}
+	
+	@Native("c++", "org::scalegraph::io::fbio::writeHeaders(#nf, #datatype, #numAttributes, #numBlocks, (#typeIds)->raw()->raw(), (#attrNames)->raw()->raw(), (#blockOffsets)->pointer(), (#chunkSizes)->raw()->raw(), #udf)")
+	private static native def writeHeaders(
+			nf :NativeFile,
+			datatype :Int, numAttributes :Int, numBlocks :Int,
+			typeIds :Array[Int],
+			attrNames :Array[String],
+			blockOffsets :MemoryChunk[Long],
+			chunkSizes :Array[MemoryChunk[Long]],
+			udf :Any) :void;
 	
 	private static class PartitionedBlocks {
 		public val numBlocks :Int;
 		public val offsets :MemoryChunk[Long];
+		// This has two components: 2*N + 0: number of bytes, 2*N + 1: number of elements
 		public val chunkSizes :Array[MemoryChunk[Long]];
+		public val numLocalBlocks :Array[Int];
 		
 		public def this(numAttrs :Int, numBlocks :Int) {
 			this.numBlocks = numBlocks;
 			offsets = new MemoryChunk[Long](numBlocks + 1);
 			chunkSizes = new Array[MemoryChunk[Long]](numBlocks,
 					(i:Int)=>new MemoryChunk[Long](numAttrs * 2));
+			numLocalBlocks = null;
 		}
 
-		public def this(numBlocks :Int) {
+		public def this(team :Team, numBlocks :Int) {
 			this.numBlocks = numBlocks;
 			offsets = new MemoryChunk[Long](numBlocks + 1);
-			chunkSizes = null;
+			chunkSizes = new Array[MemoryChunk[Long]](numBlocks);
+			numLocalBlocks = new Array[Int](team.size());
 		}
 	}
 	
@@ -476,10 +458,11 @@ public class FBIOSupport {
 		for(pid in 0..(teamSize-1)) {
 			numBlocks += results(pid).numBlocks;
 		}
-		val ret = new PartitionedBlocks(numBlocks);
+		val ret = new PartitionedBlocks(team, numBlocks);
 		var blockIdx :Int = 0;
 		ret.offsets(0) = 0L;
 		for(pid in 0..(teamSize-1)) {
+			ret.numLocalBlocks(pid) = results(pid).numBlocks;
 			for(bid in 0..(results(pid).numBlocks - 1)) {
 				ret.offsets(blockIdx + 1) = ret.offsets(blockIdx) + results(pid).offsets(bid);
 				ret.chunkSizes(blockIdx) = results(pid).chunkSizes(bid);
@@ -510,8 +493,3 @@ public class FBIOSupport {
 		}
 	}
 }
-
-
-
-
-
