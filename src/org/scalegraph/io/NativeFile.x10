@@ -2,9 +2,13 @@ package org.scalegraph.io;
 
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
+import x10.compiler.NativeCPPInclude;
+import x10.compiler.NativeCPPCompilationUnit;
 
 import org.scalegraph.util.MemoryChunk;
 
+@NativeCPPInclude("NativeFile.h")
+@NativeCPPCompilationUnit("NativeFile.cc")
 @NativeRep("c++", "org::scalegraph::io::NativeFile", "org::scalegraph::io::NativeFile", null)
 public struct NativeFile {
 	@Native("c++", "0")

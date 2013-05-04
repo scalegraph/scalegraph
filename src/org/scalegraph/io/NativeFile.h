@@ -15,13 +15,15 @@ protected:
 public:
 	RTT_H_DECLS_CLASS;
 
-	explicit NativeFile(FILE* file) : FMGL(file)(file) { }
-	NativeFile() : FMGL(file)(NULL) { }
+	explicit NativeFile(FILE* file) : FMGL(fp)(file) { }
+	NativeFile() : FMGL(fp)(NULL) { }
 
 	static NativeFile _make(x10::lang::String* name, bool write, bool append);
 	void _constructor (x10::lang::String* name, bool write, bool append);
 
-	FILE* handle() { return fp; }
+	NativeFile* operator->() { return this; }
+
+	FILE* handle() { return FMGL(fp); }
 
 	void close();
 	x10_long read(org::scalegraph::util::MemoryChunk<x10_byte> b);

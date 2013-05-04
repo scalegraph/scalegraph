@@ -4,14 +4,16 @@ import x10.io.File;
 import x10.util.Team;
 import x10.util.Timer;
 
+import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.io.fbio.FBIOSupport;
+
 import org.scalegraph.fileread.DistributedReader;
+
 import org.scalegraph.io.GraphHeader;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.Import;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.io.fbio.FBIOSupport;
 
 public class TestBinaryIO {
 	

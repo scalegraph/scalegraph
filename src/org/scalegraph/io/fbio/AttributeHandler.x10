@@ -2,6 +2,7 @@ package org.scalegraph.io.fbio;
 
 import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
+import x10.compiler.NativeCPPOutputFile;
 import x10.compiler.NativeCPPCompilationUnit;
 
 import x10.util.Team;
@@ -68,8 +69,8 @@ public abstract class AttributeHandler {
 	}
 }
 
-
 @NativeCPPInclude("NativeSupport.h")
+@NativeCPPOutputFile("fbio_fmt.h")
 @NativeCPPCompilationUnit("NativeSupport.cc") 
 class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	
@@ -85,9 +86,9 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	private native def sizeofT() :Int;
 	public def numBytes(any : Any, offset : Long, num : Long) = (num * sizeofT());
 	
-	@Native("c++", "org::scalegraph::io::fbio::readPrimitives<#T >(#nf, #dst, #numElements, #numBytes)")
+	@Native("c++", "org::scalegraph::io::fbio::readPrimitives<TPMGL(T) >(#nf, #dst, #numElements, #numBytes)")
 	private native def nativeRead(nf :NativeFile, dst :MemoryPointer[T], numElements :Long, numBytes :Long) :void;
-	@Native("c++", "org::scalegraph::io::fbio::writePrimitives<#T >(#nf, #dst, #numElements, #numBytes)")
+	@Native("c++", "org::scalegraph::io::fbio::writePrimitives<TPMGL(T) >(#nf, #dst, #numElements, #numBytes)")
 	private native def nativeWrite(nf :NativeFile, dst :MemoryPointer[T], numElements :Long, numBytes :Long) :void;
 	
 	public def read(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
@@ -109,6 +110,7 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 }
 
 @NativeCPPInclude("NativeSupport.h")
+@NativeCPPOutputFile("fbio_fmt.h")
 @NativeCPPCompilationUnit("NativeSupport.cc") 
 class StringAttributeHandler extends AttributeHandler {
 	

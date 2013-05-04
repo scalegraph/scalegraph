@@ -1,5 +1,5 @@
-#ifndef __ORG_SCALEGRAPH_IO_FORMAT_H
-#define __ORG_SCALEGRAPH_IO_FORMAT_H
+#ifndef __SCALEGRAPH_FBIO_FMT_H
+#define __SCALEGRAPH_FBIO_FMT_H
 
 namespace scalegraph {
 
@@ -9,7 +9,7 @@ namespace Format {
 		TYPE_GRAPH = 1,
 		TYPE_MATRIX = 2,
 		TYPE_VECTOR = 3,
-		TYPE_X10CLASS = 128,
+		TYPE_X10CLASS = -128,
 
 		ATTR_BOOLEAN = 1,
 		ATTR_BYTE = 2,
@@ -38,7 +38,7 @@ struct FBIO_Header {
 
 struct FBIO_String {
 	int32_t length;
-	int8_t data[1];
+	char data[1];
 };
 
 struct FBIO_Attribute {
@@ -86,4 +86,4 @@ struct FBIO_VectorHeader {
 
 } // namespace scalegraph {
 
-#endif // __ORG_SCALEGRAPH_IO_FORMAT_H
+#endif // __SCALEGRAPH_FBIO_FMT_H
