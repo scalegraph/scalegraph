@@ -4,11 +4,14 @@ import x10.io.File;
 import x10.util.Team;
 import x10.util.Timer;
 
-import org.scalegraph.fileread.*;
-import org.scalegraph.graph.*;
-import org.scalegraph.io.*;
-import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
+import org.scalegraph.io.fbio.FBIOSupport;
+import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.io.GraphHeader;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.io.Import;
+import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.MemoryChunk;
 
 public class TestBinaryIO {
 	
@@ -17,6 +20,8 @@ public class TestBinaryIO {
 			read(args);
 		} else if(args(0).equals("write")) {
 			write(args);
+		} else if(args(0).equals("writetest")) {
+			writeTestData(args);
 		} else if(args(0).equals("import")) {
 			importFromEdgeList(args);
 		} else {
@@ -33,7 +38,7 @@ public class TestBinaryIO {
 		var acc : Long = 0L;
 		for(var i:Int = 0; i < numExec; i++) {
 			var time : Long = Timer.milliTime();
-			val rawgraph = BinaryReader.read(team, fileName);
+			val rawgraph = FBIOSupport.read(team, fileName);
 			time = Timer.milliTime() - time;
 			Console.OUT.printf("Test (%d) : %.3lf sec\n", i, time / 1000.0);
 			acc += time;
@@ -50,7 +55,6 @@ public class TestBinaryIO {
 		*/
 		Console.OUT.printf("Average : %.3lf sec\n", acc / numExec as Double / 1000.0);
 	}
-	
 	
 	public static def write(args : Array[String]) {
 		val readFileName = args(1);
@@ -79,23 +83,26 @@ public class TestBinaryIO {
 		}
 		numE /= 2;
 		
-		val splittedEdgeList = Common.split(team, edgelist);
-		
-		val eaName = new Array[String](2);
-		eaName(0) = ID.NAME_SRC_ID;
-		eaName(1) = ID.NAME_DST_ID;
-		val eaData = new Array[Any](2);
-		eaData(0) = splittedEdgeList.get1();
-		eaData(1) = splittedEdgeList.get2();
-		
-		val entity = new Array[Entity](1);
-		entity(0) = Entity(eaName, eaData);
 		var time : Long = Timer.milliTime();
-		BinaryWriter.write(team, writeFileName, entity, blockSize, scatter);
+		val header = new GraphHeader(-1, numE, 0, 0);
+		val data = new NamedDistData(["edge" as String], [edgelist as Any], header);
+		FBIOSupport.write(team, writeFileName, data, blockSize, scatter);
 		time = Timer.milliTime() - time;
-		Console.OUT.printf("BinaryWriter.write(): %ld msec\n", time);
+		Console.OUT.printf("FBIOSupport.write(): %ld msec\n", time);
 	}
 	
+	public static def writeTestData(args : Array[String]) {
+		val writeFileName = args(1);
+		val blockSize = Long.parse(args(2));
+		val scatter = Boolean.parse(args(3));
+		val team = Team.WORLD;
+
+		val data = makeTestData(team);
+		var time : Long = Timer.milliTime();
+		FBIOSupport.write(team, writeFileName, data, blockSize, scatter);
+		time = Timer.milliTime() - time;
+		Console.OUT.printf("FBIOSupport.write(): %ld msec\n", time);
+	}
 	
 	private static def importFromEdgeList(args : Array[String]) {
 		val readPath = args(1);
@@ -105,45 +112,33 @@ public class TestBinaryIO {
 		val scatter = Boolean.parse(args(5));
 		val team = new Team(new Array[Place](1, here));
 		
-		val rawdata = Import.fromEdgeList(readPath, writePath, separator);
-		BinaryWriter.write(team, writePath, rawdata, blockSize, scatter);
+	//	val rawdata = Import.fromEdgeList(readPath, writePath, separator);
+	//	BinaryWriter.write(team, writePath, rawdata, blockSize, scatter);
 	}
 	
 	
 	private static def makeTestData(team : Team) {
-		val va_name = new Array[String](1);
-		va_name(0) = "hogee";
-		
-		val va_data = new Array[Any](1);
-		va_data(0) = new DistMemoryChunk[Int](team.placeGroup(), () => {
+		val va_data = new DistMemoryChunk[Int](team.placeGroup(), () => {
 			val mc = new MemoryChunk[Int](2);
 			mc(0) = here.id * 2 + 1;
 			mc(1) = here.id * 2 + 2;
 			mc
 		});
-		
-		val ea_name = new Array[String](2);
-		ea_name(0) = "hoge";
-		ea_name(1) = "foobar";
-		
-		val ea_data = new Array[Any](2);
-		ea_data(0) = new DistMemoryChunk[Short](team.placeGroup(), () => {
+		val ea_data1 = new DistMemoryChunk[Short](team.placeGroup(), () => {
 			val mc = new MemoryChunk[Short](2);
 			mc(0) = (here.id * 2 + 1) as Short;
 			mc(1) = (here.id * 2 + 2) as Short;
 			mc
 		});
-		
-		ea_data(1) = new DistMemoryChunk[Byte](team.placeGroup(), () => {
+		val ea_data2 = new DistMemoryChunk[Byte](team.placeGroup(), () => {
 			val mc = new MemoryChunk[Byte](2);
 			mc(0) = (here.id * 2 + 1) as Byte;
 			mc(1) = (here.id * 2 + 2) as Byte;
 			mc
 		});
-		
-		val rawdata = new Array[Entity](2);
-		rawdata(0) = Entity(va_name, va_data);
-		rawdata(1) = Entity(ea_name, ea_data);
-		return rawdata;
+		return new NamedDistData(
+				["hogee" as String, "hoge", "foobar"],
+				[va_data as Any, ea_data1, ea_data2],
+				new GraphHeader(-1, -1, 0, 0));
 	}
 }

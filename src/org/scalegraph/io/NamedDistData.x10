@@ -7,65 +7,48 @@ import x10.util.NoSuchElementException;
 import org.scalegraph.util.tuple.Tuple2;
 
 public class NamedDistData {
-	val name :ArrayList[String] = new ArrayList[String]();
-	val data :ArrayList[Any] = new ArrayList[Any]();
+	val name :Array[String](1);
+	val typeId :Array[Int](1);
+	val data :Array[Any](1);
 	var datatype :Byte;
 	var header :Any;
 	
-	public def setHeader(md :Any) {
-		datatype =
-			(md instanceof GraphHeader) ? ID.TYPE_GRAPH :
-			(md instanceof MatrixHeader) ? ID.TYPE_MATRIX :
-			(md instanceof VectorHeader) ? ID.TYPE_VECTOR :
-			ID.TYPE_ANY;
-		header = md;
+	private static def createTypeId(data :Array[Any](1)) {
+		val typeId = new Array[Int](data.size);
+		for([i] in data) {
+			typeId(i) = ID.typeId(data(i));
+		}
+		return typeId;
 	}
+	
+	public def this(name_ :Array[String](1), data_ :Array[Any](1), header_ :Any) {
+		this(name_, createTypeId(data_), data_, header_);
+	}
+	
+	public def this(name_ :Array[String](1), typeId_ :Array[Int](1), data_ :Array[Any](1), header_ :Any) {
+		this.name = name_;
+		this.typeId = typeId_;
+		this.data = data_;
+		this.header = header_;
+		this.datatype =
+			(header_ instanceof GraphHeader) ? ID.TYPE_GRAPH :
+			(header_ instanceof MatrixHeader) ? ID.TYPE_MATRIX :
+			(header_ instanceof VectorHeader) ? ID.TYPE_VECTOR :
+			ID.TYPE_ANY;
+		
+		// check
+		if(name.size != typeId.size || name.size != data.size)
+			throw new IllegalArgumentException("Check the array length!");
+		for([i] in name) {
+			if(!ID.checkType(data(i), typeId(i)))
+				throw new IllegalArgumentException("Type ID is not match to the actual data type.");
+		}
+	}
+
+	public def size() = name.size;
+	public def name() = name;
+	public def data() = data;
+	public def typeId() = typeId;
 	public def header() = header;
 	public def datatype() = datatype;
-	
-	public def getOrThrow(k :String) throws NoSuchElementException :Any {
-		val i = index(k);
-		if(i == -1) throw new NoSuchElementException("Not found: " + k);
-		return data(i);
-	}
-	public def getOrThrow[T](k :String) throws NoSuchElementException :DistMemoryChunk[T] {
-		val i = index(k);
-		if(i == -1) throw new NoSuchElementException("Not found: " + k);
-		return data(i) as DistMemoryChunk[T];
-	}
-	public def getOrElse(k :String, orelse :Any) :Any {
-		val i = index(k);
-		if(i == -1) return orelse;
-		return data(i);
-	}
-	public def getOrElse[T](k :String, orelse :DistMemoryChunk[T]) :DistMemoryChunk[T] {
-		val i = index(k);
-		if(i == -1) return orelse;
-		return data(i) as DistMemoryChunk[T];
-	}
-	
-	public def size() = name.size();
-	
-	public operator this(i :Int) =
-		new Tuple2[String, Any](name(i), data(i));
-	
-	public def put[T](k: String, v: DistMemoryChunk[T]) {
-		if(containsKey(k)) throw new IllegalOperationException();
-		this.name.add(k);
-		this.data.add(v);
-	}
-	public def clear():void {
-		name.clear();
-		data.clear();
-	}
-	public def keys():Array[String] = name.toArray();
-	public def containsKey(k :String) = (index(k) != -1);
-	
-	private def index(k :String) :Int {
-		for(i in 0..(this.name.size()-1)) {
-			if(name.equals(this.name(i)))
-				return i;
-		}
-		return -1;
-	}
 }

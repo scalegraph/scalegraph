@@ -1,3 +1,5 @@
+package test;
+
 import x10.util.Team;
 import x10.util.Timer;
 

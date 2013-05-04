@@ -256,7 +256,7 @@ public class FBIOSupport {
 		val tmpAttrId = new Array[Int](numAttributes);
 		for(i in 0..(numAttributes-1)) tmpAttrId(i) = attrs.attribute(i).id();
 		val attrHandler = new Array[AttributeHandler](attrs.numAttributes(),
-				(i:Int) => AttributeHandler.makeFromId(team, tmpAttrId(i)));
+				(i:Int) => AttributeHandler.make(team, tmpAttrId(i)));
 		val attributes = new Array[Any](numAttributes, (i:Int) => 
 				attrHandler(i).allocate((pid :Int) => localArraySize(pid)(i)));
 		
@@ -293,13 +293,9 @@ public class FBIOSupport {
 			}
 		}
 		
-		val result = new NamedDistData();
-		for(aid in 0..(numAttributes - 1)) {
-			attrHandler(aid).putResult(result,
-					attrs.attribute(aid).name(), attributes(aid));
-		}
-		result.setHeader(headers.userDefinedHeader());
-		return result;
+		return new NamedDistData(
+			new Array[String](numAttributes, (i :Int)=>attrs.attribute(i).name()),
+			tmpAttrId, attributes, headers.userDefinedHeader());
 	}
 	
 	public static def write(team : Team, path : String,
@@ -315,11 +311,11 @@ public class FBIOSupport {
 		
 		val headerFile = new NativeFile(fm.headerFileName(), true, false);
 		val numAttrs = data.size();
-		val attrNames = new Array[String](numAttrs, (i :Int) => data(i).get1());
-		val attrData = new Array[Any](numAttrs, (i :Int) => data(i).get2());
+		val attrNames = data.name();
+		val attrData = data.data();
+		val attrTypeIds = data.typeId();
 		val attrHandler = new Array[AttributeHandler](numAttrs,
-						(i:Int) => AttributeHandler.makeFromAny(team, attrData(i)));
-		val attrTypeIds = new Array[Int](numAttrs, (i :Int) => attrHandler(i).typeId());
+						(i:Int) => AttributeHandler.make(team, attrTypeIds(i)));
 		
 		val blocks = getBlockPartitioning(team, attrHandler, attrData, minBlockSize);
 		
@@ -372,18 +368,18 @@ public class FBIOSupport {
 	private static native def writeHeaders(
 			nf :NativeFile,
 			datatype :Int, numAttributes :Int, numBlocks :Int,
-			typeIds :Array[Int],
-			attrNames :Array[String],
+			typeIds :Array[Int](1),
+			attrNames :Array[String](1),
 			blockOffsets :MemoryChunk[Long],
-			chunkSizes :Array[MemoryChunk[Long]],
+			chunkSizes :Array[MemoryChunk[Long]](1),
 			udf :Any) :void;
 	
 	private static class PartitionedBlocks {
 		public val numBlocks :Int;
 		public val offsets :MemoryChunk[Long];
 		// This has two components: 2*N + 0: number of bytes, 2*N + 1: number of elements
-		public val chunkSizes :Array[MemoryChunk[Long]];
-		public val numLocalBlocks :Array[Int];
+		public val chunkSizes :Array[MemoryChunk[Long]](1);
+		public val numLocalBlocks :Array[Int](1);
 		
 		public def this(numAttrs :Int, numBlocks :Int) {
 			this.numBlocks = numBlocks;
