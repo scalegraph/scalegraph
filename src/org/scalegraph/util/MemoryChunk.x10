@@ -143,6 +143,19 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		this(imc, 0L, imc.length() as Long);
 	}
 	
+	public def toString() :String {
+		val sb = new x10.util.StringBuilder();
+		sb.add("[");
+		val sz = Math.min(size(), 10L);
+		for (var i:Int = 0; i < sz; ++i) {
+			if (i > 0) sb.add(",");
+			sb.add("" + data(i));
+		}
+		if (sz < size()) sb.add("...(omitted " + (size() - sz) + " elements)");
+		sb.add("]");
+		return sb.toString();
+	}
+	
 	/** Returens the internal pointer object.
 	 */
 	public def pointer() :MemoryPointer[T] = data.pointer();
