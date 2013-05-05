@@ -65,24 +65,35 @@ void writeHeaders(
 template <typename T> void readPrimitives(NativeFile nf,
 		T *array, long numElements, long numBytes)
 {
-	if(fread(array, sizeof(T) * numElements, 1, nf.handle()) != 1)
+	long datalen = sizeof(T) * numElements;
+	if(read(nf.handle(), array, datalen) != datalen)
 		x10aux::throwException(IOException::_make(
 				String::Lit("error while reading file...")));
 
-	long padding = numBytes - (sizeof(T) * numElements);
-	if(fseek(nf.handle(), padding, SEEK_CUR) != 0)
+	long padding = numBytes - datalen;
+	if(padding >= 8)
+		x10aux::throwException(IllegalArgumentException::_make(
+				String::Lit("numBytes is too large!!")));
+
+	if(lseek(nf.handle(), padding, SEEK_CUR) == -1)
 		x10aux::throwException(IOException::_make(
 				String::Lit("error while reading file...")));
 }
 template <typename T> void writePrimitives(NativeFile nf,
 		T *array, long numElements, long numBytes)
 {
-	if(fwrite(array, sizeof(T) * numElements, 1, nf.handle()) != 1)
+	long datalen = sizeof(T) * numElements;
+	if(write(nf.handle(), array, datalen) != datalen)
 		x10aux::throwException(IOException::_make(
 				String::Lit("error while writing file...")));
 
-	long padding = numBytes - (sizeof(T) * numElements);
-	if(fseek(nf.handle(), padding, SEEK_CUR) != 0)
+	long padding = numBytes - datalen;
+	if(padding >= 8)
+		x10aux::throwException(IllegalArgumentException::_make(
+				String::Lit("numBytes is too large!!")));
+
+	char emptybuf[16] = {};
+	if(write(nf.handle(), emptybuf, padding) != padding)
 		x10aux::throwException(IOException::_make(
 				String::Lit("error while writing file...")));
 }

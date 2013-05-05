@@ -5,25 +5,25 @@ namespace scalegraph {
 
 namespace Format {
 	enum {
-		TYPE_NONE = 0,
-		TYPE_GRAPH = 1,
-		TYPE_MATRIX = 2,
-		TYPE_VECTOR = 3,
-		TYPE_X10CLASS = -128,
+		HEADER_NONE = 0,
+		HEADER_GRAPH = 1,
+		HEADER_MATRIX = 2,
+		HEADER_VECTOR = 3,
+		HEADER_X10CLASS = -128,
 
-		ATTR_BOOLEAN = 1,
-		ATTR_BYTE = 2,
-		ATTR_SHORT = 3,
-		ATTR_INT = 4,
-		ATTR_LONG = 5,
-		ATTR_FLOAT = 6,
-		ATTR_DOUBLE = 7,
-		ATTR_UBYTE = 8,
-		ATTR_USHORT = 9,
-		ATTR_UINT = 10,
-		ATTR_ULONG = 11,
-		ATTR_CHAR = 12,
-		ATTR_STRING = 13,
+		TYPE_BOOLEAN = 1,
+		TYPE_BYTE = 2,
+		TYPE_SHORT = 3,
+		TYPE_INT = 4,
+		TYPE_LONG = 5,
+		TYPE_FLOAT = 6,
+		TYPE_DOUBLE = 7,
+		TYPE_UBYTE = 8,
+		TYPE_USHORT = 9,
+		TYPE_UINT = 10,
+		TYPE_ULONG = 11,
+		TYPE_CHAR = 12,
+		TYPE_STRING = 13,
 	};
 } // namespace Format {
 

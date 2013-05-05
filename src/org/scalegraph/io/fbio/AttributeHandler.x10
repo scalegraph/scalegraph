@@ -37,31 +37,31 @@ public abstract class AttributeHandler {
 		val isArray = (id_ & 0xFF) == 1;
 		val id = id_ >> 8;
 		switch(id) {
-		case ID.ATTR_BOOLEAN:
+		case ID.TYPE_BOOLEAN:
 			return new PrimitiveAttributeHandler[Boolean](team, id);
-		case ID.ATTR_BYTE:
+		case ID.TYPE_BYTE:
 			return new PrimitiveAttributeHandler[Byte](team, id);
-		case ID.ATTR_SHORT:
+		case ID.TYPE_SHORT:
 			return new PrimitiveAttributeHandler[Short](team, id);
-		case ID.ATTR_INT:
+		case ID.TYPE_INT:
 			return new PrimitiveAttributeHandler[Int](team, id);
-		case ID.ATTR_LONG:
+		case ID.TYPE_LONG:
 			return new PrimitiveAttributeHandler[Long](team, id);
-		case ID.ATTR_FLOAT:
+		case ID.TYPE_FLOAT:
 			return new PrimitiveAttributeHandler[Float](team, id);
-		case ID.ATTR_DOUBLE:
+		case ID.TYPE_DOUBLE:
 			return new PrimitiveAttributeHandler[Double](team, id);
-		case ID.ATTR_UBYTE:
+		case ID.TYPE_UBYTE:
 			return new PrimitiveAttributeHandler[UByte](team, id);
-		case ID.ATTR_USHORT:
+		case ID.TYPE_USHORT:
 			return new PrimitiveAttributeHandler[UShort](team, id);
-		case ID.ATTR_UINT:
+		case ID.TYPE_UINT:
 			return new PrimitiveAttributeHandler[UInt](team, id);
-		case ID.ATTR_ULONG:
+		case ID.TYPE_ULONG:
 			return new PrimitiveAttributeHandler[ULong](team, id);
-		case ID.ATTR_CHAR:
+		case ID.TYPE_CHAR:
 			return new PrimitiveAttributeHandler[Char](team, id);
-		case ID.ATTR_STRING:
+		case ID.TYPE_STRING:
 			return new StringAttributeHandler(team, id);
 		default:
 			throw new Exception("invalid type id : " + id);

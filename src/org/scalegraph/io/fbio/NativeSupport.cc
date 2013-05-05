@@ -17,9 +17,7 @@ inline int64_t align(int64_t offset, int64_t length) {
 }
 
 NativeHeaders::NativeHeaders(NativeFile nf) {
-	FILE* fp = nf.handle();
-
-	if(fread(&header, sizeof(header), 1, fp) != 1) {
+	if(read(nf.handle(), &header, sizeof(header)) != sizeof(header)) {
 		x10aux::throwException(IOException::_make(String::Lit("illegal file format")));
 	}
 	if(memcmp(header.magic, "DRBF", 4) != 0) {
@@ -36,7 +34,7 @@ NativeHeaders::NativeHeaders(NativeFile nf) {
 
 	int64_t remainHeaderSize = attrSectionSize + blocInfoSectionSize + udhSectionSize;
 	int8_t* headerMemory = x10aux::alloc<int8_t>(remainHeaderSize, false);
-	if(fread(headerMemory, remainHeaderSize, 1, fp) != 1) {
+	if(read(nf.handle(), headerMemory, remainHeaderSize) != remainHeaderSize) {
 		x10aux::throwException(IOException::_make(String::Lit("illegal file format")));
 	}
 
@@ -75,10 +73,10 @@ NativeHeaders::NativeHeaders(NativeFile nf) {
 
 	// read user defined header
 	switch(header.datatype[0]) {
-	case ID::TYPE_NONE:
+	case ID::HEADER_NONE:
 		udh = NULL;
 		break;
-	case ID::TYPE_GRAPH:
+	case ID::HEADER_GRAPH:
 	{
 		if(sizeof(FBIO_GraphHeader) != udhSize)
 			x10aux::throwException(IOException::_make(String::Lit("illegal file format")));
@@ -91,7 +89,7 @@ NativeHeaders::NativeHeaders(NativeFile nf) {
 		udh = reinterpret_cast<Any*>(gh);
 	}
 	break;
-	case ID::TYPE_MATRIX:
+	case ID::HEADER_MATRIX:
 	{
 		if(sizeof(FBIO_MatrixHeader) != udhSize)
 			x10aux::throwException(IOException::_make(String::Lit("illegal file format")));
@@ -101,7 +99,7 @@ NativeHeaders::NativeHeaders(NativeFile nf) {
 		udh = reinterpret_cast<Any*>(mh);
 	}
 	break;
-	case ID::TYPE_VECTOR:
+	case ID::HEADER_VECTOR:
 	{
 		if(sizeof(FBIO_VectorHeader) != udhSize)
 			x10aux::throwException(IOException::_make(String::Lit("illegal file format")));
@@ -111,7 +109,7 @@ NativeHeaders::NativeHeaders(NativeFile nf) {
 		udh = reinterpret_cast<Any*>(vh);
 	}
 	break;
-	case ID::TYPE_X10CLASS:
+	case ID::HEADER_X10CLASS:
 		// TODO: deserialize
 		x10aux::throwException(IOException::_make(String::Lit("not supported data type")));
 		break;
@@ -146,19 +144,19 @@ void writeHeaders(
 	int64_t blockInfoSize = 8 + (8 + (16 * numAttributes)) * numBlocks;
 	int64_t udhSize;
 	switch(datatype) {
-	case ID::TYPE_NONE:
+	case ID::HEADER_NONE:
 		udhSize = 0;
 		break;
-	case ID::TYPE_GRAPH:
+	case ID::HEADER_GRAPH:
 		udhSize = sizeof(FBIO_GraphHeader);
 		break;
-	case ID::TYPE_MATRIX:
+	case ID::HEADER_MATRIX:
 		udhSize = sizeof(FBIO_MatrixHeader);
 		break;
-	case ID::TYPE_VECTOR:
+	case ID::HEADER_VECTOR:
 		udhSize = sizeof(FBIO_VectorHeader);
 		break;
-	case ID::TYPE_X10CLASS:
+	case ID::HEADER_X10CLASS:
 		// TODO: serialize
 		x10aux::throwException(IOException::_make(String::Lit("not supported data type")));
 		break;
@@ -170,6 +168,7 @@ void writeHeaders(
 	int64_t attrSectionSize = align(attrSize, 8);
 	int64_t blocInfoSectionSize = align(blockInfoSize, 8);
 	int64_t udhSectionSize = align(udhSize, 8);
+	int64_t dataSectionSize = blockOffsets[numBlocks];
 
 	int64_t totalHeaderSize = headerSectionSize + attrSectionSize + blocInfoSectionSize + udhSectionSize;
 	int8_t* headerMemory = x10aux::alloc<int8_t>(totalHeaderSize, false);
@@ -198,7 +197,7 @@ void writeHeaders(
 	rawHeader->seclen[0] = attrSize;
 	rawHeader->seclen[1] = blockInfoSize;
 	rawHeader->seclen[2] = udhSize;
-	rawHeader->seclen[3] = blockOffsets[numBlocks];
+	rawHeader->seclen[3] = dataSectionSize;
 
 	// attributes
 	rawAttrs->numAttributes = numAttributes;
@@ -224,9 +223,9 @@ void writeHeaders(
 
 	// user defined header
 	switch(datatype) {
-	case ID::TYPE_NONE:
+	case ID::HEADER_NONE:
 		break;
-	case ID::TYPE_GRAPH:
+	case ID::HEADER_GRAPH:
 	{
 		FBIO_GraphHeader* raw = (FBIO_GraphHeader*)rawUserDefinedHeader;
 		GraphHeader* gh = reinterpret_cast<GraphHeader*>(udh);
@@ -236,19 +235,19 @@ void writeHeaders(
 		raw->numEdgeAttributes = gh->FMGL(numEdgeAttributes);
 	}
 	break;
-	case ID::TYPE_MATRIX:
+	case ID::HEADER_MATRIX:
 	{
 		FBIO_MatrixHeader* raw = (FBIO_MatrixHeader*)rawUserDefinedHeader;
 		MatrixHeader* gh = reinterpret_cast<MatrixHeader*>(udh);
 	}
 	break;
-	case ID::TYPE_VECTOR:
+	case ID::HEADER_VECTOR:
 	{
 		FBIO_VectorHeader* raw = (FBIO_VectorHeader*)rawUserDefinedHeader;
 		VectorHeader* gh = reinterpret_cast<VectorHeader*>(udh);
 	}
 	break;
-	case ID::TYPE_X10CLASS:
+	case ID::HEADER_X10CLASS:
 		// TODO: deserialize
 		x10aux::throwException(IOException::_make(String::Lit("not supported data type")));
 		break;
@@ -257,7 +256,7 @@ void writeHeaders(
 	}
 
 	// write to file
-	if(fwrite(headerMemory, totalHeaderSize, 1, nf.handle()) != 1)
+	if(write(nf.handle(), headerMemory, totalHeaderSize) != totalHeaderSize)
 		x10aux::throwException(IOException::_make(String::Lit("error while writing file")));
 
 	x10aux::dealloc(headerMemory);
@@ -265,7 +264,7 @@ void writeHeaders(
 
 void readStrings(NativeFile nf, String **array, long numElements, long numBytes) {
 	int8_t* buffer = x10aux::alloc<int8_t>(numBytes, false);
-	if(fread(buffer, numBytes, 1, nf.handle()) != 1) {
+	if(read(nf.handle(), buffer, numBytes) != numBytes) {
 		x10aux::throwException(IOException::_make(
 				String::Lit("error while reading file...")));
 	}
@@ -290,15 +289,15 @@ long writeStrings(NativeFile nf, String **array, long numElements, long numBytes
 		memcpy(str_data->data, array[i]->c_str(), length);
 		offset += 4 + align(length, 4);
 	}
-	if(fwrite(buffer, numBytes, 1, nf.handle()) != 1) {
-		x10aux::throwException(IOException::_make(
-				String::Lit("error while writing file...")));
-	}
-	x10aux::dealloc(buffer);
 	if(offset != numBytes) {
 		x10aux::throwException(IOException::_make(
 				String::Lit("offset != numBytes")));
 	}
+	if(write(nf.handle(), buffer, numBytes) != numBytes) {
+		x10aux::throwException(IOException::_make(
+				String::Lit("error while writing file...")));
+	}
+	x10aux::dealloc(buffer);
 }
 
 }}}} // namespace org { namespace scalegraph { namespace io { namespace fbio {

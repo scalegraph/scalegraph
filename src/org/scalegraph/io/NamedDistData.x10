@@ -31,10 +31,10 @@ public class NamedDistData {
 		this.data = data_;
 		this.header = header_;
 		this.datatype =
-			(header_ instanceof GraphHeader) ? ID.TYPE_GRAPH :
-			(header_ instanceof MatrixHeader) ? ID.TYPE_MATRIX :
-			(header_ instanceof VectorHeader) ? ID.TYPE_VECTOR :
-			ID.TYPE_ANY;
+			(header_ instanceof GraphHeader) ? ID.HEADER_GRAPH :
+			(header_ instanceof MatrixHeader) ? ID.HEADER_MATRIX :
+			(header_ instanceof VectorHeader) ? ID.HEADER_VECTOR :
+			ID.HEADER_ANY;
 		
 		// check
 		if(name.size != typeId.size || name.size != data.size)

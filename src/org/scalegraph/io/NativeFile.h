@@ -10,24 +10,24 @@ namespace org { namespace scalegraph { namespace io {
 
 struct NativeFile {
 protected:
-	FILE* FMGL(fp);
+	int FMGL(fd);
 
 public:
 	RTT_H_DECLS_CLASS;
 
-	explicit NativeFile(FILE* file) : FMGL(fp)(file) { }
-	NativeFile() : FMGL(fp)(NULL) { }
+	explicit NativeFile(int fd_) : FMGL(fd)(fd_) { }
+	NativeFile() : FMGL(fd)(-1) { }
 
-	static NativeFile _make(x10::lang::String* name, bool write, bool append);
-	void _constructor (x10::lang::String* name, bool write, bool append);
+	static NativeFile _make(x10::lang::String* name, int  fileMode, int fileAccess);
+	void _constructor (x10::lang::String* name, int  fileMode, int fileAccess);
 
 	NativeFile* operator->() { return this; }
 
-	FILE* handle() { return FMGL(fp); }
+	int handle() { return FMGL(fd); }
 
 	void close();
 	x10_long read(org::scalegraph::util::MemoryChunk<x10_byte> b);
-	x10_long write(org::scalegraph::util::MemoryChunk<x10_byte> b);
+	void write(org::scalegraph::util::MemoryChunk<x10_byte> b);
 	void seek(x10_long offset, int origin);
 	x10_long getpos();
 

@@ -18,7 +18,7 @@ public struct NativeFile {
 	@Native("c++", "2")
 	public static val END: Int = 2;
 	
-	public native def this(name: String, write: Boolean, append: Boolean);
+	public native def this(name: String, fileMode :Int, fileAccess :Int);
 	public native def close(): void;
 	public native def read(buffer: MemoryChunk[Byte]): Long;
 	public native def write(buffer: MemoryChunk[Byte]): Long;
