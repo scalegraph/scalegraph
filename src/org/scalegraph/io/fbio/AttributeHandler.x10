@@ -103,7 +103,7 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	public def print(any : Any) {
 		val dmc = any as DistMemoryChunk[T];
 		for(var i:Int = 0; i < team.size(); i++) at(team.places()(i)) {
-			Console.OUT.print(dmc().toArray() + " ");
+			Console.OUT.print(dmc() + " ");
 		}
 		Console.OUT.println("");
 	}

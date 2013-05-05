@@ -23,6 +23,7 @@ import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.FileMode;
 import org.scalegraph.io.FileAccess;
 import x10.compiler.NonEscaping;
+import x10.util.StringBuilder;
 
 @NativeCPPInclude("NativeSupport.h")
 @NativeCPPOutputFile("Attribute.h")
@@ -42,7 +43,7 @@ struct Attribute {
 struct Block {
 	@Native("c++", "(#this)->offset")
 	public native def offset() : Long;
-	@Native("c++", "(#this)->chunks.size()")
+	@Native("c++", "((#this)->chunks.size()/2)")
 	public native def numAttributes() : Int;
 	@Native("c++", "(#this)->chunks[(#i) * 2 + 0]")
 	public native def numBytes(i:Int) : Long;
@@ -319,8 +320,9 @@ public class FBIOSupport {
 			}
 		}
 		
-		return new NamedDistData(attrNames,
-				attrIds, attributes, headers.userDefinedHeader());
+		val udh = headers.userDefinedHeader();
+		headers.del();
+		return new NamedDistData(attrNames, attrIds, attributes, udh);
 	}
 	
 	public static def write(team : Team, path : String,
@@ -349,6 +351,7 @@ public class FBIOSupport {
 		headerFile.close();
 		
 		fm.setFileOffset(blocks.offsets, blocks.numLocalBlocks);
+		debugprint(blocks.toString());
 
 		// assign closures to each place
 		var blockIdx :Int = 0;
@@ -421,6 +424,16 @@ public class FBIOSupport {
 			offsets = new MemoryChunk[Long](numBlocks + 1);
 			chunkSizes = new Array[MemoryChunk[Long]](numBlocks);
 			numLocalBlocks = new MemoryChunk[Int](team.size());
+		}
+		
+		public def toString() {
+			val sb = new StringBuilder();
+			sb.add("NumBlocks = ").add(numBlocks).add("\nOffsets = ").add(offsets).add("\nChunkSizeList:\n");
+			for([i] in chunkSizes) {
+				sb.add("Block").add(i).add(": ").add(chunkSizes(i)).add("\n");
+			}
+			sb.add("Block distribution: ").add(numLocalBlocks);
+			return sb.result();
 		}
 	}
 	

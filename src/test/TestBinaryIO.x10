@@ -14,12 +14,15 @@ import org.scalegraph.io.GraphHeader;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.Import;
 import org.scalegraph.io.fbio.FBIOSupport;
+import org.scalegraph.io.fbio.AttributeHandler;
 
 public class TestBinaryIO {
 	
 	public static def main(args : Array[String](1)) {
 		if(args(0).equals("read")) {
-			read(args);
+			read(args, false);
+		} else if(args(0).equals("readtest")) {
+			read(args, true);
 		} else if(args(0).equals("write")) {
 			write(args);
 		} else if(args(0).equals("writetest")) {
@@ -32,29 +35,25 @@ public class TestBinaryIO {
 	}
 	
 	
-	public static def read(args : Array[String](1)) {
+	public static def read(args : Array[String](1), printResult :Boolean) {
 		val fileName = args(1);
 		val numExec = Int.parse(args(2));
 		val team = Team.WORLD;
 		
 		var acc : Long = 0L;
-		for(var i:Int = 0; i < numExec; i++) {
+		for(i in 0..(numExec-1)) {
 			var time : Long = Timer.milliTime();
 			val rawgraph = FBIOSupport.read(team, fileName);
 			time = Timer.milliTime() - time;
 			Console.OUT.printf("Test (%d) : %.3lf sec\n", i, time / 1000.0);
 			acc += time;
+			if(printResult && i == 0) {
+				val attrHandler = new Array[AttributeHandler](rawgraph.size(), (i:Int) => AttributeHandler.make(team, rawgraph.typeId()(i)));
+				for(aid in 0..(rawgraph.size()-1)) {
+					attrHandler(aid).print(rawgraph.data()(aid));
+				}
+			}
 		}
-		/*
-		val vAttrInfo = new Array[AttributeHandler](tuple4.get2().size, (i:Int) => AttributeHandler.makeFromAny(team, tuple4.get2()(i)));
-		val eAttrInfo = new Array[AttributeHandler](tuple4.get4().size, (i:Int) => AttributeHandler.makeFromAny(team, tuple4.get4()(i)));
-		for(var i:Int = 0; i < tuple4.get2().size; i++) {
-			vAttrInfo(i).print(tuple4.get2()(i));
-		}
-		for(var i:Int = 0; i < tuple4.get4().size; i++) {
-			eAttrInfo(i).print(tuple4.get4()(i));
-		}
-		*/
 		Console.OUT.printf("Average : %.3lf sec\n", acc / numExec as Double / 1000.0);
 	}
 	

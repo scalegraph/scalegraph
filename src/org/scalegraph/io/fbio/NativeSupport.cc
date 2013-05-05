@@ -64,7 +64,7 @@ NativeHeaders::NativeHeaders(NativeFile nf) {
 		for(int b = 0; b < rawBlocks->numBlocks; b++) {
 			NativeBlock block;
 			block.offset = current->offset;
-			block.chunks.resize(numAttributes);
+			block.chunks.resize(numAttributes * 2);
 			memcpy(&block.chunks[0], current->chunks, 16 * numAttributes);
 			blocks.push_back(block);
 			current = (FBIO_Block*)(&current->chunks[numAttributes]);
