@@ -10,8 +10,8 @@ public class FileWriter {
 	private val nf: NativeFile;
 	private var fileOffset: Long;
 	
-	public def this(file: File) {
-		nf = new NativeFile(file.getPath(), true, false);
+	public def this(file: File, fileMode :Int) {
+		nf = new NativeFile(file.getPath(), fileMode, FileAccess.Write);
 		fileOffset = 0L;
 	}
 	

@@ -12,7 +12,7 @@ import org.scalegraph.fileread.DistributedReader;
 
 import org.scalegraph.io.GraphHeader;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.io.Import;
+// import org.scalegraph.io.Import;
 import org.scalegraph.io.fbio.FBIOSupport;
 import org.scalegraph.io.fbio.AttributeHandler;
 
