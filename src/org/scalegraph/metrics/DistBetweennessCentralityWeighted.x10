@@ -398,7 +398,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private def clear() {
         // clear data local data
         for (i in 0..(lch().numLocalVertices - 1)) {
-            lch().distance(i) = Long.MAX_VALUE;
+            lch().distance(i) = Double.MAX_VALUE;
             
             if(lch().predecessors(i) != null)
                 lch().predecessors(i).clear();
@@ -429,8 +429,8 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     }
     
     private def calBC(src: Vertex) {
-        // Console.OUT.println("Cal BC for source: " + src);
-        // Console.OUT.println("Start Delta stepping");
+        // Console.OUT.println(here.id + "Cal BC for source: " + src);
+        // Console.OUT.println(here.id + "Start Delta stepping");
         clear();
         lch().currentSource() = src;
         team.barrier(role);
@@ -438,17 +438,17 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         Runtime.x10rtBlockingProbe();
         team.barrier(role);
 
-        // Console.OUT.println("Find Successors");
+        // Console.OUT.println(here.id + "Find Successors");
         deriveSuccessor();
         Runtime.x10rtBlockingProbe();
         team.barrier(role);
         
-        // Console.OUT.println("Count Path");
+        // Console.OUT.println(here.id + "Count Path");
         travelInNonIncreasingOrder();
         Runtime.x10rtBlockingProbe();
         team.barrier(role);
        
-        // Console.OUT.println("Update score");
+        // Console.OUT.println(here.id + "Update score");
         updateScore();
         Runtime.x10rtBlockingProbe();
         team.barrier(role);
@@ -521,6 +521,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             }
             // Find smallest bucket
             currentBucketIndex()() = Team.WORLD.allreduce(role, currentBucketIndex()(), Team.MIN);
+            // Console.OUT.println(here.id + " Smallest Bucket id--> " + currentBucketIndex()());
             if (currentBucketIndex()() == MAX_BUCKET_INDEX) {
                 // No more work to do
                 break;
@@ -556,7 +557,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                                 } else {
                                     val pid = getVertexPlaceRole(w);
                                     remoteRelax(threadId, pid, v, w, tentative);
-                                    // Console.OUT.println("remoteRelax: " + v + " " + w + " : " + vDist);
                                 }
                             } else {
                                 if (deferredVertex().isNotSet(localV)) {
@@ -579,17 +579,20 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             } while (dataAvailable > 0);
             
             // Relax heavy edges
+            // Console.OUT.println(here.id + " relax heavy edge");
             deferredVertex().examine((localV: Long, threadId: Int) => {
                 val v = LocSrcToOrg(localV);
                 val vDist = distance()(localV);
                 val neighbours = csr().adjacency(localV);
                 val neighbourWeight = csr().attribute(weight(), localV);
                 for (i in 0..(neighbours.size() - 1)) {
-                    val w = neighbours(i);
+                    val localW = neighbours(i);
+                    val w = LocDstToOrg(localW);
                     val wWeight = neighbourWeight(i);
                     assert(wWeight > 0.0);
                     val tentative = vDist + wWeight;
                     if (wWeight > delta()) {
+                        // Console.OUT.println(here.id + " Found heavy edge");
                         if (isLocalVertex(w)) {
                             relax(v, w, tentative);
                         }  else {
@@ -598,7 +601,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                         }
                     }
                 }
-                // throw new UnsupportedOperationException("have not tested yet");
             });
             flushAll();
             currentBucketIndex()() = currentBucketIndex()() + 1; 
@@ -613,9 +615,11 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             if (compare_and_swap[Long](lch().semaphore, localW, 0, 1)) {
                 val wDist = distance()(localW);
                 var tentative: Double = x;
-                // Console.OUT.println("Relax: " + v + ", " + w + " : " + x);
+                // Console.OUT.println(here.id + " Relax: " + v + ", " + w + " : " + x);
+                // Console.OUT.println(here.id + " tent: " + tentative + " w: " + wDist);
                 if (tentative < wDist) {
                     val newIndex = Math.ceil(tentative / delta()) as BucketIndex;
+                    // Console.OUT.println(here.id + " newIndex: " + newIndex + " capa: " + buckets().capacity());
                     if (newIndex >= buckets().capacity()) {
                         atomic {
                             // recheck after acquiring lock
