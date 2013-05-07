@@ -16,6 +16,8 @@ public class PlaceLocalHandleExample {
 	
 	static class MyInt {
 		public var v:Int;
+		public def this() { }
+		public def this(i:Int) { v = i; }
 		public operator this() = v;
 		public operator this()=(value:Int) { v = value; return v; }
 	}
@@ -89,14 +91,35 @@ public class PlaceLocalHandleExample {
 			val start = Timer.nanoTime();
 			val plh = PlaceLocalHandle.makeFlat[MyInt](placeGroup, ()=>new MyInt());
 			message("make complete " + i, start);
-			placeGroup.broadcastFlat(()=>{
+			finish for(pi in 0..(placeGroup.size()-1)) at(placeGroup(pi)) async {
 				val array = new Array[Int](size, (i:Int)=>i);
 				val recv = new Array[Int](1);
 				Team.WORLD.scatter(Team.WORLD.id(), 0, array, 0, recv, 0, 1);
 				plh()() = recv(0);
-				return;
-			});
+			};
 			message("write complete " + i, start);
+		}
+	}
+	
+	static def writeTestNew() {
+		message("WRITE TEST NEW");
+		val placeGroup = Team.WORLD.placeGroup();
+		val places = Team.WORLD.places();
+		for(i in 1..10) {
+			val start = Timer.nanoTime();
+			val plh = PlaceLocalHandle.make[MyInt, Int](placeGroup, (i:Int) => i, (i:Int)=>new MyInt(i));
+			message("make and write complete " + i, start);
+		}
+	}
+	
+	static def writeFlatTestNew() {
+		message("WRITE FLAT TEST NEW");
+		val placeGroup = Team.WORLD.placeGroup();
+		val places = Team.WORLD.places();
+		for(i in 1..10) {
+			val start = Timer.nanoTime();
+			val plh = PlaceLocalHandle.makeFlat[MyInt, Int](placeGroup, (i:Int) => i, (i:Int)=>new MyInt(i));
+			message("make and write complete " + i, start);
 		}
 	}
 	
@@ -109,5 +132,7 @@ public class PlaceLocalHandleExample {
 		writeTest();
 		writeFlatTest();
 		writeTeamTest();
+		writeTestNew();
+		writeFlatTestNew();
 	}
 }

@@ -5,13 +5,34 @@ package org.scalegraph.util;
 public struct DistMemoryChunk[T] {
 	private val plh :PlaceLocalHandle[Cell[MemoryChunk[T]]];
 	
+	private def this(plh :PlaceLocalHandle[Cell[MemoryChunk[T]]]) {
+		this.plh = plh;
+	}
+	
 	/** Creates distributed memory chunk.
      * @param placeGroup Places memory chunks are created.
 	 * @param init The initialization clousure, which is invoked on each place.
      */
 	public def this(placeGroup :PlaceGroup, init :() => MemoryChunk[T]) {
-		plh = PlaceLocalHandle.makeFlat[Cell[MemoryChunk[T]]](placeGroup, ()=>new Cell(init()));
+		plh = PlaceLocalHandle.make[Cell[MemoryChunk[T]]](placeGroup, ()=>new Cell(init()));
 	}
+	
+	/** Creates distributed memory chunk.
+	 * @param placeGroup Places memory chunks are created.
+	 * @param init The initialization clousure, which is invoked on each place.
+	 */
+	public static def make[T](pg :PlaceGroup, init :()=>MemoryChunk[T]) =
+		new DistMemoryChunk[T](PlaceLocalHandle.make[Cell[MemoryChunk[T]]](
+				pg, ()=>new Cell(init())));
+	
+	/** Creates distributed memory chunk.
+	 * @param placeGroup Places memory chunks are created.
+	 * @param init_here The clousure which returns the data that will be transfered to the remote place.
+	 * @param init_there The initialization clousure, which is invoked on each place.
+	 */
+	public static def make[T, U](pg :PlaceGroup, init_here :(Int)=>U, init_there :(U)=>MemoryChunk[T]) =
+		new DistMemoryChunk[T](PlaceLocalHandle.make[Cell[MemoryChunk[T]], U](
+				pg, init_here, (u :U)=>new Cell(init_there(u))));
 	
 	/** Returns the memory chunk bound to the current place.
 	 */
