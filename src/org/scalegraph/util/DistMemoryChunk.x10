@@ -14,7 +14,7 @@ public struct DistMemoryChunk[T] {
 	 * @param init The initialization clousure, which is invoked on each place.
      */
 	public def this(placeGroup :PlaceGroup, init :() => MemoryChunk[T]) {
-		plh = PlaceLocalHandle.make[Cell[MemoryChunk[T]]](placeGroup, ()=>new Cell(init()));
+		plh = PlaceLocalHandle.makeFlat[Cell[MemoryChunk[T]]](placeGroup, ()=>new Cell(init()));
 	}
 	
 	/** Creates distributed memory chunk.
@@ -22,7 +22,7 @@ public struct DistMemoryChunk[T] {
 	 * @param init The initialization clousure, which is invoked on each place.
 	 */
 	public static def make[T](pg :PlaceGroup, init :()=>MemoryChunk[T]) =
-		new DistMemoryChunk[T](PlaceLocalHandle.make[Cell[MemoryChunk[T]]](
+		new DistMemoryChunk[T](PlaceLocalHandle.makeFlat[Cell[MemoryChunk[T]]](
 				pg, ()=>new Cell(init())));
 	
 	/** Creates distributed memory chunk.
@@ -31,7 +31,7 @@ public struct DistMemoryChunk[T] {
 	 * @param init_there The initialization clousure, which is invoked on each place.
 	 */
 	public static def make[T, U](pg :PlaceGroup, init_here :(Int)=>U, init_there :(U)=>MemoryChunk[T]) =
-		new DistMemoryChunk[T](PlaceLocalHandle.make[Cell[MemoryChunk[T]], U](
+		new DistMemoryChunk[T](PlaceLocalHandle.makeFlat[Cell[MemoryChunk[T]], U](
 				pg, init_here, (u :U)=>new Cell(init_there(u))));
 	
 	/** Returns the memory chunk bound to the current place.
