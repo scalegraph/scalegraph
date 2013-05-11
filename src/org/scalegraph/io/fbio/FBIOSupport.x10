@@ -1,9 +1,9 @@
 package org.scalegraph.io.fbio;
 
-import x10.io.IOException;
 import x10.io.File;
 import x10.util.Team;
 import x10.util.ArrayList;
+import x10.util.StringBuilder;
 
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
@@ -14,16 +14,12 @@ import x10.compiler.Ifdef;
 import x10.compiler.Inline;
 
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.util.MemoryPointer;
 import org.scalegraph.io.NativeFile;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.FileMode;
 import org.scalegraph.io.FileAccess;
-import x10.compiler.NonEscaping;
-import x10.util.StringBuilder;
 
 @NativeCPPInclude("NativeSupport.h")
 @NativeCPPOutputFile("Attribute.h")
