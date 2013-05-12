@@ -10,7 +10,7 @@ import org.scalegraph.xpregel.comm.AggregatorInterface;
  * of message and aggregator
  * 
  */
-public class XContext[M,A] {
+public class XContext[V, M, A] {
 	var mContext : XpregelContext;
 	var mBufferSendMessages : Array[GrowableMemory[Tuple2[Long,M]]];
 	var aggregator : AggregatorInterface[A];

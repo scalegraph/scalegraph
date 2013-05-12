@@ -1,9 +1,11 @@
 package org.scalegraph.xpregel;
+
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.xpregel.comm.WorkerInterface;
 import org.scalegraph.xpregel.EdgesBuffer;
+
 public class Vertex[V,E] {
 	
 	var mVertexId	:	Long;

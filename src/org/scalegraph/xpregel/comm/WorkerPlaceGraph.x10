@@ -1,4 +1,5 @@
 package org.scalegraph.xpregel.comm;
+
 import x10.util.Team;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
@@ -17,57 +18,55 @@ import x10.util.ArrayList;
 import org.scalegraph.xpregel.XContext;
 import x10.util.HashMap;
 import org.scalegraph.xpregel.EdgesBuffer;
+import org.scalegraph.xpregel.VertexContext;
+import org.scalegraph.concurrent.Team2;
+import org.scalegraph.util.Bitmap;
 
 public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterface[V,E]{
-	val mTeam:Team;
+	val mTeam :Team2;
+	val mIds :IdStruct;
 	
-	var mMatrix:SparseMatrix;
-	var mVertexValue:GrowableMemory[V];
-	var mVertexHalt:GrowableMemory[Boolean];
-	var mOutEdgesValue : GrowableMemory[E];
+	//var mMatrix:SparseMatrix;
+	var mVertexValue :MemoryChunk[V];
+	val mVertexHalt :Bitmap;
+	val mVertexShouldBeActive :Bitmap;
 	
-	/* for in edge */
-	var mInEdgesValue : GrowableMemory[E];
-	var mInEdgesId : GrowableMemory[Long];
-	var mInEdgesOffset : GrowableMemory[Long];
-	
-	/* vertex should be alive */
-	var mVertexShouldBeAlive : GrowableMemory[Boolean];
-	
-	/* edges active flag */
-	private var mEdgesActive : GrowableMemory[Boolean];
+	var mOutEdgesOffset :MemoryChunk[Long];
+	var mOutEdgesVertex :MemoryChunk[Long];
+	var mOutEdgesValue : MemoryChunk[E];
+	val mEdgesModified :Bitmap;
 
-	val mContext : XpregelContext;
+	var mInEdgesOffset :MemoryChunk[Long];
+	var mInEdgesVertex :MemoryChunk[Long];
+	var mInEdgesValue : MemoryChunk[E];
 	
-	public def this(team:Team,matrix:SparseMatrix, context:XpregelContext) {
+	//val mContext : XpregelContext;
+	
+	public def this(team :Team2, matrix :DistSparseMatrix) {
 		mTeam = team;
-		mMatrix = matrix;
-		mContext = context;
-		initData();
-		if (here.id == 0) {
-			Console.OUT.println("lgl = " + mContext.ids().lgl);
-			Console.OUT.println("lgc = " + mContext.ids().lgc);
-			Console.OUT.println("lgr = " + mContext.ids().lgr);	
-		}
-	}
-	
-	private def initData() {
-		val matrix = mMatrix;
-		mVertexValue = new GrowableMemory[V](matrix.offsets.size()-1);
-		mVertexHalt = new GrowableMemory[Boolean](matrix.offsets.size()-1);
-		mEdgesActive = new GrowableMemory[Boolean](matrix.offsets.size()-1);
-		mOutEdgesValue = new GrowableMemory[E](matrix.vertexes.size()-1);
-		mVertexShouldBeAlive = new GrowableMemory[Boolean](matrix.offsets.size()-1);
-		mInEdgesValue = new GrowableMemory[E]();
-		mInEdgesId = new GrowableMemory[Long]();
-		mInEdgesOffset = new GrowableMemory[Long]();
+		mIds = matrix.ids();
 		
-		val r = 0..(matrix.offsets.size()-1);
-		for(index in r) {
-			mVertexValue.add(Zero.get[V]());
-			mVertexHalt.add(false);
-			mVertexShouldBeAlive.add(true);
-			mEdgesActive.add(true);
+		val m = matrix();
+		val numVertexes = mIds.numberOfLocalVertexes();
+		val numEdges = m.vertexes.size();
+		
+		mVertexValue = new MemoryChunk[V](numVertexes);
+		mVertexHalt = new Bitmap(numVertexes, false);
+		mVertexShouldBeActive = new Bitmap(numVertexes, true);
+		
+		mOutEdgesOffset = m.offsets;
+		mOutEdgesVertex = m.vertexes;
+		mOutEdgesValue = new MemoryChunk[E](numEdges);
+		mEdgesModified = new Bitmap(numVertexes, false);
+		
+		mInEdgesOffset = new MemoryChunk[Long](0);
+		mInEdgesVertex = new MemoryChunk[Long](0);
+		mInEdgesValue = new MemoryChunk[E](0);
+		
+		if (here.id == 0) {
+			Console.OUT.println("lgl = " + mIds.lgl);
+			Console.OUT.println("lgc = " + mIds.lgc);
+			Console.OUT.println("lgr = " + mIds.lgr);	
 		}
 	}
 	
@@ -93,260 +92,80 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	}
 	
 	public def initDefaultVertexValue(value : V) {
-		val tmp = new MemoryChunk[V](mMatrix.offsets.size()-1);
-		Parallel.iter(tmp.range(), (index : Long) => {
-			tmp(index) = value;
+		Parallel.iter(mVertexValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mVertexValue(i) = value;
 		});
-		mVertexValue.setMemory(tmp);
 	}
 	
-	public def zipVertexValue[T](a:GrowableMemory[T], compute : (v:T) => V){T haszero} {
-		val tmp = new MemoryChunk[V](a.size());
-		Parallel.iter(a.range(),(index:Long) => {
-			val v = a(index);
-			tmp(index) = compute(v);
+	public def zipVertexValue[T](a:MemoryChunk[T], compute : (v:T) => V) {
+		Parallel.iter(mVertexValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mVertexValue(i) = compute(a(i));
 		});
-		mVertexValue.setMemory(tmp);
 	}
 	
-	public def zipVertexValue[T1,T2](a1:GrowableMemory[T1],
-			a2:GrowableMemory[T2], compute : (v1:T1,v2:T2) => V){T1 haszero, T2 haszero} {
+	public def zipVertexValue[T1,T2](a1:MemoryChunk[T1],
+			a2:GrowableMemory[T2], compute : (v1:T1,v2:T2) => V) {
 		assert(a1.size() == a2.size());
-		val tmp = new MemoryChunk[V](a1.size());
-		Parallel.iter(a1.range(),(index : Long) => {
-			tmp(index) = compute(a1(index),a2(index));
+		Parallel.iter(mVertexValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mVertexValue(i) = compute(a1(i), a2(i));
 		});
-		mVertexValue.setMemory(tmp);
 	}
 	
-	public def zipVertexValue[T1,T2,T3](a1:GrowableMemory[T1],a2:GrowableMemory[T2],a3:GrowableMemory[T3], 
-			compute : (v1:T1,v2:T2,v3:T3) => V){T1 haszero, T2 haszero, T3 haszero} {
+	public def zipVertexValue[T1,T2,T3](a1:MemoryChunk[T1],a2:MemoryChunk[T2],a3:MemoryChunk[T3], 
+			compute : (v1:T1,v2:T2,v3:T3) => V) {
 		assert(a1.size() == a2.size() && a2.size() == a3.size());
-		val tmp = new MemoryChunk[V](a1.size());
-		Parallel.iter(a1.range(),(index : Long) => {
-			tmp(index) = compute(a1(index),a2(index),a3(index));
+		Parallel.iter(mVertexValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mVertexValue(i) = compute(a1(i), a2(i), a3(i));
 		});
-		mVertexValue.setMemory(tmp);
 	}
 	
 	public def initDefaultEdgeValue(value : E) {
-		val tmp = new MemoryChunk[E](mMatrix.vertexes.size());
-		Parallel.iter(tmp.range(),(index:Long) => {
-			tmp(index) = value;
+		Parallel.iter(mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mOutEdgesValue(i) = value;
 		});
-		mOutEdgesValue.setMemory(tmp);
 	}
 	
-	public def zipEdgeValue[T](a:GrowableMemory[T], compute : (v:T) => E){T haszero} {
+	public def zipEdgeValue[T](a:MemoryChunk[T], compute : (v:T) => E) {
 		if (here.id == 0) {
 			Console.OUT.println("a.size = " + a.size());
 		}
-		val tmp = new MemoryChunk[E](a.size());
-		Parallel.iter(a.range(),(index:Long) => {
-			tmp(index) = compute(a(index));
+		Parallel.iter(mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mOutEdgesValue(i) = compute(a(i));
 		});
-		mOutEdgesValue.setMemory(tmp);
 		if (here.id == 0) {
 			Console.OUT.println("edges value size = " + mOutEdgesValue.size());
-			Console.OUT.println("edges id size = " + mMatrix.vertexes.size());
-			Console.OUT.println("edges size = " + mMatrix.edgeIndexes.size());
+			Console.OUT.println("edges id size = " + mVertexValue.size());
+			Console.OUT.println("edges size = " + mOutEdgesVertex.size());
 		}
 	}
 	
-	public def zipEdgeValue[T1,T2](a1:GrowableMemory[T1], 
-			a2: GrowableMemory[T2], compute : (v1:T1,v2:T2) => E){T1 haszero, T2 haszero} {
+	public def zipEdgeValue[T1,T2](a1:MemoryChunk[T1], 
+			a2: MemoryChunk[T2], compute : (v1:T1,v2:T2) => E) {
 		assert(a1.size() == a2.size());
-		val tmp = new MemoryChunk[E](a1.size());
-		Parallel.iter(a1.range(),(index:Long) => {
-			tmp(index) = compute(a1(index),a2(index));
+		Parallel.iter(mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mOutEdgesValue(i) = compute(a1(i), a2(i));
 		});
-		mOutEdgesValue.setMemory(tmp);
 	}
 	
-	public def zipEdgeValue[T1,T2,T3](a1:GrowableMemory[T1], a2: GrowableMemory[T2], 
-			a3 : GrowableMemory[T3], compute : (v1:T1,v2:T2,v3:T3) => E){T1 haszero, T2 haszero, T3 haszero} {
+	public def zipEdgeValue[T1,T2,T3](a1:MemoryChunk[T1], a2: MemoryChunk[T2], 
+			a3 : MemoryChunk[T3], compute : (v1:T1,v2:T2,v3:T3) => E) {
 		assert(a1.size() == a2.size() && a2.size() == a3.size());
-		val tmp = new MemoryChunk[E](a1.size());
-		Parallel.iter(a1.range(),(index:Long) => {
-			tmp(index) = compute(a1(index),a2(index),a3(index));
+		Parallel.iter(mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
+			for(i in r) mOutEdgesValue(i) = compute(a1(i), a2(i), a3(i));
 		});
-		mOutEdgesValue.setMemory(tmp);
 	}
 	
-	public def run[M,A](computation:ComputationInterface[V,E,M,A], aggregator : AggregatorInterface[A], 
-			service:MessageCommunicationService[M,A]){M haszero, A haszero} {
-		val role = mTeam.role()(0);
-		val vertexSize = mMatrix.offsets.size()-1;
-		val [nthreads,chunkSize] = PregelUtils.splitChunk(0..(vertexSize-1));
-		
-		val contextPerThreads = new Array[XContext[M,A]](nthreads as Int);
-		val outEdgesBufferPerThreads = new Array[EdgesBuffer[E]](nthreads as Int);
-		val inEdgesBufferPerThreads = new Array[EdgesBuffer[E]](nthreads as Int);
-		for ( i in (0..(nthreads-1))) {
-			val _cont = new XContext[M,A](mContext);
-			if (aggregator != null) {
-				_cont.setAggregator(aggregator.clone());
-			}
-			contextPerThreads(i as Int) = _cont;
-			val outedge = new EdgesBuffer[E](vertexSize);
-			outEdgesBufferPerThreads(i as Int) = outedge;
-			val inedge = new EdgesBuffer[E](vertexSize);
-			inEdgesBufferPerThreads(i as Int) = inedge;
-		}
-		
-		val numActiveVertices = new Array[Long](nthreads as Int);
-		if (here.id == 0) {
-			Console.OUT.println("Start Processing SuperStep");
-		}
-		val _service = service;
-		val range = 0..(mMatrix.offsets.size()-2);
-		mContext.resetSuperStep();
-		try {
-		do {
-			val start_time = System.currentTimeMillis();
-			preComputation();
-			
-			/* process computation for each vertex in parallel */
-			Parallel.iter(range,(tIndex:Long,r:LongRange) => {
-				try {
-				val i = tIndex as Int;
-				val ra = r;
-				val _appContext = contextPerThreads(i);
-				_appContext.clearBuff();
-				if (aggregator != null) {
-					_appContext.setAggregatorValue(aggregator.getAggregatorValue());
-				}
-				val _outEdgeBuffer = outEdgesBufferPerThreads(i);
-				_outEdgeBuffer.setRange(r);
-				val _inEdgeBuffer = inEdgesBufferPerThreads(i);
-				_inEdgeBuffer.setRange(r);
-
-				val messages = new GrowableMemory[Tuple2[Long,M]](1000);
-				numActiveVertices([i]) = 0L;
-				val vertex = new Vertex[V,E](0);
-				vertex.setWorkerInterface(this);
-				vertex.setEdgesBuffer(_outEdgeBuffer,true);
-				vertex.setEdgesBuffer(_inEdgeBuffer,false);
-				for (index in ra) {
-					vertex.preComputation();
-					vertex.updateContext(mContext);
-					vertex.setVertexId(index);
-					if (mContext.getSuperStep() == 0L) {
-						if (mVertexShouldBeAlive(index)) {
-							vertex.setAlive();
-						}
-					}
-					messages.clear();
-					service.getMessagesForVertex(vertex.getVertexId(),messages);
-			
-					if (messages.size() > 0) {
-						vertex.setAlive();
-					}
-					if (!vertex.isHalted()) {
-						computation.do_computation(vertex,messages.data(),_appContext);
-					}
-					if (!vertex.isHalted()) {
-						numActiveVertices([i])++;
-					}
-					
-					vertex.postComputation();
-				}
-				}catch(e:CheckedThrowable) {
-					e.printStackTrace();
-				}
-			});
-			Console.OUT.println("End Process ...at "+here.id);
-			
-			/* modify edges */
-			var checkModified : Boolean = false;
-			for (index in outEdgesBufferPerThreads) {
-				if (outEdgesBufferPerThreads(index).isModified()) {
-					checkModified = true;
-					break;
-				}                                        
-			}
-			if (checkModified) {
-				val offsets = new GrowableMemory[Long]();
-				offsets.setMemory(mMatrix.offsets);
-				val vertexes = new GrowableMemory[Long]();
-				vertexes.setMemory(mMatrix.vertexes);
-				EdgesBuffer.merge(outEdgesBufferPerThreads, offsets, vertexes, mOutEdgesValue, vertexSize);
-			}
-			/* end */
-			
-			/* get number of active vertices and the number of messages */
-			val sumSendMessages = _service.addMessages(contextPerThreads);
-			var sumActiveVertices:Long = 0L;
-			for(index in numActiveVertices) {
-				sumActiveVertices += numActiveVertices(index);
-			}
-			
-			
-			/* 
-			 * get the total number of active vertices and the number of messages
-			 * if the total number of active vertices and the number of messages are 0
-			 * then the process is finished 
-			 */
-			val sumAllActiveVertices = mTeam.allreduce(role,sumActiveVertices,Team.ADD);
-			val sumAllSendMessages = mTeam.allreduce(role,sumSendMessages,Team.ADD);
-			if (here.id == 0) {
-				Console.OUT.println("active vertices: " + sumAllActiveVertices + ", send messages = " + sumAllSendMessages);
-			}
-			if (sumAllActiveVertices == 0L && sumAllSendMessages == 0L) {
-				break;
-			}
-			
-			/* synchronize all workers here before exchanging messages */
-			mTeam.barrier(role);
-			
-			/* exchanging messages */
-			_service.exchangeMessages();
-			
-			/* aggregator value here */
-			if (aggregator != null) {
-				aggregator.reset();
-				for(index in contextPerThreads) {
-					val _context = contextPerThreads(index);
-					aggregator.aggregate(_context.getAggregatorValue());
-				}
-				val sendArray = new Array[A](mTeam.size());
-				for(index in sendArray) {
-					sendArray(index) = aggregator.getAggregatorValue();
-				}
-				val recvArray = mTeam.alltoall(role,sendArray);
-				for(index in recvArray) {
-					if (index(0) != role) {
-						aggregator.aggregate(recvArray(index));
-					}
-				}
-			}
-			
-			postComputation();
-			val end_time = System.currentTimeMillis();
-			if (here.id == 0) {
-				Console.OUT.println("Process Superstep " + mContext.getSuperStep() + " : " + (end_time-start_time));
-			}
-		}while(true);
-		if (here.id == 0 && aggregator != null) {
-			Console.OUT.println("Aggregator value = " + aggregator.getAggregatorValue());
-		}
-		}catch (e:CheckedThrowable) {
-			e.printStackTrace();
-		}
-		
-	}
-	
-	public def run[M,A](do_computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],context:XContext[M,A]) => void,
-			aggregator : AggregatorInterface[A], service:MessageCommunicationService[M,A]){M haszero, A haszero} {
-		val role = mTeam.role()(0);
+	public def run[M,A](compute:(ctx:VertexContext[V,E,M,A],messages:MemoryChunk[M]) => void, 
+			aggregator : (MemoryChunk[A])=>A, service:MessageCommunicationService[M,A]){M haszero, A haszero}
+	{
 		val vertexSize = mMatrix.offsets.size()-1;
 		val [nthreads,chunkSize] = PregelUtils.splitChunk(0..(vertexSize-1));
 		if (here.id == 0){
 			Console.OUT.println(here.id+":num threads = " + nthreads + ", chunkSize = " + chunkSize);
 		}
-		val contextPerThreads = new Array[XContext[M,A]](nthreads as Int);
+		//val contextPerThreads = new Array[XContext[M,A]](nthreads as Int);
 		val outEdgesBufferPerThreads = new Array[EdgesBuffer[E]](nthreads as Int);
-		val inEdgesBufferPerThreads = new Array[EdgesBuffer[E]](nthreads as Int);
+		//val inEdgesBufferPerThreads = new Array[EdgesBuffer[E]](nthreads as Int);
 		for ( i in (0..(nthreads-1))) {
 			val _cont = new XContext[M,A](mContext);
 			if (aggregator != null) {

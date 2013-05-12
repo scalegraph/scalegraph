@@ -9,6 +9,8 @@ import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.xpregel.XContext;
 import org.scalegraph.xpregel.comm.DoubleMaxAggregator;
+import org.scalegraph.xpregel.VertexContext;
+
 public class PageRank {
 	
 	public static def main(args:Array[String](1)) {
@@ -38,46 +40,27 @@ public class PageRank {
 		val xpregel = g.createXPregelGraph[Double,Double]();
 		val edgeValue = g.getEdgeAttribute[Double]("edgevalue").values();
 		xpregel.zipEdgeValue[Double](edgeValue, (value : Double) => value);
-		val do_computation = (vertex:Vertex[Double,Double],messages:MemoryChunk[Tuple2[Long,Double]],_appcontext:XContext[Double,Double]) => {
-			val _graphContext = vertex.getContext();
-			if (_graphContext.getSuperStep() == 0l) {
-				vertex.setValue(1.0);
-			}
-			
-			if (_graphContext.getSuperStep() > 30) {
-				if (vertex.getVertexId() == 0L && here.id == 0) {
-					Console.OUT.println("Large PageRank =  " + _appcontext.getAggregatorValue());
-				}
-				vertex.voteToHalt();
-			}else {
-				var sum : Double = 0.0;
-				if (messages.size() > 0) {
-					for(i in messages.range()) {
-						sum += messages(i).get2();
-					}
-				}
-				val value = 0.15 / _graphContext.getNumberOfVertices() + 0.85 * sum;
-				vertex.setValue(value);
-				_appcontext.aggregate(value);
-				if (here.id == 0 && vertex.getVertexId() == 0L) {
-					Console.OUT.println("Large PageRank at superstep " + _graphContext.getSuperStep() + " = " + _appcontext.getAggregatorValue());
-				}
-				val edges = new GrowableMemory[Long]();
-				vertex.getEdgesId(true,edges);
-				if (edges.size() > 0) {
-					val message = value / vertex.getEdgesNum(true);
-					for(ind in edges.range()) {
-						if (ind > edges.range().max) continue;
-						val id = edges(ind);
-						_appcontext.putMessage(id,message);
-					}
-				}
-				edges.del();
-			}
-		};
-		val aggregator = new DoubleMaxAggregator();
 		val start_time = System.currentTimeMillis();
-		xpregel.do_computations[Double,Double](do_computation,aggregator);
+		xpregel.do_computations[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+			val value :Double;
+			if(ctx.superstep() == 0)
+				value = 1.0 / ctx.numberOfVertices();
+			else
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+
+			if (ctx.superstep() < 30) {
+				ctx.aggregate(value - ctx.value());
+				ctx.setValue(value);
+				ctx.sendMessageToAllNeighbors(value / ctx.outEdges().size());
+			}
+			else {
+				ctx.voteToHalt();
+			}
+			if (here.id == 0 && ctx.id() == 0L) {
+				Console.OUT.println("Large PageRank at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
+			}
+		},
+		(values :MemoryChunk[Double]) => MathAppend.sum(values));
 		val end_time = System.currentTimeMillis();
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");
