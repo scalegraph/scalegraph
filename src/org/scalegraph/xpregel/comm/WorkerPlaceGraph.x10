@@ -104,7 +104,7 @@ public class WorkerPlaceGraph[V,E]{V haszero, E haszero} implements WorkerInterf
 	}
 	
 	public def zipVertexValue[T1,T2](a1:MemoryChunk[T1],
-			a2:GrowableMemory[T2], compute : (v1:T1,v2:T2) => V) {
+			a2:MemoryChunk[T2], compute : (v1:T1,v2:T2) => V) {
 		assert(a1.size() == a2.size());
 		Parallel.iter(mVertexValue.range(), (tid :Long, r :LongRange) => {
 			for(i in r) mVertexValue(i) = compute(a1(i), a2(i));

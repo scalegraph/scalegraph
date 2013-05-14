@@ -1,15 +1,18 @@
 package org.scalegraph.xpregel.test;
 
 import x10.util.Team;
-import org.scalegraph.util.tuple.Tuple3;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.xpregel.Vertex;
+
+import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
+import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.graph.Graph;
+
+import org.scalegraph.xpregel.Vertex;
 import org.scalegraph.xpregel.XContext;
 import org.scalegraph.xpregel.comm.DoubleMaxAggregator;
 import org.scalegraph.xpregel.VertexContext;
+import org.scalegraph.xpregel.XPregelGraph;
 
 public class PageRank {
 	
@@ -37,10 +40,13 @@ public class PageRank {
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
-		val xpregel = g.createXPregelGraph[Double,Double]();
-		val edgeValue = g.getEdgeAttribute[Double]("edgevalue").values();
+		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val xpregel = new XPregelGraph[Double, Double](team, csr);
+		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
 		xpregel.zipEdgeValue[Double](edgeValue, (value : Double) => value);
+		
 		val start_time = System.currentTimeMillis();
+		
 		xpregel.do_computations[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0)
@@ -60,8 +66,11 @@ public class PageRank {
 				Console.OUT.println("Large PageRank at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
 			}
 		},
-		(values :MemoryChunk[Double]) => MathAppend.sum(values));
+		(values :MemoryChunk[Double]) => MathAppend.sum(values),
+		(superstep :Int, aggVal :Double) => (superstep >= 30 || aggVal < 0.0001));
+		
 		val end_time = System.currentTimeMillis();
+	
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");
 	}

@@ -13,6 +13,7 @@ import org.scalegraph.graph.Attribute;
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.xpregel.comm.AggregatorInterface;
 import org.scalegraph.concurrent.Team2;
+import org.scalegraph.util.DistMemoryChunk;
 /**
  * a main entry for processing 
  * graph with X-Pregel
@@ -41,7 +42,7 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		});
 	}
 	
-	public def zipVertexValue[T](a:DistGrowableMemory[T], compute : (v:T) => V){T haszero} {
+	public def zipVertexValue[T](a :DistMemoryChunk[T], compute : (v:T) => V){T haszero} {
 		val _team = mTeam;
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
@@ -49,8 +50,8 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		});
 	}
 	
-	public def zipVertexValue[T1,T2](a1:DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], 
-			compute : (v1:T1,v2:T2) => V) {T1 haszero, T2 haszero} {
+	public def zipVertexValue[T1,T2](a1 :DistMemoryChunk[T1], a2 :DistMemoryChunk[T2], 
+			compute :(T1, T2) => V) {T1 haszero, T2 haszero} {
 		val _team = mTeam;
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
@@ -58,8 +59,8 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		});
 	}
 	
-	public def zipVertexValue[T1,T2,T3](a1:DistGrowableMemory[T1], a2 : DistGrowableMemory[T2],
-			a3 : DistGrowableMemory[T3],
+	public def zipVertexValue[T1,T2,T3](a1 :DistMemoryChunk[T1], a2 :DistMemoryChunk[T2],
+			a3 :DistMemoryChunk[T3],
 			compute : (v1:T1,v2:T2,v3:T3) => V) {T1 haszero, T2 haszero, T3 haszero} {
 		val _team = mTeam;
 		val _workers = mWorkers;
@@ -76,7 +77,7 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		});
 	}
 			
-	public def zipEdgeValue[T] (a : DistGrowableMemory[T], compute : (v : T) => E) {T haszero} {
+	public def zipEdgeValue[T] (a :DistMemoryChunk[T], compute :(T) => E) {T haszero} {
 		val _team = mTeam;
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
@@ -84,8 +85,8 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		});
 	}
 	
-	public def zipEdgeValue[T1,T2] (a1: DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], 
-			compute : (v1 : T1, v2 : T2) => E) {T1 haszero, T2 haszero} {
+	public def zipEdgeValue[T1,T2] (a1 :DistMemoryChunk[T1], a2 :DistMemoryChunk[T2], 
+			compute :(T1, T2) => E) {T1 haszero, T2 haszero} {
 		val _team = mTeam;
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
@@ -93,8 +94,8 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		});
 	}
 			
-	public def zipEdgeValue[T1,T2,T3] (a1: DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], a3 : DistGrowableMemory[T3],
-			compute : (v1 : T1, v2 : T2, v3 : T3) => E) {T1 haszero, T2 haszero, T3 haszero} {
+	public def zipEdgeValue[T1,T2,T3] (a1 :DistMemoryChunk[T1], a2 :DistMemoryChunk[T2], a3 :DistMemoryChunk[T3],
+			compute :(T1, T2, T3) => E) {T1 haszero, T2 haszero, T3 haszero} {
 		val _team = mTeam;
 		val _workers = mWorkers;
 		_team.placeGroup().broadcastFlat(() => {
@@ -135,8 +136,10 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		Console.OUT.println("End processing...");
 	}
 	
-	public def do_computations[M,A](compute:(ctx:VertexContext[V,E,M,A],messages:MemoryChunk[M]) => void, 
-			aggregator : (MemoryChunk[A])=>A){ M haszero, A haszero} {
+	public def do_computations[M,A](
+			compute :(ctx:VertexContext[V,E,M,A],messages:MemoryChunk[M]) => void, 
+			aggregator :(MemoryChunk[A])=>A,
+			end :(Int,A)=>Boolean){ M haszero, A haszero} {
 		val _team = mTeam;
 		val _context = mContext;
 		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
