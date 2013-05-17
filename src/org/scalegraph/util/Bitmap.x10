@@ -69,4 +69,6 @@ public class Bitmap {
 		val old = mc.data.atomicAnd(wordOffset, ~mask);
 		return (old & mask) != 0UL;
 	}
+	
+	public @Inline def word(offset :Long) = mc(offset);
 }

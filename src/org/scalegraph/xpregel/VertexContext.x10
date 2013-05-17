@@ -1,6 +1,9 @@
 package org.scalegraph.xpregel;
 
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
+import org.scalegraph.util.Bitmap;
+import org.scalegraph.util.GrowableMemory;
 
 /**
  * Provides XPregel framwork services for computation kernels
@@ -12,62 +15,97 @@ import org.scalegraph.util.MemoryChunk;
  * M: Message value type
  * A: Aggreator value type
  */
-public class VertexContext[V, E, M, A] {
+public class VertexContext[V, E, M, A] {V haszero, E haszero} {
+	val mWorker :WorkerPlaceGraph[V, E];
+	val mCtx :ExecutionContext[M, A];
+
+	val mDiffEdgesOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();
+	val mDiffEdgesVertex :GrowableMemory[Long] = new GrowableMemory[Long]();
+	val mDiffEdgesValue :GrowableMemory[E] = new GrowableMemory[E]();
+
+	var mSrcid :Long;
+	var mEdgeChanged :Boolean;
+	
+	def this(worker :WorkerPlaceGraph[V, E], ctx :ExecutionContext[M, A]) {
+		mWorker = worker;
+		mCtx = ctx;
+	}
 	
 	/**
 	 * get the number of current superstep
 	 */
-	public def superstep() {
-		// TODO:
-	}
+	public def superstep() = mCtx.mSuperstep;
 	
 	/**
 	 * get read vertex id from dst id
 	 */
-	public def realId(id :Long) {
-		// TODO:
-	}
+	public def realId(id :Long) = mWorker.mDtoV(id);
 	
 	/**
 	 * get dst id from read vertex id
 	 */
-	public def dstId(realId :Long) {
-		// TODO:
-	}
+	public def dstId(realId :Long) = mWorker.mVtoD(realId);
 	
 	/**
 	 * get the number of vertices of the graph
 	 */
-	public def numberOfVertices() {
-		// TODO:
-	}
+	public def numberOfVertices() = mWorker.mIds.numberOfGlobalVertexes();
 	
 	/**
 	 * get the value for the current vertex
 	 */
-	public def value() {
-		// TODO:
-	}
+	public def value() = mWorker.mVertexValue(mSrcid);
 	
 	/**
 	 * set the value for the current vertex
 	 */
 	public def setValue(value :V) {
+		mWorker.mVertexValue(mSrcid) = value;
+	}
+	
+	public def outEdges() :Tuple2[MemoryChunk[Long], MemoryChunk[E]] {
 		// TODO:
 	}
 	
 	/**
 	 * get out edges for the current vertex
 	 */
-	public def outEdges() {
-		// TODO:
+	public def outEdgesId() {
+		// TODO: edge modification
+		val offset = mWorker.mOutEdgesOffset;
+		val start = offset(mSrcid);
+		val length = offset(mSrcid + 1) - start;
+		return mWorker.mOutEdgesVertex.subpart(start, length);
+	}
+
+	/**
+	 * get out edges for the current vertex
+	 */
+	public def outEdgesValue() {
+		val offset = mWorker.mOutEdgesOffset;
+		val start = offset(mSrcid);
+		val length = offset(mSrcid + 1) - start;
+		return mWorker.mOutEdgesValue.subpart(start, length);
 	}
 	
 	/**
 	 * get in edges for the current vertex
 	 */
-	public def inEdges() {
-		// TODO:
+	public def inEdgesId() {
+		val offset = mWorker.mInEdgesOffset();
+		val start = offset(mSrcid);
+		val length = offset(mSrcid + 1) - start;
+		return mWorker.mInEdgesVertex().subpart(start, length);
+	}
+	
+	/**
+	 * get in edges for the current vertex
+	 */
+	public def inEdgesValue() {
+		val offset = mWorker.mInEdgesOffset();
+		val start = offset(mSrcid);
+		val length = offset(mSrcid + 1) - start;
+		return mWorker.mInEdgesValue.subpart(start, length);
 	}
 	
 	/**
