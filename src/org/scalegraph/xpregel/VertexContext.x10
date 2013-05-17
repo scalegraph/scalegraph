@@ -19,12 +19,20 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :ExecutionContext[M, A];
 
+	// srcid, offset
 	val mDiffEdgesOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();
 	val mDiffEdgesVertex :GrowableMemory[Long] = new GrowableMemory[Long]();
 	val mDiffEdgesValue :GrowableMemory[E] = new GrowableMemory[E]();
+	
+	val mMessagesVertex :MemoryChunk[GrowableMemory[Long]];
+	val mMessagesValue :MemoryChunk[GrowableMemory[M]];
+	val mVOMessagesValue :MemoryChunk[M];
+	
+	val mAggregateValue :GrowableMemory[A] = new GrowableMemory[A]();
 
 	var mSrcid :Long;
-	var mEdgeChanged :Boolean;
+	var mEdgeChanged :Boolean = false;
+	var mDiffStartOffset :Long = 0;
 	
 	def this(worker :WorkerPlaceGraph[V, E], ctx :ExecutionContext[M, A]) {
 		mWorker = worker;
@@ -63,29 +71,59 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 		mWorker.mVertexValue(mSrcid) = value;
 	}
 	
+	/**
+	 * returns <vertex ids, values>
+	 */
 	public def outEdges() :Tuple2[MemoryChunk[Long], MemoryChunk[E]] {
-		// TODO:
+		if(mEdgeChanged) {
+			val start = mDiffStartOffset;
+			val length = mDiffEdgesVertex.size() - start;
+			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
+				mDiffEdgesVertex.data().subpart(start, length),
+				mDiffEdgesValue.data().subpart(start, length));
+		}
+		else {
+			val offset = mWorker.mOutEdgesOffset;
+			val start = offset(mSrcid);
+			val length = offset(mSrcid + 1) - start;
+			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
+				mWorker.mOutEdgesVertex.subpart(start, length),
+				mWorker.mOutEdgesValue.subpart(start, length));
+		}
 	}
 	
 	/**
 	 * get out edges for the current vertex
 	 */
 	public def outEdgesId() {
-		// TODO: edge modification
-		val offset = mWorker.mOutEdgesOffset;
-		val start = offset(mSrcid);
-		val length = offset(mSrcid + 1) - start;
-		return mWorker.mOutEdgesVertex.subpart(start, length);
+		if(mEdgeChanged) {
+			val start = mDiffStartOffset;
+			val length = mDiffEdgesVertex.size() - start;
+			return mDiffEdgesVertex.data().subpart(start, length);
+		}
+		else {
+			val offset = mWorker.mOutEdgesOffset;
+			val start = offset(mSrcid);
+			val length = offset(mSrcid + 1) - start;
+			return mWorker.mOutEdgesVertex.subpart(start, length);
+		}
 	}
 
 	/**
 	 * get out edges for the current vertex
 	 */
 	public def outEdgesValue() {
-		val offset = mWorker.mOutEdgesOffset;
-		val start = offset(mSrcid);
-		val length = offset(mSrcid + 1) - start;
-		return mWorker.mOutEdgesValue.subpart(start, length);
+		if(mEdgeChanged) {
+			val start = mDiffStartOffset;
+			val length = mDiffEdgesValue.size() - start;
+			return mDiffEdgesValue.data().subpart(start, length);
+		}
+		else {
+			val offset = mWorker.mOutEdgesOffset;
+			val start = offset(mSrcid);
+			val length = offset(mSrcid + 1) - start;
+			return mWorker.mOutEdgesValue.subpart(start, length);
+		}
 	}
 	
 	/**
@@ -111,43 +149,51 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	/**
 	 * replace the out edges for the current vertex with the given edges
 	 */
-	public def setOutEdges(edges :MemoryChunk[E]) {
-		// TODO:
+	public def setOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
+		mDiffEdgesVertex.setSize(mDiffStartOffset);
+		mDiffEdgesValue.setSize(mDiffStartOffset);
+		mDiffEdgesVertex.add(id);
+		mDiffEdgesValue.add(value);
+		mEdgeChanged = true;
 	}
 	
 	/**
 	 * remove all the out edges for the current vertex
 	 */
 	public def clearOutEdges() {
-		// TODO:
+		mDiffEdgesVertex.setSize(mDiffStartOffset);
+		mDiffEdgesValue.setSize(mDiffStartOffset);
+		mEdgeChanged = true;
 	}
 	
 	/**
 	 * add out edge to the current vertex
 	 */
 	public def addOutEdge(id :Long, value :E) {
-		// TODO:
+		mDiffEdgesVertex.add(id);
+		mDiffEdgesValue.add(value);
+		mEdgeChanged = true;
 	}
 	
 	/**
 	 * add out edges to the current vertex
 	 */
 	public def addOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
-		// TODO:
+		mDiffEdgesVertex.add(id);
+		mDiffEdgesValue.add(value);
+		mEdgeChanged = true;
 	}
 
 	/**
 	 * get aggregated value on a previous superstep
 	 */
-	public def aggregatedValue() {
-		// TODO:
-	}
+	public def aggregatedValue() = mCtx.aggregatedValue();
 
 	/**
 	 * aggregate the value
 	 */
 	public def aggreagate(value :A) {
-		// TODO:
+		mAggregateValue.add(value);
 	}
 
 	/**
@@ -155,7 +201,9 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	 * vertex
 	 */
 	public def sendMessage(id :Long, mes :M) {
-		// TODO:
+		val dstPlace = id; // TODO:
+		mMessagesVertex(dstPlace).add(id);
+		mMessagesValue(dstPlace).add(id);
 	}
 
 	/**
@@ -164,6 +212,11 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	 */
 	public def sendMessage(id :MemoryChunk[Long], mes :MemoryChunk[M]) {
 		// TODO:
+		for(i in id.range()) {
+			val dstPlace = id; // TODO:
+			mMessagesVertex(dstPlace).add(id);
+			mMessagesValue(dstPlace).add(id);
+		}
 	}
 
 	/**
@@ -173,7 +226,8 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	 * by invoking updateInEdges method of XPregelGraph.
 	 */
 	public def sendMessageToAllNeighbors(mes :M) {
-		// TODO:
+		// TODO: handle multiple messages
+		mCtx.mVOSMesValue(srcid) = mes;
 	}
 	
 	/**
