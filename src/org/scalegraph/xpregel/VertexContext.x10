@@ -15,28 +15,26 @@ import org.scalegraph.util.GrowableMemory;
  * M: Message value type
  * A: Aggreator value type
  */
-public class VertexContext[V, E, M, A] {V haszero, E haszero} {
+public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :ExecutionContext[M, A];
+	val mEdgeProvider :EdgeProvider[E];
 
-	// srcid, offset
-	val mDiffEdgesOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();
-	val mDiffEdgesVertex :GrowableMemory[Long] = new GrowableMemory[Long]();
-	val mDiffEdgesValue :GrowableMemory[E] = new GrowableMemory[E]();
+	// messages
+	val mEOSMessages :MemoryChunk[MessageBuffer[M]];
 	
-	val mMessagesVertex :MemoryChunk[GrowableMemory[Long]];
-	val mMessagesValue :MemoryChunk[GrowableMemory[M]];
-	val mVOMessagesValue :MemoryChunk[M];
-	
+	// aggregate values
 	val mAggregateValue :GrowableMemory[A] = new GrowableMemory[A]();
 
 	var mSrcid :Long;
-	var mEdgeChanged :Boolean = false;
-	var mDiffStartOffset :Long = 0;
 	
-	def this(worker :WorkerPlaceGraph[V, E], ctx :ExecutionContext[M, A]) {
+	def this(worker :WorkerPlaceGraph[V, E], ctx :ExecutionContext[M, A], tid :Long) {
+		val numPlaces = ctx.mTeam.size();
+		
 		mWorker = worker;
 		mCtx = ctx;
+		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
+		mEOSMessages = mCtx.mEOSMessages.subpart(tid * numPlaces, numPlaces);
 	}
 	
 	/**
@@ -67,143 +65,76 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	/**
 	 * set the value for the current vertex
 	 */
-	public def setValue(value :V) {
-		mWorker.mVertexValue(mSrcid) = value;
-	}
+	public def setValue(value :V) { mWorker.mVertexValue(mSrcid) = value; }
 	
 	/**
 	 * returns <vertex ids, values>
 	 */
-	public def outEdges() :Tuple2[MemoryChunk[Long], MemoryChunk[E]] {
-		if(mEdgeChanged) {
-			val start = mDiffStartOffset;
-			val length = mDiffEdgesVertex.size() - start;
-			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
-				mDiffEdgesVertex.data().subpart(start, length),
-				mDiffEdgesValue.data().subpart(start, length));
-		}
-		else {
-			val offset = mWorker.mOutEdgesOffset;
-			val start = offset(mSrcid);
-			val length = offset(mSrcid + 1) - start;
-			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
-				mWorker.mOutEdgesVertex.subpart(start, length),
-				mWorker.mOutEdgesValue.subpart(start, length));
-		}
-	}
+	public def outEdges() = mEdgeProvider.outEdges(mSrcid);
 	
 	/**
 	 * get out edges for the current vertex
 	 */
-	public def outEdgesId() {
-		if(mEdgeChanged) {
-			val start = mDiffStartOffset;
-			val length = mDiffEdgesVertex.size() - start;
-			return mDiffEdgesVertex.data().subpart(start, length);
-		}
-		else {
-			val offset = mWorker.mOutEdgesOffset;
-			val start = offset(mSrcid);
-			val length = offset(mSrcid + 1) - start;
-			return mWorker.mOutEdgesVertex.subpart(start, length);
-		}
-	}
+	public def outEdgesId() = mEdgeProvider.outEdgesId(mSrcid);
 
 	/**
 	 * get out edges for the current vertex
 	 */
-	public def outEdgesValue() {
-		if(mEdgeChanged) {
-			val start = mDiffStartOffset;
-			val length = mDiffEdgesValue.size() - start;
-			return mDiffEdgesValue.data().subpart(start, length);
-		}
-		else {
-			val offset = mWorker.mOutEdgesOffset;
-			val start = offset(mSrcid);
-			val length = offset(mSrcid + 1) - start;
-			return mWorker.mOutEdgesValue.subpart(start, length);
-		}
-	}
+	public def outEdgesValue() = mEdgeProvider.outEdgesValue(mSrcid);
 	
 	/**
 	 * get in edges for the current vertex
 	 */
-	public def inEdgesId() {
-		val offset = mWorker.mInEdgesOffset();
-		val start = offset(mSrcid);
-		val length = offset(mSrcid + 1) - start;
-		return mWorker.mInEdgesVertex().subpart(start, length);
-	}
+	public def inEdgesId() = mEdgeProvider.inEdgesId(mSrcid);
 	
 	/**
 	 * get in edges for the current vertex
 	 */
-	public def inEdgesValue() {
-		val offset = mWorker.mInEdgesOffset();
-		val start = offset(mSrcid);
-		val length = offset(mSrcid + 1) - start;
-		return mWorker.mInEdgesValue.subpart(start, length);
-	}
+	public def inEdgesValue() = mEdgeProvider.inEdgesValue(mSrcid);
 	
 	/**
 	 * replace the out edges for the current vertex with the given edges
 	 */
 	public def setOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
-		mDiffEdgesVertex.setSize(mDiffStartOffset);
-		mDiffEdgesValue.setSize(mDiffStartOffset);
-		mDiffEdgesVertex.add(id);
-		mDiffEdgesValue.add(value);
-		mEdgeChanged = true;
+		mEdgeProvider.setOutEdges(id, value);
 	}
 	
 	/**
 	 * remove all the out edges for the current vertex
 	 */
-	public def clearOutEdges() {
-		mDiffEdgesVertex.setSize(mDiffStartOffset);
-		mDiffEdgesValue.setSize(mDiffStartOffset);
-		mEdgeChanged = true;
-	}
+	public def clearOutEdges() { mEdgeProvider.clearOutEdges(); }
 	
 	/**
 	 * add out edge to the current vertex
 	 */
-	public def addOutEdge(id :Long, value :E) {
-		mDiffEdgesVertex.add(id);
-		mDiffEdgesValue.add(value);
-		mEdgeChanged = true;
-	}
+	public def addOutEdge(id :Long, value :E) { mEdgeProvider.addOutEdge(id, value); }
 	
 	/**
 	 * add out edges to the current vertex
 	 */
 	public def addOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
-		mDiffEdgesVertex.add(id);
-		mDiffEdgesValue.add(value);
-		mEdgeChanged = true;
+		mEdgeProvider.addOutEdges(id, value);
 	}
 
 	/**
 	 * get aggregated value on a previous superstep
 	 */
-	public def aggregatedValue() = mCtx.aggregatedValue();
+	public def aggregatedValue() = mCtx.mAggregatedValue;
 
 	/**
 	 * aggregate the value
 	 */
-	public def aggreagate(value :A) {
-		mAggregateValue.add(value);
-	}
+	public def aggreagate(value :A) { mAggregateValue.add(value); }
 
 	/**
 	 * send message using dst id of 
 	 * vertex
 	 */
 	public def sendMessage(id :Long, mes :M) {
-		val dstPlace = id; // TODO:
-		mMessagesVertex(dstPlace).add(id);
-		mMessagesValue(dstPlace).add(id);
+		val dstPlace = mWorker.mDtoV.c(id);
+		val mesBuf = mEOSMessages(dstPlace);
+		mesBuf.messages.add(mes);
+		mesBuf.dstIds.add(id);
 	}
 
 	/**
@@ -211,11 +142,11 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	 * vertex
 	 */
 	public def sendMessage(id :MemoryChunk[Long], mes :MemoryChunk[M]) {
-		// TODO:
 		for(i in id.range()) {
-			val dstPlace = id; // TODO:
-			mMessagesVertex(dstPlace).add(id);
-			mMessagesValue(dstPlace).add(id);
+			val dstPlace = mWorker.mDtoV.c(id(i));
+			val mesBuf = mEOSMessages(dstPlace);
+			mesBuf.messages.add(mes(i));
+			mesBuf.dstIds.add(id(i));
 		}
 	}
 
@@ -227,34 +158,38 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero} {
 	 */
 	public def sendMessageToAllNeighbors(mes :M) {
 		// TODO: handle multiple messages
-		mCtx.mVOSMesValue(srcid) = mes;
+		if(mCtx.mVOSEnabled == null) {
+			mCtx.allocateVOSBuffer();
+		}
+		mCtx.mVOSEnabled(mSrcid) = true;
+		mCtx.mVOSMessages(mSrcid) = mes;
 	}
 	
 	/**
 	 * make the halted flag for the current vertex true
 	 */
 	public def voteToHalt() {
-		// TODO;
+		mWorker.mVertexActive(mSrcid) = false;
 	}
 	
 	/**
 	 * make the halted flag for the current vertex false
 	 */
 	public def revive() {
-		// TODO:
+		mWorker.mVertexActive(mSrcid) = true;
 	}
 	
 	/**
 	 * set the initial halted flag value for the current vertex on the next computation
 	 */
 	public def setVertexShouldBeActive(active :Boolean) {
-		// TODO:
+		mWorker.mVertexShouldBeActive(mSrcid) = active;
 	}
 	
 	/**
 	 * get the halted flag for the current vertex
 	 */
-	public def isHalted() {
-		// TODO:
-	}
+	public def isHalted() = mWorker.mVertexActive(mSrcid);
 }
+
+
