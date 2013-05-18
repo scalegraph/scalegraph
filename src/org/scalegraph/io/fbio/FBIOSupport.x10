@@ -181,6 +181,7 @@ class ScatteredFileManager extends FileManager {
 			else {
 				break;
 			}
+			idx++;
 		}
 		fileOffset = new Array[Long](fileSize.size()+1, 0L);
 		for(i in 0..(fileSize.size()-1)) {
@@ -201,7 +202,7 @@ class ScatteredFileManager extends FileManager {
 	public def headerFileName() = fileName(0);
 	public def fileName(i:Int) = String.format(format, [path, i]);
 	public def index(offset : Long) : Int {
-		for(i in 1..fileOffset.size) {
+		for(i in 1..(fileOffset.size-1)) {
 			if(offset < fileOffset(i)) return i - 1;
 		}
 		return -1;
@@ -225,6 +226,15 @@ class ScatteredFileManager extends FileManager {
 @NativeCPPCompilationUnit("NativeSupport.cc") 
 public class FBIOSupport {
 
+	private static class BlockConfig {
+		var numBlocksPerPlace :Int = 4;
+		var minNumBlocks :Int = 16;
+		var minBlockSize :Long = 1L << 10;
+		var maxBlockSize :Long = 4L << 20;
+	}
+	
+	static val blockConfig = new BlockConfig();
+	
 	static @Inline def align(addr : Int, length : Int) : Int = (addr + (length - 1)) & ~(length - 1);
 	
 	static @Inline def align(addr : Long, length : Int) : Long = (addr + (length as Long - 1L)) & ~(length as Long - 1L);
@@ -326,7 +336,7 @@ public class FBIOSupport {
 	}
 	
 	public static def write(team : Team, path : String,
-			data : NamedDistData, minBlockSize : Long, scatter : Boolean)
+			data : NamedDistData, scatter : Boolean)
 	{
 		val numAttributes = data.size();
 		val attrNames = data.name();
@@ -335,7 +345,7 @@ public class FBIOSupport {
 		val attrHandler = new Array[AttributeHandler](numAttributes,
 						(i:Int) => AttributeHandler.make(team, attrTypeIds(i)));
 		
-		val blocks = getBlockPartitioning(team, attrHandler, attrData, minBlockSize);
+		val blocks = getBlockPartitioning(team, attrHandler, attrData);
 
 		// select FileManager
 		val fm = scatter ? new ScatteredFileManager(path)
@@ -441,7 +451,7 @@ public class FBIOSupport {
 	 * blockOffsets, chunkSize
 	 */
 	private static def getBlockPartitioning(team :Team, attrHandler :Array[AttributeHandler](1),
-			attrData :Array[Any](1), minBlockSize :Long) : PartitionedBlocks
+			attrData :Array[Any](1)) : PartitionedBlocks
 	{
 		val numAttr = attrData.size;
 		val teamSize = team.size();
@@ -455,7 +465,7 @@ public class FBIOSupport {
 			for(aid in 0..(numAttr-1)) {
 				numTotalBytes += attrHandler(aid).numBytes(attrData(aid));
 			}
-			val numBlocks = ((numTotalBytes + minBlockSize - 1L) / minBlockSize) as Int;
+			val numBlocks = getAppropriateNumBlocks(numTotalBytes);
 			val blocks = new PartitionedBlocks(numAttr, numBlocks);
 			
 			// calculate the length of each chunks
@@ -508,6 +518,29 @@ public class FBIOSupport {
 		
 		return ret;
 	}
+	
+	
+	private static def getAppropriateNumBlocks(numTotalBytes : Long) : Int {
+		val numPlaces = Place.MAX_PLACES;
+		val numBlocksPerPlace = blockConfig.numBlocksPerPlace;
+		val minNumBlocks = blockConfig.minNumBlocks;
+		val minBlockSize = blockConfig.minBlockSize;
+		val maxBlockSize = blockConfig.maxBlockSize;
+		val guideNumBlocks = Math.max(numBlocksPerPlace, (minNumBlocks + numPlaces - 1) / numPlaces);
+		
+		var numBlocks:Int = 0;
+		if(numTotalBytes < guideNumBlocks * minBlockSize) {
+			numBlocks = ((numTotalBytes + minBlockSize - 1L) / minBlockSize) as Int;
+		} else if(numTotalBytes > guideNumBlocks * maxBlockSize) {
+			numBlocks = ((numTotalBytes + maxBlockSize - 1L) / maxBlockSize) as Int;
+		} else {
+			numBlocks = guideNumBlocks;
+		}
+		debugprint("guideNumBlocks = " + guideNumBlocks);
+		debugprint("numBlocks = " + numBlocks);
+		return numBlocks;
+	}
+	
 	
 	/************************** test function ******************************/
 	private static def printProperty(attrs : Attributes) {

@@ -60,8 +60,7 @@ public class TestBinaryIO {
 	public static def write(args : Array[String](1)) {
 		val readFileName = args(1);
 		val writeFileName = args(2);
-		val blockSize = Long.parse(args(3));
-		val scatter = Boolean.parse(args(4));
+		val scatter = Boolean.parse(args(3));
 		val team = Team.WORLD;
 		
 		val fileList : Array[String];
@@ -87,7 +86,7 @@ public class TestBinaryIO {
 		var time : Long = Timer.milliTime();
 		val header = new GraphHeader(-1, numE, 0, 0);
 		val data = new NamedDistData(["edge" as String], [edgelist as Any], header);
-		FBIOSupport.write(team, writeFileName, data, blockSize, scatter);
+		FBIOSupport.write(team, writeFileName, data, scatter);
 		time = Timer.milliTime() - time;
 		Console.OUT.printf("FBIOSupport.write(): %ld msec\n", time);
 	}
@@ -100,7 +99,7 @@ public class TestBinaryIO {
 
 		val data = makeTestData(team);
 		var time : Long = Timer.milliTime();
-		FBIOSupport.write(team, writeFileName, data, blockSize, scatter);
+		FBIOSupport.write(team, writeFileName, data, scatter);
 		time = Timer.milliTime() - time;
 		Console.OUT.printf("FBIOSupport.write(): %ld msec\n", time);
 	}
