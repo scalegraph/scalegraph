@@ -7,6 +7,7 @@ package org.scalegraph.fileread;
 import x10.util.ArrayList;
 import x10.lang.Exception;
 import x10.io.File;
+import x10.io.Reader;
 import x10.io.FileReader;
 import x10.io.BufferedReader;
 import x10.compiler.Inline;
@@ -20,6 +21,13 @@ import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.concurrent.Parallel;
  
 public class DistributedReader {
+    
+    static def ReaderSkip(reader :Reader, var length :Long) {
+        while(length > 0) {
+            reader.skip(Math.min(0x40000000L, length) as Int);
+            length -= 0x40000000;
+        }
+    }
  
  	public static def read(
  		team : Team,
@@ -54,7 +62,7 @@ public class DistributedReader {
 					splits.add(new InputSplit(path, start, size));
 					break;
 				}
-				reader.skip(chunk_size as Int);
+				ReaderSkip(reader, chunk_size);
 				reader.readLine();
 				val next = reader.getFilePointer();
 				splits.add(new InputSplit(path, start, next));

@@ -18,11 +18,7 @@ public struct InputSplit {
 	
 	public def open() {
 		val reader = new BufferedReader(new FileReader(new File(path)));
-		var offset :Long = start;
-		while(offset > 0) {
-			reader.skip(Math.min(0x40000000L, offset) as Int);
-			offset -= 0x40000000;
-		}
+		DistributedReader.ReaderSkip(reader, start);
 		return reader;
 	}
 	

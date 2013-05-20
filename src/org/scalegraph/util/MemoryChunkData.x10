@@ -33,19 +33,19 @@ struct MemoryChunkData[T] {
 	@Native("java", "x10.core.IndexedMemoryChunk.<#T$box>allocate(#T$rtt, #numElements, #zeroed)")
 	private static native def allocateFlat[T](numElements :Long, alignment :Int, zeroed :Boolean) :IndexedMemoryChunk[T];
 
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw() + (#offset), (#size))")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw() + (#offset), NULL, (#size))")
 	public static def make[T](backing :IndexedMemoryChunk[T], offset :Long, size :Long) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, offset, size);
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw(), (#backing).length())")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw(), NULL, (#backing).length())")
 	public static def make[T](backing :IndexedMemoryChunk[T]) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, 0L, backing.length());
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >(org::scalegraph::util::allocateFlat<#T >(#numElements, 0, true), #numElements)")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >(org::scalegraph::util::allocateFlat<#T >(#numElements, 0, true), NULL, #numElements)")
 	public static def make[T](numElements :Long) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, 0, true), 0L, numElements);
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >(org::scalegraph::util::allocateFlat<#T >(#numElements, #alignment, #zeroed), #numElements)")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >(org::scalegraph::util::allocateFlat<#T >(#numElements, #alignment, #zeroed), NULL, #numElements)")
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
@@ -59,7 +59,7 @@ struct MemoryChunkData[T] {
 		return MemoryPointer.make[T](raw, offset);
 	}
 
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#this).FMGL(pointer) + (#offset), (#size))")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#this).FMGL(head), (#this).FMGL(pointer) + (#offset), (#size))")
 	public def subpart(offset :Long, size :Long) :MemoryChunkData[T] =
 		new MemoryChunkData[T](raw, this.offset + offset, size);
 
