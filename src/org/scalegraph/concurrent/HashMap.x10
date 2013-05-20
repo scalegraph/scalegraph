@@ -209,7 +209,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
     // closure__1
     val scatterGather = new ScatterGather(nChunk);
     Parallel.iter(ks.range(), (tid: Long, r : LongRange)=> {
-      val counts = scatterGather.getCounts(tid as Int);
+      val counts = scatterGather.counts(tid as Int);
       for (i in r) {
         val h = hash(ks(i));
         val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
@@ -220,7 +220,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
     // split according to upper nMaskBit
     // closure__2
     Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
-      val offsets = scatterGather.getOffsets(tid as Int);
+      val offsets = scatterGather.offsets(tid as Int);
       for (i in r) {
         val k = ks(i);
         val h = hash(ks(i));
@@ -230,8 +230,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
       }
     });
 
-    val offsets = scatterGather.getChunkOffset();
-    val counts = scatterGather.getChunkCounts();
+    val offsets = scatterGather.offsets();
+    val counts = scatterGather.counts();
     // add chunks to table
 
     // closure__3
@@ -392,7 +392,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
     val scatterGather = new ScatterGather(nChunk);
     Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
-      val counts = scatterGather.getCounts(tid as Int);
+      val counts = scatterGather.counts(tid as Int);
       for (i in r) {
         val h = hash(ks(i));
         val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
@@ -403,7 +403,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
     // split elements according to upper nMaskBits
     Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
-      val offsets = scatterGather.getOffsets(tid as Int);
+      val offsets = scatterGather.offsets(tid as Int);
       for (i in r) {
         val k = ks(i);
         val v = vs(i);
@@ -414,8 +414,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
       }
     });
 
-    val offsets = scatterGather.getChunkOffset();
-    val counts = scatterGather.getChunkCounts();
+    val offsets = scatterGather.offsets();
+    val counts = scatterGather.counts();
 
     // put elements to table parallel
     val localSize = new Array[Int](nChunk);
@@ -500,7 +500,7 @@ public class HashMap[K,V] {K haszero, V haszero} {
 
     val scatterGather = new ScatterGather(nChunk);
     Parallel.iter(t.range(), (tid: Long, r : LongRange)=> {
-      val counts = scatterGather.getCounts(tid as Int);
+      val counts = scatterGather.counts(tid as Int);
       for (i in r) {
         val e = t(i);
         if (e.flag == HashEntry.OCCUPIED) {
@@ -512,11 +512,11 @@ public class HashMap[K,V] {K haszero, V haszero} {
     });
     scatterGather.sum();
 
-    val chunk = new MemoryChunk[Pair[Int, Long]](scatterGather.getChunkSize());
+    val chunk = new MemoryChunk[Pair[Int, Long]](scatterGather.size());
 
     // split elements according to upper nMaskBit
     Parallel.iter(t.range(), (tid: Long, r : LongRange)=>{
-      val offsets = scatterGather.getOffsets(tid as Int);
+      val offsets = scatterGather.offsets(tid as Int);
       for (i in r) {
         val e = t(i);
         if (e.flag == HashEntry.OCCUPIED) {
@@ -528,8 +528,8 @@ public class HashMap[K,V] {K haszero, V haszero} {
       }
     });
 
-    val offsets = scatterGather.getChunkOffset();
-    val counts = scatterGather.getChunkCounts();
+    val offsets = scatterGather.offsets();
+    val counts = scatterGather.counts();
 
 
     val localSize = new Array[Int](nChunk);

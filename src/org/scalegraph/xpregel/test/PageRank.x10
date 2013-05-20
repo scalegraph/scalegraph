@@ -57,7 +57,7 @@ public class PageRank {
 			if (ctx.superstep() < 30) {
 				ctx.aggregate(value - ctx.value());
 				ctx.setValue(value);
-				ctx.sendMessageToAllNeighbors(value / ctx.outEdges().size());
+				ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
 			}
 			else {
 				ctx.voteToHalt();

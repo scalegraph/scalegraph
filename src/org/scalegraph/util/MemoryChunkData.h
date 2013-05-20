@@ -50,6 +50,12 @@ template<class T> class MCData_Impl {
 		return MCData_Impl(pointer, size);
 	}
 
+	void del() {
+		x10aux::dealloc(FMGL(pointer));
+		FMGL(pointer) = NULL;
+		FMGL(size) = 0;
+	}
+
 	x10::lang::String* typeName() { return x10aux::type_name((*this)); }
 	x10::lang::String* toString() {
 		return x10::lang::String::Steal(x10aux::alloc_printf(

@@ -1,14 +1,15 @@
 package org.scalegraph.xpregel;
 
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Bitmap;
-import org.scalegraph.util.GrowableMemory;
 
 /**
- * Provides XPregel framwork services for computation kernels
- * The default vertex id format is dst id.
- * When you want to get real vertex id, use readId method.
+ * Provides XPregel framework service for compute kernels. <br>
+ * The vertex id is processed in the mangled format,
+ * we call <i>dst id format</i>, for optimization. You can get
+ * the real vertex id with realId() method.
  * 
  * V: Vertex value type
  * E: Edge value type
@@ -21,7 +22,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	val mEdgeProvider :EdgeProvider[E];
 
 	// messages
-	val mEOSMessages :MemoryChunk[MessageBuffer[M]];
+	val mEOCMessages :MemoryChunk[MessageBuffer[M]];
 	
 	// aggregate values
 	var mAggregatedValue :A;
@@ -33,23 +34,33 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 		mWorker = worker;
 		mCtx = ctx;
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
-		mEOSMessages = mCtx.messageBuffer(tid);
+		mEOCMessages = mCtx.messageBuffer(tid);
 	}
 	
 	/**
 	 * get the number of current superstep
 	 */
 	public def superstep() = mCtx.mSuperstep;
+
+	/**
+	 * get the vertex id
+	 */
+	public def id() = mCtx.mStoD(mSrcid);
+
+	/**
+	 * get the minimum vertex id of the region assigned to the current place
+	 */
+	public def placeBaseVertexId() = mCtx.mStoD(0L);
 	
 	/**
-	 * get read vertex id from dst id
+	 * get real vertex id from dst id
 	 */
-	public def realId(id :Long) = mWorker.mDtoV(id);
+	public def realId(id :Long) = mCtx.mDtoV(id);
 	
 	/**
 	 * get dst id from read vertex id
 	 */
-	public def dstId(realId :Long) = mWorker.mVtoD(realId);
+	public def dstId(realId :Long) = mCtx.mVtoD(realId);
 	
 	/**
 	 * get the number of vertices of the graph
@@ -132,7 +143,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	public def sendMessage(id :Long, mes :M) {
 		val dstPlace = mCtx.mDtoV.c(id);
 		val srcId = mCtx.mDtoS(id);
-		val mesBuf = mEOSMessages(dstPlace);
+		val mesBuf = mEOCMessages(dstPlace);
 		mesBuf.messages.add(mes);
 		mesBuf.dstIds.add(srcId);
 	}
@@ -143,9 +154,9 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 */
 	public def sendMessage(id :MemoryChunk[Long], mes :MemoryChunk[M]) {
 		for(i in id.range()) {
-			val dstPlace = mWorker.mDtoV.c(id(i));
+			val dstPlace = mCtx.mDtoV.c(id(i));
 			val srcId = mCtx.mDtoS(id(i));
-			val mesBuf = mEOSMessages(dstPlace);
+			val mesBuf = mEOCMessages(dstPlace);
 			mesBuf.messages.add(mes(i));
 			mesBuf.dstIds.add(srcId);
 		}
@@ -159,10 +170,10 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 */
 	public def sendMessageToAllNeighbors(mes :M) {
 		// TODO: handle multiple messages
-		if(mCtx.mVOSEnabled == null) {
-			mCtx.allocateVOSBuffer();
+		if(mCtx.mVOCHasMessage == null) {
+			mCtx.allocateVOCBuffer();
 		}
-		mCtx.mVOSEnabled(mSrcid) = true;
+		mCtx.mVOCHasMessage(mSrcid) = true;
 		mCtx.mVOSMessages(mSrcid) = mes;
 	}
 	

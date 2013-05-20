@@ -5,8 +5,8 @@ import x10.compiler.Inline;
 
 public class Bitmap {
 	public static val BitsPerWord = 64;
-	val mc :MemoryChunk[ULong];
-	val size :Long;
+	var mc :MemoryChunk[ULong];
+	var size :Long;
 	
 	public def this(size :Long) {
 		val numWords = (size + BitsPerWord - 1) / BitsPerWord;
@@ -25,6 +25,11 @@ public class Bitmap {
 	public def this(baseMemory :MemoryChunk[ULong]) {
 		this.mc = baseMemory;
 		this.size = baseMemory.size() * BitsPerWord;
+	}
+	
+	public def del() {
+		mc.del();
+		size = 0;
 	}
 	
 	public def size() = size;

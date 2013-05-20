@@ -143,6 +143,14 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		this(imc, 0L, imc.length() as Long);
 	}
 	
+	/** Free memory. Once you free MemoryChunk,
+	 * you can not use any MemoryChunk which point to the released memory.
+	 * 
+	 */
+	public def del() {
+		data.del();
+	}
+	
 	public def toString() :String {
 		val sb = new x10.util.StringBuilder();
 		sb.add("[");

@@ -470,6 +470,42 @@ public class Parallel {
     		hi_ = cut;
     	}
     }
+    
+    public static def sort[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
+    	val numThreads = Runtime.NTHREADS;
+    	val logChunks = MathAppend.ceilLog2(numThreads * 4);
+    	val numChunks = 1 << logChunks;
+    	val numShift = rangeScale - logChunks;
+    	val sg = new ScatterGather(numChunks);
+    	
+    	assert (src_i.size() == src_v.size());
+    	assert (src_i.size() == dst_i.size());
+    	assert (src_i.size() == dst_v.size());
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val counts = sg.counts(tid as Int);
+    		for(i in r) {
+    			counts(src_i(i) >> numShift)++;
+    		}
+    	});
+    	
+    	sg.sum();
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val offsets = sg.offsets(tid as Int);
+    		for(i in r) {
+    			val dstIndex = offsets(src_i(i) >> numShift)++;
+    			dst_i(dstIndex) = src_i(i);
+    			dst_v(dstIndex) = src_v(i);
+    		}
+    	});
+    	
+    	sg.check(src_i.size() as Int);
+    	
+    	finish for(i in 0..(numChunks-1)) async {
+    		Algorithm.sort(dst_i, dst_v);
+    	}
+    }
 
 	/**
      * Searches the given indices  for the least indices that makes the given function true.using the binary search
