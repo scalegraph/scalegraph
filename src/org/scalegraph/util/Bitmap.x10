@@ -22,11 +22,17 @@ public class Bitmap {
 		for(i in mc.range()) mc(i) = value;
 	}
 	
+	public def this(baseMemory :MemoryChunk[ULong]) {
+		this.mc = baseMemory;
+		this.size = baseMemory.size() * BitsPerWord;
+	}
+	
 	public def size() = size;
 	public def data() = mc;
 	
 	public static def offset(i :Long) = i / BitsPerWord;
 	public static def mask(i :Long) = 1UL << ((i % BitsPerWord) as Int);
+	public static def numWords(length :Long) = (length + BitsPerWord - 1) / BitsPerWord;
 	
 	public @Inline operator this(i :Long) :Boolean {
 		@Ifndef("NO_BOUNDS_CHECKS") {

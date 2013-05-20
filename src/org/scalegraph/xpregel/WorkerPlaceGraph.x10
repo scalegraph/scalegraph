@@ -28,7 +28,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	val mTeam :Team2;
 	val mIds :IdStruct;
 	val mVtoD :OnedC.VtoD;
-	val mDtoV :OnedC.DtoV;
 	
 	//var mMatrix:SparseMatrix;
 	var mVertexValue :MemoryChunk[V];
@@ -37,7 +36,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	
 	val mOutEdge :GraphEdge[E];
 	val mInEdge :GraphEdge[E];
-	val mEdgesModified :Bitmap;
+	var mInEdgesMask :Bitmap;
 	
 	//val mContext : XpregelContext;
 	
@@ -45,7 +44,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mTeam = new Team2(team);
 		mIds = matrix.ids();
 		mVtoD = new OnedC.VtoD(matrix.ids());
-		mDtoV = new OnedC.DtoV(matrix.ids());
 		
 		val numVertexes = mIds.numberOfLocalVertexes();
 		
@@ -87,7 +85,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	
 	// src will be destroyed
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],
-			aggregator :(MemoryChunk[A])=>A) :A 
+			aggregator :(MemoryChunk[A])=>A) :A
 	{
 		val root = (team.base.role()(0) == 0);
 		src(0) = aggregator(src);
@@ -104,8 +102,8 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		val root = (mTeam.base.role()(0) == 0);
 		val numThreads = Runtime.NTHREADS;
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val ectx :ExecutionContext[M, A] =
-			new ExecutionContext[M, A](mTeam, mIds, numThreads);
+		val ectx :MessageCommunicator[M] =
+			new MessageCommunicator[M](mTeam, mIds, numThreads);
 		val vctxs = new Array[VertexContext[V, E, M, A]](numThreads,
 				(i :Int) => new VertexContext[V, E, M, A](this, ectx, i));
 		val edgeProviderList = new Array[EdgeProvider[E]](numThreads,
@@ -113,13 +111,11 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		val intermedAggregateValue = new MemoryChunk[A](numThreads);
 		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
 		
-		var numMessages :Long = 0L;
 		/* Statistics
 		 * 0 : Active vertexes
 		 * 1 : Sent messages
 		 */
-		val sendStatistics = new MemoryChunk[Long](4);
-		val recvStatistics = sendStatistics.subpart(2, 2);
+		val statistics = new MemoryChunk[Long](2*2);
 		
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
@@ -129,7 +125,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			MemoryChunk.copy(mVertexShouldBeActive.data(), 0L,
 					vertexActvieBitmap, 0L, vertexActvieBitmap.size());
 			
-			sendStatistics(0) = 0L;
+			statistics(0) = 0L;
 			
 			Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
 				val vc = vctxs(tid as Int);
@@ -148,34 +144,36 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 				}
 				intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.data());
 				vc.mAggregateValue.clear();
-				sendStatistics.atomicAdd(0, numProcessed);
+				statistics.atomicAdd(0, numProcessed);
 			});
 			
 			// update out edges
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
 			
 			// aggregate
-			ectx.mAggregatedValue = computeAggregate[A](
-					mTeam, intermedAggregateValue, aggregateBuffer, aggregator);
+			val aggVal = computeAggregate[A](mTeam, intermedAggregateValue, aggregateBuffer, aggregator);
+			for([i] in vctxs) vctxs(i).mAggregatedValue = aggVal;
 			/*
-			if(end(ectx.mAggregatedValue)) {
-				// terminate
-				break;
-			}
+			 * if(end(ectx.mAggregatedValue)) {
+			 * // terminate
+			 * break;
+			 * }
 			 */
 			
-			// merge messages
-			
-			// combine if combiner is provided
+			// merge messages and combine if combiner is provided
+			val [ numRawMessages, numCombinedMessages, numVertexMessages ] = ectx.preProcess(null);
+			statistics(1) = numRawMessages + numVertexMessages;
 			
 			// check termination
-			mTeam.allreduce(sendStatistics.subpart(0, 2), recvStatistics, Team.ADD);
+			val recvStatistics = statistics.subpart(2, 2);
+			mTeam.allreduce(statistics.subpart(0, 2), recvStatistics, Team.ADD);
 			// if there are no active vertex nor messages, we terminate computation.
 			if(recvStatistics(0) == 0L && recvStatistics(1) == 0L) {
 				break;
 			}
 			
 			// transfer messages
+			ectx.exchangeMessages();
 		}
 		
 		ectx.del();

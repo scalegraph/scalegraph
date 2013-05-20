@@ -17,24 +17,23 @@ import org.scalegraph.util.GrowableMemory;
  */
 public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
-	val mCtx :ExecutionContext[M, A];
+	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
 
 	// messages
 	val mEOSMessages :MemoryChunk[MessageBuffer[M]];
 	
 	// aggregate values
+	var mAggregatedValue :A;
 	val mAggregateValue :GrowableMemory[A] = new GrowableMemory[A]();
 
 	var mSrcid :Long;
 	
-	def this(worker :WorkerPlaceGraph[V, E], ctx :ExecutionContext[M, A], tid :Long) {
-		val numPlaces = ctx.mTeam.size();
-		
+	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
 		mWorker = worker;
 		mCtx = ctx;
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
-		mEOSMessages = mCtx.mEOSMessages.subpart(tid * numPlaces, numPlaces);
+		mEOSMessages = mCtx.messageBuffer(tid);
 	}
 	
 	/**
@@ -119,7 +118,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	/**
 	 * get aggregated value on a previous superstep
 	 */
-	public def aggregatedValue() = mCtx.mAggregatedValue;
+	public def aggregatedValue() = mAggregatedValue;
 
 	/**
 	 * aggregate the value
@@ -131,10 +130,11 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 * vertex
 	 */
 	public def sendMessage(id :Long, mes :M) {
-		val dstPlace = mWorker.mDtoV.c(id);
+		val dstPlace = mCtx.mDtoV.c(id);
+		val srcId = mCtx.mDtoS(id);
 		val mesBuf = mEOSMessages(dstPlace);
 		mesBuf.messages.add(mes);
-		mesBuf.dstIds.add(id);
+		mesBuf.dstIds.add(srcId);
 	}
 
 	/**
@@ -144,9 +144,10 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	public def sendMessage(id :MemoryChunk[Long], mes :MemoryChunk[M]) {
 		for(i in id.range()) {
 			val dstPlace = mWorker.mDtoV.c(id(i));
+			val srcId = mCtx.mDtoS(id(i));
 			val mesBuf = mEOSMessages(dstPlace);
 			mesBuf.messages.add(mes(i));
-			mesBuf.dstIds.add(id(i));
+			mesBuf.dstIds.add(srcId);
 		}
 	}
 

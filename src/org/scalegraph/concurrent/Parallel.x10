@@ -538,7 +538,7 @@ public class Parallel {
      * Divides the given array into its classification.
      * Let <code>r</code> be the result of this method, For each <code>n</code>-th element <code>x</code> in the given array,
      * let <code>y</code> be a integer such that <code>y = func(n, x)</code>,
-     * <code>r(y)<code> contains <code>x</code>.<p>
+     * <code>r(y)<code> contains <code>x</code>.<br>
      *
      * The range of <code>func</code> must be in [0, <code>kinds</code>-1]
      *
@@ -784,5 +784,22 @@ public class Parallel {
 
 	public static @Inline def prefixSum[U](range :IntRange, arr :Array[U](1)) {U haszero, U <: Arithmetic[U]}
 		= scan(range, arr, Zero.get[U](), (i :Int, v :U) => v + arr(i), (v1 :U, v2 :U) => v1 + v2);
+		
+	public static def makeOffset(sortedIndex :MemoryChunk[Long], offset :MemoryChunk[Long]) {
+		val length = sortedIndex.size();
+		for(o in 0..sortedIndex(0)) offset(o) = 0;
+		for(o in (sortedIndex(length-1)+1)..(offset.size()-1)) offset(o) = length;
+		
+		Parallel.iter(1..(length-1), (tid :Long, r :LongRange) => {
+			var prev :Long = sortedIndex(r.min - 1);
+			for(i in r) {
+				val cur = sortedIndex(i);
+				if(prev != cur) {
+					for(o in (prev+1)..cur) offset(o) = i;
+					prev = cur;
+				}
+			}
+		});
+	}
 
 }
