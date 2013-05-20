@@ -66,7 +66,13 @@ template<class T> class MCData_Impl {
 	}
 
 	void del() {
-		x10aux::dealloc(FMGL(pointer));
+		if(FMGL(head) != FMGL(pointer)) {
+			x10aux::throwException(
+					x10::lang::UnsupportedOperationException(
+					x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
+		}
+		x10aux::dealloc(FMGL(head));
+		FMGL(head) = NULL;
 		FMGL(pointer) = NULL;
 		FMGL(size) = 0;
 	}

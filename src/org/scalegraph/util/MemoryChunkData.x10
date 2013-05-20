@@ -50,7 +50,6 @@ struct MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
 	
-	// TODO: ensure the pointer is head
 	@Native("c++", "(#this).del()")
 	public static def del() :void { }
 	
