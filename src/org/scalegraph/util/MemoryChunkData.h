@@ -13,7 +13,8 @@ template <typename T> T* allocateFlat(x10_long numElements, x10_int alignment, x
 	}
 	assert((alignment & (alignment-1)) == 0);
 	x10_long size = alignment + numElements*sizeof(T);
-	T* allocMem = x10aux::alloc<T>(size, false);
+//	T* allocMem = x10aux::alloc<T>(size, false);
+	T* allocMem = x10aux::alloc_chunk<T>(size);
 	if (zeroed) {
 		memset(allocMem, 0, size);
 	}
@@ -34,20 +35,34 @@ template<class T> class MCData_Impl {
 
 	static MCData_Impl<T> _alloc(){MCData_Impl<T> t; return t; }
 
+	/*
+	 * head points to starting address of allocated memory, a MemoryChunkData that subparts from any MemoryChunkData
+	 * whill have head point to the same address
+	 * */
+	T * FMGL(head);
 	T * FMGL(pointer);
 	x10_long FMGL(size);
 
 	MCData_Impl()
-		: FMGL(pointer)(NULL),
+		: FMGL(head)(NULL),
+		  FMGL(pointer)(NULL),
 		  FMGL(size)(0)
 	{ }
-	MCData_Impl(T* pointer__, x10_long size__)
-		: FMGL(pointer)(pointer__),
+	MCData_Impl(T* head__, T* pointer__, x10_long size__)
+		: FMGL(head)(head__),
+		  FMGL(pointer)(pointer__),
 		  FMGL(size)(size__)
-	{ }
+	{
+	    /**
+	     * pointer = null implies the memory was created from alloc method, otherwise from subpart method
+	     */
+	    if (FMGL(pointer) == NULL) {
+	        FMGL(pointer) = FMGL(head);
+	    }
+	}
 
-	static MCData_Impl<T> _make(T * pointer, x10_long size) {
-		return MCData_Impl(pointer, size);
+	static MCData_Impl<T> _make(T * head, T * pointer, x10_long size) {
+		return MCData_Impl(head, pointer, size);
 	}
 
 	x10::lang::String* typeName() { return x10aux::type_name((*this)); }
@@ -81,9 +96,11 @@ template<class T> class MCData_Impl {
 	static MCData_Impl<T> _deserialize(x10aux::deserialization_buffer& buf) {
 		x10_long size = buf.read<x10_long>();
 		// "x10aux::getRTT<T>()->containsPtrs" has not been implemented yet.
-		T* pointer = x10aux::alloc<T>(size*sizeof(T), false); // x10aux::getRTT<T>()->containsPtrs);
-		x10aux::deserialization_buffer::copyOut(buf, pointer, size, sizeof(T));
-		return MCData_Impl<T>(pointer, size);
+//		T* pointer = x10aux::alloc<T>(size*sizeof(T), false); // x10aux::getRTT<T>()->containsPtrs);
+		//Charuwat+: Fix this
+		T* allocMem = x10aux::alloc_chunk<T>(size * sizeof(T));
+		x10aux::deserialization_buffer::copyOut(buf, allocMem, size, sizeof(T));
+		return MCData_Impl<T>(allocMem, NULL, size);
 	}
 };
 
