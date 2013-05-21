@@ -8,6 +8,7 @@ import x10.util.Timer;
 import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.Algorithm;
 
 /** Thread Parallel Library.
  */
@@ -470,6 +471,42 @@ public class Parallel {
     		hi_ = cut;
     	}
     }
+    
+    public static def sort[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
+    	val numThreads = Runtime.NTHREADS;
+    	val logChunks = MathAppend.ceilLog2(numThreads * 4);
+    	val numChunks = 1 << logChunks;
+    	val numShift = rangeScale - logChunks;
+    	val sg = new ScatterGather(numChunks);
+    	
+    	assert (src_i.size() == src_v.size());
+    	assert (src_i.size() == dst_i.size());
+    	assert (src_i.size() == dst_v.size());
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val counts = sg.counts(tid as Int);
+    		for(i in r) {
+    			counts(src_i(i) >> numShift)++;
+    		}
+    	});
+    	
+    	sg.sum();
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val offsets = sg.offsets(tid as Int);
+    		for(i in r) {
+    			val dstIndex = offsets(src_i(i) >> numShift)++;
+    			dst_i(dstIndex) = src_i(i);
+    			dst_v(dstIndex) = src_v(i);
+    		}
+    	});
+    	
+    	sg.check(src_i.size() as Int);
+    	
+    	finish for(i in 0..(numChunks-1)) async {
+    		Algorithm.sort(dst_i, dst_v);
+    	}
+    }
 
 	/**
      * Searches the given indices  for the least indices that makes the given function true.using the binary search
@@ -538,7 +575,7 @@ public class Parallel {
      * Divides the given array into its classification.
      * Let <code>r</code> be the result of this method, For each <code>n</code>-th element <code>x</code> in the given array,
      * let <code>y</code> be a integer such that <code>y = func(n, x)</code>,
-     * <code>r(y)<code> contains <code>x</code>.<p>
+     * <code>r(y)<code> contains <code>x</code>.<br>
      *
      * The range of <code>func</code> must be in [0, <code>kinds</code>-1]
      *
@@ -784,5 +821,22 @@ public class Parallel {
 
 	public static @Inline def prefixSum[U](range :IntRange, arr :Array[U](1)) {U haszero, U <: Arithmetic[U]}
 		= scan(range, arr, Zero.get[U](), (i :Int, v :U) => v + arr(i), (v1 :U, v2 :U) => v1 + v2);
+		
+	public static def makeOffset(sortedIndex :MemoryChunk[Long], offset :MemoryChunk[Long]) {
+		val length = sortedIndex.size();
+		for(o in 0..sortedIndex(0)) offset(o) = 0;
+		for(o in (sortedIndex(length-1)+1)..(offset.size()-1)) offset(o) = length;
+		
+		Parallel.iter(1..(length-1), (tid :Long, r :LongRange) => {
+			var prev :Long = sortedIndex(r.min - 1);
+			for(i in r) {
+				val cur = sortedIndex(i);
+				if(prev != cur) {
+					for(o in (prev+1)..cur) offset(o) = i;
+					prev = cur;
+				}
+			}
+		});
+	}
 
 }

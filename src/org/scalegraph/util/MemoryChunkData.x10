@@ -41,14 +41,17 @@ struct MemoryChunkData[T] {
 	public static def make[T](backing :IndexedMemoryChunk[T]) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, 0L, backing.length());
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >(org::scalegraph::util::allocateFlat<#T >(#numElements, 0, true), NULL, #numElements)")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, 0, true)")
 	public static def make[T](numElements :Long) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, 0, true), 0L, numElements);
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >(org::scalegraph::util::allocateFlat<#T >(#numElements, #alignment, #zeroed), NULL, #numElements)")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed)")
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
+	
+	@Native("c++", "(#this).del()")
+	public def del() :void { }
 	
 	@Native("c++", "(#this).FMGL(pointer)")
 	public def pointer() :MemoryPointer[T] {

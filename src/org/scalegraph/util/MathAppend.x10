@@ -81,4 +81,7 @@ public class MathAppend {
     public static def pow2(i:Int) {
         return 1L << i;
     }
+    
+    @Native("c++", "__builtin_popcountl(#v)")
+    public static native def popcount[T](v :T) :Int {T <: Arithmetic[T]}; 
 }

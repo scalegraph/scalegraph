@@ -2,22 +2,24 @@ package org.scalegraph.graph;
 
 import x10.util.ArrayList;
 import x10.util.HashMap;
-import x10.compiler.Pinned;
 import x10.util.Team;
 
+import x10.compiler.Pinned;
+
+import org.scalegraph.concurrent.DistScatterGather;
+import org.scalegraph.concurrent.Team2;
+import org.scalegraph.concurrent.Remote;
+import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.concurrent.Parallel;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.concurrent.DistScatterGather;
-import org.scalegraph.concurrent.Team2;
 import org.scalegraph.util.MathAppend;
+
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.concurrent.Remote;
-import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.xpregel.XPregelGraph;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
@@ -782,12 +784,5 @@ import org.scalegraph.xpregel.XPregelGraph;
 
 	public def vertexAttributeKeys() = vertexAttributes.keySet();
 	public def edgeAttributeKeys() = edgeAttributes.keySet();
-	
-	public def createXPregelGraph[V,E](){V haszero, E haszero}:XPregelGraph[V,E] {
-		val csr = constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val _team = team;
-		val xpregelgraph = new XPregelGraph[V,E](_team,csr);
-		return xpregelgraph;
-	}
 }
 

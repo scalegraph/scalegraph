@@ -1,4 +1,5 @@
-package org.scalegraph.xpregel.comm;
+package org.scalegraph.xpregel;
+
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import x10.util.Team;
@@ -9,20 +10,45 @@ import org.scalegraph.xpregel.XpregelContext;
 import org.scalegraph.concurrent.DistScatterGather;
 import org.scalegraph.xpregel.XContext;
 import org.scalegraph.concurrent.Team2;
+import org.scalegraph.graph.id.IdStruct;
 
-public class MessageCommunicationService[M,A] {
+struct MessageBuffer[M] {
+	val messages :GrowableMemory[M] = new GrowableMemory[M]();
+	val dstIds :GrowableMemory[M] = new GrowableMemory[M]();
+	
+	def this() { }
+}
+
+class MessageCommunicationService[M,A] {
+	val mTeam :Team2;
+	val mIds :IdStruct;
+	val mNumThreads :Int;
+	
+	val mEdgeOrientMessages :MemoryChunk[MessageBuffer[M]];
+	val mVertexOrientMessages :GrowableMemory[M];
+	
+	/*
 	var mSendBufferMessages:GrowableMemory[Tuple2[Long,M]];
-	var mReceiveBufferMessages:GrowableMemory[Tuple2[Long,M]];
 	var mOffsets:GrowableMemory[Long];
-	val mTeam:Team2;
 	val mContext:XpregelContext;
 	val sendOffsets : MemoryChunk[Int];
 	val sendCounts : MemoryChunk[Int];
+	 */
 
-	public def this(team:Team,capacity:Long,context:XpregelContext) {
-		mTeam = new Team2(team);
-		mSendBufferMessages = new GrowableMemory[Tuple2[Long,M]](capacity);
-		mReceiveBufferMessages = new GrowableMemory[Tuple2[Long,M]](capacity);
+	public def this(team :Team2, ids :IdStruct, numThreads :Int) {
+		mTeam = team;
+		mIds = ids;
+		mNumThreads = numThreads;
+		
+		mEdgeOrientMessages = new MemoryChunk[MessageBuffer[M]](numThreads * team.size());
+		for(i in mEdgeOrientMessages.range())
+			mEdgeOrientMessages(i) = MessageBuffer[M]();
+		
+		mVertexOrientMessages = new GrowableMemory[M]();
+		
+		/*
+		mSendBufferMessages = new GrowableMemory[Tuple2[Long,M]]();
+		mReceiveBufferMessages = new GrowableMemory[Tuple2[Long,M]]();
 		mContext = context;
 		mOffsets = new GrowableMemory[Long](mContext.ids().numberOfLocalVertexes);
 		val range = (0..(mContext.ids().numberOfLocalVertexes-1));
@@ -31,6 +57,7 @@ public class MessageCommunicationService[M,A] {
 		}
 		sendOffsets = new MemoryChunk[Int](mTeam.size()+1);
 		sendCounts = new MemoryChunk[Int](mTeam.size());
+		 */
 	}
 
 	public def addSendMessages(buffer:GrowableMemory[Tuple2[Long,M]]) {
