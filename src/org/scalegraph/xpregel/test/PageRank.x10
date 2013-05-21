@@ -44,6 +44,10 @@ public class PageRank {
 		
 		val start_time = System.currentTimeMillis();
 		
+		xpregel.updateInEdge();
+		
+		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		
 		xpregel.do_computations[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0)

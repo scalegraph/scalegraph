@@ -207,7 +207,8 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			
 			// merge messages and combine if combiner is provided
 			val [ numRawMessages, numCombinedMessages, numVertexMessages ] = ectx.preProcess(null);
-			statistics(1) = numRawMessages;
+			statistics(0) = numRawMessages;
+			statistics(1) = numCombinedMessages;
 			statistics(2) = numVertexMessages;
 			
 			// check termination
