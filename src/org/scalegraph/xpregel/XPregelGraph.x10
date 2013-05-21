@@ -1,20 +1,18 @@
 package org.scalegraph.xpregel;
 
 import x10.util.Team;
-import org.scalegraph.xpregel.ComputationInterface;
-import org.scalegraph.xpregel.comm.MessageCommunicationService;
-import org.scalegraph.xpregel.comm.SendInEdgeCommunication;
+
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.DistGrowableMemory;
+import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
+
+import org.scalegraph.concurrent.Team2;
+import org.scalegraph.concurrent.Parallel;
+
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.DistSparseMatrix;
-import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.util.tuple.Tuple2;
-import x10.util.HashMap;
 import org.scalegraph.graph.Attribute;
-import org.scalegraph.util.DistGrowableMemory;
-import org.scalegraph.xpregel.comm.AggregatorInterface;
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.concurrent.Parallel;
 
 /**
  * a main entry for processing 
@@ -25,15 +23,10 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 
 	var mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
-//	var mContext:XpregelContext;
-	var vertexAttributes :HashMap[String, Any];
-	var edgeAttributes :HashMap[String, Any];
 	
 	public def this(team :Team, data :DistSparseMatrix)
 	{
 		mTeam = new Team2(team);
-//		mContext = new XpregelContext(data.ids());
-//		val _context = mContext;
 		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),
 				() => new WorkerPlaceGraph[V,E](team, data));
 	}
@@ -99,9 +92,9 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
-			Parallel.iter(w.mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mOutEdgesValue(i) = value;
+			val w = workers_().mOutEdge;
+			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+				for(i in r) w.value(i) = value;
 			});
 		});
 	}
@@ -111,10 +104,10 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
+			val w = workers_().mOutEdge;
 			val a = a_();
-			Parallel.iter(w.mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mOutEdgesValue(i) = compute(a(i));
+			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+				for(i in r) w.value(i) = compute(a(i));
 			});
 		});
 	}
@@ -125,11 +118,11 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
+			val w = workers_().mOutEdge;
 			val a1 = a1_();
 			val a2 = a2_();
-			Parallel.iter(w.mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mOutEdgesValue(i) = compute(a1(i), a2(i));
+			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+				for(i in r) w.value(i) = compute(a1(i), a2(i));
 			});
 		});
 	}
@@ -140,12 +133,12 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
+			val w = workers_().mOutEdge;
 			val a1 = a1_();
 			val a2 = a2_();
 			val a3 = a3_();
-			Parallel.iter(w.mOutEdgesValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mOutEdgesValue(i) = compute(a1(i), a2(i), a3(i));
+			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+				for(i in r) w.value(i) = compute(a1(i), a2(i), a3(i));
 			});
 		});
 	}
@@ -155,32 +148,20 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 	 * data at each worker
 	 * 
 	 */
-	public def updateInEdge(enableValue :Boolean) {
-		val _team = mTeam;
-		val _context = mContext;
-		val sendInComputation = new SendInEdgeCommunication[V,E]();
-		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[Tuple2[Long,E],Double]](_team.placeGroup(),
-				() => new MessageCommunicationService[Tuple2[Long,E],Double](_team,1000,_context));
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().run[Tuple2[Long,E],Double](sendInComputation,null,service());
-		});
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().initInEdge(service());
+	public def updateInEdge() {
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat(() => {
+			workers_().updateInEdge();
 		});
 	}
 	
-	public def do_computations[M,A](computation:ComputationInterface[V,E,M,A], aggregator : AggregatorInterface[A]){ M haszero, A haszero} {
-		val _team = mTeam;
-		val _context = mContext;
-		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
-				() => new MessageCommunicationService[M,A](_team,1000,_context));
+	public def updateInEdgeAndValue() {
+		val team_ = mTeam;
 		val workers_ = mWorkers;
-		Console.OUT.println("Start processing ...");
-		_team.placeGroup().broadcastFlat(() => {
-			workers_().run[M,A](computation, aggregator, service());
+		team_.placeGroup().broadcastFlat(() => {
+			workers_().updateInEdgeWithValue();
 		});
-		Console.OUT.println("End processing...");
 	}
 	
 	public def do_computations[M,A](

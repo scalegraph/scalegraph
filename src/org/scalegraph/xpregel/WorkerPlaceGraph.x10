@@ -54,7 +54,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		}
 	}
 	
-	public def updateInEdge(service : MessageCommunicationService[Tuple2[Long,E],Double]) {
+	public def updateInEdge() {
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
@@ -84,7 +84,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mesComm.del();
 	}
 	
-	public def updateInEdgeWithValue(service : MessageCommunicationService[Tuple2[Long,E],Double]) {
+	public def updateInEdgeWithValue() {
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
@@ -147,10 +147,10 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mIds, numThreads);
-		val vctxs = new Array[VertexContext[V, E, M, A]](numThreads,
-				(i :Int) => new VertexContext[V, E, M, A](this, ectx, i));
-		val edgeProviderList = new Array[EdgeProvider[E]](numThreads,
-				(i:Int) => vctxs(i).mEdgeProvider);
+		val vctxs = new MemoryChunk[VertexContext[V, E, M, A]](numThreads,
+				(i :Long) => new VertexContext[V, E, M, A](this, ectx, i));
+		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads,
+				(i:Long) => vctxs(i).mEdgeProvider);
 		val intermedAggregateValue = new MemoryChunk[A](numThreads);
 		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
 		
@@ -197,7 +197,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			
 			// aggregate
 			val aggVal = computeAggregate[A](mTeam, intermedAggregateValue, aggregateBuffer, aggregator);
-			for([i] in vctxs) vctxs(i).mAggregatedValue = aggVal;
+			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
 			/*
 			 * if(end(ectx.mAggregatedValue)) {
 			 * // terminate

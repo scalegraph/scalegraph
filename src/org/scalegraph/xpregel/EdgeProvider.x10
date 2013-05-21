@@ -33,9 +33,9 @@ class EdgeProvider [E] {E haszero} {
 		mInValue = inEdge.value;
 	}
 	
-	static def updateOutEdge[E](outEdge :GraphEdge[E], list :Array[EdgeProvider[E]](1), ids :IdStruct) {E haszero} {
+	static def updateOutEdge[E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) {E haszero} {
 		var changed :Boolean = false;
-		for([i] in list) {
+		for(i in list.range()) {
 			if(list(i).mDiffOffset.size() > 0) {
 				changed = true; break;
 			}

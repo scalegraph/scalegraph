@@ -100,6 +100,13 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		data = MemoryChunkData.make[T](size, alignment, zeroed);
 	}
 	
+	public def this(size :Long, init :(Long) => T) {
+		this(size);
+		for(i in 0L..(size-1L)) {
+			data(i) = init(i);
+		}
+	}
+	
 	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk.
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts

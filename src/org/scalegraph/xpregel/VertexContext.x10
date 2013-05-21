@@ -134,7 +134,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	/**
 	 * aggregate the value
 	 */
-	public def aggreagate(value :A) { mAggregateValue.add(value); }
+	public def aggregate(value :A) { mAggregateValue.add(value); }
 
 	/**
 	 * send message using dst id of 
@@ -174,7 +174,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 			mCtx.allocateVOCBuffer();
 		}
 		mCtx.mVOCHasMessage(mSrcid) = true;
-		mCtx.mVOSMessages(mSrcid) = mes;
+		mCtx.mVOCMessages(mSrcid) = mes;
 	}
 	
 	/**

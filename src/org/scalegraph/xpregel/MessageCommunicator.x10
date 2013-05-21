@@ -70,11 +70,9 @@ class MessageCommunicator[M] { M haszero } {
 		mDtoS = new OnedC.DtoS(ids);
 		mStoD = new OnedC.StoD(ids, rank_c);
 
-		mEOCMessages = new MemoryChunk[MessageBuffer[M]](mNumThreads * mTeam.size());
-		
-		// initialize for first step
-		mEdgeOrientOrVertexOrientS = true;
-		mEdgeOrientOrVertexOrientR = true;
+		// TODO: optimize
+		mEOCMessages = new MemoryChunk[MessageBuffer[M]](mNumThreads * mTeam.size(),
+				(i:Long) => new MessageBuffer[M]());
 	}
 	
 	def del() {
@@ -93,11 +91,10 @@ class MessageCommunicator[M] { M haszero } {
 			throw new Exception("Invalid program ...");
 		mVOCHasMessage = new Bitmap(mIds.numberOfLocalVertexes(), false);
 		mVOCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
-		mEdgeOrientOrVertexOrientS = false;
 	}
 	
 	def message(srcid :Long) {
-		if(mEdgeOrientOrVertexOrientR) {
+		if(mEOREnabled) {
 			// edge orient
 			if(mEOROffset.size() == 0L)
 				return new MemoryChunk[M](0);
@@ -106,9 +103,9 @@ class MessageCommunicator[M] { M haszero } {
 			val length = mEOROffset(srcid + 1) - start;
 			return mEORMessages.subpart(start, length);
 		}
-		else {
+		else if(mVOREnabled) {
 			// vertex orient
-			val bmp = mVOREnabled;
+			val bmp = mVORHasMessage;
 			val offset = mVOROffset;
 			val mes = mVORMessages;
 			val start = mInEdgesOffset(srcid);
@@ -133,11 +130,13 @@ class MessageCommunicator[M] { M haszero } {
 			
 			return buffer.data();
 		}
+		return new MemoryChunk[M]();
 	}
 	
 	private def preProcessEdgeOrientMessages(combine : (MemoryChunk[M]) => M) {
 		val numPlaces = mTeam.size();
 		val combineEnabled = (combine != null);
+		val nullMessage = Zero.get[M]();
 		
 		val numMessages = Algorithm.reduce(mEOCMessages.range(),
 				(i:Long) => mEOCMessages(i).messages.size()) as Int;
@@ -196,6 +195,12 @@ class MessageCommunicator[M] { M haszero } {
 				val size = src.messages.size();
 				MemoryChunk.copy(src.messages.data(), 0L, mesLocal, offset, size);
 				MemoryChunk.copy(src.dstIds.data(), 0L, idsLocal, offset, size);
+				
+				// clear messages
+				for(i in src.messages.range()) src.messages(i) = nullMessage;
+				src.messages.setSize(0);
+				src.dstIds.setSize(0);
+				
 				offset += size;
 			}
 			if(combine != null) {
@@ -278,6 +283,7 @@ class MessageCommunicator[M] { M haszero } {
 	private def preProcessVertexOrientMessages(combine : (MemoryChunk[M]) => M) {
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
+		val nullMessage = Zero.get[M]();
 		
 		if(mInEdgesMask == null) createInEdgesMask();
 		
@@ -296,6 +302,7 @@ class MessageCommunicator[M] { M haszero } {
 			for(i in placeHasMessage.range()) {
 				placeHasMessage(i) = rawHasMessage(i) & placeInEdgeMask(i);
 				placeNumMessage += MathAppend.popcount(placeHasMessage(i));
+				rawHasMessage(i) = 0UL; // clear bitmap
 			}
 			mVOSCount(p) = placeNumMessage;
 		});
@@ -316,9 +323,10 @@ class MessageCommunicator[M] { M haszero } {
 			val mesLocalBuffer = mVOSMessages.subpart(start, length);
 			
 			var offset :Int = 0L;
-			for(i in mVOSMessages.range()) {
+			for(i in mVOCMessages.range()) {
 				if(placeHasMessage(i)) {
-					mesLocalBuffer(offset++) = mVOSMessages(i);
+					mesLocalBuffer(offset++) = mVOCMessages(i);
+					mVOCMessages(i) = nullMessage; // clear
 				}
 			}
 			assert (offset == length);
@@ -327,17 +335,17 @@ class MessageCommunicator[M] { M haszero } {
 		return mVOSOffset(numPlaces);
 	}
 	
-	def releaseCommunicationMemory() { 
+	def resetSRBuffer() { 
 		if(mEORMessages.size() > 0) mEORMessages.del();
 		if(mEOROffset.size() > 0) mEOROffset.del();
-		if(mVORHasMessage.size() > 0) mVORHasMessage.del();
+		if(mVORHasMessage != null) mVORHasMessage.del();
 		if(mVOROffset.size() > 0) mVOROffset.del();
 		if(mVORMessages.size() > 0) mVORMessages.del();
 		mVORTmpBuffer.setSize(0);
 	}
 	
 	def preProcess(combine : (MemoryChunk[M]) => M) {
-		releaseCommunicationMemory();
+		resetSRBuffer();
 		
 		val [ r0, r1 ] = preProcessEdgeOrientMessages(combine);
 		

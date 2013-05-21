@@ -8,9 +8,6 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 
-import org.scalegraph.xpregel.Vertex;
-import org.scalegraph.xpregel.XContext;
-import org.scalegraph.xpregel.comm.DoubleMaxAggregator;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 

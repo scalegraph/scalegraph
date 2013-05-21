@@ -8,6 +8,7 @@ import x10.util.Timer;
 import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.Algorithm;
 
 /** Thread Parallel Library.
  */

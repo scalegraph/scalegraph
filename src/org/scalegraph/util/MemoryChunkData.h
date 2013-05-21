@@ -4,28 +4,9 @@
 #include <x10rt.h>
 #include <x10/lang/Any.h>
 #include <x10/lang/String.h>
+#include <x10/lang/UnsupportedOperationException.h>
 
 namespace org { namespace scalegraph { namespace util {
-
-template <typename T> T* allocateFlat(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
-	if (0 == numElements) {
-		return NULL;
-	}
-	assert((alignment & (alignment-1)) == 0);
-	x10_long size = alignment + numElements*sizeof(T);
-//	T* allocMem = x10aux::alloc<T>(size, false);
-	T* allocMem = x10aux::alloc_chunk<T>(size);
-	if (zeroed) {
-		memset(allocMem, 0, size);
-	}
-	if(alignment > 0) {
-		x10_long alignDelta = alignment-1;
-		x10_long alignMask = ~alignDelta;
-		x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
-		return (T*)alignedMem;
-	}
-	return allocMem;
-}
 
 template<class T> class MCData_Impl {
 	public:
@@ -60,15 +41,36 @@ template<class T> class MCData_Impl {
 	        FMGL(pointer) = FMGL(head);
 	    }
 	}
-
+/*
 	static MCData_Impl<T> _make(T * head, T * pointer, x10_long size) {
 		return MCData_Impl(head, pointer, size);
+	}
+*/
+	static MCData_Impl<T> _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+		if (0 == numElements) {
+			return MCData_Impl<T>(NULL, NULL, 0);
+		}
+		assert((alignment & (alignment-1)) == 0);
+		x10_long size = alignment + numElements*sizeof(T);
+       bool containsPtrs = x10aux::getRTT<T>()->containsPtrs;
+	//	T* allocMem = x10aux::alloc<T>(size, false);
+		T* allocMem = static_cast<T*>(x10aux::alloc_chunk(size, containsPtrs));
+		if (zeroed) {
+			memset(allocMem, 0, size);
+		}
+		if(alignment > 0) {
+			x10_long alignDelta = alignment-1;
+			x10_long alignMask = ~alignDelta;
+			x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
+			return MCData_Impl<T>(allocMem, (T*)alignedMem, numElements);;
+		}
+		return MCData_Impl<T>(allocMem, allocMem, numElements);
 	}
 
 	void del() {
 		if(FMGL(head) != FMGL(pointer)) {
 			x10aux::throwException(
-					x10::lang::UnsupportedOperationException(
+					x10::lang::UnsupportedOperationException::_make(
 					x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
 		}
 		x10aux::dealloc(FMGL(head));
@@ -110,9 +112,9 @@ template<class T> class MCData_Impl {
 		// "x10aux::getRTT<T>()->containsPtrs" has not been implemented yet.
 //		T* pointer = x10aux::alloc<T>(size*sizeof(T), false); // x10aux::getRTT<T>()->containsPtrs);
 		//Charuwat+: Fix this
-		T* allocMem = x10aux::alloc_chunk<T>(size * sizeof(T));
-		x10aux::deserialization_buffer::copyOut(buf, allocMem, size, sizeof(T));
-		return MCData_Impl<T>(allocMem, NULL, size);
+		MCData_Impl<T> allocMem = _make(size * sizeof(T), 0, false);
+		x10aux::deserialization_buffer::copyOut(buf, allocMem.FMGL(pointer), size, sizeof(T));
+		return allocMem;
 	}
 };
 
