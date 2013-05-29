@@ -53,7 +53,6 @@ template<class T> class MCData_Impl {
 		assert((alignment & (alignment-1)) == 0);
 		x10_long size = alignment + numElements*sizeof(T);
        bool containsPtrs = x10aux::getRTT<T>()->containsPtrs;
-	//	T* allocMem = x10aux::alloc<T>(size, false);
 		T* allocMem = static_cast<T*>(x10aux::alloc_chunk(size, containsPtrs));
 		if (zeroed) {
 			memset(allocMem, 0, size);
@@ -109,9 +108,6 @@ template<class T> class MCData_Impl {
 
 	static MCData_Impl<T> _deserialize(x10aux::deserialization_buffer& buf) {
 		x10_long size = buf.read<x10_long>();
-		// "x10aux::getRTT<T>()->containsPtrs" has not been implemented yet.
-//		T* pointer = x10aux::alloc<T>(size*sizeof(T), false); // x10aux::getRTT<T>()->containsPtrs);
-		//Charuwat+: Fix this
 		MCData_Impl<T> allocMem = _make(size * sizeof(T), 0, false);
 		x10aux::deserialization_buffer::copyOut(buf, allocMem.FMGL(pointer), size, sizeof(T));
 		return allocMem;
