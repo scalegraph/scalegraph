@@ -15,7 +15,7 @@ import org.scalegraph.util.MemoryChunk;
 public struct ScatterGather {
 
 	private nChunk : Int;
-    private maxThreads :Int;
+	private maxThreads :Int;
 	private bufferWidth :Int;
 	private threadCounts :MemoryChunk[Int];
 	private threadOffsets :MemoryChunk[Int];

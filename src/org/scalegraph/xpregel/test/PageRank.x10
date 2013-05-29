@@ -56,7 +56,7 @@ public class PageRank {
 				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
 
 			if (ctx.superstep() < 30) {
-				ctx.aggregate(value - ctx.value());
+				ctx.aggregate(Math.abs(value - ctx.value()));
 				ctx.setValue(value);
 				ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
 			}

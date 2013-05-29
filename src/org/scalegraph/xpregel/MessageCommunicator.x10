@@ -56,7 +56,6 @@ class MessageCommunicator[M] { M haszero } {
 	var mVORHasMessage :Bitmap;
 	var mVOROffset :MemoryChunk[Long];
 	var mVORMessages :MemoryChunk[M];
-	val mVORTmpBuffer :GrowableMemory[M] = new GrowableMemory[M]();
 	
 	def this(team :Team2, ids :IdStruct, numThreads :Int)
 	{
@@ -73,6 +72,8 @@ class MessageCommunicator[M] { M haszero } {
 		// TODO: optimize
 		mEOCMessages = new MemoryChunk[MessageBuffer[M]](mNumThreads * mTeam.size(),
 				(i:Long) => new MessageBuffer[M]());
+		mVOCHasMessage = new Bitmap(mIds.numberOfLocalVertexes(), false);
+		mVOCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
 	}
 	
 	def del() {
@@ -81,19 +82,7 @@ class MessageCommunicator[M] { M haszero } {
 	
 	def messageBuffer(tid :Long) = mEOCMessages.subpart(tid * mTeam.size(), mTeam.size());
 	
-	def setInEdge[E](inEdge :GraphEdge[E]) { E haszero } {
-		mInEdgesOffset = inEdge.offsets;
-		mInEdgesVertex = inEdge.vertexes;
-	}
-	
-	def allocateVOCBuffer() {
-		if(mVOCHasMessage != null)
-			throw new Exception("Invalid program ...");
-		mVOCHasMessage = new Bitmap(mIds.numberOfLocalVertexes(), false);
-		mVOCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
-	}
-	
-	def message(srcid :Long) {
+	def message(srcid :Long, buffer :GrowableMemory[M]) {
 		if(mEOREnabled) {
 			// edge orient
 			if(mEOROffset.size() == 0L)
@@ -111,21 +100,18 @@ class MessageCommunicator[M] { M haszero } {
 			val start = mInEdgesOffset(srcid);
 			val end = mInEdgesOffset(srcid + 1);
 			val length = end - start;
-			val buffer = mVORTmpBuffer;
 			
 			buffer.setSize(length);
 			for(i in 0..(length-1)) {
 				val dst = mInEdgesVertex(start + i);
-				val wordOffset = Bitmap.offset(dst);
-				val wordMask = Bitmap.mask(dst) - 1;
 				
-				assert bmp(dst) == true;
-				
-				val mesOffset = offset(wordOffset) +
-					MathAppend.popcount(bmp.word(wordOffset) & wordMask);
-				buffer(i) = mes(mesOffset);
-				
-				assert srcid == mDtoS(mInEdgesVertex(mesOffset));
+				if(bmp(dst)) { // TODO: optimize
+					val wordOffset = Bitmap.offset(dst);
+					val wordMask = Bitmap.mask(dst) - 1;
+					val mesOffset = offset(wordOffset) +
+						MathAppend.popcount(bmp.word(wordOffset) & wordMask);
+					buffer(i) = mes(mesOffset);
+				}
 			}
 			
 			return buffer.data();
@@ -185,7 +171,7 @@ class MessageCommunicator[M] { M haszero } {
 		
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val pstart = mesOffset(p);
-			val plength = mesOffset(p+1) - mesOffset(p);
+			val plength = mesOffset(p+1) - pstart;
 			val mesLocal = mesTmp.subpart(pstart, plength);
 			val idsLocal = idsTmp.subpart(pstart, plength);
 			var offset :Long = 0;
@@ -307,6 +293,7 @@ class MessageCommunicator[M] { M haszero } {
 			mVOSCount(p) = placeNumMessage;
 		});
 		
+		mVOSOffset(0) = 0;
 		for(i in 0..(numPlaces-1)) {
 			mVOSOffset(i + 1) = mVOSOffset(i) + mVOSCount(i);
 		}
@@ -341,21 +328,13 @@ class MessageCommunicator[M] { M haszero } {
 		if(mVORHasMessage != null) mVORHasMessage.del();
 		if(mVOROffset.size() > 0) mVOROffset.del();
 		if(mVORMessages.size() > 0) mVORMessages.del();
-		mVORTmpBuffer.setSize(0);
 	}
 	
 	def preProcess(combine : (MemoryChunk[M]) => M) {
 		resetSRBuffer();
 		
 		val [ r0, r1 ] = preProcessEdgeOrientMessages(combine);
-		
-		val r2 :Long;
-		if(mVOCHasMessage != null) {
-			r2 = preProcessVertexOrientMessages(combine);
-		}
-		else {
-			r2 = 0L;
-		}
+		val r2 = preProcessVertexOrientMessages(combine);
 		
 		return [ r0, r1, r2 ];
 	}
@@ -422,10 +401,12 @@ class MessageCommunicator[M] { M haszero } {
 			mTeam.alltoall(mVOSMask.data(), mVORHasMessage.data());
 			mVOSMask.del();
 			
-			mVOROffset = new MemoryChunk[Long](Bitmap.numWords(mVORHasMessage.size()));
-			Parallel.scan(1..(mVOROffset.size()-1), mVOROffset, 0L,
+			mVOROffset = new MemoryChunk[Long](Bitmap.numWords(mVORHasMessage.size()) + 1);
+			Parallel.scan(mVORHasMessage.data().range(), mVOROffset, 0L,
 					(i:Long, v:Long) => MathAppend.popcount(mVORHasMessage.word(i)) + v,
 					(v1:Long, v2:Long) => v1 + v2);
+			
+			assert recvOffset(numPlaces) as Long == mVOROffset(numLocalVertexes2N * numPlaces);
 		}
 
 		recvCount.del();

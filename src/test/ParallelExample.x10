@@ -44,20 +44,17 @@ public final class ParallelExample {
  
  static def scanExample(): void{
     Console.OUT.println("Scan Exapmle");
-    val n = 1;
-    val m = 30;
-    val result = new Array[Array[Int](1)](n, new Array[Int](m+1));
-    val retval = new Array[Int](n);
+    val m = 50L;
+    val result = new MemoryChunk[Long](m+1);
 
-    for ( count in 0..(n-1)) {
-      val c = count + 1;
-      val d = count + 2;
-      val input = new Array[Int](n, (i:Int)=> c *(i%d == (d - 1) ? 1 : 0) );
-      retval(count) = Parallel.scan(1..n, result(count), 0, (i:Int,x:Int)=> input(i-1) + x, (x:Int, y:Int)=> x+y);
-
-      Console.OUT.println("count: " + count + ", n: " + n + ", input: " + input);
-      Console.OUT.println("count: " + count + ", n: " + n + ", result: " + result(count));
-    }
+	val c = 1L;
+	val d = 2L;
+	val input = new MemoryChunk[Long](m, (i:Long)=> c *(i%d == (d - 1) ? 1 : 0) );
+	
+	val retval = Parallel.scan(input.range(), result, 0L, (i:Long,x:Long)=> input(i) + x, (x:Long, y:Long)=> x+y);
+	
+	Console.OUT.println("m: " + m + ", input: " + input);
+	Console.OUT.println("m: " + m + ", result: " + result + ", retval: " + retval);
   }
 
   public static def main(args:Array[String](1)) : void{

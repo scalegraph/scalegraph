@@ -30,6 +30,8 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 
 	var mSrcid :Long;
 	
+	var mNumVOMes :Long = 0L; // TODO:
+	
 	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
 		mWorker = worker;
 		mCtx = ctx;
@@ -78,7 +80,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	public def setValue(value :V) { mWorker.mVertexValue(mSrcid) = value; }
 	
 	/**
-	 * returns <vertex ids, values>
+	 * returns <vertex dst ids, values>
 	 */
 	public def outEdges() = mEdgeProvider.outEdges(mSrcid);
 	
@@ -170,9 +172,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 */
 	public def sendMessageToAllNeighbors(mes :M) {
 		// TODO: handle multiple messages
-		if(mCtx.mVOCHasMessage == null) {
-			mCtx.allocateVOCBuffer();
-		}
+		++mNumVOMes;
 		mCtx.mVOCHasMessage(mSrcid) = true;
 		mCtx.mVOCMessages(mSrcid) = mes;
 	}

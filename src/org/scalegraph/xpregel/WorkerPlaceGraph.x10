@@ -134,7 +134,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		src(0) = aggregator(src);
 		team.gather(0, src.subpart(0, 1), buffer);
 		if(root) buffer(0) = aggregator(buffer);
-		team.bcast(0, buffer.subpart(0, 1), src.subpart(0, 1));
+		team.bcast(0, root ? buffer.subpart(0, 1) : buffer, src.subpart(0, 1));
 		return src(0);
 	}
 	
@@ -161,6 +161,10 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		 */
 		val numStt = 3;
 		val statistics = new MemoryChunk[Long](numStt*2);
+
+		ectx.mInEdgesOffset = mInEdge.offsets;
+		ectx.mInEdgesVertex = mInEdge.vertexes;
+		ectx.mInEdgesMask = mInEdgesMask;
 		
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
@@ -175,10 +179,12 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
 				val vc = vctxs(tid as Int);
 				val ep = vc.mEdgeProvider;
+				val mesTempBuffer :GrowableMemory[M] = new GrowableMemory[M]();
 				var numProcessed :Long = 0L;
+				
 				for(srcid in r) {
 					vc.mSrcid = srcid;
-					val mes = ectx.message(srcid);
+					val mes = ectx.message(srcid, mesTempBuffer);
 					if(mes.size() > 0 || mVertexActive(srcid)) {
 						
 						compute(vc, mes);
@@ -225,6 +231,8 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			// transfer messages
 			ectx.exchangeMessages(recvStatistics(1) > 0L, recvStatistics(2) > 0L);
 		}
+		
+		mInEdgesMask = ectx.mInEdgesMask;
 		
 		ectx.del();
 	}
