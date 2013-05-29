@@ -43,9 +43,9 @@ public class PageRank {
 
 		val g = new Graph(team, Graph.VertexType.Long, useTranslator);
         val start = Timer.nanoTime();
-		g.addEdges(edgelist.data(team.placeGroup()));
+		g.addEdges(edgelist.raw(team.placeGroup()));
         Console.OUT.printf("addEdges: time = %g\n", (Timer.nanoTime() - start));
-		g.setEdgeAttribute[Double]("weight", weight.data(team.placeGroup()));
+		g.setEdgeAttribute[Double]("weight", weight.raw(team.placeGroup()));
 
 		// check results
 		Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());

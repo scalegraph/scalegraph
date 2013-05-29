@@ -57,8 +57,8 @@ public class EdgesBuffer[E] {
 		val tuple = new Tuple2[Long,Long](count,edgesId.size());
 		mOffset(vertexId) = tuple;
 		count += edgesId.size();
-		edgesId.add(_edgesId.data());
-		edgesValue.add(_edgesValue.data());
+		edgesId.add(_edgesId.raw());
+		edgesValue.add(_edgesValue.raw());
 	}
 	
 	public def modify(value:Boolean) {
@@ -83,8 +83,8 @@ public class EdgesBuffer[E] {
 						val tuple = mOffset(index);
 						val start = tuple.get1();
 						val size =  tuple.get2();
-						tmpId.add(buffers(bufIndex).edgesId.data().subpart(start,size));
-						tmpValues.add(buffers(bufIndex).edgesValue.data().subpart(start,size));
+						tmpId.add(buffers(bufIndex).edgesId.raw().subpart(start,size));
+						tmpValues.add(buffers(bufIndex).edgesValue.raw().subpart(start,size));
 						tmpOffset(index+1) = tmpOffset(index) + size;
 					}
 				}
@@ -92,15 +92,15 @@ public class EdgesBuffer[E] {
 			}else {
 				val start = targetOffset(index);
 				val size = targetOffset(index+1) - targetOffset(index);
-				tmpId.add(targetId.data().subpart(start,size));
-				tmpValues.add(targetValue.data().subpart(start,size));
+				tmpId.add(targetId.raw().subpart(start,size));
+				tmpValues.add(targetValue.raw().subpart(start,size));
 				tmpOffset(index+1) = tmpOffset(index) + size;
 			}
 		}
 		
 		targetOffset.setMemory(tmpOffset);
-		targetId.setMemory(tmpId.data());
-		targetValue.setMemory(tmpValues.data());
+		targetId.setMemory(tmpId.raw());
+		targetValue.setMemory(tmpValues.raw());
 		
 		for(index in buffers) {
 			buffers(index).reset();

@@ -61,7 +61,7 @@ class MessageCommunicationService[M,A] {
 	}
 
 	public def addSendMessages(buffer:GrowableMemory[Tuple2[Long,M]]) {
-		mSendBufferMessages.add(buffer.data());
+		mSendBufferMessages.add(buffer.raw());
 	}
 
 	public def addSendMessages(buffer:MemoryChunk[Tuple2[Long,M]]) {
@@ -104,7 +104,7 @@ class MessageCommunicationService[M,A] {
 	}
 
 	public def exchangeMessages() {
-		val raw = mSendBufferMessages.data();
+		val raw = mSendBufferMessages.raw();
 		val _context = mContext;
 
 		/*
@@ -267,7 +267,7 @@ class MessageCommunicationService[M,A] {
 	 * Now it just returns dummy
 	 */
 	public def getMessagesForVertex(vertexId:Long,messages:GrowableMemory[Tuple2[Long,M]]) {
-		val raw = mReceiveBufferMessages.data();
+		val raw = mReceiveBufferMessages.raw();
 		if (raw.size() > 0L) {
 			assert (vertexId >= 0);
 			assert (vertexId < mOffsets.size());

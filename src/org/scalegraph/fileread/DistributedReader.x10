@@ -123,11 +123,11 @@ public class DistributedReader {
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);
- 			val values_ = values.values()().data();
+ 			val values_ = values.values()().raw();
  			val writer = new FileWriter(new File(filename));
 
  			if(names != null) {
-	 			val names_ = names.values()().data();
+	 			val names_ = names.values()().raw();
 	 			for(i in values_.range()) {
 	 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
 	 			}

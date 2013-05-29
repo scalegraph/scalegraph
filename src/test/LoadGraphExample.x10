@@ -48,10 +48,10 @@ public class LoadGraphExample {
         // Create graph
         val edgeList = rawData.get1();
         val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.data(team.placeGroup()));
+        g.addEdges(edgeList.raw(team.placeGroup()));
         // If weighted graph, get weight list and set it as edge attribute
         val weightList = rawData.get2();
-        g.setEdgeAttribute[Double]("weight", weightList.data(team.placeGroup()));
+        g.setEdgeAttribute[Double]("weight", weightList.raw(team.placeGroup()));
         
         Console.OUT.println("Complete!");
     }

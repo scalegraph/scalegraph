@@ -55,8 +55,8 @@ public class DistBetweennessCentralityWeightedExample {
         val weightList = rawData.get2();
         
         val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.data(team.placeGroup()));
-        g.setEdgeAttribute[Double]("weight", weightList.data(team.placeGroup()));
+        g.addEdges(edgeList.raw(team.placeGroup()));
+        g.setEdgeAttribute[Double]("weight", weightList.raw(team.placeGroup()));
         Console.OUT.println("Start BC");
         DistBetweennessCentralityWeighted.run(g,
                                               true,

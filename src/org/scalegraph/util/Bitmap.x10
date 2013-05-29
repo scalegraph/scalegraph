@@ -33,7 +33,7 @@ public class Bitmap {
 	}
 	
 	public def size() = size;
-	public def data() = mc;
+	public def raw() = mc;
 	
 	public static def offset(i :Long) = i / BitsPerWord;
 	public static def mask(i :Long) = 1UL << ((i % BitsPerWord) as Int);

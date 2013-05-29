@@ -46,8 +46,8 @@ public class Import {
 			vertexList(i) = it.next();
 		}
 		val vid = new DistMemoryChunk[Long](singleTeam.placeGroup(), () => vertexList);
-		val src = new DistMemoryChunk[Long](singleTeam.placeGroup(), () => srcBuilder.data());
-		val dst = new DistMemoryChunk[Long](singleTeam.placeGroup(), () => dstBuilder.data());
+		val src = new DistMemoryChunk[Long](singleTeam.placeGroup(), () => srcBuilder.raw());
+		val dst = new DistMemoryChunk[Long](singleTeam.placeGroup(), () => dstBuilder.raw());
 		
 		val vaName = new Array[String](1, ID.NAME_VERTEX_ID);
 		val vaData = new Array[Any](1, vid);

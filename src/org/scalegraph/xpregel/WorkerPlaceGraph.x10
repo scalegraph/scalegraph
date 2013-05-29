@@ -170,8 +170,8 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			ectx.mSuperstep = ss;
 			
 			// initialize halt flag
-			val vertexActvieBitmap = mVertexActive.data();
-			MemoryChunk.copy(mVertexShouldBeActive.data(), 0L,
+			val vertexActvieBitmap = mVertexActive.raw();
+			MemoryChunk.copy(mVertexShouldBeActive.raw(), 0L,
 					vertexActvieBitmap, 0L, vertexActvieBitmap.size());
 			
 			statistics(0) = 0L;
@@ -193,7 +193,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
-				intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.data());
+				intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
 				vc.mAggregateValue.clear();
 				statistics.atomicAdd(0, numProcessed);
 			});

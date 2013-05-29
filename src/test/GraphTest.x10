@@ -39,8 +39,8 @@ public class GraphTest {
 		Console.OUT.println("Creating graph object ...");
 		
 		val g = new Graph(team, Graph.VertexType.Long, useTranslator);
-		g.addEdges(edgelist.data(team.placeGroup()));
-		g.setEdgeAttribute[Double]("weight", weight.data(team.placeGroup()));
+		g.addEdges(edgelist.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("weight", weight.raw(team.placeGroup()));
 		
 		// chech results
 		Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());

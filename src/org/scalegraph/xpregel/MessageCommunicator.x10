@@ -114,7 +114,7 @@ class MessageCommunicator[M] { M haszero } {
 				}
 			}
 			
-			return buffer.data();
+			return buffer.raw();
 		}
 		return new MemoryChunk[M]();
 	}
@@ -179,8 +179,8 @@ class MessageCommunicator[M] { M haszero } {
 			for(th in 0..(mNumThreads-1)) {
 				val src = mEOCMessages(th * numPlaces + p);
 				val size = src.messages.size();
-				MemoryChunk.copy(src.messages.data(), 0L, mesLocal, offset, size);
-				MemoryChunk.copy(src.dstIds.data(), 0L, idsLocal, offset, size);
+				MemoryChunk.copy(src.messages.raw(), 0L, mesLocal, offset, size);
+				MemoryChunk.copy(src.dstIds.raw(), 0L, idsLocal, offset, size);
 				
 				// clear messages
 				for(i in src.messages.range()) src.messages(i) = nullMessage;
@@ -262,7 +262,7 @@ class MessageCommunicator[M] { M haszero } {
 			for(i in r) tmpMask.atomicSet(mInEdgesVertex(i));
 		});
 		
-		mTeam.alltoall(tmpMask.data(), mInEdgesMask.data());
+		mTeam.alltoall(tmpMask.raw(), mInEdgesMask.raw());
 		tmpMask.del();
 	}
 	
@@ -280,9 +280,9 @@ class MessageCommunicator[M] { M haszero } {
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
 			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
-			val placeHasMessage = mVOSMask.data().subpart(startWordOffset, lengthInWords);
-			val placeInEdgeMask = mInEdgesMask.data().subpart(startWordOffset, lengthInWords);
-			val rawHasMessage = mVOCHasMessage.data();
+			val placeHasMessage = mVOSMask.raw().subpart(startWordOffset, lengthInWords);
+			val placeInEdgeMask = mInEdgesMask.raw().subpart(startWordOffset, lengthInWords);
+			val rawHasMessage = mVOCHasMessage.raw();
 			
 			var placeNumMessage :Int = 0;
 			for(i in placeHasMessage.range()) {
@@ -303,7 +303,7 @@ class MessageCommunicator[M] { M haszero } {
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
 			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
-			val placeHasMessage = new Bitmap(mVOSMask.data().subpart(startWordOffset, lengthInWords));
+			val placeHasMessage = new Bitmap(mVOSMask.raw().subpart(startWordOffset, lengthInWords));
 			
 			val start = mVOSOffset(p);
 			val length = mVOSCount(p);
@@ -398,11 +398,11 @@ class MessageCommunicator[M] { M haszero } {
 			mVOSMessages.del();
 
 			mVORHasMessage = new Bitmap(numLocalVertexes2N * numPlaces);
-			mTeam.alltoall(mVOSMask.data(), mVORHasMessage.data());
+			mTeam.alltoall(mVOSMask.raw(), mVORHasMessage.raw());
 			mVOSMask.del();
 			
 			mVOROffset = new MemoryChunk[Long](Bitmap.numWords(mVORHasMessage.size()) + 1);
-			Parallel.scan(mVORHasMessage.data().range(), mVOROffset, 0L,
+			Parallel.scan(mVORHasMessage.raw().range(), mVOROffset, 0L,
 					(i:Long, v:Long) => MathAppend.popcount(mVORHasMessage.word(i)) + v,
 					(v1:Long, v2:Long) => v1 + v2);
 			

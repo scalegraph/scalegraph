@@ -30,8 +30,8 @@ public class SSSP {
 		val weigh = graphData.get2();
 		val g = new Graph(team,Graph.VertexType.Long,false);
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.data(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.data(team.placeGroup()));
+		g.addEdges(edgeList.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 	

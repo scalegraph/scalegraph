@@ -80,7 +80,7 @@ class ExecutionContext[M, A] { M haszero, A haszero } {
 	def message(srcid :Long) {
 		if(mEdgeOrientOrVertexOrient) {
 			// edge orient
-			return mEORMessages.messages.data().subpart(
+			return mEORMessages.messages.raw().subpart(
 					mEOROffset(srcid), mEOROffset(srcid + 1) - mEOROffset(srcid));
 		}
 		else {
@@ -110,7 +110,7 @@ class ExecutionContext[M, A] { M haszero, A haszero } {
 				assert srcid == mDtoS(inEdgeVertex(mesOffset));
 			}
 			
-			return buffer.data();
+			return buffer.raw();
 		}
 	}
 }

@@ -254,7 +254,7 @@ import org.scalegraph.graph.id.IdStruct;
 				val shift = MathAppend.log2(team_.size()) as Int;
 				val indexes_ = indexes();
 				val values_ = values();
-				Remote.put(team_, att_.data(), indexes_.range(),
+				Remote.put(team_, att_.raw(), indexes_.range(),
 						(index:Long, put:(Int, Long,  T)=>void)=> {
 					val dstRole = indexes_(index) & mask;
 					val dstIdx = indexes_(index) >> shift;
@@ -693,7 +693,7 @@ import org.scalegraph.graph.id.IdStruct;
 					val localsize = 1L << sparseMatrix.ids().lgl;
 					
 					val distAtt = new MemoryChunk[T](localsize);
-					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(),
+					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(),
 							(i :Long, get:(Long, Int, Long)=>void) => {
 						val rr = i * sizeOfDist + roleInDist;
 						val dstRole = rr & (sizeOfGraph - 1);
@@ -707,7 +707,7 @@ import org.scalegraph.graph.id.IdStruct;
 					val rankMask = (1L << shift) - 1;
 					val edgeIndexes = sparseMatrix().edgeIndexes;
 					val distAtt = new MemoryChunk[T](edgeIndexes.size());
-					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
+					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
 						val index = edgeIndexes(i);
 						get(i, (index & rankMask) as Int, index >> shift);
 					});

@@ -44,7 +44,7 @@ public class Degree {
 			
 			val recv = scatterGather.scatter(requests);
 			result().setSize(columnDistGraph.ids().numberOfLocalVertexes());
-			val result_ = result().data();
+			val result_ = result().raw();
 			Parallel.iter(recv.range(), (tid :Long, r :LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				for(i in r) {

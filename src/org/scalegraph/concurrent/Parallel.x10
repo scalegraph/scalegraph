@@ -628,7 +628,7 @@ public class Parallel {
 				if (size > 0) {
 					debugln("k: " + k + ", wid: " + wid);
 					debugln("k: " + k + ", wid: " + wid + ", offsets: " + resultOffsets(k)(wid) + ", size: " + acc(wid)(k).size());
-					MemoryChunk.copy(acc(wid)(k).data(), 0L, result(k), resultOffsets(k)(wid), acc(wid)(k).size());
+					MemoryChunk.copy(acc(wid)(k).raw(), 0L, result(k), resultOffsets(k)(wid), acc(wid)(k).size());
 				}
 			});
 		}

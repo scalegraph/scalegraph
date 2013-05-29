@@ -53,7 +53,7 @@ public class DistBetweennessCentralityExample {
         // Create graph
         val edgeList = rawData.get1();
         val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.data(team.placeGroup()));
+        g.addEdges(edgeList.raw(team.placeGroup()));
         
         DistBetweennessCentrality.calculate(g, true, "bc", false);
         val attrVertexId = g.getVertexAttribute[Long]("name");

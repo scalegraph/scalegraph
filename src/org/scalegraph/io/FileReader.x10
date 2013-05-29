@@ -46,12 +46,12 @@ public class FileReader {
 		val buffered = length - offset;
 		fileOffset += len;
 		if(buffered >= len) {
-			MemoryChunk.copy[Byte](buffer.data(), offset, r, off, len);
+			MemoryChunk.copy[Byte](buffer.raw(), offset, r, off, len);
 			offset += len;
 			return len;
 		}
 		else {
-			MemoryChunk.copy[Byte](buffer.data(), offset, r, off, buffered);
+			MemoryChunk.copy[Byte](buffer.raw(), offset, r, off, buffered);
 			off += buffered; len -= buffered;
 			offset = length = 0L;
 			var ret: Long = buffered;
@@ -88,7 +88,7 @@ public class FileReader {
 	}
 
 	private def fillBuffer(): Long {
-		val fil = buffer.data().subpart(length, buffer.size() - length);
+		val fil = buffer.raw().subpart(length, buffer.size() - length);
 		val readBytes = nf.read(fil);
 		if(readBytes > 0L) length += readBytes;
 		return readBytes;
@@ -102,7 +102,7 @@ public class FileReader {
 		val b = new GrowableMemory[Byte]();
 		var cr :Boolean = false;
 		while(true) {
-			val data = buffer.data();
+			val data = buffer.raw();
 			for(i in offset..(length-1)) {
 				val ch = data(i) as Char;
 				if(ch == '\r') cr = true;

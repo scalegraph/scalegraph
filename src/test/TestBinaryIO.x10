@@ -76,7 +76,7 @@ public class TestBinaryIO {
 			Tuple3[Long, Long, Double](Long.parse(list(0)), Long.parse(list(1)), 1.0)
 		});
 		
-		val edgelist = tuple2.get1().data(team.placeGroup());
+		val edgelist = tuple2.get1().raw(team.placeGroup());
 		var numE : Long = 0L;
 		for(p in team.places().values()) {
 			numE += at(p) edgelist().size();
