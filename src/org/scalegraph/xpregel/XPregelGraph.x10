@@ -36,10 +36,15 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
-			Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mVertexValue(i) = value;
-			});
+			try {
+				val w = workers_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.mVertexValue(i) = value;
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -48,11 +53,16 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
-			val a = a_();
-			Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mVertexValue(i) = compute(a(i));
-			});
+			try {
+				val w = workers_();
+				val a = a_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.mVertexValue(i) = compute(a(i));
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -62,12 +72,17 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
-			val a1 = a1_();
-			val a2 = a2_();
-			Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mVertexValue(i) = compute(a1(i), a2(i));
-			});
+			try {
+				val w = workers_();
+				val a1 = a1_();
+				val a2 = a2_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.mVertexValue(i) = compute(a1(i), a2(i));
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -77,13 +92,18 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_();
-			val a1 = a1_();
-			val a2 = a2_();
-			val a3 = a3_();
-			Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.mVertexValue(i) = compute(a1(i), a2(i), a3(i));
-			});
+			try {
+				val w = workers_();
+				val a1 = a1_();
+				val a2 = a2_();
+				val a3 = a3_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.mVertexValue(i) = compute(a1(i), a2(i), a3(i));
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 			
@@ -92,10 +112,15 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_().mOutEdge;
-			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.value(i) = value;
-			});
+			try {
+				val w = workers_().mOutEdge;
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = value;
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 			
@@ -104,11 +129,16 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_().mOutEdge;
-			val a = a_();
-			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.value(i) = compute(a(i));
-			});
+			try {
+				val w = workers_().mOutEdge;
+				val a = a_();
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = compute(a(i));
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -118,12 +148,17 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_().mOutEdge;
-			val a1 = a1_();
-			val a2 = a2_();
-			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.value(i) = compute(a1(i), a2(i));
-			});
+			try {
+				val w = workers_().mOutEdge;
+				val a1 = a1_();
+				val a2 = a2_();
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = compute(a1(i), a2(i));
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 			
@@ -133,13 +168,18 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
-			val w = workers_().mOutEdge;
-			val a1 = a1_();
-			val a2 = a2_();
-			val a3 = a3_();
-			Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-				for(i in r) w.value(i) = compute(a1(i), a2(i), a3(i));
-			});
+			try {
+				val w = workers_().mOutEdge;
+				val a1 = a1_();
+				val a2 = a2_();
+				val a3 = a3_();
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = compute(a1(i), a2(i), a3(i));
+				});
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -152,7 +192,12 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat(() => {
-			workers_().updateInEdge();
+			try {
+				workers_().updateInEdge();
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -160,7 +205,12 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat(() => {
-			workers_().updateInEdgeWithValue();
+			try {
+				workers_().updateInEdgeWithValue();
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 	}
 	
@@ -173,7 +223,12 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 		val workers_ = mWorkers;
 		Console.OUT.println("Start processing ...");
 		team_.placeGroup().broadcastFlat( () => {
-			workers_().run[M,A](compute, aggregator, end);
+			try {
+				workers_().run[M,A](compute, aggregator, end);
+			}
+			catch (e :CheckedThrowable) {
+				e.printStackTrace();
+			}
 		});
 		Console.OUT.println("End processing...");
 	}

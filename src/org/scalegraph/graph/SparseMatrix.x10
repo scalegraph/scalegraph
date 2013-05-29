@@ -100,8 +100,8 @@ public struct SparseMatrix {
 				counts.atomicAdd(edges(i).get1(), 1);
 		});
 
-		Parallel.scan(1L..offsetLength, offsets_, 0L,
-			(i:Long, v:Long) => counts(i-1) + v,
+		Parallel.scan(counts.range(), offsets_, 0L,
+			(i:Long, v:Long) => counts(i) + v,
 			(v1:Long, v2:Long) => v1 + v2);
 
 		Parallel.iter(counts.range(), (tid :Long, r :LongRange) => {
@@ -153,8 +153,8 @@ public struct SparseMatrix {
 				counts.atomicAdd(edges(i).get1(), 1);
 		});
 
-		Parallel.scan(1L..edges.size(), offsets_, 0L,
-			(i:Long, v:Long) => counts(i-1) + v,
+		Parallel.scan(counts.range(), offsets_, 0L,
+			(i:Long, v:Long) => counts(i) + v,
 			(v1:Long, v2:Long) => v1 + v2);
 
 		Parallel.iter(counts.range(), (tid :Long, r :LongRange) => {
