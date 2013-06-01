@@ -1,14 +1,15 @@
 package org.scalegraph.xpregel.test;
 
 import x10.util.Team;
-import org.scalegraph.util.tuple.Tuple3;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.xpregel.Vertex;
+
+import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.xpregel.XContext;
-import org.scalegraph.xpregel.comm.LongMaxAggregator;
+import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.graph.Graph;
+
+import org.scalegraph.xpregel.VertexContext;
+import org.scalegraph.xpregel.XPregelGraph;
 
 public class SSSP {
 	public static def main(args:Array[String](1)) {

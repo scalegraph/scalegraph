@@ -30,7 +30,9 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 
 	var mSrcid :Long;
 	
-	var mNumVOMes :Long = 0L; // TODO:
+	// statictics
+	var mNumActiveVertexes :Long = 0L;
+	var mVOSInputCount :Long = 0L;
 	
 	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
 		mWorker = worker;
@@ -172,7 +174,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 */
 	public def sendMessageToAllNeighbors(mes :M) {
 		// TODO: handle multiple messages
-		++mNumVOMes;
+		++mVOSInputCount;
 		mCtx.mVOCHasMessage(mSrcid) = true;
 		mCtx.mVOCMessages(mSrcid) = mes;
 	}

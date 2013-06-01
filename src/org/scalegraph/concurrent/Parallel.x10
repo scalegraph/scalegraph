@@ -813,7 +813,7 @@ public class Parallel {
 					val i_start = range.min + i*chunk_size;
 					val i_end = Math.min(range.max+1, i_start + chunk_size);
 					async {
-						for(ii in i_start..(i_end-2)) dst(ii+1) = func(ii, dst(ii));
+						for(ii in i_start..(i_end-1)) dst(ii+1) = func(ii, dst(ii));
 					}
 				}
 			}
