@@ -4,7 +4,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;

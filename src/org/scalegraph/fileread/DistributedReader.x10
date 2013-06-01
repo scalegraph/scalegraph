@@ -18,7 +18,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.graph.Attribute;
 import x10.io.FileWriter;
 import org.scalegraph.util.GrowableMemory;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
  
 public class DistributedReader {
     

@@ -6,11 +6,11 @@ import x10.util.Team;
 
 import x10.compiler.Pinned;
 
-import org.scalegraph.concurrent.DistScatterGather;
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.concurrent.Remote;
-import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.DistScatterGather;
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Remote;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.Parallel;
 
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;

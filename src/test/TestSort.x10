@@ -8,7 +8,7 @@ import x10.util.Random;
 import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 
 class Sort {
     static val debug = false;

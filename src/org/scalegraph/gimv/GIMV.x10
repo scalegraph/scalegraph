@@ -10,8 +10,8 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Parallel;
 
 public class GIMV {
 	

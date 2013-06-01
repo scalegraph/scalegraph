@@ -1,4 +1,4 @@
-package org.scalegraph.concurrent;
+package org.scalegraph.util;
 
 import x10.compiler.Inline;
 import x10.util.IndexedMemoryChunk;

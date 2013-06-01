@@ -9,8 +9,8 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
-import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.Graph;

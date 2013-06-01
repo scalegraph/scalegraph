@@ -5,11 +5,11 @@ import org.scalegraph.util.tuple.Tuple2;
 import x10.util.Team;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.xpregel.Vertex;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.xpregel.XpregelContext;
-import org.scalegraph.concurrent.DistScatterGather;
+import org.scalegraph.util.DistScatterGather;
 import org.scalegraph.xpregel.XContext;
-import org.scalegraph.concurrent.Team2;
+import org.scalegraph.util.Team2;
 import org.scalegraph.graph.id.IdStruct;
 
 struct MessageBuffer[M] {

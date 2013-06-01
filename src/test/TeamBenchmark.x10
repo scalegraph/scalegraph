@@ -2,9 +2,9 @@ package test;
 import x10.util.Team;
 import x10.util.Timer;
 import org.scalegraph.util.Debug;
-import org.scalegraph.concurrent.RemoteGetContext;
-import org.scalegraph.concurrent.RemotePutContext;
-import org.scalegraph.concurrent.RemoteContextEmulation;
+import org.scalegraph.util.RemoteGetContext;
+import org.scalegraph.util.RemotePutContext;
+import org.scalegraph.util.RemoteContextEmulation;
 
 public class TeamBenchmark {
     private static def message (str:String) : void {

@@ -8,8 +8,8 @@ import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Bitmap;
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Parallel;
 
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.SparseMatrix;

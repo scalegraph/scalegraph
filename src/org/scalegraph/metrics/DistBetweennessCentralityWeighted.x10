@@ -8,7 +8,7 @@ import x10.util.concurrent.Lock;
 import x10.util.GrowableIndexedMemoryChunk;
 import x10.util.Team;
 import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.util.Dist2D;
 import x10.compiler.Inline;
 import org.scalegraph.metrics.DistBetweennessCentrality.Bitmap;
 import org.scalegraph.util.DistMemoryChunk;

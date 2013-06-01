@@ -4,7 +4,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 
 class EdgeProvider [E] {E haszero} {
 	// modified out edges

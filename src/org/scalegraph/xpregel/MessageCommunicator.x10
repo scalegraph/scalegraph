@@ -5,8 +5,8 @@ import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.Bitmap;
 import org.scalegraph.util.Algorithm;
 import org.scalegraph.util.MathAppend;
-import org.scalegraph.concurrent.Parallel;
-import org.scalegraph.concurrent.Team2;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Team2;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.graph.id.OnedC;
 

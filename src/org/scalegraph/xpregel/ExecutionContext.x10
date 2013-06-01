@@ -3,7 +3,7 @@ package org.scalegraph.xpregel;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.Bitmap;
-import org.scalegraph.concurrent.Team2;
+import org.scalegraph.util.Team2;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.graph.id.OnedC;

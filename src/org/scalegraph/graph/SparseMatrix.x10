@@ -5,8 +5,8 @@ import x10.compiler.Ifndef;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.concurrent.Parallel;
-import org.scalegraph.concurrent.Team2;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Team2;
 
 /** Sparse matrix representation.
  */

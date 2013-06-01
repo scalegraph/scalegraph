@@ -1,4 +1,4 @@
-package org.scalegraph.concurrent;
+package org.scalegraph.util;
 
 import org.scalegraph.util.MemoryChunk;
 

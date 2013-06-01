@@ -1,4 +1,4 @@
-package org.scalegraph.concurrent;
+package org.scalegraph.util;
 import x10.util.ArrayList;
 import x10.util.Team;
 

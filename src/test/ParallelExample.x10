@@ -2,7 +2,7 @@ package test;
 import x10.util.ArrayUtils;
 import x10.util.Team;
 import x10.util.Random;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MemoryChunk;
 
 public final class ParallelExample {

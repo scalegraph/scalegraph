@@ -4,7 +4,7 @@ import x10.util.Team;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 
 /**
  * Provides various graph generators.

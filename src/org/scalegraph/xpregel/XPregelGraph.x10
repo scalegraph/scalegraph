@@ -7,8 +7,8 @@ import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.tuple.Tuple2;
 
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Parallel;
 
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.DistSparseMatrix;
