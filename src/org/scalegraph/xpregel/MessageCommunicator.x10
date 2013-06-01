@@ -45,6 +45,7 @@ class MessageCommunicator[M] { M haszero } {
 	var mEOSIds :MemoryChunk[Long];
 	var mEOSMessages :MemoryChunk[M];
 	
+	var mVOSInputCount :Long;
 	var mVOSCount :MemoryChunk[Int];
 	var mVOSOffset :MemoryChunk[Int];
 	var mVOSMessages :MemoryChunk[M];
@@ -56,6 +57,8 @@ class MessageCommunicator[M] { M haszero } {
 	var mVORHasMessage :Bitmap;
 	var mVOROffset :MemoryChunk[Long];
 	var mVORMessages :MemoryChunk[M];
+	
+	var mNumActiveVertexes :Long;
 	
 	def this(team :Team2, ids :IdStruct, numThreads :Int)
 	{
@@ -117,6 +120,11 @@ class MessageCommunicator[M] { M haszero } {
 			return buffer.data();
 		}
 		return new MemoryChunk[M]();
+	}
+	
+	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) {V haszero, E haszero, A haszero } {
+		mNumActiveVertexes += ctx.mNumActiveVertexes; ctx.mNumActiveVertexes = 0L;
+		mVOSInputCount += ctx.mVOSInputCount; ctx.mVOSInputCount = 0L;
 	}
 	
 	private def preProcessEdgeOrientMessages(combine : (MemoryChunk[M]) => M) {
@@ -266,10 +274,12 @@ class MessageCommunicator[M] { M haszero } {
 		tmpMask.del();
 	}
 	
-	private def preProcessVertexOrientMessages(combine : (MemoryChunk[M]) => M) {
+	private def preProcessVertexOrientMessages(combine : (MemoryChunk[M]) => M) :Long {
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
 		val nullMessage = Zero.get[M]();
+		
+		if(mVOSInputCount == 0L) return 0L;
 		
 		if(mInEdgesMask == null) createInEdgesMask();
 		
@@ -322,7 +332,7 @@ class MessageCommunicator[M] { M haszero } {
 		return mVOSOffset(numPlaces);
 	}
 	
-	def resetSRBuffer() { 
+	def resetSRBuffer() {
 		if(mEORMessages.size() > 0) mEORMessages.del();
 		if(mEOROffset.size() > 0) mEOROffset.del();
 		if(mVORHasMessage != null) mVORHasMessage.del();
@@ -332,11 +342,15 @@ class MessageCommunicator[M] { M haszero } {
 	
 	def preProcess(combine : (MemoryChunk[M]) => M) {
 		resetSRBuffer();
+
+		val r0 = mNumActiveVertexes;
+		val [ r1, r2 ] = preProcessEdgeOrientMessages(combine);
+		val r3 = preProcessVertexOrientMessages(combine);
+
+		mVOSInputCount = 0L;
+		mNumActiveVertexes = 0L;
 		
-		val [ r0, r1 ] = preProcessEdgeOrientMessages(combine);
-		val r2 = preProcessVertexOrientMessages(combine);
-		
-		return [ r0, r1, r2 ];
+		return [ r0, r1, r2, r3 ];
 	}
 	
 	def exchangeMessages(EOEnable :Boolean, VOEnable :Boolean) :void {
@@ -406,7 +420,8 @@ class MessageCommunicator[M] { M haszero } {
 					(i:Long, v:Long) => MathAppend.popcount(mVORHasMessage.word(i)) + v,
 					(v1:Long, v2:Long) => v1 + v2);
 			
-			assert recvOffset(numPlaces) as Long == mVOROffset(numLocalVertexes2N * numPlaces);
+			assert recvOffset(numPlaces) as Long ==
+				mVOROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
 		}
 
 		recvCount.del();
