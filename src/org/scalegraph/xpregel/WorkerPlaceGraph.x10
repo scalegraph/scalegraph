@@ -17,7 +17,6 @@ import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.IdStruct;
 
 import org.scalegraph.xpregel.VertexContext;
-import org.scalegraph.xpregel.EdgesBuffer;
 
 class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	val mTeam :Team2;
@@ -138,7 +137,55 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		return src(0);
 	}
 	
-	public def run[M, A](compute :(ctx:VertexContext[V,E,M,A],messages:MemoryChunk[M]) => void, 
+	private static val STT_END_COUNT = 0;
+	private static val STT_ACTIVE_VERTEX = 1;
+	private static val STT_COMBINED_MESSAGE = 2;
+	private static val STT_VERTEX_MESSAGE = 3;
+	private static val STT_MAX = 4;
+
+	private static def exchangeMessages[M](team :Team2,
+			ectx :MessageCommunicator[M], statistics :MemoryChunk[Long]) { M haszero } :Boolean
+	{
+		// if end is satisfied, we skip message processing.
+		if(statistics(STT_END_COUNT) == 0L) {
+			// merge messages and combine if combiner is provided
+			val [ numActive, numRawMessages, numCombinedMessages, numVertexMessages ]
+					= ectx.preProcess(null);
+			
+			statistics(STT_ACTIVE_VERTEX) = numActive;
+			statistics(STT_COMBINED_MESSAGE) = numCombinedMessages;
+			statistics(STT_VERTEX_MESSAGE) = numVertexMessages;
+		}
+		else { // end is satisfied
+			statistics(STT_ACTIVE_VERTEX) = 0L;
+			statistics(STT_COMBINED_MESSAGE) = 0L;
+			statistics(STT_VERTEX_MESSAGE) = 0L;
+		}
+		
+		// check termination
+		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
+		team.allreduce(statistics.subpart(0, STT_MAX), recvStatistics, Team.ADD);
+		if(recvStatistics(STT_END_COUNT) > 0) {
+			// terminate
+			return true;
+		}
+		// if there are no active vertex nor messages, we terminate computation.
+		if(recvStatistics(STT_ACTIVE_VERTEX) == 0L &&
+			recvStatistics(STT_COMBINED_MESSAGE) == 0L &&
+			recvStatistics(STT_VERTEX_MESSAGE) == 0L)
+		{
+			return true;
+		}
+		
+		// transfer messages
+		ectx.exchangeMessages(
+				recvStatistics(STT_COMBINED_MESSAGE) > 0L,
+				recvStatistics(STT_VERTEX_MESSAGE) > 0L);
+		
+		return false;
+	}
+	
+	public def run[M, A](compute :(ctx:VertexContext[V,E,M,A], messages:MemoryChunk[M]) => void, 
 			aggregator :(MemoryChunk[A])=>A,
 			end :(Int,A)=>Boolean) { M haszero, A haszero }
 	{
@@ -153,14 +200,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 				(i:Long) => vctxs(i).mEdgeProvider);
 		val intermedAggregateValue = new MemoryChunk[A](numThreads);
 		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
-		
-		/* Statistics
-		 * 0 : Active vertexes
-		 * 1 : Edge orient messages
-		 * 2 : Vertex orient messages
-		 */
-		val numStt = 3;
-		val statistics = new MemoryChunk[Long](numStt*2);
+		val statistics = new MemoryChunk[Long](STT_MAX*2);
 
 		ectx.mInEdgesOffset = mInEdge.offsets;
 		ectx.mInEdgesVertex = mInEdge.vertexes;
@@ -173,8 +213,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			val vertexActvieBitmap = mVertexActive.raw();
 			MemoryChunk.copy(mVertexShouldBeActive.raw(), 0L,
 					vertexActvieBitmap, 0L, vertexActvieBitmap.size());
-			
-			statistics(0) = 0L;
 			
 			Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
 				val vc = vctxs(tid as Int);
@@ -195,8 +233,13 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 				}
 				intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
 				vc.mAggregateValue.clear();
-				statistics.atomicAdd(0, numProcessed);
+				vc.mNumActiveVertexes = numProcessed;
 			});
+			
+			// gather statistics
+			for(th in 0..(numThreads-1)) {
+				ectx.sqweezeMessage(vctxs(th));
+			}
 			
 			// update out edges
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
@@ -204,32 +247,12 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			// aggregate
 			val aggVal = computeAggregate[A](mTeam, intermedAggregateValue, aggregateBuffer, aggregator);
 			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
-			/*
-			 * if(end(ectx.mAggregatedValue)) {
-			 * // terminate
-			 * break;
-			 * }
-			 */
+			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
 			
-			// merge messages and combine if combiner is provided
-			val [ numRawMessages, numCombinedMessages, numVertexMessages ] = ectx.preProcess(null);
-			statistics(0) = numRawMessages;
-			statistics(1) = numCombinedMessages;
-			statistics(2) = numVertexMessages;
-			
-			// check termination
-			val recvStatistics = statistics.subpart(numStt, numStt);
-			mTeam.allreduce(statistics.subpart(0, numStt), recvStatistics, Team.ADD);
-			// if there are no active vertex nor messages, we terminate computation.
-			if(recvStatistics(0) == 0L &&
-				recvStatistics(1) == 0L &&
-				recvStatistics(2) == 0L)
-			{
+			// exchange messages
+			if(exchangeMessages(mTeam, ectx, statistics)) {
 				break;
 			}
-			
-			// transfer messages
-			ectx.exchangeMessages(recvStatistics(1) > 0L, recvStatistics(2) > 0L);
 		}
 		
 		mInEdgesMask = ectx.mInEdgesMask;

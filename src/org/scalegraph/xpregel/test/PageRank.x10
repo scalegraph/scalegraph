@@ -63,16 +63,18 @@ public class PageRank {
 			else {
 				ctx.voteToHalt();
 			}
-			if (here.id == 0 && ctx.id() == 0L) {
-				Console.OUT.println("Large PageRank at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
-			}
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
-		(superstep :Int, aggVal :Double) => (superstep >= 30 || aggVal < 0.0001));
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+			}
+			return (superstep >= 30 || aggVal < 0.0001);
+		});
 		
 		val end_time = System.currentTimeMillis();
 	
-		Console.OUT.println("Finish after =" + (end_time-start_time));
+		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		Console.OUT.println("Finish application");
 	}
 }
