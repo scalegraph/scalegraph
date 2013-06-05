@@ -48,8 +48,7 @@ public class BlondelTest {
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 		
 		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
-			val _graphContext = vertex.getContext();
-			if (ctx.superstep() == 0L) {
+			if (ctx.superstep() == 0) {
 				ctx.sendMessageToAllNeighbors(ctx.outEdgesId().size());
 			}else {
 				
@@ -58,7 +57,7 @@ public class BlondelTest {
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
 			if (here.id == 0) {
-				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+				Console.OUT.println("Large Blondel Clustering at superstep " + superstep + " = " + aggVal);
 			}
 			return (superstep >= 30 || aggVal < 0.0001);
 		});
