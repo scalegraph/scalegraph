@@ -47,7 +47,7 @@ public class TestRMAT {
         // Create graph
         val edgeList = rawData.get1();
         val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.data(team.placeGroup()));
+        g.addEdges(edgeList.raw(team.placeGroup()));
         
         val result = Degree.getInDegree(g);
         

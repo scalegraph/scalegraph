@@ -2,7 +2,6 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;

@@ -33,7 +33,7 @@ public final class ParallelExample {
   static def partitionExample(): void{
     Console.OUT.println("Partite Test");
     val n = 15;
-    val input = new Array[Int](n + 1, (i:Int)=> i );
+    val input = new MemoryChunk[Int](n + 1, (i :Long)=> i as Int );
 
     finish for (i in 1..n) {
       Console.OUT.println("n: " + i + ", input: " + input);
