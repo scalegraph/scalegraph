@@ -39,6 +39,13 @@ public class Bitmap {
 	public static def mask(i :Long) = 1UL << ((i % BitsPerWord) as Int);
 	public static def numWords(length :Long) = (length + BitsPerWord - 1) / BitsPerWord;
 	
+	public @Inline def word(offset :Long) = mc(offset);
+	
+	public def clear(initv :Boolean) {
+		val value = initv ? ~0UL : 0UL;
+		for(i in mc.range()) mc(i) = value;
+	}
+	
 	public @Inline operator this(i :Long) :Boolean {
 		@Ifndef("NO_BOUNDS_CHECKS") {
 			if(i < 0 || i > size)
@@ -49,7 +56,18 @@ public class Bitmap {
 		return (mc.data(wordOffset) & mask) != 0UL;
 	}
 	
-	public @Inline operator this(i :Long) = (v :Boolean) :void {
+	public operator this(i :Long) = (v :Boolean) :void {
+		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(i < 0 || i > size)
+				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
+		}
+		val wordOffset = i / BitsPerWord;
+		val mask = 1UL << ((i % BitsPerWord) as Int);
+		if(v) mc.data(wordOffset) |= mask;
+		else  mc.data(wordOffset) &= ~mask;
+	}
+	
+	public def set(i :Long) :void {
 		@Ifndef("NO_BOUNDS_CHECKS") {
 			if(i < 0 || i > size)
 				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
@@ -59,7 +77,17 @@ public class Bitmap {
 		mc.data(wordOffset) |= mask;
 	}
 	
-	public @Inline def atomicSet(i :Long) :Boolean {
+	public def unset(i :Long) :void {
+		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(i < 0 || i > size)
+				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
+		}
+		val wordOffset = i / BitsPerWord;
+		val mask = 1UL << ((i % BitsPerWord) as Int);
+		mc.data(wordOffset) &= ~mask;
+	}
+	
+	public def atomicSet(i :Long) :Boolean {
 		@Ifndef("NO_BOUNDS_CHECKS") {
 			if(i < 0 || i > size)
 				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
@@ -70,7 +98,7 @@ public class Bitmap {
 		return (old & mask) != 0UL;
 	}
 	
-	public @Inline def atomicUnset(i :Long) :Boolean {
+	public def atomicUnset(i :Long) :Boolean {
 		@Ifndef("NO_BOUNDS_CHECKS") {
 			if(i < 0 || i > size)
 				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
@@ -80,6 +108,4 @@ public class Bitmap {
 		val old = mc.data.atomicAnd(wordOffset, ~mask);
 		return (old & mask) != 0UL;
 	}
-	
-	public @Inline def word(offset :Long) = mc(offset);
 }

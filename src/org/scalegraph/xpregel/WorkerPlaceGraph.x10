@@ -22,7 +22,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	val mTeam :Team2;
 	val mIds :IdStruct;
 	
-	//var mMatrix:SparseMatrix;
 	var mVertexValue :MemoryChunk[V];
 	val mVertexActive :Bitmap;
 	val mVertexShouldBeActive :Bitmap;
@@ -30,8 +29,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	val mOutEdge :GraphEdge[E];
 	val mInEdge :GraphEdge[E];
 	var mInEdgesMask :Bitmap;
-	
-	//val mContext : XpregelContext;
 	
 	public def this(team :Team, matrix :DistSparseMatrix) {
 		mTeam = new Team2(team);
@@ -125,6 +122,34 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mesComm.del();
 	}
 	
+	public def run(compute :(ctx :InitVertexContext[V,E]) => void)
+	{
+		val root = (mTeam.base.role()(0) == 0);
+		val numThreads = Runtime.NTHREADS;
+		val numLocalVertexes = mIds.numberOfLocalVertexes();
+		val vctxs = new MemoryChunk[InitVertexContext[V, E]](numThreads,
+				(i :Long) => new InitVertexContext[V, E](this));
+		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads,
+				(i:Long) => vctxs(i).mEdgeProvider);
+		
+		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+			val vc = vctxs(tid);
+			val ep = vc.mEdgeProvider;
+			for(srcid in r) {
+				vc.mSrcid = srcid;
+				if(mVertexShouldBeActive(srcid)) {
+					
+					compute(vc);
+
+					if(ep.mEdgeChanged) ep.fixModifiedEdges(srcid);
+				}
+			}
+		});
+		
+		// update out edges
+		EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
+	}
+	
 	// src will be destroyed
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],
 			aggregator :(MemoryChunk[A])=>A) :A
@@ -215,7 +240,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 					vertexActvieBitmap, 0L, vertexActvieBitmap.size());
 			
 			Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
-				val vc = vctxs(tid as Int);
+				val vc = vctxs(tid);
 				val ep = vc.mEdgeProvider;
 				val mesTempBuffer :GrowableMemory[M] = new GrowableMemory[M]();
 				var numProcessed :Long = 0L;

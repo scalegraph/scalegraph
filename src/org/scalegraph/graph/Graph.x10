@@ -742,9 +742,9 @@ import org.scalegraph.graph.id.IdStruct;
 		val attlist = new ArrayList[Any]();
 		
 		for(key in vertexAttributes.keySet())
-			attlist.add(vertexAttributes(key));
+			attlist.add(vertexAttributes.getOrThrow(key));
 		for(key in edgeAttributes.keySet())
-			attlist.add(edgeAttributes(key));
+			attlist.add(edgeAttributes.getOrThrow(key));
 		
 		team.placeGroup().broadcastFlat(()=> {
 			try {
@@ -769,8 +769,8 @@ import org.scalegraph.graph.id.IdStruct;
 						(att as Attribute[String]).values().del();
 					else if(att instanceof Attribute[Boolean])
 						(att as Attribute[Boolean]).values().del();
-					else 
-						throw new UnsupportedOperationException();
+					else
+						throw new UnsupportedOperationException("Type: " + att.typeName());
 				}
 			}
 			catch(e : CheckedThrowable) {

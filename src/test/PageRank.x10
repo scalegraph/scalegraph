@@ -40,7 +40,7 @@ public class PageRank {
 		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val xpregel = new XPregelGraph[Double, Double](team, csr);
 		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
-		xpregel.zipEdgeValue[Double](edgeValue, (value : Double) => value);
+		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
 		
 		val start_time = System.currentTimeMillis();
 		
@@ -48,7 +48,7 @@ public class PageRank {
 		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 		
-		xpregel.do_computations[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0)
 				value = 1.0 / ctx.numberOfVertices();
