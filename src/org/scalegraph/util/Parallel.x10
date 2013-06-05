@@ -829,19 +829,24 @@ public class Parallel {
 		
 	public static def makeOffset(sortedIndex :MemoryChunk[Long], offset :MemoryChunk[Long]) {
 		val length = sortedIndex.size();
-		for(o in 0..sortedIndex(0)) offset(o) = 0;
-		for(o in (sortedIndex(length-1)+1)..(offset.size()-1)) offset(o) = length;
-		
-		Parallel.iter(1..(length-1), (tid :Long, r :LongRange) => {
-			var prev :Long = sortedIndex(r.min - 1);
-			for(i in r) {
-				val cur = sortedIndex(i);
-				if(prev != cur) {
-					for(o in (prev+1)..cur) offset(o) = i;
-					prev = cur;
+		if(length == 0L) {
+			for(o in offset.range()) offset(o) = 0;
+		}
+		else {
+			for(o in 0..sortedIndex(0)) offset(o) = 0;
+			for(o in (sortedIndex(length-1)+1)..(offset.size()-1)) offset(o) = length;
+			
+			Parallel.iter(1..(length-1), (tid :Long, r :LongRange) => {
+				var prev :Long = sortedIndex(r.min - 1);
+				for(i in r) {
+					val cur = sortedIndex(i);
+					if(prev != cur) {
+						for(o in (prev+1)..cur) offset(o) = i;
+						prev = cur;
+					}
 				}
-			}
-		});
+			});
+		}
 	}
 
 }

@@ -50,6 +50,11 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 * get the vertex id
 	 */
 	public def id() = mCtx.mStoD(mSrcid);
+	
+	/**
+	 * get real vertex id
+	 */
+	public def realId() = mCtx.mStoV(mSrcid);
 
 	/**
 	 * get the minimum vertex id of the region assigned to the current place
@@ -175,7 +180,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	public def sendMessageToAllNeighbors(mes :M) {
 		// TODO: handle multiple messages
 		++mVOSInputCount;
-		mCtx.mVOCHasMessage(mSrcid) = true;
+		mCtx.mVOCHasMessage.set(mSrcid);
 		mCtx.mVOCMessages(mSrcid) = mes;
 	}
 	
@@ -183,14 +188,14 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 * make the halted flag for the current vertex true
 	 */
 	public def voteToHalt() {
-		mWorker.mVertexActive(mSrcid) = false;
+		mWorker.mVertexActive.unset(mSrcid);
 	}
 	
 	/**
 	 * make the halted flag for the current vertex false
 	 */
 	public def revive() {
-		mWorker.mVertexActive(mSrcid) = true;
+		mWorker.mVertexActive.set(mSrcid);
 	}
 	
 	/**

@@ -62,7 +62,8 @@ public class GraphGenerator {
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
-				rnd_.skip(offset * scale + r.min);
+				// 4 random values per single edge (nextLong() uses 2 generated random values)
+				rnd_.skip((offset + r.min)*4);
 				val edgeMem_ = edgeMemory();
 				val vertexMask = numVertices - 1;
 				for(i in r) {
@@ -71,6 +72,38 @@ public class GraphGenerator {
 				}
 			});
 		});
+		
+		rnd.skip(numEdges * 4);
+		
+		return edgeMemory;
+	}
+	
+	public static def genRandomEdgeValue(scale :Int, edgefactor :Int, rnd :Random, team :Team)
+	: DistMemoryChunk[Double]
+	{
+		val numVertices = 1L << scale;
+		val numEdges = edgefactor * numVertices;
+		val numLocalEdges = numEdges / team.size();
+		
+		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](numLocalEdges));
+		
+		team.placeGroup().broadcastFlat(() => {
+			val role = team.role()(0);
+			val offset = role * numLocalEdges;
+			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
+				val rnd_ = rnd.clone();
+				// 2 random values per single edge (nextDouble() uses 2 generated random values)
+				rnd_.skip((offset + r.min)*2);
+				val edgeMem_ = edgeMemory();
+				val vertexMask = numVertices - 1;
+				for(i in r) {
+					edgeMem_(i) = rnd_.nextDouble();
+				}
+			});
+		});
+		
+		rnd.skip(numEdges * 2);
 		
 		return edgeMemory;
 	}
@@ -103,14 +136,12 @@ public class GraphGenerator {
 			sumABC(i) = (a+b+c) / abcd;
 		}
 		
-		Console.OUT.println("finished generating parameters");
-		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.role()(0);
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
-				rnd_.skip(offset * scale + r.min);
+				rnd_.skip((offset + r.min) * scale);
 				val edgeMem_ = edgeMemory();
 				for(i in r) {
 					var srcVertex :Long = 0;
@@ -129,6 +160,8 @@ public class GraphGenerator {
 				}
 			});
 		});
+		
+		rnd.skip(numEdges * scale);
 		
 		return edgeMemory;
 	}

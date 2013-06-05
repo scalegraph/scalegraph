@@ -7,88 +7,77 @@ import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.util.random.Random;
+import org.scalegraph.generator.GraphGenerator;
 
+import org.scalegraph.xpregel.InitVertexContext;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
 public class SSSP {
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				1.0
-			);
-		};
+		val scale = Int.parse(args(0));
+		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val rnd = new Random(2, 3);
+		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-	
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
+		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
+
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
+		val g = new Graph(team,Graph.VertexType.Long,false);
+		g.addEdges(edgeList);
+		g.setEdgeAttribute[Double]("edgevalue", weigh);		
+		
+		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
+
+		// release graph data
+		g.del();
+		edgeList.del();
+		weigh.del();
+		
+		val xpregel = new XPregelGraph[Double, Double](team, csr);
+		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+		
 		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-	
-		val xpregel = g.createXPregelGraph[Long,Long]();
-		xpregel.initDefaultVertexValue(Long.MAX_VALUE);
-	
-		val do_computation = (vertex:Vertex[Long,Long],messages:MemoryChunk[Tuple2[Long,Long]],_appcontext:XContext[Long,Long]) => {
-			val _graphContext = vertex.getContext();
-			if (_graphContext.getSuperStep() == 0l) {
-				if (_graphContext.getVertexIdFromSrcId(vertex.getVertexId()) == 0L) {
-					vertex.setValue(0L);
-					val edgeids = new GrowableMemory[Long]();
-					vertex.getEdgesId(true,edgeids);
-					if (edgeids.size() > 0) {
-						val message = vertex.getValue() + 1L;
-						for(index in edgeids.range()) {
-							_appcontext.putMessage(edgeids(index),message);
-						}
-					}
-					edgeids.del();
-				}else {
-					vertex.voteToHalt();
-				}
-			}
-			if (messages.size() > 0) {
-				var currentValue:Long = vertex.getValue();
-				for(index in messages.range()) {
-					if (currentValue > messages(index).get2()) {
-						currentValue = messages(index).get2();
-					}
-				}
-				if (currentValue < vertex.getValue()) {
-					vertex.setAlive();
-					vertex.setValue(currentValue);
-					_appcontext.aggregate(currentValue);
-					val edgeids = new GrowableMemory[Long]();
-					vertex.getEdgesId(true,edgeids);
-					if (edgeids.size() > 0) {
-						val message = vertex.getValue() + 1L;
-						for(index in edgeids.range()) {
-							_appcontext.putMessage(edgeids(index),message);
-						}
-					}
-					edgeids.del();
-				}else {
-					vertex.voteToHalt();
-				}
-			}else {
-				vertex.voteToHalt();
-			}
-		};
-		val aggregator = new LongMaxAggregator();
+		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + " ms");
+		
 		val start_time = System.currentTimeMillis();
-		xpregel.do_computations[Long,Long](do_computation,aggregator);
+
+		xpregel.initVertexValue(Double.POSITIVE_INFINITY);
+		
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+			var mindist :Double = (ctx.realId() == 0L) ? 0.0 : Double.POSITIVE_INFINITY;
+			for(i in messages.range())
+				if(mindist > messages(i)) mindist = messages(i);
+			// This is OK because operations on positive infinity produce sensible output.
+			if(mindist < ctx.value()) {
+			//	Console.OUT.println("V: " + ctx.id() + " is updated: " + ctx.value() + " -> " + mindist);
+				ctx.setValue(mindist);
+				val outEdge = ctx.outEdgesId();
+				val outEdgeValue = ctx.outEdgesValue();
+				for(i in outEdge.range()) {
+					ctx.sendMessage(outEdge(i), mindist + outEdgeValue(i));
+			//		Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
+				}
+			}
+			ctx.voteToHalt();
+		},
+		(values :MemoryChunk[Double]) => MathAppend.sum(values),
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				Console.OUT.println("Large SSSP: Finished superstep " + superstep + " at "
+						+ (System.currentTimeMillis()-start_time) + " ms");
+			}
+			return (superstep >= 30); // temp
+		});
+		
 		val end_time = System.currentTimeMillis();
-		Console.OUT.println("Finish after =" + (end_time-start_time));
+		
+		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		Console.OUT.println("Finish application");
 	}
 	

@@ -27,6 +27,7 @@ class MessageCommunicator[M] { M haszero } {
 	val mDtoV :OnedC.DtoV;
 	val mDtoS :OnedC.DtoS;
 	val mStoD :OnedC.StoD;
+	val mStoV :OnedC.StoV;
 
 	var mInEdgesOffset :MemoryChunk[Long];
 	var mInEdgesVertex :MemoryChunk[Long];
@@ -71,6 +72,7 @@ class MessageCommunicator[M] { M haszero } {
 		mDtoV = new OnedC.DtoV(ids);
 		mDtoS = new OnedC.DtoS(ids);
 		mStoD = new OnedC.StoD(ids, rank_c);
+		mStoV = new OnedC.StoV(ids, rank_c);
 
 		// TODO: optimize
 		mEOCMessages = new MemoryChunk[MessageBuffer[M]](mNumThreads * mTeam.size(),
@@ -363,6 +365,12 @@ class MessageCommunicator[M] { M haszero } {
 		mVOREnabled = VOEnable;
 		
 		if(EOEnable) {
+			if(mEOSCount.size() == 0L) {
+				// this place has no message to send but it must prepare for receiving messages
+				mEOSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
+				mEOSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
+			}
+			
 			mTeam.alltoall(mEOSCount, recvCount);
 			
 			recvOffset(0) = 0;
@@ -398,6 +406,13 @@ class MessageCommunicator[M] { M haszero } {
 		}
 		
 		if(VOEnable) {
+			if(mVOSCount.size() == 0L) {
+				// this place has no message to send but it must prepare for receiving messages
+				mVOSMask = new Bitmap(numLocalVertexes2N * numPlaces, false);
+				mVOSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
+				mVOSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
+			}
+			
 			mTeam.alltoall(mVOSCount, recvCount);
 			
 			recvOffset(0) = 0;
