@@ -1,4 +1,4 @@
-package test;
+package example;
 
 import x10.compiler.Inline;
 import x10.util.Team;
@@ -20,17 +20,10 @@ import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.util.DistMemoryChunk;
 
 
-public class DistBetweennessCentralityExample {
+public class DistBetweennessCentralityUnweightedExample {
     
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");
-        try {
-            val x = Long.parse(items(0).trim());
-            val y = Long.parse(items(1).trim());
-            
-        } catch(e: Exception) {
-            Console.OUT.println(items(0).trim() + " " + items(1).trim());
-        }
         return Tuple3[Long, Long, Double] (
                 Long.parse(items(0).trim()),
                 Long.parse(items(1).trim()),

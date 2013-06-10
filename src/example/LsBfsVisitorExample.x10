@@ -1,4 +1,4 @@
-package test;
+package example;
 
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
@@ -15,14 +15,7 @@ import org.scalegraph.visitor.LsBfsVisitor;
 public class LsBfsVisitorExample {
     
     public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        try {
-        	val x = Long.parse(items(0).trim());
-        	val y = Long.parse(items(1).trim());
-        	
-        } catch(e: Exception) {
-            Console.OUT.println(items(0).trim() + " " + items(1).trim());
-        }
+        val items = s.split(" ");        
         return Tuple3[Long, Long, Double] (
                 Long.parse(items(0).trim()),
                 Long.parse(items(1).trim()),
