@@ -3,6 +3,7 @@ package org.scalegraph.metrics;
 import x10.compiler.Ifndef;
 import x10.compiler.Inline;
 import x10.compiler.Native;
+import x10.util.concurrent.Lock;
 import x10.io.SerialData;
 import x10.io.File;
 import x10.io.FileReader;
@@ -11,8 +12,8 @@ import x10.util.ArrayList;
 import x10.util.IndexedMemoryChunk;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
+
 import org.scalegraph.util.Dist2D;
-import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
@@ -20,15 +21,15 @@ import org.scalegraph.graph.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
-import x10.util.concurrent.Lock;
+import org.scalegraph.util.Bitmap2;
 
 public type Vertex = Long;
 public type Distance = Long;
 
 /**
- * A class aiming at estimating betweenness centrality of large-scale unweigheted graph.
+ * A class for computing betweenness centrality for large-scale unweigheted graphs.
  * The implementation is based on Brandes's alogorthm[1] and Edmonds' algorithm[2].
- * The linear-scaling technique[3] is also used to improve the estimation result.
+ * The linear-scaling technique[3] is also available for improving the estimation result.
  * 
  * <br><br>
  * Reference:
@@ -49,7 +50,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _distSparseMatrix: DistSparseMatrix;
         
         val _currentSource: Cell[Vertex];
-        val _queues: IndexedMemoryChunk[Bitmap];
+        val _queues: IndexedMemoryChunk[Bitmap2];
         
         // poniters of current queue and next queue
         val _qPointer: Cell[Int];
@@ -97,7 +98,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _dependenciesLock: IndexedMemoryChunk[Lock];
                 
         /* Back tracking stuff */
-        val _backtrackingQueues: IndexedMemoryChunk[Bitmap];
+        val _backtrackingQueues: IndexedMemoryChunk[Bitmap2];
         val _backtrackingQPointer: Cell[Int];
         // The number of vertex's successor that has called back 
         val _numUpdate: IndexedMemoryChunk[Long];
@@ -130,11 +131,11 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             _numSource = nSrc;
             _sourceRange = srcRange;
             _currentSource = new Cell[Vertex](0);
-            _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap](2,
+            _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](2,
                             _ALIGN,
                             _CONGRUENT);
-            _queues(0) = new Bitmap(_numLocalVertices);
-            _queues(1) = new Bitmap(_numLocalVertices);
+            _queues(0) = new Bitmap2(_numLocalVertices);
+            _queues(1) = new Bitmap2(_numLocalVertices);
             _qPointer = new Cell[Int](0);
             _currentLevel = new Cell[Long](0);
             
@@ -168,12 +169,12 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                     _CONGRUENT);
 
             // Create queue for updating score
-            _backtrackingQueues = IndexedMemoryChunk.allocateUninitialized[Bitmap](
+            _backtrackingQueues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](
                     2, 
                     _ALIGN,
                     _CONGRUENT);
-            _backtrackingQueues(0) = new Bitmap(_numLocalVertices);
-            _backtrackingQueues(1) = new Bitmap(_numLocalVertices);
+            _backtrackingQueues(0) = new Bitmap2(_numLocalVertices);
+            _backtrackingQueues(1) = new Bitmap2(_numLocalVertices);
             _backtrackingQPointer = new Cell[Int](0);
             _numUpdate = IndexedMemoryChunk.allocateZeroed[Long](
                     _numLocalVertices, 
@@ -258,7 +259,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
      */
     public static def calculate(g: Graph, directed: Boolean, attrName: String, normalize: Boolean): void {
         val sourceRange = 0..(g.numberOfVertices() - 1);
-        run(g, directed, attrName, normalize, -1, null, sourceRange, false);
+        run(g, directed, attrName, normalize, -1, null, sourceRange, false, true);
     }
     
     /**
@@ -270,7 +271,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
      * @param linearScale use linear-scaling technique
      */
     public static def estimate(g: Graph, directed: Boolean, attrName: String, numSource: Long, linearScale: Boolean): void {
-        run(g, directed, attrName, false, numSource, null, 0..(-1 as Long), linearScale);
+        run(g, directed, attrName, false, numSource, null, 0..(-1 as Long), linearScale, false);
     }
     
     /**
@@ -282,7 +283,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
      * @param linearScale use linear-scaling technique
      */
     public static def estimate(g: Graph, directed: Boolean, attrName: String, sources: Array[Vertex], linearScale: Boolean): void {
-        run(g, directed, attrName, false, -1, sources, 0..(-1 as Long), linearScale);
+        run(g, directed, attrName, false, -1, sources, 0..(-1 as Long), linearScale, false);
     }
     
     /**
@@ -294,7 +295,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
      * @param linearScale use linear-scaling technique
      */
     public static def estimate(g: Graph, directed: Boolean, attrName: String, sourceRange: LongRange, linearScale: Boolean): void {
-        run(g, directed, attrName, false, -1, null, sourceRange, linearScale);
+        run(g, directed, attrName, false, -1, null, sourceRange, linearScale, false);
     }
     
     /**
@@ -304,7 +305,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         // TODO: clear all reference
     }
 
-    private static def run(g: Graph, directed: Boolean, attrName: String, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean) {
+    private static def run(g: Graph, directed: Boolean, attrName: String, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
         val team = g.team();
         val places = team.placeGroup();
         // Represent graph as CSR
@@ -332,12 +333,22 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         if (normalize) {
             finish for (p in places) {
                 at (p) async {
-                    Parallel.iter(0..(bc.lch()._numLocalVertices -1), (i: Long) => {
+                    internalIter(0..(bc.lch()._numLocalVertices -1), (i: Long) => {
                         val score = bc.lch()._score(i);
                         var frac: Double = (N - 1) * (N - 2);
                         if (!directed)
                             frac /= 2D;
                         bc.lch()._score(i) = score / (frac);
+                    });
+                }
+            }
+        } else if (!directed && isExactBc) {
+            // Undirected grapth and exact bc --> result divive by 2
+            finish for (p in places) {
+                at (p) async {
+                    internalIter(0..(bc.lch()._numLocalVertices -1), (i: Long) => {
+                        val score = bc.lch()._score(i);
+                        bc.lch()._score(i) = score / 2D;
                     });
                 }
             }
@@ -385,7 +396,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             for (i in 0..(lch()._sources.size - 1)) {
                 computeForSource(lch()._sources(i));
             }
-        } else if (lch()._sourceRange.min >= 0 && lch()._sourceRange.min >= 0) {
+        } else if (lch()._sourceRange.min >= 0 && lch()._sourceRange.max >= 0) {
             // use sources from given range
             for (i in lch()._sourceRange) {
                 computeForSource(i);
@@ -444,16 +455,18 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         backtrackingCurrentQ().clearAll();
         backtrackingNextQ().clearAll();
         lch()._currentLevel() = 0L;
+        val numLocalVertices = lch()._numLocalVertices;
         for (i in 0..(lch()._numLocalVertices - 1)) {
             lch()._distanceMap(i) = 0L;
             if (lch()._predMap(i) != null) {
                 lch()._predMap(i).clear();
             }
-            lch()._successorCount(i) = 0;
-            lch()._pathCount(i) = 0L;
-            lch()._numUpdate(i) = 0;
-            lch()._dependencies(i) = 0D;
         }
+        
+        lch()._successorCount.clear(0, numLocalVertices);
+        lch()._pathCount.clear(0, numLocalVertices);
+        lch()._numUpdate.clear(0, numLocalVertices);
+        lch()._dependencies.clear(0, numLocalVertices);
     }
     
     @Inline
@@ -462,6 +475,32 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         if(vertexPlace == role as Long)
             return true;
         return false;
+    }
+    
+    /* Work around when optimizing. Parallel class will ca */
+    private static @Inline def internalIter(range :LongRange, func :(Long, LongRange)=>void) {
+        val size = range.max - range.min + 1;
+        if(size == 0L) return ;
+        val nthreads = Math.min(Runtime.NTHREADS as Long, size);
+        val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
+        finish for(i in 0..(nthreads-1)) {
+            val idx = i;
+            val i_start = range.min + i*chunk_size;
+            val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
+            async func(idx, i_range);
+        }
+    }
+    
+    public static @Inline def internalIter(range :LongRange, func :(Long)=>void) {
+        val size = range.max - range.min + 1;
+        if(size == 0L) return ;
+        val nthreads = Math.min(Runtime.NTHREADS as Long, size);
+        val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
+        finish for(i in 0..(nthreads-1)) {
+            val i_start = range.min + i*chunk_size;
+            val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
+            async for(ii in i_range) func(ii);
+        }
     }
     
     @Inline
@@ -623,7 +662,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 for(k in 0..(preds.size - 1)) {
                     val pred = preds(k);
                     val locPred = OrgToLocSrc(pred);
-                    add_and_fetch[Long](lch()._successorCount, locPred, 1);
+                    add_and_fetch[Long](lch()._successorCount, locPred, 1L);
                 }
             }
             clearBuffer(bufId, pid);
@@ -643,35 +682,41 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             }    
             predBuf(bufId)(pid).add(pred);
         };
-        val examine = (i: Long, threadId: Int) => {
-            if (lch()._predMap(i) != null 
-                    && lch()._predMap(i).size() > 0) {  
-                val sz = lch()._predMap(i).size();
-                for (k in 0..(sz -1)) {  
-                    val pred = lch()._predMap(i)(k);
-                    val locPred = OrgToLocSrc(pred);
-                    if (isLocalVertex(pred))  {
-                        fetch_and_add[Long](lch()._successorCount, locPred, 1);
-                    } else {
-                        val targetRole = team.role(getVertexPlace(pred))(0);
-                        addRemote(threadId, targetRole, pred);
-                    }    
-                }
-            }   
+        val examine = (threadId: Long, r: LongRange) => {
+            for (i in r) {
+                if (lch()._predMap(i) != null 
+                        && lch()._predMap(i).size() > 0) {  
+                    val sz = lch()._predMap(i).size();
+                    for (k in 0..(sz -1)) {  
+                        val pred = lch()._predMap(i)(k);
+                        val locPred = OrgToLocSrc(pred);
+                        if (isLocalVertex(pred))  {
+                            fetch_and_add[Long](lch()._successorCount, locPred, 1);
+                        } else {
+                            val targetRole = team.role(getVertexPlace(pred))(0);
+                            addRemote(threadId as Int, targetRole, pred);
+                        }    
+                    }
+                }   
+            }
         }; 
-        iter(0..(lch()._numLocalVertices - 1), examine);
+        // iter(0..(lch()._numLocalVertices - 1), examine);
+        internalIter(0..(lch()._numLocalVertices - 1), examine);
+
         _flushAll();
     }
     
     private def addLeafNodeToUpdate() {
-        val checkNode = (i: Long, threadId: Int) => {
-            if (lch()._predMap(i) != null 
-                    && lch()._predMap(i).size() > 0
-                    && lch()._successorCount(i) == 0L) {
-                backtrackingNextQ().set(i);
-            } 
+        val checkNode = (threadId: Long, r: LongRange) => {
+            for (i in r) {
+                if (lch()._predMap(i) != null 
+                        && lch()._predMap(i).size() > 0
+                        && lch()._successorCount(i) == 0L) {
+                    backtrackingNextQ().set(i);
+                } 
+            }
         };
-        iter(0..(lch()._numLocalVertices - 1), checkNode);
+        internalIter(0..(lch()._numLocalVertices - 1), checkNode);
     }
     
     private def backtracking() {
@@ -774,110 +819,4 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         assert(lch()._successorCount(locPred) > 0 
                && lch()._numUpdate(locPred) <= lch()._successorCount(locPred));
     }
-   
-    protected static def iter(range :LongRange, func :(Long, Int) => void) {
-        val size = range.max - range.min + 1;
-        if (size == 0L)
-            return;
-        val nthreads = Math.min(Runtime.NTHREADS as Long, size);
-        val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);  
-        finish for(i in 0..(nthreads-1)) {
-            val i_start = range.min + i * chunk_size;
-            val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
-            val threadId = i as Int;
-            async for(ii in i_range) {
-                func(ii, threadId);
-            }
-        }
-    }
-
-    /**
-     * Bitmap used to implement queue for saving space and parallizing bfs
-     */
-	public static struct Bitmap {
-	    protected val bitLength: Long;
-	    protected val data: IndexedMemoryChunk[Long];
-	    protected val bitPerWord = 64;
-	    protected val setCount: AtomicLong;
-	    
-	    public def this(length: Long) {
-	        bitLength = length;
-	        val allocSize = (bitLength >> 6) + 1; // div by 64
-	        data = IndexedMemoryChunk.allocateZeroed[Long](allocSize, 64, false); 
-	        // Clear bits
-	        for (i in 0..(data.length() - 1))	            
-	           data(i) = 0L;
-	        setCount = new AtomicLong(0);
-	    }
-	    
-	    public atomic def set(bit: Long) {
-	        val bitOffset = bit & ((1L << 6) -1);
-	        val wordOffset = bit >> 6;
-	        val mask = (1L << (bitOffset as Int));
-	        
-	        @Ifndef("NO_BOUNDS_CHECKS") {
-	            if(bit < 0 || bit >= bitLength)
-	                throw new ArrayIndexOutOfBoundsException("bit (" + bit + ") not contained in BitMap");
-	        }
-	        // If it is already set
-	        if (((data(wordOffset) as ULong) & mask as ULong) > 0UL)
-	            throw new Exception("Bit (" + bit + ") is already set"); 	       
-	        data(wordOffset) = data(wordOffset) | mask; 
-	        setCount.incrementAndGet();
-	    }
-	    
-	    public atomic def clear(bit: Long) {
-	        val bitOffset = bit & ((1L << 6) -1);
-	        val wordOffset = bit >> 6;
-	        val mask = ~(1L << (bitOffset as Int));
-	        
-	        @Ifndef("NO_BOUNDS_CHECKS") {
-	            if(bit < 0 || bit >= bitLength)
-	                throw new ArrayIndexOutOfBoundsException("bit (" + bit + ") not contained in BitMap");
-	        }
-	        // If it is already clear
-	        if ((data(wordOffset) | mask) == 0L)
-	            throw new Exception("Bit is already cleared");
-	        data(wordOffset) = data(wordOffset) & mask;
-	        setCount.decrementAndGet();
-	    }
-	    
-	    public def isSet(bit: Long) = !isNotSet(bit);
-	    
-	    public def isNotSet(bit: Long): Boolean {
-	        val bitOffset = bit & ((1L << 6) -1);
-	        val wordOffset = bit >> 6;
-	        val mask = (1L << (bitOffset as Int));
-	        return (data(wordOffset) as ULong & mask as ULong) == 0UL;
-	    }
-	    
-	    public def examine(callback: (i: Long, threadId: Int) => void) {
-	        val f = (w: Long, threadId: Int) => {
-	            val word = data(w);
-	            var mask: Long = 0x1;
-	            var callCount: Long = 0;
-	            if (word == 0L)
-	                return;
-	            for (var l: Long = 0; l < bitPerWord; ++l) { 
-	                mask = 1L << (l as Int);
-	                if (((word as ULong) & (mask as ULong)) > 0UL) {
-	                    val bitPos = w * bitPerWord + l;	                    
-	                    if (bitPos >= bitLength)
-	                        break;	                    
-	                    callback(bitPos , threadId);
-	                } 
-	            }
-	        };
-	        if (setCount.longValue() > 0)
-	            iter(0..(data.length() as Long - 1), f);
-	    }
-	    	    
-	    public def clearAll() {   
-	        for (i in 0..(data.length() - 1))	            
-	            data(i) = 0L;
-	        setCount.set(0L);
-	    }
-	    
-	    public def setBitCount() = setCount.longValue();
-	}
 }
