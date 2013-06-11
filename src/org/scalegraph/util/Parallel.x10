@@ -1,4 +1,4 @@
-package org.scalegraph.concurrent;
+package org.scalegraph.util;
 
 import x10.compiler.Inline;
 import x10.util.IndexedMemoryChunk;
@@ -9,6 +9,7 @@ import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Algorithm;
+import org.scalegraph.util.GrowableMemory;
 
 /** Thread Parallel Library.
  */
@@ -504,7 +505,9 @@ public class Parallel {
     	sg.check(src_i.size() as Int);
     	
     	finish for(i in 0..(numChunks-1)) async {
-    		Algorithm.sort(dst_i, dst_v);
+    		val off = sg.offsets()(i);
+    		val len = sg.counts()(i);
+    		Algorithm.sort(dst_i.subpart(off, len), dst_v.subpart(off, len));
     	}
     }
 
@@ -569,7 +572,7 @@ public class Parallel {
 		return acc.toArray();
 	}
 
-	public static @Inline def partition[T](array :Array[T](1), func :(T)=>Int, kinds :Int) = partition(array, (Int, x:T)=>func(x), kinds);
+	public static @Inline def partition[T](array :MemoryChunk[T], func :(T)=>Int, kinds :Int) = partition(array, (Long, x:T)=>func(x), kinds);
 
 	/**
      * Divides the given array into its classification.
@@ -583,13 +586,13 @@ public class Parallel {
      * @param func the function to classify
      * @param kinds the size of the classification
       */
-	public static @Inline def partition[T](array :Array[T](1), func :(Int,T)=>Int, kinds :Int) : Array[Array[T](1)](1) {
-		debugln("partition: " + ", size: " + array.size +  " kinds:" + kinds);
-		val acc = new Array[Array[ArrayList[T]](1)](Runtime.MAX_THREADS,
-				(Int)=>new Array[ArrayList[T]](kinds,
-						(Int)=>new ArrayList[T]()));
+	public static @Inline def partition[T](array :MemoryChunk[T], func :(Long,T)=>Int, kinds :Int) : MemoryChunk[MemoryChunk[T]] {
+		debugln("partition: " + ", size: " + array.size() +  " kinds:" + kinds);
+		val acc = new MemoryChunk[MemoryChunk[GrowableMemory[T]]](Runtime.MAX_THREADS,
+				(Long)=>new MemoryChunk[GrowableMemory[T]](kinds,
+						(Long)=>new GrowableMemory[T]()));
 		debugln("before acc");
-		Parallel.iter(new IntRange(array.region.min(0), array.region.max(0)), (Int, range:IntRange)=> {
+		Parallel.iter(array.range(), (Long, range :LongRange)=> {
 			val wid = Runtime.workerId();
 			for (i in range) {
 				val x = array(i);
@@ -597,16 +600,16 @@ public class Parallel {
 			}
 		});
 		debugln("acc: " + acc);
-		val resultSizes = new Array[Int](kinds, 0);
-		val resultOffsets = new Array[Array[Int](1)](kinds, new Array[Int](Runtime.MAX_THREADS + 1));
+		val resultSizes = new MemoryChunk[Long](kinds, 0, true);
+		val resultOffsets = new MemoryChunk[MemoryChunk[Long]](kinds, (Long) => new MemoryChunk[Long](Runtime.MAX_THREADS + 1));
 		debugln("before scan");
 		for (k in 0..(kinds-1)) {
-			val arr = new Array[Int](Runtime.MAX_THREADS, (i:Int)=>acc(i)(k).size());
+			val arr = new MemoryChunk[Long](Runtime.MAX_THREADS, (i:Long)=>acc(i)(k).size());
 			debugln("k: " + k + " arr: " + arr);
-			resultOffsets(k)(0) = 0;
-			resultSizes(k) = Parallel.scan(1..(Runtime.MAX_THREADS), resultOffsets(k), 0, (i:Int, a:Int)=> acc(i - 1)(k).size() + a, (x:Int, y:Int)=>x+y);
-			val truescan = new Array[Int](Runtime.MAX_THREADS + 1);
-			Parallel.scan(1..(Runtime.MAX_THREADS), truescan, 0, (i:Int, a:Int)=> arr(i - 1) + a, (x:Int, y:Int)=>x+y);
+			resultOffsets(k)(0) = 0L;
+			resultSizes(k) = Parallel.scan(acc.range(), resultOffsets(k), 0L, (i:Long, a:Long)=> acc(i)(k).size() + a, (x:Long, y:Long)=>x+y);
+			val truescan = new MemoryChunk[Long](Runtime.MAX_THREADS + 1);
+			Parallel.scan(acc.range(), truescan, 0L, (i:Long, a:Long)=> arr(i) + a, (x:Long, y:Long)=>x+y);
 			debugln("k: " + k +  "truescan: " + truescan);
 			debugln("k: " + k +  "resultOffsets: " + resultOffsets(k));
 			resultOffsets(k) = truescan;
@@ -615,17 +618,17 @@ public class Parallel {
 		for (k in 0..(kinds-1)) {
 				debugln("k: " + k +  ", resultOffsets: " + resultOffsets(k));
 		}
-		val result = new Array[Array[T](1)](kinds, (i:Int)=>new Array[T](IndexedMemoryChunk.allocateUninitialized[T](resultSizes(i))));
+		val result = new MemoryChunk[MemoryChunk[T]](kinds, (i:Long)=>new MemoryChunk[T](resultSizes(i)));
 		debugln("before copy");
 		debugln("sizes" + resultSizes);
-		debugln("sizes" + new Array[Int](kinds, (i:Int)=>resultOffsets(i)(Runtime.MAX_THREADS - 1)));
+		debugln("sizes" + new MemoryChunk[Long](kinds, (i:Long)=>resultOffsets(i)(Runtime.MAX_THREADS - 1)));
 		finish for (k in 0..(kinds-1)) {
 			Parallel.iter(0..(Runtime.MAX_THREADS-1), (wid:Int)=>{
 				val size = acc(wid)(k).size();
 				if (size > 0) {
 					debugln("k: " + k + ", wid: " + wid);
 					debugln("k: " + k + ", wid: " + wid + ", offsets: " + resultOffsets(k)(wid) + ", size: " + acc(wid)(k).size());
-					Array.copy(acc(wid)(k).toArray(), 0, result(k), resultOffsets(k)(wid), acc(wid)(k).size());
+					MemoryChunk.copy(acc(wid)(k).raw(), 0L, result(k), resultOffsets(k)(wid), acc(wid)(k).size());
 				}
 			});
 		}
@@ -739,40 +742,41 @@ public class Parallel {
 		val size = range.max - range.min + 1;
 		val nthreads = Math.min(Runtime.NTHREADS, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1);
-		dst(range.min - 1) = init;
+		dst(range.min) = init;
+		// TODO: optimize with software pipelining
 		if(nthreads >= 2){
 			finish {
 				for(i in 0..(nthreads-1)) {
 					val i_start = range.min + i*chunk_size;
-					val i_end = i_start + chunk_size - 1;
-					if(i_end <= range.max) {
+					val i_end = i_start + chunk_size;
+					if(i_end <= range.max + 1) {
 						async {
 							var r :U = Zero.get[U]();
-							for(ii in i_start..i_end) r = func(ii, r);
+							for(ii in i_start..(i_end-1)) r = func(ii, r);
 							dst(i_end) = r;
 						}
 					}
 				}
 			}
 			for(i in 0..(nthreads-1)) {
-				val i_prev = range.min + i*chunk_size - 1;
-				val i_cur = i_prev + chunk_size;
-				if(i_cur <= range.max) {
-					dst(i_cur) = op(dst(i_cur), dst(i_prev));
+				val i_start = range.min + i*chunk_size;
+				val i_end = i_start + chunk_size;
+				if(i_end <= range.max + 1) {
+					dst(i_end) = op(dst(i_end), dst(i_start));
 				}
 			}
 			finish {
 				for(i in 0..(nthreads-1)) {
 					val i_start = range.min + i*chunk_size;
-					val i_end = Math.min(range.max + 1, i_start+chunk_size-1);
+					val i_end = Math.min(range.max+1, i_start + chunk_size);
 					async {
-						for(ii in i_start..(i_end-1)) dst(ii) = func(ii, dst(ii-1));
+						for(ii in i_start..(i_end-2)) dst(ii+1) = func(ii, dst(ii));
 					}
 				}
 			}
 		}
 		else {
-			for(i in range) dst(i) = func(i, dst(i-1));
+			for(i in range) dst(i+1) = func(i, dst(i));
 		}
 		return dst(range.max);
 	}
@@ -781,40 +785,41 @@ public class Parallel {
 		val size = range.max - range.min + 1;
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
-		dst(range.min - 1) = init;
+		dst(range.min) = init;
+		// TODO: optimize with software pipelining
 		if(nthreads >= 2){
 			finish {
 				for(i in 0..(nthreads-1)) {
 					val i_start = range.min + i*chunk_size;
-					val i_end = i_start + chunk_size - 1;
-					if(i_end <= range.max) {
+					val i_end = i_start + chunk_size;
+					if(i_end <= range.max + 1) {
 						async {
 							var r :U = Zero.get[U]();
-							for(ii in i_start..i_end) r = func(ii, r);
+							for(ii in i_start..(i_end-1)) r = func(ii, r);
 							dst(i_end) = r;
 						}
 					}
 				}
 			}
 			for(i in 0..(nthreads-1)) {
-				val i_prev = range.min + i*chunk_size - 1;
-				val i_cur = i_prev + chunk_size;
-				if(i_cur <= range.max) {
-					dst(i_cur) = op(dst(i_cur), dst(i_prev));
+				val i_start = range.min + i*chunk_size;
+				val i_end = i_start + chunk_size;
+				if(i_end <= range.max + 1) {
+					dst(i_end) = op(dst(i_end), dst(i_start));
 				}
 			}
 			finish {
 				for(i in 0..(nthreads-1)) {
 					val i_start = range.min + i*chunk_size;
-					val i_end = Math.min(range.max + 1, i_start+chunk_size-1);
+					val i_end = Math.min(range.max+1, i_start + chunk_size);
 					async {
-						for(ii in i_start..(i_end-1)) dst(ii) = func(ii, dst(ii-1));
+						for(ii in i_start..(i_end-1)) dst(ii+1) = func(ii, dst(ii));
 					}
 				}
 			}
 		}
 		else {
-			for(i in range) dst(i) = func(i, dst(i-1));
+			for(i in range) dst(i+1) = func(i, dst(i));
 		}
 		return dst(range.max);
 	}
@@ -824,19 +829,24 @@ public class Parallel {
 		
 	public static def makeOffset(sortedIndex :MemoryChunk[Long], offset :MemoryChunk[Long]) {
 		val length = sortedIndex.size();
-		for(o in 0..sortedIndex(0)) offset(o) = 0;
-		for(o in (sortedIndex(length-1)+1)..(offset.size()-1)) offset(o) = length;
-		
-		Parallel.iter(1..(length-1), (tid :Long, r :LongRange) => {
-			var prev :Long = sortedIndex(r.min - 1);
-			for(i in r) {
-				val cur = sortedIndex(i);
-				if(prev != cur) {
-					for(o in (prev+1)..cur) offset(o) = i;
-					prev = cur;
+		if(length == 0L) {
+			for(o in offset.range()) offset(o) = 0;
+		}
+		else {
+			for(o in 0..sortedIndex(0)) offset(o) = 0;
+			for(o in (sortedIndex(length-1)+1)..(offset.size()-1)) offset(o) = length;
+			
+			Parallel.iter(1..(length-1), (tid :Long, r :LongRange) => {
+				var prev :Long = sortedIndex(r.min - 1);
+				for(i in r) {
+					val cur = sortedIndex(i);
+					if(prev != cur) {
+						for(o in (prev+1)..cur) offset(o) = i;
+						prev = cur;
+					}
 				}
-			}
-		});
+			});
+		}
 	}
 
 }

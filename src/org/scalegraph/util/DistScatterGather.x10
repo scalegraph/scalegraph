@@ -1,4 +1,4 @@
-package org.scalegraph.concurrent;
+package org.scalegraph.util;
 
 import x10.compiler.Ifdef;
 import x10.compiler.Ifndef;
@@ -12,31 +12,37 @@ import org.scalegraph.util.MemoryChunk;
  * 3. Count up the number of elements for each destination and store the array that getCounts returns.
  * 4.
  */
-public struct ScatterGather {
+public struct DistScatterGather {
 
-	private nChunk : Int;
+	private team :Team2;
     private maxThreads :Int;
 	private bufferWidth :Int;
 	private threadCounts :MemoryChunk[Int];
 	private threadOffsets :MemoryChunk[Int];
 	private sendCounts :MemoryChunk[Int];
 	private sendOffsets :MemoryChunk[Int];
+	private recvCounts :MemoryChunk[Int];
+	private recvOffsets :MemoryChunk[Int];
 
     private CACHE_LINE = 64;
 
-	public def this(nChunk : Int) {
-		this.nChunk = nChunk;
+	public def this(team :Team) {
+		this.team = new Team2(team);
+		val teamSize = team.size();
+
 		// TODO: imcomplete cache alignment
 		maxThreads = Runtime.NTHREADS;
-		bufferWidth = Math.max(CACHE_LINE/4, nChunk);
+		bufferWidth = Math.max(CACHE_LINE/4, teamSize);
 
-		val size = bufferWidth * (maxThreads*2 + 1) + (nChunk*2 + 1);
+		val size = bufferWidth * (maxThreads*2 + 1) + (teamSize*2 + 1) * 2;
 		val dist = (new MemoryChunk[Int](size, CACHE_LINE)).distributor();
 
 		threadCounts = dist.next(bufferWidth*maxThreads);
 		threadOffsets = dist.next(bufferWidth*(maxThreads+1));
-		sendCounts = dist.next(nChunk);
-		sendOffsets = dist.next(nChunk + 1);
+		sendCounts = dist.next(teamSize);
+		sendOffsets = dist.next(teamSize + 1);
+		recvCounts = dist.next(teamSize);
+		recvOffsets = dist.next(teamSize + 1);
 		dist.checkFinish();
 
 		for(i in threadCounts.range()) threadCounts(i) = 0;
@@ -46,7 +52,7 @@ public struct ScatterGather {
 		for(i in threadCounts.range()) threadCounts(i) = 0;
 	}
 
-	public def counts(tid :Int) {
+	public def getCounts(tid :Int) {
 		val mc = threadCounts.subpart(bufferWidth*tid, bufferWidth);
 		@Ifndef("NO_BOUNDS_CHECKS") {
 			for(i in 0..(bufferWidth-1)) assert(mc(i) == 0);
@@ -54,12 +60,12 @@ public struct ScatterGather {
 		return mc;
 	}
 
-	public def offsets(tid :Int) = threadOffsets.subpart(bufferWidth*tid, bufferWidth);
+	public def getOffsets(tid :Int) = threadOffsets.subpart(bufferWidth*tid, bufferWidth);
 
 	public def sum() {
 		val width = bufferWidth;
-		val nChunk = nChunk;
-		val teamRange = 0..(nChunk-1);
+		val teamSize = team.size();
+		val teamRange = 0..(teamSize-1);
 		val threadsRange = 0..(maxThreads-1);
 		// compute sum of thread local count values
 		for(r in teamRange) {
@@ -85,25 +91,9 @@ public struct ScatterGather {
 		}
 	}
 
-	public def sendCount() = sendOffsets(nChunk);
-	// public def recvCount() = recvOffsets(team.size());
+	public def sendCount() = sendOffsets(team.size());
+	public def recvCount() = recvOffsets(team.size());
 
-    public def check(size : Int) {
-        val width = bufferWidth;
-		for(r in 0..(nChunk-1)) {
-			assert (threadOffsets(0*width + r) == sendOffsets(r) + threadCounts(0*width + r));
-			for(t in 1..(maxThreads-1)) {
-				assert (threadOffsets(t*width + r) == threadOffsets((t-1)*width + r) + threadCounts(t*width + r));
-			}
-		}
-		assert (size as Int == sendOffsets(nChunk));
-    }
-
-    public def offsets() = sendOffsets;
-    public def counts() = sendCounts;
-    public def size() = sendOffsets(nChunk);
-
-    /*
 	public def scatter[T](sendData :MemoryChunk[T]) {
 		val width = bufferWidth;
 		val teamSize = team.size();
@@ -134,5 +124,5 @@ public struct ScatterGather {
 	public def gather[T](sendData :MemoryChunk[T], recvData :MemoryChunk[T]) {
 		team.alltoallv(sendData, recvOffsets, recvCounts, recvData, sendOffsets, sendCounts);
 	}
-    */
+
 }

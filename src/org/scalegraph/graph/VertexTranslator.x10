@@ -10,9 +10,9 @@ import x10.compiler.Pinned;
 import x10.compiler.Pragma;
 import x10.compiler.Inline;
 
-import org.scalegraph.concurrent.Parallel;
-import org.scalegraph.concurrent.DistScatterGather;
-import org.scalegraph.concurrent.HashMap;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.DistScatterGather;
+import org.scalegraph.util.HashMap;
 import org.scalegraph.util.Debug;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;

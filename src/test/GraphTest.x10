@@ -4,7 +4,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
@@ -39,8 +39,8 @@ public class GraphTest {
 		Console.OUT.println("Creating graph object ...");
 		
 		val g = new Graph(team, Graph.VertexType.Long, useTranslator);
-		g.addEdges(edgelist.data(team.placeGroup()));
-		g.setEdgeAttribute[Double]("weight", weight.data(team.placeGroup()));
+		g.addEdges(edgelist.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("weight", weight.raw(team.placeGroup()));
 		
 		// chech results
 		Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());

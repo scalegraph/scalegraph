@@ -4,72 +4,69 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Bitmap;
+import org.scalegraph.graph.id.OnedC;
 
 /**
- * Provides XPregel framework service for compute kernels. <br>
+ * Provides XPregel framework service for init compute kernels. <br>
  * The vertex id is processed in the mangled format,
  * we call <i>dst id format</i>, for optimization. You can get
  * the real vertex id with realId() method.
  * 
  * V: Vertex value type
  * E: Edge value type
- * M: Message value type
- * A: Aggreator value type
  */
-public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A haszero } {
+public class InitVertexContext[V, E] {V haszero, E haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
-	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
 
-	// messages
-	val mEOCMessages :MemoryChunk[MessageBuffer[M]];
-	
-	// aggregate values
-	var mAggregatedValue :A;
-	val mAggregateValue :GrowableMemory[A] = new GrowableMemory[A]();
+	val mVtoD :OnedC.VtoD;
+	val mDtoV :OnedC.DtoV;
+	val mStoD :OnedC.StoD;
+	val mStoV :OnedC.StoV;
 
 	var mSrcid :Long;
 	
-	// statictics
-	var mNumActiveVertexes :Long = 0L;
-	var mVOSInputCount :Long = 0L;
-	
-	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
+	def this(worker :WorkerPlaceGraph[V, E]) {
 		mWorker = worker;
-		mCtx = ctx;
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
-		mEOCMessages = mCtx.messageBuffer(tid);
+		
+		val ids = worker.mIds;
+		val rank_c = worker.mTeam.base.role()(0);
+		mVtoD = new OnedC.VtoD(ids);
+		mDtoV = new OnedC.DtoV(ids);
+		mStoD = new OnedC.StoD(ids, rank_c);
+		mStoV = new OnedC.StoV(ids, rank_c);
 	}
 	
 	/**
 	 * get the number of current superstep
 	 */
-	public def superstep() = mCtx.mSuperstep;
+	public def superstep() = 0;
 
 	/**
 	 * get the vertex id
 	 */
-	public def id() = mCtx.mStoD(mSrcid);
+	public def id() = mStoD(mSrcid);
 	
 	/**
 	 * get real vertex id
 	 */
-	public def realId() = mCtx.mStoV(mSrcid);
+	public def realId() = mStoV(mSrcid);
 
 	/**
 	 * get the minimum vertex id of the region assigned to the current place
 	 */
-	public def placeBaseVertexId() = mCtx.mStoD(0L);
+	public def placeBaseVertexId() = mStoD(0L);
 	
 	/**
 	 * get real vertex id from dst id
 	 */
-	public def realId(id :Long) = mCtx.mDtoV(id);
+	public def realId(id :Long) = mDtoV(id);
 	
 	/**
 	 * get dst id from read vertex id
 	 */
-	public def dstId(realId :Long) = mCtx.mVtoD(realId);
+	public def dstId(realId :Long) = mVtoD(realId);
 	
 	/**
 	 * get the number of vertices of the graph
@@ -136,79 +133,11 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	}
 
 	/**
-	 * get aggregated value on a previous superstep
-	 */
-	public def aggregatedValue() = mAggregatedValue;
-
-	/**
-	 * aggregate the value
-	 */
-	public def aggregate(value :A) { mAggregateValue.add(value); }
-
-	/**
-	 * send message using dst id of 
-	 * vertex
-	 */
-	public def sendMessage(id :Long, mes :M) {
-		val dstPlace = mCtx.mDtoV.c(id);
-		val srcId = mCtx.mDtoS(id);
-		val mesBuf = mEOCMessages(dstPlace);
-		mesBuf.messages.add(mes);
-		mesBuf.dstIds.add(srcId);
-	}
-
-	/**
-	 * send messages using dst id of 
-	 * vertex
-	 */
-	public def sendMessage(id :MemoryChunk[Long], mes :MemoryChunk[M]) {
-		for(i in id.range()) {
-			val dstPlace = mCtx.mDtoV.c(id(i));
-			val srcId = mCtx.mDtoS(id(i));
-			val mesBuf = mEOCMessages(dstPlace);
-			mesBuf.messages.add(mes(i));
-			mesBuf.dstIds.add(srcId);
-		}
-	}
-
-	/**
-	 * send messages to all neighbor vertices
-	 * This method uses in edges to send messages.
-	 * Before using this method, you have to update in edges
-	 * by invoking updateInEdges method of XPregelGraph.
-	 */
-	public def sendMessageToAllNeighbors(mes :M) {
-		// TODO: handle multiple messages
-		++mVOSInputCount;
-		mCtx.mVOCHasMessage.set(mSrcid);
-		mCtx.mVOCMessages(mSrcid) = mes;
-	}
-	
-	/**
-	 * make the halted flag for the current vertex true
-	 */
-	public def voteToHalt() {
-		mWorker.mVertexActive.unset(mSrcid);
-	}
-	
-	/**
-	 * make the halted flag for the current vertex false
-	 */
-	public def revive() {
-		mWorker.mVertexActive.set(mSrcid);
-	}
-	
-	/**
 	 * set the initial halted flag value for the current vertex on the next computation
 	 */
 	public def setVertexShouldBeActive(active :Boolean) {
 		mWorker.mVertexShouldBeActive(mSrcid) = active;
 	}
-	
-	/**
-	 * get the halted flag for the current vertex
-	 */
-	public def isHalted() = mWorker.mVertexActive(mSrcid);
 }
 
 

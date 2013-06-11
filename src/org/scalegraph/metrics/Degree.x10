@@ -1,11 +1,11 @@
 package org.scalegraph.metrics;
 
 import org.scalegraph.graph.Graph;
-import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistGrowableMemory;
-import org.scalegraph.concurrent.DistScatterGather;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.DistScatterGather;
+import org.scalegraph.util.Parallel;
 import x10.util.Team;
 
 public class Degree {
@@ -44,7 +44,7 @@ public class Degree {
 			
 			val recv = scatterGather.scatter(requests);
 			result().setSize(columnDistGraph.ids().numberOfLocalVertexes());
-			val result_ = result().data();
+			val result_ = result().raw();
 			Parallel.iter(recv.range(), (tid :Long, r :LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				for(i in r) {

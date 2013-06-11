@@ -1,11 +1,11 @@
-package test;
+package example;
 
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
@@ -15,14 +15,7 @@ import org.scalegraph.visitor.LsBfsVisitor;
 public class LsBfsVisitorExample {
     
     public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        try {
-        	val x = Long.parse(items(0).trim());
-        	val y = Long.parse(items(1).trim());
-        	
-        } catch(e: Exception) {
-            Console.OUT.println(items(0).trim() + " " + items(1).trim());
-        }
+        val items = s.split(" ");        
         return Tuple3[Long, Long, Double] (
                 Long.parse(items(0).trim()),
                 Long.parse(items(1).trim()),
@@ -41,7 +34,7 @@ public class LsBfsVisitorExample {
         // Create graph
         val edgeList = rawData.get1();
         val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.data(team.placeGroup()));
+        g.addEdges(edgeList.raw(team.placeGroup()));
         
         // Create dist sparse matrix
         val csr = g.constructDistSparseMatrix(

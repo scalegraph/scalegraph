@@ -6,11 +6,11 @@ import x10.util.Team;
 
 import x10.compiler.Pinned;
 
-import org.scalegraph.concurrent.DistScatterGather;
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.concurrent.Remote;
-import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.DistScatterGather;
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Remote;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.Parallel;
 
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
@@ -254,7 +254,7 @@ import org.scalegraph.graph.id.IdStruct;
 				val shift = MathAppend.log2(team_.size()) as Int;
 				val indexes_ = indexes();
 				val values_ = values();
-				Remote.put(team_, att_.data(), indexes_.range(),
+				Remote.put(team_, att_.raw(), indexes_.range(),
 						(index:Long, put:(Int, Long,  T)=>void)=> {
 					val dstRole = indexes_(index) & mask;
 					val dstIdx = indexes_(index) >> shift;
@@ -693,7 +693,7 @@ import org.scalegraph.graph.id.IdStruct;
 					val localsize = 1L << sparseMatrix.ids().lgl;
 					
 					val distAtt = new MemoryChunk[T](localsize);
-					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(),
+					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(),
 							(i :Long, get:(Long, Int, Long)=>void) => {
 						val rr = i * sizeOfDist + roleInDist;
 						val dstRole = rr & (sizeOfGraph - 1);
@@ -707,7 +707,7 @@ import org.scalegraph.graph.id.IdStruct;
 					val rankMask = (1L << shift) - 1;
 					val edgeIndexes = sparseMatrix().edgeIndexes;
 					val distAtt = new MemoryChunk[T](edgeIndexes.size());
-					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
+					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
 						val index = edgeIndexes(i);
 						get(i, (index & rankMask) as Int, index >> shift);
 					});
@@ -742,9 +742,9 @@ import org.scalegraph.graph.id.IdStruct;
 		val attlist = new ArrayList[Any]();
 		
 		for(key in vertexAttributes.keySet())
-			attlist.add(vertexAttributes(key));
+			attlist.add(vertexAttributes.getOrThrow(key));
 		for(key in edgeAttributes.keySet())
-			attlist.add(edgeAttributes(key));
+			attlist.add(edgeAttributes.getOrThrow(key));
 		
 		team.placeGroup().broadcastFlat(()=> {
 			try {
@@ -769,8 +769,8 @@ import org.scalegraph.graph.id.IdStruct;
 						(att as Attribute[String]).values().del();
 					else if(att instanceof Attribute[Boolean])
 						(att as Attribute[Boolean]).values().del();
-					else 
-						throw new UnsupportedOperationException();
+					else
+						throw new UnsupportedOperationException("Type: " + att.typeName());
 				}
 			}
 			catch(e : CheckedThrowable) {

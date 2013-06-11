@@ -1,14 +1,14 @@
 package org.scalegraph.xpregel.test;
-import org.scalegraph.graph.id.OnedC;
+
 import x10.util.Team;
-import org.scalegraph.util.tuple.Tuple3;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.xpregel.Vertex;
+
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.xpregel.XContext;
-import org.scalegraph.xpregel.comm.DoubleMaxAggregator;
+import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.graph.Graph;
+
+import org.scalegraph.xpregel.VertexContext;
+import org.scalegraph.xpregel.XPregelGraph;
 
 public class BlondelTest {
 	
@@ -31,32 +31,40 @@ public class BlondelTest {
 		val weigh = graphData.get2();
 		val g = new Graph(team,Graph.VertexType.Long,false);
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.data(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.data(team.placeGroup()));
+		g.addEdges(edgeList.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		val edgeValue = g.getEdgeAttribute[Double]("edgevalue").values();
 		
-		val xpregelgraph = g.createXPregelGraph[Tuple2[Long,Double],Double]();
-		//xpregelgraph.zipEdgeValue[Double](edgeValue, (value : Double) => value);
-		xpregelgraph.initDefaultEdgeValue(1.0);
-		xpregelgraph.updateInEdge();
-		val _pair_computation = (vertex:Vertex[Tuple2[Long,Double],Double], messages : MemoryChunk[Tuple2[Long,Long]], 
-				_appcontext:XContext[Long,Double]) => {
-			val _graphContext = vertex.getContext();
-			if (_graphContext.getSuperStep() == 0L) {
-				val inEdgeIds = new GrowableMemory[Long]();
-				val numOfOutEdges = vertex.getEdgesNum(false);
-				vertex.getEdgesId(false,inEdgeIds);
-				if (inEdgeIds.size() > 0) {
-					for(index in inEdgeIds.range()) {
-						_appcontext.putMessage(inEdgeIds(index),numOfOutEdges);
-					}
-				}
+		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val xpregel = new XPregelGraph[Double, Double](team, csr);
+		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
+		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+		
+		val start_time = System.currentTimeMillis();
+		
+		xpregel.updateInEdge();
+		
+		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+			if (ctx.superstep() == 0) {
+				ctx.sendMessageToAllNeighbors(ctx.outEdgesId().size());
 			}else {
 				
 			}
-		};
+		},
+		(values :MemoryChunk[Double]) => MathAppend.sum(values),
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				Console.OUT.println("Large Blondel Clustering at superstep " + superstep + " = " + aggVal);
+			}
+			return (superstep >= 30 || aggVal < 0.0001);
+		});
 		
+		val end_time = System.currentTimeMillis();
+		
+		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
+		Console.OUT.println("Finish application");
 	}
 }

@@ -27,7 +27,7 @@ public class GrowableMemory[T] {
 	
 	/** Returns the valid part.
 	 */
-	public def data() = mc.subpart(0, size);
+	public def raw() = mc.subpart(0, size);
 	
 	/** Returns the number of valid elements.
 	 */

@@ -2,11 +2,13 @@ package org.scalegraph.xpregel.test;
 
 import x10.util.Team;
 
-import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.random.Random;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.generator.GraphGenerator;
 
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
@@ -15,32 +17,34 @@ public class PageRank {
 	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				1.0
-			);
-		};
+		val scale = Int.parse(args(0));
+		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val rnd = new Random(2, 3);
+		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-	
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
+		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
+
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.data(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.data(team.placeGroup()));
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
+		val g = new Graph(team,Graph.VertexType.Long,false);
+		g.addEdges(edgeList);
+		g.setEdgeAttribute[Double]("edgevalue", weigh);		
 		
 		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[Double, Double](team, csr);
 		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
-		xpregel.zipEdgeValue[Double](edgeValue, (value : Double) => value);
+
+		// release graph data
+		g.del();
+		edgeList.del();
+		weigh.del();
+		
+		val xpregel = new XPregelGraph[Double, Double](team, csr);
+		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+		
+		
+		val end_init_graph = System.currentTimeMillis();
+		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
 		val start_time = System.currentTimeMillis();
 		
@@ -48,7 +52,7 @@ public class PageRank {
 		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 		
-		xpregel.do_computations[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0)
 				value = 1.0 / ctx.numberOfVertices();
@@ -56,23 +60,25 @@ public class PageRank {
 				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
 
 			if (ctx.superstep() < 30) {
-				ctx.aggregate(value - ctx.value());
+				ctx.aggregate(Math.abs(value - ctx.value()));
 				ctx.setValue(value);
 				ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
 			}
 			else {
 				ctx.voteToHalt();
 			}
-			if (here.id == 0 && ctx.id() == 0L) {
-				Console.OUT.println("Large PageRank at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
-			}
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
-		(superstep :Int, aggVal :Double) => (superstep >= 30 || aggVal < 0.0001));
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+			}
+			return (superstep >= 30 || aggVal < 0.0001);
+		});
 		
 		val end_time = System.currentTimeMillis();
 	
-		Console.OUT.println("Finish after =" + (end_time-start_time));
+		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		Console.OUT.println("Finish application");
 	}
 }

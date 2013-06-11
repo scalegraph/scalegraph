@@ -7,7 +7,7 @@ import x10.util.Random;
 import x10.util.Pair;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.concurrent.Remote;
+import org.scalegraph.util.Remote;
 
 public class TestRemote {
     static val test = true;

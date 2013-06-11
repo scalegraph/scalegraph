@@ -1,11 +1,11 @@
-package org.scalegraph.concurrent;
+package org.scalegraph.util;
 import x10.compiler.Inline;
 import x10.util.Team;
 import x10.lang.Runtime;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.concurrent.AtomicInteger;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.*;
 

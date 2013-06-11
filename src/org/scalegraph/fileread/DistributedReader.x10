@@ -18,7 +18,8 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.graph.Attribute;
 import x10.io.FileWriter;
 import org.scalegraph.util.GrowableMemory;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.DistMemoryChunk;
  
 public class DistributedReader {
     
@@ -123,11 +124,11 @@ public class DistributedReader {
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);
- 			val values_ = values.values()().data();
+ 			val values_ = values.values()().raw();
  			val writer = new FileWriter(new File(filename));
 
  			if(names != null) {
-	 			val names_ = names.values()().data();
+	 			val names_ = names.values()().raw();
 	 			for(i in values_.range()) {
 	 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
 	 			}
@@ -139,6 +140,43 @@ public class DistributedReader {
  				}
  			}
  			
+ 			writer.close();
+ 		});
+ 	}
+ 	
+ 	public static def write[T](
+ 			filenamefmt : String,
+ 			team : Team,
+ 			values : DistMemoryChunk[T])
+ 	{
+ 		team.placeGroup().broadcastFlat(() => {
+ 			val role = team.role()(0);
+ 			val filename = String.format(filenamefmt, [role as Any]);
+ 			val values_ = values();
+ 			val writer = new FileWriter(new File(filename));
+			val size = team.size();
+			for(i in values_.range()) {
+				writer.write(((i * size + role).toString() + "," + values_(i).toString() + "\n").bytes());
+			}
+ 			writer.close();
+ 		});
+ 	}
+ 	
+ 	public static def write[T](
+ 			filenamefmt : String,
+ 			team : Team,
+ 			names : DistMemoryChunk[T],
+ 			values : DistMemoryChunk[T])
+ 	{
+ 		team.placeGroup().broadcastFlat(() => {
+ 			val role = team.role()(0);
+ 			val filename = String.format(filenamefmt, [role as Any]);
+ 			val values_ = values();
+ 			val writer = new FileWriter(new File(filename));
+			val names_ = names();
+			for(i in values_.range()) {
+				writer.write((names_(i).toString() + "," + values_(i).toString() + "\n").bytes());
+			}
  			writer.close();
  		});
  	}

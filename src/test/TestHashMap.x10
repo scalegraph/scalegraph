@@ -9,8 +9,8 @@ import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.StopWatch;
-import org.scalegraph.concurrent.Parallel;
-import org.scalegraph.concurrent.HashMap;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.HashMap;
 
 public class TestHashMap {
     val n : Int;

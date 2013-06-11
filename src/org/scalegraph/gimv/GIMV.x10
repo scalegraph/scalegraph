@@ -10,8 +10,8 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.concurrent.Team2;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Parallel;
 
 public class GIMV {
 	
@@ -115,7 +115,7 @@ public class GIMV {
 						// convert local+C to roundrobin
 						val rr = ((((i & localMask) << lgc) | (i >> lgl)) << lgr) | dist_r;
 						// combine partial result
-						b.tmpsv(i) = combine(rr, tmp.data());
+						b.tmpsv(i) = combine(rr, tmp.raw());
 					}
 				});
 				
@@ -132,7 +132,7 @@ public class GIMV {
 							tmp(j) = b.tmprv(i + j*localsize);
 						}
 						// combine final result
-						b.dstv(i) = combine(i * size + rank, tmp.data());
+						b.dstv(i) = combine(i * size + rank, tmp.raw());
 					}
 				});
 
@@ -159,7 +159,7 @@ public class GIMV {
 					tmpResult(0L) += tmpResult(i);
 				}
 				tmpResult.setSize(1);
-				allTeam.allreduce(tmpResult.data(), convergence, Team.ADD);
+				allTeam.allreduce(tmpResult.raw(), convergence, Team.ADD);
 
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				
@@ -236,7 +236,7 @@ public class GIMV {
 								tmp(j) = map(w(j+off), b.refv(m.vertexes(j+off)));
 							}
 							// combine result
-							b.dstv(i) = combine(i * size + rank, tmp.data());
+							b.dstv(i) = combine(i * size + rank, tmp.raw());
 						}
 					}
 				});
@@ -264,7 +264,7 @@ public class GIMV {
 					tmpResult(0L) += tmpResult(i);
 				}
 				tmpResult.setSize(1);
-				team.allreduce(tmpResult.data(), convergence, Team.ADD);
+				team.allreduce(tmpResult.raw(), convergence, Team.ADD);
 				
 				if(here.id == 0) Console.OUT.println("superstep " + loop + " convergence: " + convergence(0));
 				

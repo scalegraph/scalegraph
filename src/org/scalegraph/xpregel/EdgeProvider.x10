@@ -4,7 +4,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 
 class EdgeProvider [E] {E haszero} {
 	// modified out edges
@@ -54,7 +54,7 @@ class EdgeProvider [E] {E haszero} {
 			
 			e.mDiffOffset.add(new Tuple2[Long, Long](0, e.mDiffVertex.size()));
 			
-			val diffOffset = e.mDiffOffset.data();
+			val diffOffset = e.mDiffOffset.raw();
 			
 			for(srcid in r) {
 				if(diffOffset(diffIndex).get1() == srcid) {
@@ -83,9 +83,9 @@ class EdgeProvider [E] {E haszero} {
 			var diffIndex :Long = 0;
 			var offset :Long = offsetPerThread(tid);
 
-			val diffOffset = e.mDiffOffset.data();
-			val diffVertex = e.mDiffVertex.data();
-			val diffValue = e.mDiffValue.data();
+			val diffOffset = e.mDiffOffset.raw();
+			val diffVertex = e.mDiffVertex.raw();
+			val diffValue = e.mDiffValue.raw();
 			val outOffset = e.mOutOffset;
 			val outVertex = e.mOutVertex;
 			val outValue = e.mOutValue;
@@ -129,8 +129,8 @@ class EdgeProvider [E] {E haszero} {
 			val start = mDiffStartOffset;
 			val length = mDiffVertex.size() - start;
 			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
-					mDiffVertex.data().subpart(start, length),
-					mDiffValue.data().subpart(start, length));
+					mDiffVertex.raw().subpart(start, length),
+					mDiffValue.raw().subpart(start, length));
 		}
 		else {
 			val start = mOutOffset(srcid);
@@ -145,7 +145,7 @@ class EdgeProvider [E] {E haszero} {
 		if(mEdgeChanged) {
 			val start = mDiffStartOffset;
 			val length = mDiffVertex.size() - start;
-			return mDiffVertex.data().subpart(start, length);
+			return mDiffVertex.raw().subpart(start, length);
 		}
 		else {
 			val start = mOutOffset(srcid);
@@ -158,7 +158,7 @@ class EdgeProvider [E] {E haszero} {
 		if(mEdgeChanged) {
 			val start = mDiffStartOffset;
 			val length = mDiffValue.size() - start;
-			return mDiffValue.data().subpart(start, length);
+			return mDiffValue.raw().subpart(start, length);
 		}
 		else {
 			val start = mOutOffset(srcid);

@@ -18,8 +18,8 @@ public struct DistGrowableMemory[T] {
 	
 	/** Returns the current data as a DistMemoryChunk.
 	 */
-	public def data(placeGroup :PlaceGroup)
-		= DistMemoryChunk[T](placeGroup, () => plh().data());
+	public def raw(placeGroup :PlaceGroup)
+		= DistMemoryChunk[T](placeGroup, () => plh().raw());
 	
 	public def del() {
 		plh().del();

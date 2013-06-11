@@ -1,4 +1,4 @@
-package test;
+package example;
 
 import x10.compiler.Inline;
 import x10.util.Team;
@@ -9,8 +9,8 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
-import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
@@ -18,23 +18,16 @@ import org.scalegraph.graph.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.metrics.DistBetweennessCentralityWeighted;
 
-
-public class DistBetweennessCentralityExample {
+public class DistBetweennessCentralityWeightedExample {
     
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");
-        try {
-            val x = Long.parse(items(0).trim());
-            val y = Long.parse(items(1).trim());
-            
-        } catch(e: Exception) {
-            Console.OUT.println(items(0).trim() + " " + items(1).trim());
-        }
         return Tuple3[Long, Long, Double] (
                 Long.parse(items(0).trim()),
                 Long.parse(items(1).trim()),
-                0D
+                Double.parse(items(2).trim())
         );
     };
     
@@ -52,13 +45,20 @@ public class DistBetweennessCentralityExample {
         
         // Create graph
         val edgeList = rawData.get1();
-        val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.data(team.placeGroup()));
+        val weightList = rawData.get2();
         
-        DistBetweennessCentrality.calculate(g, true, "bc", false);
+        val g = new Graph(team, Graph.VertexType.Long, false);
+        g.addEdges(edgeList.raw(team.placeGroup()));
+        g.setEdgeAttribute[Double]("weight", weightList.raw(team.placeGroup()));
+        Console.OUT.println("Start BC");
+        DistBetweennessCentralityWeighted.calculate(g,
+                                              true,
+                                              "weight",
+                                                  "bc",
+                                                      1,
+                                                      false);
         val attrVertexId = g.getVertexAttribute[Long]("name");
         val attrBc = g.getVertexAttribute[Double]("bc");
         DistributedReader.write("output-%d.txt", team, attrVertexId, attrBc);
-        
     }
 }

@@ -3,30 +3,26 @@ package test;
 import x10.util.ArrayUtils;
 import x10.util.Team;
 import x10.util.Random;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MemoryChunk;
 
 public final class ParallelTest {
 	static def testscan(): void{
 		Console.OUT.println("Scan Test");
-		val n = 1;
-		val m = 30;
-		val result = new Array[Array[Int](1)](n, new Array[Int](m+1));
-		val retval = new Array[Int](n);
+		val n = 10L;
+		val m = 300L;
+		val result = new MemoryChunk[Long](m+1);
 		for ( count in 0..(n-1)) {
 			val c = count + 1;
 			val d = count + 2;
-			val input = new Array[Int](n, (i:Int)=> c *(i%d == (d - 1) ? 1 : 0) );
-			retval(count) = Parallel.scan(1..n, result(count), 0, (i:Int,x:Int)=> input(i-1) + x, (x:Int, y:Int)=> x+y);
+			val input = new MemoryChunk[Long](m, (i:Long)=> c *(i%d == (d - 1) ? 1 : 0) );
+			val retval = Parallel.scan(input.range(), result, 0L, (i:Long,x:Long)=> input(i) + x, (x:Long, y:Long)=> x+y);
 			Console.OUT.println("count: " + count + ", n: " + n + ", input: " + input);
 			Console.OUT.println("count: " + count + ", n: " + n + ", result: " + result(count));
-		}
-		for ( count in 0..(n-1)) {
-			val c = count + 1;
-			val d = count + 2;
+
 			for (i in 0..n) {
-				if (result(count)(i) != c * (i / d))
-					Console.OUT.println("count: " + count + ", n: " + n + ", result(i): " + result(count)(i) + "but expected: " + c * (i/d));
+				if (result(i) != c * (i / d))
+					Console.OUT.println("count: " + count + ", n: " + n + ", result(i): " + result(i) + "but expected: " + c * (i/d));
 			}
 		}
 	}
@@ -56,10 +52,10 @@ public final class ParallelTest {
 	static def testpartition(): void{
 		Console.OUT.println("Partite Test");
 		val n = 15;
-		val input = new Array[Int](n + 1, (i:Int)=> i );
+		val input = new MemoryChunk[Long](n + 1, (i:Long)=> i );
 		finish for (i in 1..n) {
 			Console.OUT.println("n: " + i + ", input: " + input);
-			val result = Parallel.partition[Int](input, (x:Int)=> x % i, i);
+			val result = Parallel.partition[Long](input, (x:Long)=> (x % i) as Int, i);
 			Console.OUT.println("n: " + i + ", result: " + result);
 		}
 	}

@@ -4,7 +4,7 @@ import x10.util.Team;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.util.Dist2D;
 
 /** Distributed sparse matrix.
  */
