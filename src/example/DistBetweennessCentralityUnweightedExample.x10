@@ -52,6 +52,5 @@ public class DistBetweennessCentralityUnweightedExample {
         val attrVertexId = g.getVertexAttribute[Long]("name");
         val attrBc = g.getVertexAttribute[Double]("bc");
         DistributedReader.write("output-%d.txt", team, attrVertexId, attrBc);
-        
     }
 }
