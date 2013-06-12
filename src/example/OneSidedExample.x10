@@ -1,4 +1,4 @@
-package test;
+package example;
 import x10.util.Team;
 import x10.util.Timer;
 import org.scalegraph.util.RemoteGetContext;

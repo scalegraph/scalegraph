@@ -1,4 +1,4 @@
-package test;
+package example;
 import org.scalegraph.util.*;
 import org.scalegraph.util.Debug;
 import x10.util.Random;
