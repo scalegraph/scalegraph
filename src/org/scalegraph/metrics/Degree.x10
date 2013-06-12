@@ -54,7 +54,7 @@ public class Degree {
 			
 			// shrink results
 			var resultSize :Long = 0L;
-			for(i in result_.size()..1) {
+			for (var i :Long = result_.size(); i >= 1; --i) {
 				if(result_(i-1) > 0) {
 					resultSize = i;
 					break;
