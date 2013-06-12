@@ -3,7 +3,6 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
@@ -70,8 +69,8 @@ public class HyperANF_Pregel {
 		val weigh = graphData.get2();
 		val g = new Graph(team,Graph.VertexType.Long,false);
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.data(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.data(team.placeGroup()));
+		g.addEdges(edgeList.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
@@ -79,7 +78,7 @@ public class HyperANF_Pregel {
 		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](team, csr);
 		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
-		xpregel.zipEdgeValue[Double](edgeValue, (value : Double) => value);
+		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
 		
 		val start_time = System.currentTimeMillis();
 		
@@ -90,13 +89,20 @@ public class HyperANF_Pregel {
 		val N:Long = g.numberOfVertices();
 		val B = 7;
 		val M = 1<<B;
-		
-		xpregel.do_computations[MemoryChunk[Byte],Double](
-				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
-		//‚±‚±‚ªMemoryChunk[MemoryChunk[Byte]] ??
 
-			val counter = ctx.value();
+		val alpha:Double;
+		if(B==5) alpha = 0.697;
+		else if(B==6) alpha = 0.769;
+		else alpha = 0.7213 / (1.00+1.073/M);
+		xpregel.iterate[MemoryChunk[Byte],Double](
+				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
+		
+//‰Šú‰»‚³‚ê‚Ä‚¢‚È‚¢‚¯‚Ç‘åä•vH
+			val counter = ctx.value() ;
 			if(ctx.superstep()==0) {
+				//initŒn‚É‚±‚Ì‚ ‚½‚è‚Ìˆ—‚ª‚È‚©‚Á‚½‚Í‚¸‚È‚Ì‚Å’Ç‰Á
+//				counter = new MemoryChunk[Byte](M);
+				for(i in counter.range()) counter(i) = 0;
 				
 				val rand = new Random(ctx.realId(ctx.id()), 1000);
 				val pos = rand.nextLong()%M;
@@ -110,6 +116,7 @@ public class HyperANF_Pregel {
 				
 			}
 			else {
+//				counter = ctx.value();
 				//maxim massages
 				for(i in messages.range()) {
 					for(j in counter.range()) {
@@ -119,12 +126,12 @@ public class HyperANF_Pregel {
 				
 			}
 
+			if (here.id == 0 && ctx.id() == 0L) {
+				Console.OUT.println("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
+			}
+			
 			ctx.sendMessageToAllNeighbors(counter);
 			
-			val alpha:Double;
-			if(B==5) alpha = 0.697;
-			else if(B==6) alpha = 0.769;
-			else alpha = 0.7213 / (1.00+1.073/M);
 			val retval = calcSize(counter,alpha);
 			
 			ctx.aggregate(retval);
