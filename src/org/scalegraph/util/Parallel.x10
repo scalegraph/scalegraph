@@ -655,6 +655,7 @@ public class Parallel {
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
+			if(i_start > range.max) break;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
 			async for(ii in i_range) func(ii);
 		}
@@ -667,6 +668,7 @@ public class Parallel {
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
+			if(i_start > range.max) break;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
 			async for(ii in i_range) func(ii);
 		}
@@ -680,6 +682,7 @@ public class Parallel {
 		finish for(i in 0..(nthreads-1)) {
 			val idx = i;
 			val i_start = range.min + i*chunk_size;
+			if(i_start > range.max) break;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
 			async func(idx, i_range);
 		}
@@ -693,6 +696,7 @@ public class Parallel {
 		finish for(i in 0..(nthreads-1)) {
 			val idx = i;
 			val i_start = range.min + i*chunk_size;
+			if(i_start > range.max) break;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
 			async func(idx, i_range);
 		}

@@ -193,6 +193,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		
 		///
 		if(here.id() == 0) {
+			Console.OUT.println("TEAM_SIZE" + team.size());
 			Console.OUT.println("STT_END_COUNT: " + recvStatistics(STT_END_COUNT));
 			Console.OUT.println("STT_ACTIVE_VERTEX: " + recvStatistics(STT_ACTIVE_VERTEX));
 			Console.OUT.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));

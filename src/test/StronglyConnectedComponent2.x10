@@ -101,7 +101,6 @@ public class StronglyConnectedComponent2 {
 					(ctx :VertexContext[SCCVertex, Long, MessageA, Long ], messages :MemoryChunk[MessageA] ) => {
 						
 				if(ctx.superstep()==0) {
-					if(ctx.realId()==0L) Console.OUT.println("NumOfVertex" + ctx.numberOfVertices());
 					//—×Ú“_‚ª‚È‚¯‚ê‚Î‚»‚Ì’¸“_‚Í‚·‚®‚ÉI‚í‚ç‚¹‚é
 					if(ctx.outEdgesId().size()==0L && ctx.inEdgesId().size()==0L && ctx.id()!=0L) {
 						val newInfo = new SCCVertex(ctx.id(), true,true,-1L);
