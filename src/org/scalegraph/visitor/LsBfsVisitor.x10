@@ -20,6 +20,7 @@ import org.scalegraph.graph.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.Bitmap2;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -45,7 +46,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val _distSparseMatrix: DistSparseMatrix;
         
         val _source: Cell[Vertex];
-        val _queues: IndexedMemoryChunk[Bitmap];
+        val _queues: IndexedMemoryChunk[Bitmap2];
         
         // poniters of current queue and next queue
         val _qPointer: Cell[Int];
@@ -82,15 +83,14 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             _handler = h;
             
             _source = new Cell[Vertex](src);
-            _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap](2,
+            _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](2,
                             _ALIGN,
                             _CONGRUENT);
-            _queues(0) = new Bitmap(_numLocalVertices);
-            _queues(1) = new Bitmap(_numLocalVertices);
+            _queues(0) = new Bitmap2(_numLocalVertices);
+            _queues(1) = new Bitmap2(_numLocalVertices);
             _qPointer = new Cell[Int](0);
             _currentLevel = new Cell[Long](0);
             
-           
             _distanceMap = IndexedMemoryChunk.allocateZeroed[Long](
                     _numLocalVertices,
                     _ALIGN,
@@ -360,94 +360,4 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             }
         }
     }
-
-    /**
-     * Bitmap used to implement queue for saving space and parallizing bfs
-     */
-	public static struct Bitmap {
-	    protected val bitLength: Long;
-	    protected val data: IndexedMemoryChunk[Long];
-	    protected val bitPerWord = 64;
-	    protected val setCount: AtomicLong;
-	    
-	    public def this(length: Long) {
-	        bitLength = length;
-	        val allocSize = (bitLength >> 6) + 1; // div by 64
-	        data = IndexedMemoryChunk.allocateZeroed[Long](allocSize, 64, false); 
-	        // Clear bits
-	        for (i in 0..(data.length() - 1))	            
-	           data(i) = 0L;
-	        setCount = new AtomicLong(0);
-	    }
-	    
-	    public atomic def set(bit: Long) {
-	        val bitOffset = bit & ((1L << 6) -1);
-	        val wordOffset = bit >> 6;
-	        val mask = (1L << (bitOffset as Int));
-	        
-	        @Ifndef("NO_BOUNDS_CHECKS") {
-	            if(bit < 0 || bit >= bitLength)
-	                throw new ArrayIndexOutOfBoundsException("bit (" + bit + ") not contained in BitMap");
-	        }
-	        // If it is already set
-	        if (((data(wordOffset) as ULong) & mask as ULong) > 0UL)
-	            throw new Exception("Bit (" + bit + ") is already set"); 	       
-	        data(wordOffset) = data(wordOffset) | mask; 
-	        setCount.incrementAndGet();
-	    }
-	    
-	    public atomic def clear(bit: Long) {
-	        val bitOffset = bit & ((1L << 6) -1);
-	        val wordOffset = bit >> 6;
-	        val mask = ~(1L << (bitOffset as Int));
-	        
-	        @Ifndef("NO_BOUNDS_CHECKS") {
-	            if(bit < 0 || bit >= bitLength)
-	                throw new ArrayIndexOutOfBoundsException("bit (" + bit + ") not contained in BitMap");
-	        }
-	        // If it is already clear
-	        if ((data(wordOffset) | mask) == 0L)
-	            throw new Exception("Bit is already cleared");
-	        data(wordOffset) = data(wordOffset) & mask;
-	        setCount.decrementAndGet();
-	    }
-	    
-	    public def isSet(bit: Long) = !isNotSet(bit);
-	    
-	    public def isNotSet(bit: Long): Boolean {
-	        val bitOffset = bit & ((1L << 6) -1);
-	        val wordOffset = bit >> 6;
-	        val mask = (1L << (bitOffset as Int));
-	        return (data(wordOffset) as ULong & mask as ULong) == 0UL;
-	    }
-	    
-	    public def examine(callback: (i: Long, threadId: Int) => void) {
-	        val f = (w: Long, threadId: Int) => {
-	            val word = data(w);
-	            var mask: Long = 0x1;
-	            var callCount: Long = 0;
-	            if (word == 0L)
-	                return;
-	            for (var l: Long = 0; l < bitPerWord; ++l) { 
-	                mask = 1L << (l as Int);
-	                if (((word as ULong) & (mask as ULong)) > 0UL) {
-	                    val bitPos = w * bitPerWord + l;	                    
-	                    if (bitPos >= bitLength)
-	                        break;	                    
-	                    callback(bitPos , threadId);
-	                } 
-	            }
-	        };
-	        if (setCount.longValue() > 0)
-	            iter(0..(data.length() as Long - 1), f);
-	    }
-	    	    
-	    public def clearAll() {   
-	        for (i in 0..(data.length() - 1))	            
-	            data(i) = 0L;
-	        setCount.set(0L);
-	    }
-	    
-	    public def setBitCount() = setCount.longValue();
-	}
 }
