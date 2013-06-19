@@ -132,7 +132,7 @@ public class StronglyConnectedComponent2 {
 				if(ctx.superstep()>0) {
 					if(ctx.value().front && ctx.value().back)
 						return;
-					Console.OUT.println(ctx.realId());
+//					Console.OUT.println(ctx.realId());
 					var existFront:Boolean = false;
 					var existBack:Boolean = false;
 					for(i in messages.range()) {
@@ -197,8 +197,8 @@ public class StronglyConnectedComponent2 {
 				}
 				if(ctx.superstep()==2) {
 					//messageはそれぞれ一つしかこないので、0のはず
-					Console.OUT.println("    :ctx.realId() "+ctx.realId() );
-					Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
+//					Console.OUT.println("    :ctx.realId() "+ctx.realId() );
+//					Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
 //					Console.OUT.println("     value" + ctx.value().leaderId);
 					
 					if(messages(0).front) {
@@ -218,25 +218,6 @@ public class StronglyConnectedComponent2 {
 				*/
 				}
 				
-				//最も影響が大きそうな、隣に同じ辺がないようなものをどうにか取り除く処理を行う
-				//BFS処理を行う
-				
-				// if(ctx.superstep()==3 && !ctx.value().front && !ctx.value().back) {
-					// var hasEdge:Boolean = false;
-					// for(i in messages.range()) {
-						// if(messages(i).id == ctx.value().leaderId)
-							// hasEdge = true;
-					// }
-					// //!hasEdgeが実行される <=> ctx.revive()されている頂点 で同じleaderの隣接点なし<=> 
-					// 次生きていていて隣接点はない
-					// if(!hasEdge) {
-						// val newInfo = new SCCVertex(ctx.id(), true, true, -1L);
-						// ctx.setValue(newInfo);
-					// }
-					// ctx.voteToHalt();
-				// } 
-				
-				 
 			},
 			//aggregateは多分使わないので適当なことを書いた
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
@@ -262,7 +243,7 @@ public class StronglyConnectedComponent2 {
 						}
 					}
 				}
-				Console.OUT.println("value.minimId"+ctx.realId()+" " + ctx.value().minimId);
+//				Console.OUT.println("value.minimId"+ctx.realId()+" " + ctx.value().minimId);
 				if(update) {
 					val mes = new MessageC(ctx.value().leaderId, ctx.value().minimId);
 					for(i in ctx.outEdgesId().range())

@@ -56,7 +56,7 @@ struct MessageC {
 	}
 }
 
-public class StronglyConnectedComponent2 {
+public class SCCDebug{
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;	
 		val inputFormat = (s:String) => {
