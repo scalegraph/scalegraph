@@ -190,6 +190,17 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		// check termination
 		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
 		team.allreduce(statistics.subpart(0, STT_MAX), recvStatistics, Team.ADD);
+		
+		///
+		if(here.id() == 0) {
+			Console.OUT.println("TEAM_SIZE" + team.size());
+			Console.OUT.println("STT_END_COUNT: " + recvStatistics(STT_END_COUNT));
+			Console.OUT.println("STT_ACTIVE_VERTEX: " + recvStatistics(STT_ACTIVE_VERTEX));
+			Console.OUT.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
+			Console.OUT.println("STT_VERTEX_MESSAGE: " + recvStatistics(STT_VERTEX_MESSAGE));
+		}
+		
+		
 		if(recvStatistics(STT_END_COUNT) > 0) {
 			// terminate
 			return true;
@@ -230,14 +241,14 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		ectx.mInEdgesOffset = mInEdge.offsets;
 		ectx.mInEdgesVertex = mInEdge.vertexes;
 		ectx.mInEdgesMask = mInEdgesMask;
+
+		// initialize halt flag
+		val vertexActvieBitmap = mVertexActive.raw();
+		MemoryChunk.copy(mVertexShouldBeActive.raw(), 0L,
+				vertexActvieBitmap, 0L, vertexActvieBitmap.size());
 		
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
-			
-			// initialize halt flag
-			val vertexActvieBitmap = mVertexActive.raw();
-			MemoryChunk.copy(mVertexShouldBeActive.raw(), 0L,
-					vertexActvieBitmap, 0L, vertexActvieBitmap.size());
 			
 			Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
 				val vc = vctxs(tid);
