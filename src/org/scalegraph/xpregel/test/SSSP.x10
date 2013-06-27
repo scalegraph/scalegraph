@@ -27,9 +27,8 @@ public class SSSP {
 		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
 
 		val start_init_graph = System.currentTimeMillis();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		g.addEdges(edgeList);
-		g.setEdgeAttribute[Double]("edgevalue", weigh);		
+		val g = Graph.make(team, edgeList);
+		g.setEdgeAttribute("edgevalue", weigh);
 		
 		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");

@@ -510,6 +510,50 @@ public class Parallel {
     		Algorithm.sort(dst_i.subpart(off, len), dst_v.subpart(off, len));
     	}
     }
+    
+    public static def sort[V1, V2](rangeScale :Int,
+    		src_i :MemoryChunk[Long], src_v1 :MemoryChunk[V1], src_v2 :MemoryChunk[V2],
+    		dst_i :MemoryChunk[Long], dst_v1 :MemoryChunk[V1], dst_v2 :MemoryChunk[V2])
+    {
+    	val numThreads = Runtime.NTHREADS;
+    	val logChunks = MathAppend.ceilLog2(numThreads * 4);
+    	val numChunks = 1 << logChunks;
+    	val numShift = rangeScale - logChunks;
+    	val sg = new ScatterGather(numChunks);
+    	
+    	assert (src_i.size() == src_v1.size());
+    	assert (src_i.size() == src_v2.size());
+    	assert (src_i.size() == dst_i.size());
+    	assert (src_i.size() == dst_v1.size());
+    	assert (src_i.size() == dst_v2.size());
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val counts = sg.counts(tid as Int);
+    		for(i in r) {
+    			counts(src_i(i) >> numShift)++;
+    		}
+    	});
+    	
+    	sg.sum();
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val offsets = sg.offsets(tid as Int);
+    		for(i in r) {
+    			val dstIndex = offsets(src_i(i) >> numShift)++;
+    			dst_i(dstIndex) = src_i(i);
+    			dst_v1(dstIndex) = src_v1(i);
+    			dst_v2(dstIndex) = src_v2(i);
+    		}
+    	});
+    	
+    	sg.check(src_i.size() as Int);
+    	
+    	finish for(i in 0..(numChunks-1)) async {
+    		val off = sg.offsets()(i);
+    		val len = sg.counts()(i);
+    		Algorithm.sort(dst_i.subpart(off, len), dst_v1.subpart(off, len), dst_v2.subpart(off, len));
+    	}
+    }
 
 	/**
      * Searches the given indices  for the least indices that makes the given function true.using the binary search

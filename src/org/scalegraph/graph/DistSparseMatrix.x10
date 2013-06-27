@@ -8,31 +8,31 @@ import org.scalegraph.util.Dist2D;
 
 /** Distributed sparse matrix.
  */
-public struct DistSparseMatrix {
+public struct DistSparseMatrix[T] {
 
-	private static struct Data {
+	private static struct Data[T] {
 		public val dist :Dist2D;
 		public val ids :IdStruct;
-		public val matrix :SparseMatrix;
+		public val matrix :SparseMatrix[T];
 		
-		public def this(dist :Dist2D, ids :IdStruct, matrix :SparseMatrix) {
+		public def this(dist :Dist2D, ids :IdStruct, matrix :SparseMatrix[T]) {
 			this.dist = dist;
 			this.ids = ids;
 			this.matrix = matrix;
 		}
 	}
 	
-	private val data :PlaceLocalHandle[Cell[Data]];
+	private val data :PlaceLocalHandle[Cell[Data[T]]];
 	
 	/** Creates distributed sparse matrix. Currently there is a limitation that dist.parentTeam().role() must be the place 0.
 	 * @param dist Distribution for sparse matrix
 	 * @param init The closure that constructs sparse matrix for plane 0.
 	 */
-	public def this(dist :Dist2D, init :()=>Tuple2[IdStruct, SparseMatrix]) {
+	public def this(dist :Dist2D, init :()=>Tuple2[IdStruct, SparseMatrix[T]]) {
 		// create z == 0 plane
-		val data_ = PlaceLocalHandle.make[Cell[Data]](dist.allTeam().placeGroup(), ()=> {
+		val data_ = PlaceLocalHandle.make[Cell[Data[T]]](dist.allTeam().placeGroup(), ()=> {
 			val r = init();
-			return new Cell[Data](new Data(dist, r.get1(), r.get2()));
+			return new Cell[Data[T]](new Data(dist, r.get1(), r.get2()));
 		});
 		this.data = data_;
 		
@@ -68,7 +68,7 @@ public struct DistSparseMatrix {
 	 */
 	public def del() {
 		val cache = data()();
-		data()() = Data(cache.dist, cache.ids, Zero.get[SparseMatrix]());
+		data()() = Data[T](cache.dist, cache.ids, Zero.get[SparseMatrix[T]]());
 	}
 
 	/** (Not implemented)

@@ -30,9 +30,9 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	val mInEdge :GraphEdge[E];
 	var mInEdgesMask :Bitmap;
 	
-	public def this(team :Team, matrix :DistSparseMatrix) {
+	public def this(team :Team, ids :IdStruct) {
 		mTeam = new Team2(team);
-		mIds = matrix.ids();
+		mIds = ids;
 		
 		val numVertexes = mIds.numberOfLocalVertexes();
 		
@@ -40,7 +40,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mVertexActive = new Bitmap(numVertexes, true);
 		mVertexShouldBeActive = new Bitmap(numVertexes, true);
 
-		mOutEdge = new GraphEdge[E](matrix());
+		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
 		
 		if (here.id == 0) {
@@ -48,6 +48,12 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			Console.OUT.println("lgc = " + mIds.lgc);
 			Console.OUT.println("lgr = " + mIds.lgr);	
 		}
+	}
+	
+	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long]) {
+		this(team, edgeIndexMatrix.ids());
+		mOutEdge.offsets = edgeIndexMatrix().offsets;
+		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
 	}
 	
 	public def updateInEdge() {
