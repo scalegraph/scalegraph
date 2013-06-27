@@ -490,18 +490,21 @@ import org.scalegraph.graph.id.IdStruct;
 	public def createDistEdgeIndexMatrix(dist2d :Dist2D, directed :Boolean, outerOrInner :Boolean) {
 		val team_ = team;
 		val edgelist_ = edgeList;
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
-		val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
-		val places = dist2d.allTeam().places();
-		for([i] in places) {
-			roleMap(i) = team_.role(places(i))(0);
-		}
-		val ids = dist2d.getIds(numberOfVertices, outerOrInner);
-		val rmask = (1L << ids.lgr) - 1;
-		val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
 		return new DistSparseMatrix(dist2d, () => {
 			val scatterGather = new DistScatterGather(team_);
 			val edgelist__ = edgelist_();
+			val ids = dist2d.getIds(vi.numberOfVertices,
+					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
+			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
+			val places = dist2d.allTeam().places();
+			for([i] in places) {
+				roleMap(i) = team_.role(places(i))(0);
+			}
+			val rmask = (1L << ids.lgr) - 1;
+			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
+			
 			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
@@ -524,7 +527,8 @@ import org.scalegraph.graph.id.IdStruct;
 			val teamRank = team_.role()(0);
 			val teamSize = team_.size();
 			val sendCount = scatterGather.sendCount();
-			val sendEdges = new MemoryChunk[EDGE](sendCount);
+			val sendSrcV = new MemoryChunk[Long](sendCount);
+			val sendDstV = new MemoryChunk[Long](sendCount);
 			val sendValues = new MemoryChunk[Long](sendCount);
 			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
@@ -548,7 +552,8 @@ import org.scalegraph.graph.id.IdStruct;
 						val v0 = edgelist__(i*2 + 0);
 						val v1 = edgelist__(i*2 + 1);
 						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
-						sendEdges(off0) = EDGE(v0, v1);
+						sendSrcV(off0) = v0;
+						sendDstV(off0) = v1;
 						sendValues(off0) = i * teamSize + teamRank;
 					}
 				}
@@ -557,17 +562,20 @@ import org.scalegraph.graph.id.IdStruct;
 						val v0 = edgelist__(i*2 + 0);
 						val v1 = edgelist__(i*2 + 1);
 						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
-						sendEdges(off0) = EDGE(v0, v1);
+						sendSrcV(off0) = v0;
+						sendDstV(off0) = v1;
 						sendValues(off0) = i * teamSize + teamRank;
 						val off1 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
-						sendEdges(off1) = EDGE(v1, v0);
+						sendSrcV(off1) = v1;
+						sendDstV(off1) = v0;
 						sendValues(off1) = i * teamSize + teamRank;
 					}
 				}
 			});
-			val recvEdges = scatterGather.scatter(sendEdges);
-			val recvValues = scatterGather.scatter(sendValues);
-			return new Tuple2[IdStruct, SparseMatrix[Long]](ids, new SparseMatrix(recvEdges, recvValues, ids));
+			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
+			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
+			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
+			return new Tuple2[IdStruct, SparseMatrix[Long]](ids, new SparseMatrix(recvSrcV, recvDstV, recvValues, ids));
 		});
 	}
 	
@@ -575,20 +583,23 @@ import org.scalegraph.graph.id.IdStruct;
 	{
 		val team_ = team;
 		val edgelist_ = edgeList;
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		val att = getEdgeAttribute[T](name);
-		
-		val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
-		val places = dist2d.allTeam().places();
-		for([i] in places) {
-			roleMap(i) = team_.role(places(i))(0);
-		}
-		val ids = dist2d.getIds(numberOfVertices, outerOrInner);
-		val rmask = (1L << ids.lgr) - 1;
-		val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
+
 		return new DistSparseMatrix(dist2d, () => {
 			val scatterGather = new DistScatterGather(team_);
 			val edgelist__ = edgelist_();
+			val ids = dist2d.getIds(vi.numberOfVertices,
+					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
+			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
+			val places = dist2d.allTeam().places();
+			for([i] in places) {
+				roleMap(i) = team_.role(places(i))(0);
+			}
+			val rmask = (1L << ids.lgr) - 1;
+			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
 			val att_ = att.values()().raw();
+			
 			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
@@ -648,8 +659,8 @@ import org.scalegraph.graph.id.IdStruct;
 						sendDstV(off0) = v1;
 						sendValues(off0) = att_(i);
 						val off1 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
-						sendSrcV(off1) = v0;
-						sendDstV(off1) = v1;
+						sendSrcV(off1) = v1;
+						sendDstV(off1) = v0;
 						sendValues(off1) = att_(i);
 					}
 				}
@@ -657,7 +668,7 @@ import org.scalegraph.graph.id.IdStruct;
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
-			return new Tuple2[IdStruct, SparseMatrix[T]](ids, new SparseMatrix(recvEdges, recvValues, ids));
+			return new Tuple2[IdStruct, SparseMatrix[T]](ids, new SparseMatrix(recvSrcV, recvDstV, recvValues, ids));
 		});
 	}
 	
@@ -679,49 +690,31 @@ import org.scalegraph.graph.id.IdStruct;
 				val edgelist__ = edgelist_();
 				val numEdges = edgelist__.size() / 2;
 				val sendCount = directed ? numEdges : numEdges * 2;
-				val sendEdges = new MemoryChunk[EDGE](sendCount);
+				val sendSrcV = new MemoryChunk[Long](sendCount);
+				val sendDstV = new MemoryChunk[Long](sendCount);
 				val sendIndexes = new MemoryChunk[Long](sendCount);
 				val teamSize = team_.size();
 				val teamRank = team_.role()(0);
 				Parallel.iter(0..(numEdges - 1), (tid:Long, r:LongRange) => {
 					if(directed) {
-						if(outerOrInner) {
-							for(i in r) {
-								val v0 = edgelist__(i*2 + 0);
-								val v1 = edgelist__(i*2 + 1);
-								sendEdges(i) = EDGE(v0, v1);
-								sendIndexes(i) = i * teamSize + teamRank;
-							}
-						}
-						else {
-							for(i in r) {
-								val v0 = edgelist__(i*2 + 0);
-								val v1 = edgelist__(i*2 + 1);
-								sendEdges(i) = EDGE(v1, v0);
-								sendIndexes(i) = i * teamSize + teamRank;
-							}
+						for(i in r) {
+							val v0 = edgelist__(i*2 + 0);
+							val v1 = edgelist__(i*2 + 1);
+							sendSrcV(i) = v0;
+							sendDstV(i) = v1;
+							sendIndexes(i) = i * teamSize + teamRank;
 						}
 					}
 					else {
-						if(outerOrInner) {
-							for(i in r) {
-								val v0 = edgelist__(i*2 + 0);
-								val v1 = edgelist__(i*2 + 1);
-								sendEdges(i*2 + 0) = EDGE(v0, v1);
-								sendIndexes(i*2 + 0) = i * teamSize + teamRank;
-								sendEdges(i*2 + 1) = EDGE(v1, v0);
-								sendIndexes(i*2 + 1) = i * teamSize + teamRank;
-							}
-						}
-						else {
-							for(i in r) {
-								val v0 = edgelist__(i*2 + 0);
-								val v1 = edgelist__(i*2 + 1);
-								sendEdges(i*2 + 0) = EDGE(v1, v0);
-								sendIndexes(i*2 + 0) = i * teamSize + teamRank;
-								sendEdges(i*2 + 1) = EDGE(v0, v1);
-								sendIndexes(i*2 + 1) = i * teamSize + teamRank;
-							}
+						for(i in r) {
+							val v0 = edgelist__(i*2 + 0);
+							val v1 = edgelist__(i*2 + 1);
+							sendSrcV(i*2 + 0) = v0;
+							sendDstV(i*2 + 0) = v1;
+							sendIndexes(i*2 + 0) = i * teamSize + teamRank;
+							sendSrcV(i*2 + 1) = v1;
+							sendDstV(i*2 + 1) = v0;
+							sendIndexes(i*2 + 1) = i * teamSize + teamRank;
 						}
 					}
 				});
@@ -729,7 +722,7 @@ import org.scalegraph.graph.id.IdStruct;
 				val team2 = new Team2(team_);
 				
 				val sendNumEdges = new MemoryChunk[Int](1);
-				sendNumEdges(0) = sendEdges.size() as Int;
+				sendNumEdges(0) = sendSrcV.size() as Int;
 				if(place == here) { // root
 					val counts = new MemoryChunk[Int](team_.size(), 0, true);
 					val offsets  = new MemoryChunk[Int](team_.size() + 1);
@@ -737,13 +730,15 @@ import org.scalegraph.graph.id.IdStruct;
 					
 					offsets(0) = 0;
 					for(i in counts.range()) offsets(i + 1) = offsets(i) + counts(i);
-					val recvEdges = new MemoryChunk[EDGE](offsets(team_.size()));
+					val recvSrcV = new MemoryChunk[Long](offsets(team_.size()));
+					val recvDstV = new MemoryChunk[Long](offsets(team_.size()));
 					val recvIndexes = new MemoryChunk[Long](offsets(team_.size()));
-					team2.gatherv(root, sendEdges, recvEdges, counts, offsets);
+					team2.gatherv(root, sendSrcV, recvSrcV, counts, offsets);
+					team2.gatherv(root, sendDstV, recvDstV, counts, offsets);
 					team2.gatherv(root, sendIndexes, recvIndexes, counts, offsets);
 					
 					val lgl = MathAppend.ceilLog2(numberOfVertices);
-					val sparseMatrix = new SparseMatrix[Long](recvEdges, recvIndexes, lgl);
+					val sparseMatrix = new SparseMatrix[Long](recvSrcV, recvDstV, recvIndexes, lgl, outerOrInner);
 					
 					// write result
 					val ref = new GlobalRef[Cell[SparseMatrix[Long]]](new Cell[SparseMatrix[Long]](sparseMatrix));
@@ -753,10 +748,10 @@ import org.scalegraph.graph.id.IdStruct;
 				}
 				else { // non-root
 					val nullInt = MemoryChunk.getNull[Int]();
-					val nullEdge = MemoryChunk.getNull[EDGE]();
 					val nullLong = MemoryChunk.getNull[Long]();
 					team2.gather(root, sendNumEdges, nullInt);
-					team2.gatherv(root, sendEdges, nullEdge, nullInt, nullInt);
+					team2.gatherv(root, sendSrcV, nullLong, nullInt, nullInt);
+					team2.gatherv(root, sendDstV, nullLong, nullInt, nullInt);
 					team2.gatherv(root, sendIndexes, nullLong, nullInt, nullInt);
 				}
 			}

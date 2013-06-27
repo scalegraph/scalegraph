@@ -1,8 +1,10 @@
-package org.scalegraph.graph;
+package org.scalegraph.blas;
 
 import x10.util.Team;
+import org.scalegraph.graph.id.Twod;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.tuple.*;
+import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Dist2D;
 
@@ -75,5 +77,75 @@ public struct DistSparseMatrix[T] {
 	 */
 	public static def makeReplica[T](attribute :DistMemoryChunk[T], teamArray :Array[Team]) {
 		// return PlaceLocalHandle[Rail[T]]...
+	}
+	
+	public def simplify(removeDuplicates :Boolean, removeSelfloops :Boolean, reduction :(MemoryChunk[T]) => T)
+	{
+		if(!removeDuplicates && !removeSelfloops) return ;
+		
+		data()().dist.allTeam().placeGroup().broadcastFlat(() => {
+			val dist = data()().dist;
+			val m = data()().matrix;
+			val ids = data()().ids;
+			val StoV = Twod.StoV(ids, dist.c());
+			val DtoV = Twod.DtoV(ids, dist.r());
+			var dstIdx :Long = 0L;
+			var cachedOffset :Long = m.offsets(0);
+			
+			if(ids.outerOrInner) {
+				for(i in 1L..(m.offsets.size()-2)) {
+					val off = cachedOffset;
+					val next = m.offsets(i+1);
+					var prev :Long = -1L;
+					var prev_idx :Long = -1L;
+					for(var ei :Long = off; ei < next;) {
+						val v = m.vertexes(ei);
+						if(removeSelfloops && DtoV(v) == StoV(i)) ++ei; // !!
+						else if(removeDuplicates && v == prev) {
+							for( ++ei; ei < next; ++ei) {
+								if(m.vertexes(ei) != prev) break;
+							}
+							m.values(dstIdx-1) = reduction(m.values.subpart(prev_idx, ei - prev_idx));
+							continue;
+						} else {
+							prev = v;
+							prev_idx = ei;
+							m.vertexes(dstIdx) = v;
+							m.values(dstIdx) = m.values(ei);
+							++dstIdx; ++ei;
+						}
+					}
+					cachedOffset = next;
+					m.offsets(i+1) = dstIdx;
+				}
+			}
+			else {
+				for(i in 1L..(m.offsets.size()-2)) {
+					val off = cachedOffset;
+					val next = m.offsets(i+1);
+					var prev :Long = -1L;
+					var prev_idx :Long = -1L;
+					for(var ei :Long = off; ei < next;) {
+						val v = m.vertexes(ei);
+						if(removeSelfloops && StoV(v) == DtoV(i)) ++ei; // !!
+						else if(removeDuplicates && v == prev) {
+							for( ++ei; ei < next; ++ei) {
+								if(m.vertexes(ei) != prev) break;
+							}
+							m.values(dstIdx-1) = reduction(m.values.subpart(prev_idx, ei - prev_idx));
+							continue;
+						} else {
+							prev = v;
+							prev_idx = ei;
+							m.vertexes(dstIdx) = v;
+							m.values(dstIdx) = m.values(ei);
+							++dstIdx; ++ei;
+						}
+					}
+					cachedOffset = next;
+					m.offsets(i+1) = dstIdx;
+				}
+			}
+		});
 	}
 }

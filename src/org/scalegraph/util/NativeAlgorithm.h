@@ -1,4 +1,7 @@
 
+#ifndef __ORG_SCALEGRAPH_UTIL_NATIVE_ALGORITHM__
+#define __ORG_SCALEGRAPH_UTIL_NATIVE_ALGORITHM__
+
 #include <stdint.h>
 #include <algorithm>
 #include <functional>
@@ -215,4 +218,6 @@ namespace org { namespace scalegraph { namespace util {
 	}
 
 }}} // namespace org { namespace scalegraph { namespace util {
+
+#endif // #ifndef __ORG_SCALEGRAPH_UTIL_NATIVE_ALGORITHM__
 

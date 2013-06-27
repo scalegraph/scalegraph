@@ -1,4 +1,4 @@
-package org.scalegraph.graph;
+package org.scalegraph.blas;
 
 import x10.util.Team;
 import x10.compiler.Ifndef;
@@ -8,6 +8,7 @@ import org.scalegraph.graph.id.Twod;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
+import org.scalegraph.util.Algorithm;
 
 /** Sparse matrix representation.
  */
@@ -43,7 +44,6 @@ public struct SparseMatrix[T] {
 	 * @param ids IdStruct that provides the distribution information.
 	 */
 	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], ids :IdStruct) {
-		type EDGE = Tuple2[Long,Long];
 
 		if(srcV.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
@@ -64,7 +64,6 @@ public struct SparseMatrix[T] {
 
 		val offsetLength = 1L << (ids.lgl + (ids.outerOrInner ? ids.lgr : ids.lgc));
 
-		val counts = new MemoryChunk[Long](offsetLength);
 		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
 		val origin = new MemoryChunk[Long](srcV.size());
 		val target = new MemoryChunk[Long](srcV.size());
@@ -77,34 +76,19 @@ public struct SparseMatrix[T] {
 			Parallel.sort(ids.lgl + ids.lgr, srcV, dstV, values, origin, target, values_);
 		else
 			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
+		
+		Parallel.makeOffset(origin, offsets_);
 
-		Parallel.iter(edges.range(), (tie :Long, r :LongRange) => {
-			for(i in r)
-				counts.atomicAdd(edges(i).get1(), 1);
-		});
-
-		Parallel.scan(counts.range(), offsets_, 0L,
-			(i:Long, v:Long) => counts(i) + v,
-			(v1:Long, v2:Long) => v1 + v2);
-
-		Parallel.iter(counts.range(), (tid :Long, r :LongRange) => {
+		Parallel.iter(1L..(offsetLength-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
 				val off = offsets_(i);
-				val next = offsets_(i+1);
-				val len = next - off;
-
-				for(idx in off..(next-1)) {
-					assert (edges(idx).get1() == i);
-					vertexes_(idx) = edges(idx).get2();
-				}
-
-				Parallel.sort(vertexes_.subpart(off, len), values.subpart(off, len), 0,
-					(v0:Long, v1:Long) => (v0.compareTo(v1)));
+				val len = offsets_(i+1) - off;
+				Algorithm.sort(target.subpart(off, len), values.subpart(off, len));
 			}
 		});
 
 		this.offsets = offsets_;
-		this.vertexes = vertexes_;
+		this.vertexes = target;
 		this.values = values;
 	}
 
@@ -113,10 +97,9 @@ public struct SparseMatrix[T] {
 	 * @param indexes The indexes corresponds to the edge list.
 	 * @param lgl The number of bits for the vertex ID.
 	 */
-	public def this(edges :MemoryChunk[Tuple2[Long,Long]], values: MemoryChunk[T], lgl :Int) {
-		type EDGE = Tuple2[Long,Long];
+	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], lgl :Int, outerOrInner :Boolean) {
 
-		if(edges.size() == 0L) { // shortcut
+		if(srcV.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
 			this.vertexes = MemoryChunk.getNull[Long]();
 			this.values = MemoryChunk.getNull[T]();
@@ -125,37 +108,28 @@ public struct SparseMatrix[T] {
 
 		val offsetLength = 1L << lgl;
 
-		val counts = new MemoryChunk[Long](offsetLength, 0, true);
 		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
-		val vertexes_ = new MemoryChunk[Long](edges.size());
+		val origin = new MemoryChunk[Long](srcV.size());
+		val target = new MemoryChunk[Long](srcV.size());
+		val values_ = new MemoryChunk[T](srcV.size());
 
-		Parallel.sort[EDGE, T](edges, values, (e0:EDGE,e1:EDGE)=> (e0.get1().compareTo(e1.get1())));
+		if(outerOrInner)
+			Parallel.sort(lgl, srcV, dstV, values, origin, target, values_);
+		else
+			Parallel.sort(lgl, dstV, srcV, values, origin, target, values_);
+		
+		Parallel.makeOffset(origin, offsets_);
 
-		Parallel.iter(edges.range(), (tie :Long, r :LongRange) => {
-			for(i in r)
-				counts.atomicAdd(edges(i).get1(), 1);
-		});
-
-		Parallel.scan(counts.range(), offsets_, 0L,
-			(i:Long, v:Long) => counts(i) + v,
-			(v1:Long, v2:Long) => v1 + v2);
-
-		Parallel.iter(counts.range(), (tid :Long, r :LongRange) => {
+		Parallel.iter(1L..(offsetLength-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
 				val off = offsets_(i);
-				val next = offsets_(i+1);
-				val len = next - off;
-
-				for(idx in off..(next-1))
-					vertexes_(idx) = edges(idx).get2();
-
-				Parallel.sort(vertexes_.subpart(off, len), values.subpart(off, len), 0,
-					(v0:Long, v1:Long) => (v0.compareTo(v1)));
+				val len = offsets_(i+1) - off;
+				Algorithm.sort(target.subpart(off, len), values.subpart(off, len));
 			}
 		});
 
 		this.offsets = offsets_;
-		this.vertexes = vertexes_;
+		this.vertexes = target;
 		this.values = values;
 	}
 
@@ -189,5 +163,38 @@ public struct SparseMatrix[T] {
 
 			return new Cell[SparseMatrix[T]](new SparseMatrix[T](offsets, vertexes, values));
 		});
+	}
+	
+	public def simplify(removeDuplicates :Boolean, removeSelfloops :Boolean, reduction :(MemoryChunk[T]) => T)
+	{
+		if(!removeDuplicates && !removeSelfloops) return ;
+		
+		var dstIdx :Long = 0L;
+		var cachedOffset :Long = offsets(0);
+		for(i in 1L..(offsets.size()-2)) {
+			val off = cachedOffset;
+			val next = offsets(i+1);
+			var prev :Long = -1L;
+			var prev_idx :Long = -1L;
+			for(var ei :Long = off; ei < next;) {
+				val v = vertexes(ei);
+				if(removeSelfloops && v == i) ++ei;
+				else if(removeDuplicates && v == prev) {
+					for( ++ei; ei < next; ++ei) {
+						if(vertexes(ei) != prev) break;
+					}
+					values(dstIdx-1) = reduction(values.subpart(prev_idx, ei - prev_idx));
+					continue;
+				} else {
+					prev = v;
+					prev_idx = ei;
+					vertexes(dstIdx) = v;
+					values(dstIdx) = values(ei);
+					++dstIdx; ++ei;
+				}
+			}
+			cachedOffset = next;
+			offsets(i+1) = dstIdx;
+		}
 	}
 }

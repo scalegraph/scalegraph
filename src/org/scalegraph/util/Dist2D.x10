@@ -218,13 +218,12 @@ public struct Dist2D {
      * @param numberOfVertices: The max vertex id
      * @param outerOrInner Whether outer edge or inner edge (true: outer, false: inner)
      */
-    public def getIds(numberOfVertices :Long, outerOrInner :Boolean) {
+    public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, outerOrInner :Boolean) {
     	val R = R();
     	val C = C();
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))
     		throw new IllegalArgumentException();
     	val teamSize = allTeam().size();
-    	val numberOfLocalVertices = (numberOfVertices + teamSize - 1) / teamSize;
     	return new IdStruct(MathAppend.ceilLog2(R), MathAppend.ceilLog2(C),
     			MathAppend.ceilLog2(numberOfLocalVertices), outerOrInner, numberOfLocalVertices, numberOfVertices);
     }
