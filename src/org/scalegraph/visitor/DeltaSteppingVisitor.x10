@@ -12,15 +12,14 @@ import x10.io.SerialData;
 import x10.compiler.Inline;
 import x10.compiler.Native;
 
-public type Vertex = Long;
-public type Distance = Double;
-public type DeltaSteppingHandler = (v: Vertex, pred: Vertex, isFirstVisit: Boolean, dist: Distance) => void;
-
 public class DeltaSteppingVisitor {
+    
+    private static type Vertex = Long;
+    private static type Distance = Double;
+    public static type DeltaSteppingHandler = (v: Vertex, pred: Vertex, isFirstVisit: Boolean, dist: Distance) => void;
     
     private val MAX_BUCKET_INDEX = Int.MAX_VALUE;
     
-    private static type Vertex = Long;
     private static type Bucket = Array[Bitmap2]{self.size == 2};
     private static type Buckets = GrowableIndexedMemoryChunk[Bucket];
     private static type BucketIndex = Int;

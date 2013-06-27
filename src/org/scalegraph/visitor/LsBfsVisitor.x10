@@ -22,10 +22,6 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Bitmap2;
 
-public type Vertex = Long;
-public type Distance = Long;
-public type LsBFSHandler = (v: Vertex, pred: Vertex, isFirstVisit: Boolean, dist: Distance) => void;
-
 /**
  * Traverse graph in level-synchronous bfs fashion
  * <p>
@@ -34,6 +30,11 @@ public type LsBFSHandler = (v: Vertex, pred: Vertex, isFirstVisit: Boolean, dist
  * 
  */
 public class LsBfsVisitor implements x10.io.CustomSerialization {
+    
+    private static type Vertex = Long;
+    private static type Distance = Long;
+    public static type LsBFSHandler = (v: Vertex, pred: Vertex, isFirstVisit: Boolean, dist: Distance) => void;
+    
     private val team: Team;
     private val lgl: Int;
     private val lgc: Int;
