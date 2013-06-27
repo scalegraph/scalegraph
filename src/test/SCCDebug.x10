@@ -12,51 +12,51 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-struct SCCVertex {
-	val leaderId:Long; 
-	val front:Boolean; 
-	val back:Boolean;
-	val minimId:Long;
-	def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long) {
-		leaderId = leader; 
-		front = fro; 
-		back = bac;
-		minimId = tmp;
+public class SCCDebug {
+	private static struct SCCVertex {
+		val leaderId:Long; 
+		val front:Boolean; 
+		val back:Boolean;
+		val minimId:Long;
+		def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long) {
+			leaderId = leader; 
+			front = fro; 
+			back = bac;
+			minimId = tmp;
+		}
 	}
-}
-struct MessageA {
-	val leaderId:Long;
-	val dir:Boolean;
-	def this(lead:Long, d:Boolean) {
-		leaderId = lead;
-		dir = d;	
+	private static struct MessageA {
+		val leaderId:Long;
+		val dir:Boolean;
+		def this(lead:Long, d:Boolean) {
+			leaderId = lead;
+			dir = d;	
+		}
+
+		@Native("c++", "(#this)->FMGL(dir) = #v")
+		native def setDir(v :Boolean) :void;
 	}
 
-	@Native("c++", "(#this)->FMGL(dir) = #v")
-	native def setDir(v :Boolean) :void;
-}
-
-struct MessageB {
-	val front:Boolean;
-	val back:Boolean;
-	val id:Long;
-	def this(fro:Boolean, bac:Boolean, idNum:Long  ) {
-		front = fro;
-		back = bac;
-		id = idNum;
+	private static struct MessageB {
+		val front:Boolean;
+		val back:Boolean;
+		val id:Long;
+		def this(fro:Boolean, bac:Boolean, idNum:Long  ) {
+			front = fro;
+			back = bac;
+			id = idNum;
+		}
 	}
-}
 
-struct MessageC {
-	val leaderId:Long;
-	val minimId:Long;
-	def this(leader:Long, m:Long) {
-		minimId = m;
-		leaderId = leader;
+	private static struct MessageC {
+		val leaderId:Long;
+		val minimId:Long;
+		def this(leader:Long, m:Long) {
+			minimId = m;
+			leaderId = leader;
+		}
 	}
-}
-
-public class StronglyConnectedComponent2 {
+	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;	
 		val inputFormat = (s:String) => {
