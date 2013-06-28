@@ -1,51 +1,37 @@
 package test;
 
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
 import x10.util.Timer;
-import org.scalegraph.graph.Graph;
+
+import org.scalegraph.util.tuple.*;
+import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.gimv.GIMV;
+import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.Attribute;
+import org.scalegraph.generator.GraphGenerator;
+import org.scalegraph.gimv.GIMV;
 
 public class GIMVPageRank {
 
-	public static inputFormat_g1 = (s:String)=> {
-		val elements = s.split(",");
-		return Tuple3[Long, Long, Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				Double.parse(elements(3)));
-	};
-	public static inpurFormat_g2 = (s:String)=> {
-		val elements = s.split(",");
-		return Tuple3[Long, Long, Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				Double.parse(elements(2)));
-	};
+	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
 
-	public static def read_graph(srcfile :String, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
-		val filelist = new Array[String](1); filelist(0) = srcfile;
-		Console.OUT.println("Reading file: " + filelist(0) + " ...");
-
-		val format = srcfile.endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
-		val rawdata = DistributedReader.read(team, filelist, format);
-		val edgelist = rawdata.get1();
-		val weight = rawdata.get2();
+		Console.OUT.println("Generating edge list ...");
+		val rnd = new Random(2, 3);
+		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 
 		Console.OUT.println("Creating graph object ...");
 
 		val g = new Graph(team, Graph.VertexType.Long, useTranslator);
         val start = Timer.nanoTime();
-		g.addEdges(edgelist.raw(team.placeGroup()));
+		g.addEdges(edgelist);
         Console.OUT.printf("addEdges: time = %g\n", (Timer.nanoTime() - start));
-		g.setEdgeAttribute[Double]("weight", weight.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("weight", weigh);
 
 		// check results
 		Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());
@@ -119,7 +105,8 @@ public class GIMVPageRank {
 
 	public static def main(args: Array[String](1)) {
 		val team = Team.WORLD;
-		val g = read_graph(args(0), team, true);
+		val scale = Int.parse(args(0));
+		val g = generate_graph(scale, team, true);
 
 		// normalize weight //
 		normalize_columns_weights(g);
