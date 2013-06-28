@@ -18,7 +18,7 @@ public class GrowableMemory[T] {
 	}
 	
 	/** Creates growable memory with the specified capacity.
-	 * @pragma cap Initial capacity for this instance.
+	 * @param cap Initial capacity for this instance.
 	 */
 	public def this(cap :Long) {
 		mc = new MemoryChunk[T](cap);

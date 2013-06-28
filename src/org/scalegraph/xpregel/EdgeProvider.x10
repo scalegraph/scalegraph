@@ -168,14 +168,14 @@ class EdgeProvider [E] {E haszero} {
 	}
 
 	def inEdgesId(srcid :Long) {
-		val start = mOutOffset(srcid);
-		val length = mOutOffset(srcid + 1) - start;
+		val start = mInOffset(srcid);
+		val length = mInOffset(srcid + 1) - start;
 		return mInVertex.subpart(start, length);
 	}
 
 	def inEdgesValue(srcid :Long) {
-		val start = mOutOffset(srcid);
-		val length = mOutOffset(srcid + 1) - start;
+		val start = mInOffset(srcid);
+		val length = mInOffset(srcid + 1) - start;
 		return mInValue.subpart(start, length);
 	}
 	
