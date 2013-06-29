@@ -1,7 +1,8 @@
 package org.scalegraph.visitor;
-import org.scalegraph.graph.DistSparseMatrix;
+
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.MemoryChunk;
 import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;

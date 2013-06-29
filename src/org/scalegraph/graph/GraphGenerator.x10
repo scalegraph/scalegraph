@@ -1,4 +1,4 @@
-package org.scalegraph.generator;
+package org.scalegraph.graph;
 
 import x10.util.Team;
 import org.scalegraph.util.random.Random;

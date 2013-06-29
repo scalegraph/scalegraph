@@ -20,6 +20,8 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.MathAppend;
 
 import org.scalegraph.graph.id.IdStruct;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving this instance to another place is not worth.
  */

@@ -12,7 +12,7 @@ import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
 
 import org.scalegraph.graph.DistSparseMatrix;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.IdStruct;
 

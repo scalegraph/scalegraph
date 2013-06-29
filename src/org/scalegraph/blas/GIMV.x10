@@ -1,4 +1,4 @@
-package org.scalegraph.gimv;
+package org.scalegraph.blas;
 
 import x10.compiler.Inline;
 import x10.util.Team;

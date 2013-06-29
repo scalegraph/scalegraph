@@ -2,6 +2,10 @@ package org.scalegraph.graph.id;
 
 /**
  * ID Converter method collection for 1D column distributions.
+ * 
+ * V : Real Vertex ID
+ * S : Source form ID
+ * D : Destination form ID
  */
 public class OnedC {
 	/** Vertex ID to Source ID Converter */
