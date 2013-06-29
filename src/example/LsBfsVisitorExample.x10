@@ -38,7 +38,7 @@ public class LsBfsVisitorExample {
         g.addEdges(edgeList.raw(team.placeGroup()));
         
         // Create dist sparse matrix
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
                                               true);

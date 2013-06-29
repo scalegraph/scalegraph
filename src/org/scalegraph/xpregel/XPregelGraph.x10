@@ -10,8 +10,8 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
 
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.Attribute;
 

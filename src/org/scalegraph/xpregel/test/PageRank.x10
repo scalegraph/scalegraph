@@ -27,21 +27,17 @@ public class PageRank {
 		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
 
 		val start_init_graph = System.currentTimeMillis();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		g.addEdges(edgeList);
+		val g = Graph.make(team, edgeList);
 		g.setEdgeAttribute[Double]("edgevalue", weigh);		
-		
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
+		val csr = g.createDistSparseMatrix[Double](
+				Dist2D.make2D(team, 1, team.size()), "edgevalue", true, true);
 
 		// release graph data
 		g.del();
 		edgeList.del();
 		weigh.del();
-		
-		val xpregel = new XPregelGraph[Double, Double](team, csr);
-		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
-		
+
+		val xpregel = XPregelGraph.make[Double, Double](team, csr);
 		
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");

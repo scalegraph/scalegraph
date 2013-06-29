@@ -20,7 +20,7 @@ public class BLASTest {
 		val team = Team.WORLD;
 		val scale = Int.parse(args(0));
 
-		Console.OUT.println("Generating edge list ...");
+		Console.OUT.println("Graph generation ...");
 		val rnd = new Random(2, 3);
 		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
 		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
@@ -31,27 +31,31 @@ public class BLASTest {
 		val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
 		val C = team.size() / R;
 		val dist = Dist2D.make2D(team, R, C);
-		
+
+		Console.OUT.println("Sparse matrix construction ...");
 		// undirected and inner
 		val A = g.createDistSparseMatrix[Double](dist, "edgevalue", false, false);
 		val N = A.ids().numberOfLocalVertexes2N();
-		
+
+		Console.OUT.println("Simplify ...");
 		A.simplify(true, true, (r :MemoryChunk[Double]) => MathAppend.sum(r));
 
-		// DegVec <- A %*% rbind(rep(1, times=N))
+		// V <- A %*% rbind(rep(1, times=N))
 		val V = new DistMemoryChunk[Double](team.placeGroup(), () =>
 			new MemoryChunk[Double](N, (Long) => 1.0));
-		
+
+		Console.OUT.println("V <- A * rbind(rep(1, times=N))");
 		BLAS.mult[Double](1.0, A, false, V, 0.0, V);
 		
-		// Adj <- D^(-1/2) %*% Adj
+		// A <- D^(-1/2) %*% A
 		team.placeGroup().broadcastFlat(() => {
 			val vec_ = V();
 			Parallel.iter(vec_.range(), (tid :Long, r :LongRange) => {
 				for(i in r) vec_(i) = Math.sqrt(1.0 / vec_(i));
 			});
 		});
-		
+
+		Console.OUT.println("A <- D^(-1/2) * A");
 		BLAS.mult[Double](1.0, DistDiagonalMatrix(V), A, false, 0.0, A);
 		
 		// V <- (I - Adj) %*% rbind(rep(1, times=N))
@@ -61,9 +65,13 @@ public class BLASTest {
 				for(i in r) vec_(i) = 1.0;
 			});
 		});
-		
+
+		Console.OUT.println("V <- (I - Adj) * rbind(rep(1, times=N))");
 		BLAS.mult[Double](-1.0, A, false, V, 1.0, V);
 
+		Console.OUT.println("Writing output ...");
 		DistributedReader.write("outvec-%d.txt", team, V);
+
+		Console.OUT.println("Finished !!!");
 	}
 }

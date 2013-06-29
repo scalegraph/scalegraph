@@ -23,6 +23,12 @@ public struct SparseMatrix[T] {
 	public def adjacency(localV :Long) =
 		vertexes.subpart(offsets(localV), offsets(localV+1) - offsets(localV));
 
+	/** Returns the edge values for the specified vertex.
+	 * @param localV The vertex ID in the local ID format.
+	 */
+	public def values(localV :Long) =
+		values.subpart(offsets(localV), offsets(localV+1) - offsets(localV));
+
 	/** Returns the attribute values corresponds to the adjacency edges for the specified vertex.
 	 * @param values Attribute values assigned for the current place.
 	 * @param localV The vertex ID in the local ID format.

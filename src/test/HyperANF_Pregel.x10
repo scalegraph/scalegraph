@@ -75,9 +75,9 @@ public class HyperANF_Pregel {
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
 
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](team, csr);
-		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
+		val edgeValue = g.createDistAttribute[Double](csr, false, "edgevalue");
 		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
 		
 		val start_time = System.currentTimeMillis();
@@ -97,10 +97,10 @@ public class HyperANF_Pregel {
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
 		
-//‰Šú‰»‚³‚ê‚Ä‚¢‚È‚¢‚¯‚Ç‘åä•vH
+//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½Ç‘ï¿½ï¿½vï¿½H
 			val counter = ctx.value() ;
 			if(ctx.superstep()==0) {
-				//initŒn‚É‚±‚Ì‚ ‚½‚è‚Ìˆ—‚ª‚È‚©‚Á‚½‚Í‚¸‚È‚Ì‚Å’Ç‰Á
+				//initï¿½nï¿½É‚ï¿½ï¿½Ì‚ï¿½ï¿½ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í‚ï¿½ï¿½È‚Ì‚Å’Ç‰ï¿½
 //				counter = new MemoryChunk[Byte](M);
 				for(i in counter.range()) counter(i) = 0;
 				

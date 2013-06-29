@@ -47,12 +47,12 @@ public class DeltaSteppingVisitorExample {
         Console.OUT.println("Start delta-stepping");
         
         // Create dist sparse matrix
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
                                               true);
         // Construct attribute
-        val weightAttr = g.constructDistAttribute[Double](csr, false, weightAttrName);
+        val weightAttr = g.createDistAttribute[Double](csr, false, weightAttrName);
         // Run delta stepping
         val source = 0L;
         val delta = 1;
