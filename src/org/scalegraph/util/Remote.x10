@@ -13,7 +13,6 @@ import org.scalegraph.util.*;
  * Usage : .... (Now printing)
  */
 public class Remote {
-
 	private static def debugprint(tag :String) {
 		Console.OUT.println("Place: " + here.id + ": Remote: " + tag);
 	}
@@ -216,6 +215,7 @@ public class Remote {
 					val off = offsets(dst_role)++;
 					reqVal(off) = value;
 					reqIdx(off) = dst_ind;
+					
 				};
 				for(i2 in i_range) f(i2, put);
 			}

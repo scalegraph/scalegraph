@@ -14,24 +14,24 @@ import org.scalegraph.util.MemoryChunk;
  */
 public struct ScatterGather {
 
-	private nChunk : Int;
-	private maxThreads :Int;
-	private bufferWidth :Int;
-	private threadCounts :MemoryChunk[Int];
-	private threadOffsets :MemoryChunk[Int];
-	private sendCounts :MemoryChunk[Int];
-	private sendOffsets :MemoryChunk[Int];
+	private nChunk : Long;
+	private maxThreads :Long;
+	private bufferWidth :Long;
+	private threadCounts :MemoryChunk[Long];
+	private threadOffsets :MemoryChunk[Long];
+	private sendCounts :MemoryChunk[Long];
+	private sendOffsets :MemoryChunk[Long];
 
-    private CACHE_LINE = 64;
+    private CACHE_LINE = 64L;
 
-	public def this(nChunk : Int) {
+	public def this(nChunk : Long) {
 		this.nChunk = nChunk;
 		// TODO: imcomplete cache alignment
 		maxThreads = Runtime.NTHREADS;
 		bufferWidth = Math.max(CACHE_LINE/4, nChunk);
 
 		val size = bufferWidth * (maxThreads*2 + 1) + (nChunk*2 + 1);
-		val dist = (new MemoryChunk[Int](size, CACHE_LINE)).distributor();
+		val dist = (new MemoryChunk[Long](size, CACHE_LINE)).distributor();
 
 		threadCounts = dist.next(bufferWidth*maxThreads);
 		threadOffsets = dist.next(bufferWidth*(maxThreads+1));
@@ -49,7 +49,7 @@ public struct ScatterGather {
 	public def counts(tid :Int) {
 		val mc = threadCounts.subpart(bufferWidth*tid, bufferWidth);
 		@Ifndef("NO_BOUNDS_CHECKS") {
-			for(i in 0..(bufferWidth-1)) assert(mc(i) == 0);
+			for(i in 0..(bufferWidth-1)) assert(mc(i) == 0L);
 		}
 		return mc;
 	}
@@ -70,7 +70,7 @@ public struct ScatterGather {
 			sendCounts(r) = sum;
 		}
 		// compute offsets
-		sendOffsets(0) = 0;
+		sendOffsets(0) = 0L;
 		for(r in teamRange) {
 			sendOffsets(r + 1) = sendOffsets(r) + sendCounts(r);
 		}
@@ -96,7 +96,7 @@ public struct ScatterGather {
 				assert (threadOffsets(t*width + r) == threadOffsets((t-1)*width + r) + threadCounts(t*width + r));
 			}
 		}
-		assert (size as Int == sendOffsets(nChunk));
+		assert (size as Long == sendOffsets(nChunk));
     }
 
     public def offsets() = sendOffsets;
