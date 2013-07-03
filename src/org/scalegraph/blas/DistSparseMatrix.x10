@@ -86,11 +86,19 @@ public struct DistSparseMatrix[T] {
 		data()().dist.allTeam().placeGroup().broadcastFlat(() => {
 			val dist = data()().dist;
 			val m = data()().matrix;
+			val values_ = m.values;
 			val ids = data()().ids;
 			val StoV = Twod.StoV(ids, dist.c());
 			val DtoV = Twod.DtoV(ids, dist.r());
 			var dstIdx :Long = 0L;
 			var cachedOffset :Long = m.offsets(0);
+			
+			// refactoring
+			// 1. remove self loops on diagonal block
+			// if removeDuplicates then
+			// 		2. remove duplicates by reading and writing whole data
+			// else
+			//			2. move lator region data
 			
 			if(ids.outerOrInner) {
 				for(i in 1L..(m.offsets.size()-2)) {
@@ -111,7 +119,7 @@ public struct DistSparseMatrix[T] {
 							prev = v;
 							prev_idx = ei;
 							m.vertexes(dstIdx) = v;
-							m.values(dstIdx) = m.values(ei);
+							values_(dstIdx) = values_(ei);
 							++dstIdx; ++ei;
 						}
 					}
@@ -138,7 +146,7 @@ public struct DistSparseMatrix[T] {
 							prev = v;
 							prev_idx = ei;
 							m.vertexes(dstIdx) = v;
-							m.values(dstIdx) = m.values(ei);
+							values_(dstIdx) = values_(ei);
 							++dstIdx; ++ei;
 						}
 					}

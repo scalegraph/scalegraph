@@ -26,7 +26,7 @@ public struct SparseMatrix[T] {
 	/** Returns the edge values for the specified vertex.
 	 * @param localV The vertex ID in the local ID format.
 	 */
-	public def values(localV :Long) =
+	public def attribute(localV :Long) =
 		values.subpart(offsets(localV), offsets(localV+1) - offsets(localV));
 
 	/** Returns the attribute values corresponds to the adjacency edges for the specified vertex.
@@ -157,9 +157,10 @@ public struct SparseMatrix[T] {
 
 			val team2 = new Team2(team);
 			if(ref_matrix.home == here) { // root
-				team2.scatter(root, ref_matrix()().offsets, offsets);
-				team2.scatter(root, ref_matrix()().vertexes, vertexes);
-				team2.scatter(root, ref_matrix()().values, values);
+				val m = ref_matrix.getLocalOrCopy()();
+				team2.scatter(root, m.offsets, offsets);
+				team2.scatter(root, m.vertexes, vertexes);
+				team2.scatter(root, m.values, values);
 			}
 			else {
 				team2.scatter(root, MemoryChunk.getNull[Long](), offsets);

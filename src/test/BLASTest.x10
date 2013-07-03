@@ -19,18 +19,22 @@ public class BLASTest {
 	public static def main(args: Array[String](1)) {
 		val team = Team.WORLD;
 		val scale = Int.parse(args(0));
-
-		Console.OUT.println("Graph generation ...");
-		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
-		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
-
-		val g = Graph.make(team, edgelist);
-		g.setEdgeAttribute("edgevalue", weigh);
 		
 		val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
 		val C = team.size() / R;
 		val dist = Dist2D.make2D(team, R, C);
+		
+		Console.OUT.println(dist);
+		Console.OUT.println("Graph generation ...");
+		
+		val rnd = new Random(2, 3);
+		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val weight = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));
+
+		val g = Graph.make(team, edgelist);
+		g.setEdgeAttribute("edgevalue", weight);
 
 		Console.OUT.println("Sparse matrix construction ...");
 		// undirected and inner
@@ -38,7 +42,7 @@ public class BLASTest {
 		val N = A.ids().numberOfLocalVertexes2N();
 
 		Console.OUT.println("Simplify ...");
-		A.simplify(true, true, (r :MemoryChunk[Double]) => MathAppend.sum(r));
+		// A.simplify(true, true, (r :MemoryChunk[Double]) => MathAppend.sum(r));
 
 		// V <- A %*% rbind(rep(1, times=N))
 		val V = new DistMemoryChunk[Double](team.placeGroup(), () =>
@@ -46,6 +50,8 @@ public class BLASTest {
 
 		Console.OUT.println("V <- A * rbind(rep(1, times=N))");
 		BLAS.mult[Double](1.0, A, false, V, 0.0, V);
+		
+		DistributedReader.write("outvec-%d.txt", team, V);
 		
 		// A <- D^(-1/2) %*% A
 		team.placeGroup().broadcastFlat(() => {
@@ -70,7 +76,7 @@ public class BLASTest {
 		BLAS.mult[Double](-1.0, A, false, V, 1.0, V);
 
 		Console.OUT.println("Writing output ...");
-		DistributedReader.write("outvec-%d.txt", team, V);
+		//DistributedReader.write("outvec-%d.txt", team, V);
 
 		Console.OUT.println("Finished !!!");
 	}

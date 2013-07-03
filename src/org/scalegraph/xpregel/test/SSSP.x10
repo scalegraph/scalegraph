@@ -52,13 +52,13 @@ public class SSSP {
 				if(mindist > messages(i)) mindist = messages(i);
 			// This is OK because operations on positive infinity produce sensible output.
 			if(mindist < ctx.value()) {
-			//	Console.OUT.println("V: " + ctx.id() + " is updated: " + ctx.value() + " -> " + mindist);
+				Console.OUT.println("V: " + ctx.id() + " is updated: " + ctx.value() + " -> " + mindist);
 				ctx.setValue(mindist);
 				val outEdge = ctx.outEdgesId();
 				val outEdgeValue = ctx.outEdgesValue();
 				for(i in outEdge.range()) {
 					ctx.sendMessage(outEdge(i), mindist + outEdgeValue(i));
-			//		Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
+					Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
 				}
 			}
 			ctx.voteToHalt();
