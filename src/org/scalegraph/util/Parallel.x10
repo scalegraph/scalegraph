@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.util;
 
 import x10.compiler.Inline;
@@ -474,9 +485,9 @@ public class Parallel {
     }
     
     public static def sort[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
-    	val numThreads = Runtime.NTHREADS;
-    	val logChunks = MathAppend.ceilLog2(numThreads * 4);
-    	val numChunks = 1 << logChunks;
+    	val numThreads = Runtime.NTHREADS as Long;
+    	val logChunks = MathAppend.ceilLog2(numThreads * 4L);
+    	val numChunks = 1L << logChunks;
     	val numShift = rangeScale - logChunks;
     	val sg = new ScatterGather(numChunks);
     	
@@ -487,7 +498,7 @@ public class Parallel {
     	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
     		val counts = sg.counts(tid as Int);
     		for(i in r) {
-    			counts(src_i(i) >> numShift)++;
+    			counts(src_i(i) >> numShift as Int)++;
     		}
     	});
     	
@@ -496,7 +507,7 @@ public class Parallel {
     	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
     		val offsets = sg.offsets(tid as Int);
     		for(i in r) {
-    			val dstIndex = offsets(src_i(i) >> numShift)++;
+    			val dstIndex = offsets(src_i(i) >> numShift as Int)++;
     			dst_i(dstIndex) = src_i(i);
     			dst_v(dstIndex) = src_v(i);
     		}

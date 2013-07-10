@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.visitor;
 import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.util.DistMemoryChunk;
@@ -12,15 +23,14 @@ import x10.io.SerialData;
 import x10.compiler.Inline;
 import x10.compiler.Native;
 
-public type Vertex = Long;
-public type Distance = Double;
-public type DeltaSteppingHandler = (v: Vertex, pred: Vertex, isFirstVisit: Boolean, dist: Distance) => void;
-
 public class DeltaSteppingVisitor {
+    
+    private static type Vertex = Long;
+    private static type Distance = Double;
+    public static type DeltaSteppingHandler = (v: Vertex, pred: Vertex, isFirstVisit: Boolean, dist: Distance) => void;
     
     private val MAX_BUCKET_INDEX = Int.MAX_VALUE;
     
-    private static type Vertex = Long;
     private static type Bucket = Array[Bitmap2]{self.size == 2};
     private static type Buckets = GrowableIndexedMemoryChunk[Bucket];
     private static type BucketIndex = Int;

@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.util;
 
 import x10.util.IndexedMemoryChunk;
@@ -56,7 +67,7 @@ public struct Bitmap2 {
                 throw new ArrayIndexOutOfBoundsException("bit (" + bit + ") not contained in BitMap");
         }
         // If it is already set
-        if (((data(wordOffset) as ULong) & mask as ULong) > 0UL)
+        if (((data(wordOffset) as ULong) & (mask as ULong)) > 0UL)
             throw new Exception("Bit (" + bit + ") is already set");
         acquireLock(wordOffset);
         data(wordOffset) = data(wordOffset) | mask;
@@ -89,7 +100,22 @@ public struct Bitmap2 {
         val bitOffset = bit & ((1L << 6) -1);
         val wordOffset = bit >> 6;
         val mask = (1L << (bitOffset as Int));
-        return (data(wordOffset) as ULong & mask as ULong) == 0UL;
+        return ((data(wordOffset) as ULong) & (mask as ULong)) == 0UL;
+    }
+    
+    public def isNotSetThenSet(bit :Long): Boolean {
+        
+        val bitOffset = bit & ((1L << 6) -1);
+        val wordOffset = bit >> 6;
+        val mask = (1L << (bitOffset as Int));
+        acquireLock(wordOffset);
+        val ret = ((data(wordOffset) as ULong) & (mask as ULong)) == 0UL;
+        
+        // Set
+        data(wordOffset) = data(wordOffset) | mask;
+        releaseLock(wordOffset);
+        
+        return ret;
     }
     
     public def examine(callback: (i: Long, threadId: Int) => void) {
