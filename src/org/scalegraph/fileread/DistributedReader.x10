@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 /* this is a study version
  * simple distributed file reader
  */
@@ -7,6 +18,7 @@ package org.scalegraph.fileread;
 import x10.util.ArrayList;
 import x10.lang.Exception;
 import x10.io.File;
+import x10.io.Reader;
 import x10.io.FileReader;
 import x10.io.BufferedReader;
 import x10.compiler.Inline;
@@ -17,20 +29,28 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.graph.Attribute;
 import x10.io.FileWriter;
 import org.scalegraph.util.GrowableMemory;
-import org.scalegraph.concurrent.Parallel;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.DistMemoryChunk;
  
 public class DistributedReader {
+    
+    static def ReaderSkip(reader :Reader, var length :Long) {
+        while(length > 0) {
+            reader.skip(Math.min(0x40000000L, length) as Int);
+            length -= 0x40000000;
+        }
+    }
  
- 	public static def read(
+ 	public static def read[T](
  		team : Team,
  		fileList : Array[String],
- 		inputFormat : (String) => Tuple3[Long, Long, Double]) {
+ 		inputFormat : (String) => Tuple3[Long, Long, T]) {
  		
  		val places = team.places();
  		val teamSize = team.size();
 		val splits = new ArrayList[InputSplit]();
 		val edgelist = new DistGrowableMemory[Long](team.placeGroup());
-		val weight = new DistGrowableMemory[Double](team.placeGroup());
+		val weight = new DistGrowableMemory[T](team.placeGroup());
 		
 		var all_size: Long= 0;
 		for(path in fileList.values()) {
@@ -54,7 +74,7 @@ public class DistributedReader {
 					splits.add(new InputSplit(path, start, size));
 					break;
 				}
-				reader.skip(chunk_size as Int);
+				ReaderSkip(reader, chunk_size);
 				reader.readLine();
 				val next = reader.getFilePointer();
 				splits.add(new InputSplit(path, start, next));
@@ -103,7 +123,7 @@ public class DistributedReader {
 			}
 		}
 		
-		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[Double]](edgelist, weight);
+		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[T]](edgelist, weight);
 	}
  	
  	public static def write(
@@ -115,11 +135,11 @@ public class DistributedReader {
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);
- 			val values_ = values.values()().data();
+ 			val values_ = values.values()().raw();
  			val writer = new FileWriter(new File(filename));
 
  			if(names != null) {
-	 			val names_ = names.values()().data();
+	 			val names_ = names.values()().raw();
 	 			for(i in values_.range()) {
 	 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
 	 			}
@@ -131,6 +151,43 @@ public class DistributedReader {
  				}
  			}
  			
+ 			writer.close();
+ 		});
+ 	}
+ 	
+ 	public static def write[T](
+ 			filenamefmt : String,
+ 			team : Team,
+ 			values : DistMemoryChunk[T])
+ 	{
+ 		team.placeGroup().broadcastFlat(() => {
+ 			val role = team.role()(0);
+ 			val filename = String.format(filenamefmt, [role as Any]);
+ 			val values_ = values();
+ 			val writer = new FileWriter(new File(filename));
+			val size = team.size();
+			for(i in values_.range()) {
+				writer.write(((i * size + role).toString() + "," + values_(i).toString() + "\n").bytes());
+			}
+ 			writer.close();
+ 		});
+ 	}
+ 	
+ 	public static def write[T](
+ 			filenamefmt : String,
+ 			team : Team,
+ 			names : DistMemoryChunk[T],
+ 			values : DistMemoryChunk[T])
+ 	{
+ 		team.placeGroup().broadcastFlat(() => {
+ 			val role = team.role()(0);
+ 			val filename = String.format(filenamefmt, [role as Any]);
+ 			val values_ = values();
+ 			val writer = new FileWriter(new File(filename));
+			val names_ = names();
+			for(i in values_.range()) {
+				writer.write((names_(i).toString() + "," + values_(i).toString() + "\n").bytes());
+			}
  			writer.close();
  		});
  	}

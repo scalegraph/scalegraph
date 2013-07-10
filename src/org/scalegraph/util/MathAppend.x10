@@ -1,12 +1,24 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.util;
 
 import x10.compiler.Native;
 import x10.util.Ordered;
+import x10.compiler.Inline;
 
 public class MathAppend {
 	
 	public static def abs[T](a :T) {T <: Arithmetic[T], T <: Ordered[T], T haszero} = a > Zero.get[T]() ? a : -a;
-	
+
 	public static def min[T](vec : MemoryChunk[T]) {T <: Ordered[T]} {
 		var result :T = vec(0);
 		for(i in 1..(vec.size()-1)) {
@@ -14,6 +26,9 @@ public class MathAppend {
 		}
 		return result;
 	}
+
+	public static @Inline def min[T](a :T, b :T) {T <: Ordered[T]} = a < b ? a : b;
+	public static @Inline def max[T](a :T, b :T) {T <: Ordered[T]} = a > b ? a : b;
 	
 	public static def sum[T](vec : MemoryChunk[T]) {T <: Arithmetic[T], T haszero} {
 		var res : T = Zero.get[T]();
@@ -81,4 +96,7 @@ public class MathAppend {
     public static def pow2(i:Int) {
         return 1L << i;
     }
+    
+    @Native("c++", "__builtin_popcountl(#v)")
+    public static native def popcount[T](v :T) :Int {T <: Arithmetic[T]}; 
 }

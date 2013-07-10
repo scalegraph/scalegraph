@@ -1,17 +1,31 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.xpregel;
-import org.scalegraph.xpregel.comm.WorkerPlaceGraph;
+
 import x10.util.Team;
-import org.scalegraph.xpregel.ComputationInterface;
-import org.scalegraph.xpregel.comm.MessageCommunicationService;
-import org.scalegraph.xpregel.comm.SendInEdgeCommunication;
+
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.DistGrowableMemory;
+import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
+
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Parallel;
+
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.DistSparseMatrix;
-import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.util.tuple.Tuple2;
-import x10.util.HashMap;
+import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.Attribute;
-import org.scalegraph.util.DistGrowableMemory;
-import org.scalegraph.xpregel.comm.AggregatorInterface;
+
 /**
  * a main entry for processing 
  * graph with X-Pregel
@@ -19,85 +33,159 @@ import org.scalegraph.xpregel.comm.AggregatorInterface;
  */
 public class XPregelGraph[V,E]{V haszero, E haszero} {
 
-	var mWorkers:PlaceLocalHandle[WorkerPlaceGraph[V,E]];
-	val mTeam:Team;
-	var mContext:XpregelContext;
-	var vertexAttributes : HashMap[String,Any];
-	var edgeAttributes : HashMap[String,Any];
+	var mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
+	val mTeam :Team2;
 	
-	public def this(team:Team, data: DistSparseMatrix) {
-		mTeam = team;
-		mContext = new XpregelContext(data.ids());
-		val _context = mContext;
-		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),() => new WorkerPlaceGraph[V,E](team,data(),_context));	
+	public def this(team :Team, data :DistSparseMatrix)
+	{
+		mTeam = new Team2(team);
+		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),
+				() => new WorkerPlaceGraph[V,E](team, data));
 	}
 	
-	public def initDefaultVertexValue(value : V) {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat( () => {
-			_workers().initDefaultVertexValue(value);
+	public def initVertexValue(value : V)
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.mVertexValue(i) = value;
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 	
-	public def zipVertexValue[T](a:DistGrowableMemory[T], compute : (v:T) => V){T haszero} {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().zipVertexValue[T](a(),compute);
+	public def initVertexValue(compute :(realId :Long) => V)
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
+					for(i in r) w.mVertexValue(i) = compute(StoV(i));
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 	
-	public def zipVertexValue[T1,T2](a1:DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], 
-			compute : (v1:T1,v2:T2) => V) {T1 haszero, T2 haszero} {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().zipVertexValue[T1,T2](a1(),a2(),compute);
+	public def initVertexValue[T](a_ :DistMemoryChunk[T], compute :(realId :Long, v :T) => V){T haszero}
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				val a = a_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
+					for(i in r) w.mVertexValue(i) = compute(StoV(i), a(i));
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 	
-	public def zipVertexValue[T1,T2,T3](a1:DistGrowableMemory[T1], a2 : DistGrowableMemory[T2],
-			a3 : DistGrowableMemory[T3],
-			compute : (v1:T1,v2:T2,v3:T3) => V) {T1 haszero, T2 haszero, T3 haszero} {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().zipVertexValue[T1,T2,T3](a1(),a2(),a3(),compute);
+	public def initVertexValue[T1,T2](a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], 
+			compute :(Long, T1, T2) => V) {T1 haszero, T2 haszero}
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				val a1 = a1_();
+				val a2 = a2_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
+					for(i in r) w.mVertexValue(i) = compute(StoV(i), a1(i), a2(i));
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
+	}
+	
+	public def initVertexValue[T1,T2,T3](a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], a3_ :DistMemoryChunk[T3],
+			compute : (Long, T1, T2, T3) => V) {T1 haszero, T2 haszero, T3 haszero}
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				val a1 = a1_();
+				val a2 = a2_();
+				val a3 = a3_();
+				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
+					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
+					for(i in r) w.mVertexValue(i) = compute(StoV(i), a1(i), a2(i), a3(i));
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
+	}
+
+	public def initEdgeValue(value : E)
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_().mOutEdge;
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = value;
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 			
-	public def initDefaultEdgeValue(value : E) {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat( () => {
-			_workers().initDefaultEdgeValue(value);
-		});
-	}
-			
-	public def zipEdgeValue[T] (a : DistGrowableMemory[T], compute : (v : T) => E) {T haszero} {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().zipEdgeValue(a(),compute);
+	public def initEdgeValue[T] (a_ :DistMemoryChunk[T], compute :(T) => E) {T haszero}
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_().mOutEdge;
+				val a = a_();
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = compute(a(i));
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 	
-	public def zipEdgeValue[T1,T2] (a1: DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], 
-			compute : (v1 : T1, v2 : T2) => E) {T1 haszero, T2 haszero} {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().zipEdgeValue(a1(),a2(),compute);
+	public def initEdgeValue[T1,T2] (a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], 
+			compute :(T1, T2) => E) {T1 haszero, T2 haszero}
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_().mOutEdge;
+				val a1 = a1_();
+				val a2 = a2_();
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = compute(a1(i), a2(i));
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 			
-	public def zipEdgeValue[T1,T2,T3] (a1: DistGrowableMemory[T1], a2 : DistGrowableMemory[T2], a3 : DistGrowableMemory[T3],
-			compute : (v1 : T1, v2 : T2, v3 : T3) => E) {T1 haszero, T2 haszero, T3 haszero} {
-		val _team = mTeam;
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().zipEdgeValue(a1(),a2(),a3(),compute);
+	public def initEdgeValue[T1,T2,T3] (a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], a3_ :DistMemoryChunk[T3],
+			compute :(T1, T2, T3) => E) {T1 haszero, T2 haszero, T3 haszero}
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_().mOutEdge;
+				val a1 = a1_();
+				val a2 = a2_();
+				val a3 = a3_();
+				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.value(i) = compute(a1(i), a2(i), a3(i));
+				});
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 	
@@ -107,43 +195,59 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 	 * 
 	 */
 	public def updateInEdge() {
-		val _team = mTeam;
-		val _context = mContext;
-		val sendInComputation = new SendInEdgeCommunication[V,E]();
-		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[Tuple2[Long,E],Double]](_team.placeGroup(),
-				() => new MessageCommunicationService[Tuple2[Long,E],Double](_team,1000,_context));
-		val _workers = mWorkers;
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().run[Tuple2[Long,E],Double](sendInComputation,null,service());
-		});
-		_team.placeGroup().broadcastFlat(() => {
-			_workers().initInEdge(service());
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat(() => {
+			try {
+				workers_().updateInEdge();
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 	
-	public def do_computations[M,A](computation:ComputationInterface[V,E,M,A], aggregator : AggregatorInterface[A]){ M haszero, A haszero} {
-		val _team = mTeam;
-		val _context = mContext;
-		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
-				() => new MessageCommunicationService[M,A](_team,1000,_context));
+	public def updateInEdgeAndValue() {
+		val team_ = mTeam;
 		val workers_ = mWorkers;
-		Console.OUT.println("Start processing ...");
-		_team.placeGroup().broadcastFlat(() => {
-			workers_().run[M,A](computation, aggregator, service());
+		team_.placeGroup().broadcastFlat(() => {
+			try {
+				workers_().updateInEdgeWithValue();
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
-		Console.OUT.println("End processing...");
 	}
 	
-	public def do_computations[M,A](computation:(vertex:Vertex[V,E],messages:MemoryChunk[Tuple2[Long,M]],_appcontext:XContext[M,A]) => void, 
-			aggregator : AggregatorInterface[A]){ M haszero, A haszero} {
-		val _team = mTeam;
-		val _context = mContext;
-		val service = PlaceLocalHandle.makeFlat[MessageCommunicationService[M,A]](_team.placeGroup(),
-				() => new MessageCommunicationService[M,A](_team,1000,_context));
+	public def resetSholdBeActiveFlag() {
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat(() => {
+			try {
+				workers_().mVertexShouldBeActive.clear(true);
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
+	}
+	
+	public def init(compute :(ctx :InitVertexContext[V,E]) => void) {
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		Console.OUT.println("Start Init processing ...");
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				workers_().run(compute);
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
+		Console.OUT.println("End Init processing...");
+	}
+	
+	public def iterate[M,A](
+			compute :(ctx:VertexContext[V,E,M,A],messages:MemoryChunk[M]) => void, 
+			aggregator :(MemoryChunk[A])=>A,
+			end :(Int,A)=>Boolean){ M haszero, A haszero}
+	{
+		val team_ = mTeam;
 		val workers_ = mWorkers;
 		Console.OUT.println("Start processing ...");
-		_team.placeGroup().broadcastFlat(() => {
-			workers_().run[M,A](computation, aggregator, service());
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				workers_().run[M,A](compute, aggregator, end);
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 		Console.OUT.println("End processing...");
 	}

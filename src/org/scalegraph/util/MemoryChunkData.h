@@ -1,30 +1,23 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 #ifndef __ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_NATIVE_H
 #define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_NATIVE_H
 
 #include <x10rt.h>
 #include <x10/lang/Any.h>
 #include <x10/lang/String.h>
+#include <x10/lang/UnsupportedOperationException.h>
 
 namespace org { namespace scalegraph { namespace util {
-
-template <typename T> T* allocateFlat(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
-	if (0 == numElements) {
-		return NULL;
-	}
-	assert((alignment & (alignment-1)) == 0);
-	x10_long size = alignment + numElements*sizeof(T);
-	T* allocMem = x10aux::alloc<T>(size, false);
-	if (zeroed) {
-		memset(allocMem, 0, size);
-	}
-	if(alignment > 0) {
-		x10_long alignDelta = alignment-1;
-		x10_long alignMask = ~alignDelta;
-		x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
-		return (T*)alignedMem;
-	}
-	return allocMem;
-}
 
 template<class T> class MCData_Impl {
 	public:
@@ -34,20 +27,66 @@ template<class T> class MCData_Impl {
 
 	static MCData_Impl<T> _alloc(){MCData_Impl<T> t; return t; }
 
+	/*
+	 * head points to starting address of allocated memory, a MemoryChunkData that subparts from any MemoryChunkData
+	 * whill have head point to the same address
+	 * */
+	T * FMGL(head);
 	T * FMGL(pointer);
 	x10_long FMGL(size);
 
 	MCData_Impl()
-		: FMGL(pointer)(NULL),
+		: FMGL(head)(NULL),
+		  FMGL(pointer)(NULL),
 		  FMGL(size)(0)
 	{ }
-	MCData_Impl(T* pointer__, x10_long size__)
-		: FMGL(pointer)(pointer__),
+	MCData_Impl(T* head__, T* pointer__, x10_long size__)
+		: FMGL(head)(head__),
+		  FMGL(pointer)(pointer__),
 		  FMGL(size)(size__)
-	{ }
+	{
+	    /**
+	     * pointer = null implies the memory was created from alloc method, otherwise from subpart method
+	     */
+	    if (FMGL(pointer) == NULL) {
+	        FMGL(pointer) = FMGL(head);
+	    }
+	}
+/*
+	static MCData_Impl<T> _make(T * head, T * pointer, x10_long size) {
+		return MCData_Impl(head, pointer, size);
+	}
+*/
+	static MCData_Impl<T> _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+		if (0 == numElements) {
+			return MCData_Impl<T>(NULL, NULL, 0);
+		}
+		assert((alignment & (alignment-1)) == 0);
+		x10_long size = alignment + numElements*sizeof(T);
+       bool containsPtrs = x10aux::getRTT<T>()->containsPtrs;
+		T* allocMem = static_cast<T*>(x10aux::alloc_chunk(size, containsPtrs));
+		if (zeroed) {
+			memset(allocMem, 0, size);
+		}
+		if(alignment > 0) {
+			x10_long alignDelta = alignment-1;
+			x10_long alignMask = ~alignDelta;
+			x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
+			return MCData_Impl<T>(allocMem, (T*)alignedMem, numElements);;
+		}
+		return MCData_Impl<T>(allocMem, allocMem, numElements);
+	}
 
-	static MCData_Impl<T> _make(T * pointer, x10_long size) {
-		return MCData_Impl(pointer, size);
+	void del() {
+		if(FMGL(head) != FMGL(pointer)) {
+			x10aux::throwException(
+					x10::lang::UnsupportedOperationException::_make(
+					x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
+		}
+		x10aux::dealloc(FMGL(head));
+		FMGL(head) = NULL;
+		FMGL(pointer) = NULL;
+		FMGL(size) = 0;
 	}
 
 	x10::lang::String* typeName() { return x10aux::type_name((*this)); }
@@ -80,10 +119,9 @@ template<class T> class MCData_Impl {
 
 	static MCData_Impl<T> _deserialize(x10aux::deserialization_buffer& buf) {
 		x10_long size = buf.read<x10_long>();
-		// "x10aux::getRTT<T>()->containsPtrs" has not been implemented yet.
-		T* pointer = x10aux::alloc<T>(size*sizeof(T), false); // x10aux::getRTT<T>()->containsPtrs);
-		x10aux::deserialization_buffer::copyOut(buf, pointer, size, sizeof(T));
-		return MCData_Impl<T>(pointer, size);
+		MCData_Impl<T> allocMem = _make(size * sizeof(T), 0, false);
+		x10aux::deserialization_buffer::copyOut(buf, allocMem.FMGL(pointer), size, sizeof(T));
+		return allocMem;
 	}
 };
 

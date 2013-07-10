@@ -1,23 +1,36 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.graph;
 
 import x10.util.ArrayList;
 import x10.util.HashMap;
-import x10.compiler.Pinned;
 import x10.util.Team;
 
-import org.scalegraph.concurrent.Parallel;
+import x10.compiler.Pinned;
+
+import org.scalegraph.util.DistScatterGather;
+import org.scalegraph.util.Team2;
+import org.scalegraph.util.Remote;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.Parallel;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.concurrent.DistScatterGather;
-import org.scalegraph.concurrent.Team2;
 import org.scalegraph.util.MathAppend;
+
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.concurrent.Remote;
-import org.scalegraph.concurrent.Dist2D;
-import org.scalegraph.xpregel.XPregelGraph;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
@@ -252,7 +265,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 				val shift = MathAppend.log2(team_.size()) as Int;
 				val indexes_ = indexes();
 				val values_ = values();
-				Remote.put(team_, att_.data(), indexes_.range(),
+				Remote.put(team_, att_.raw(), indexes_.range(),
 						(index:Long, put:(Int, Long,  T)=>void)=> {
 					val dstRole = indexes_(index) & mask;
 					val dstIdx = indexes_(index) >> shift;
@@ -691,7 +704,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 					val localsize = 1L << sparseMatrix.ids().lgl;
 					
 					val distAtt = new MemoryChunk[T](localsize);
-					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(),
+					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(),
 							(i :Long, get:(Long, Int, Long)=>void) => {
 						val rr = i * sizeOfDist + roleInDist;
 						val dstRole = rr & (sizeOfGraph - 1);
@@ -705,7 +718,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 					val rankMask = (1L << shift) - 1;
 					val edgeIndexes = sparseMatrix().edgeIndexes;
 					val distAtt = new MemoryChunk[T](edgeIndexes.size());
-					Remote.get(team_, att.values()().data(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
+					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
 						val index = edgeIndexes(i);
 						get(i, (index & rankMask) as Int, index >> shift);
 					});
@@ -740,9 +753,9 @@ import org.scalegraph.xpregel.XPregelGraph;
 		val attlist = new ArrayList[Any]();
 		
 		for(key in vertexAttributes.keySet())
-			attlist.add(vertexAttributes(key));
+			attlist.add(vertexAttributes.getOrThrow(key));
 		for(key in edgeAttributes.keySet())
-			attlist.add(edgeAttributes(key));
+			attlist.add(edgeAttributes.getOrThrow(key));
 		
 		team.placeGroup().broadcastFlat(()=> {
 			try {
@@ -767,8 +780,8 @@ import org.scalegraph.xpregel.XPregelGraph;
 						(att as Attribute[String]).values().del();
 					else if(att instanceof Attribute[Boolean])
 						(att as Attribute[Boolean]).values().del();
-					else 
-						throw new UnsupportedOperationException();
+					else
+						throw new UnsupportedOperationException("Type: " + att.typeName());
 				}
 			}
 			catch(e : CheckedThrowable) {
@@ -782,12 +795,5 @@ import org.scalegraph.xpregel.XPregelGraph;
 
 	public def vertexAttributeKeys() = vertexAttributes.keySet();
 	public def edgeAttributeKeys() = edgeAttributes.keySet();
-	
-	public def createXPregelGraph[V,E](){V haszero, E haszero}:XPregelGraph[V,E] {
-		val csr = constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val _team = team;
-		val xpregelgraph = new XPregelGraph[V,E](_team,csr);
-		return xpregelgraph;
-	}
 }
 

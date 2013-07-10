@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.graph.id;
 
 /**
@@ -7,12 +18,15 @@ public class OnedC {
 	/** Vertex ID to Source ID Converter */
 	public static struct VtoS {
 		val lgc :Int;
+		val cmask :Long;
 		
 		public def this(ids :IdStruct) {
 			lgc = ids.lgc;
+			cmask = ((1L << lgc) - 1L);
 		}
 		
 		public operator this(id :Long) :Long = (id >> lgc);
+		public def c(id :Long) :Int = (id & cmask) as Int;
 	}
 
 	/** Vertex ID to Destination ID Converter */
@@ -28,6 +42,7 @@ public class OnedC {
 		}
 		
 		public operator this(id :Long) :Long = ((id & cmask) << lgl) | (id >> lgc);
+		public def c(id :Long) :Int = (id & cmask) as Int;
 	}
 
 	/** Source ID to Vertex ID Converter */
@@ -68,17 +83,20 @@ public class OnedC {
 		}
 		
 		public operator this(id :Long) :Long = ((id & lmask) << lgc) | (id >> lgl);
+		public def c(id :Long) :Int = (id >> lgl) as Int;
 	}
 
 	/** Destination ID to Source ID Converter */
 	public static struct DtoS {
 		val lmask :Long;
+		val lgl :Int;
 		
 		public def this(ids :IdStruct) {
-			val lgl = ids.lgl;
-			lmask = (1L << lgl) - 1L;
+			lmask = (1L << ids.lgl) - 1L;
+			lgl = ids.lgl;
 		}
 		
 		public operator this(id :Long) :Long = id & lmask;
+		public def c(id :Long) :Int = (id >> lgl) as Int;
 	}
 }

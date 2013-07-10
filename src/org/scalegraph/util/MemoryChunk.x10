@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.util;
 
 import x10.compiler.Inline;
@@ -100,6 +111,13 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		data = MemoryChunkData.make[T](size, alignment, zeroed);
 	}
 	
+	public def this(size :Long, init :(Long) => T) {
+		this(size);
+		for(i in 0L..(size-1L)) {
+			data(i) = init(i);
+		}
+	}
+	
 	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk.
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts
@@ -141,6 +159,27 @@ public struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public def this(imc :IndexedMemoryChunk[T]) {
 		this(imc, 0L, imc.length() as Long);
+	}
+	
+	/** Free memory. Once you free MemoryChunk,
+	 * you can not use any MemoryChunk which point to the released memory.
+	 * 
+	 */
+	public def del() {
+		data.del();
+	}
+	
+	public def toString() :String {
+		val sb = new x10.util.StringBuilder();
+		sb.add("[");
+		val sz = Math.min(size(), 10L);
+		for (var i:Int = 0; i < sz; ++i) {
+			if (i > 0) sb.add(",");
+			sb.add("" + data(i));
+		}
+		if (sz < size()) sb.add("...(omitted " + (size() - sz) + " elements)");
+		sb.add("]");
+		return sb.toString();
 	}
 	
 	/** Returens the internal pointer object.

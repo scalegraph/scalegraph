@@ -1,85 +1,95 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.xpregel.test;
 
 import x10.util.Team;
-import org.scalegraph.util.tuple.Tuple3;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.xpregel.Vertex;
+
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.random.Random;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.xpregel.XContext;
-import org.scalegraph.xpregel.comm.DoubleMaxAggregator;
+import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.graph.Graph;
+import org.scalegraph.generator.GraphGenerator;
+
+import org.scalegraph.xpregel.VertexContext;
+import org.scalegraph.xpregel.XPregelGraph;
+
 public class PageRank {
 	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				1.0
-			);
-		};
+		val scale = Int.parse(args(0));
+		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val rnd = new Random(2, 3);
+		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-	
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
+		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
+
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.data(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.data(team.placeGroup()));
+		val g = new Graph(team,Graph.VertexType.Long,false);
+		g.addEdges(edgeList);
+		g.setEdgeAttribute[Double]("edgevalue", weigh);		
+		
+		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
+
+		// release graph data
+		g.del();
+		edgeList.del();
+		weigh.del();
+		
+		val xpregel = new XPregelGraph[Double, Double](team, csr);
+		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+		
+		
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
-		val xpregel = g.createXPregelGraph[Double,Double]();
-		val edgeValue = g.getEdgeAttribute[Double]("edgevalue").values();
-		xpregel.zipEdgeValue[Double](edgeValue, (value : Double) => value);
-		val do_computation = (vertex:Vertex[Double,Double],messages:MemoryChunk[Tuple2[Long,Double]],_appcontext:XContext[Double,Double]) => {
-			val _graphContext = vertex.getContext();
-			if (_graphContext.getSuperStep() == 0l) {
-				vertex.setValue(1.0);
-			}
-			
-			if (_graphContext.getSuperStep() > 30) {
-				if (vertex.getVertexId() == 0L && here.id == 0) {
-					Console.OUT.println("Large PageRank =  " + _appcontext.getAggregatorValue());
-				}
-				vertex.voteToHalt();
-			}else {
-				var sum : Double = 0.0;
-				if (messages.size() > 0) {
-					for(i in messages.range()) {
-						sum += messages(i).get2();
-					}
-				}
-				val value = 0.15 / _graphContext.getNumberOfVertices() + 0.85 * sum;
-				vertex.setValue(value);
-				_appcontext.aggregate(value);
-				if (here.id == 0 && vertex.getVertexId() == 0L) {
-					Console.OUT.println("Large PageRank at superstep " + _graphContext.getSuperStep() + " = " + _appcontext.getAggregatorValue());
-				}
-				val edges = new GrowableMemory[Long]();
-				vertex.getEdgesId(true,edges);
-				if (edges.size() > 0) {
-					val message = value / vertex.getEdgesNum(true);
-					for(ind in edges.range()) {
-						if (ind > edges.range().max) continue;
-						val id = edges(ind);
-						_appcontext.putMessage(id,message);
-					}
-				}
-				edges.del();
-			}
-		};
-		val aggregator = new DoubleMaxAggregator();
 		val start_time = System.currentTimeMillis();
-		xpregel.do_computations[Double,Double](do_computation,aggregator);
+		
+		xpregel.updateInEdge();
+		
+		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+			val value :Double;
+			if(ctx.superstep() == 0)
+				value = 1.0 / ctx.numberOfVertices();
+			else
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+
+			if (ctx.superstep() < 30) {
+				ctx.aggregate(Math.abs(value - ctx.value()));
+				ctx.setValue(value);
+				ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
+			}
+			else {
+				ctx.voteToHalt();
+			}
+		},
+		(values :MemoryChunk[Double]) => MathAppend.sum(values),
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+			}
+			return (superstep >= 30 || aggVal < 0.0001);
+		});
+		
 		val end_time = System.currentTimeMillis();
-		Console.OUT.println("Finish after =" + (end_time-start_time));
+	
+		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		Console.OUT.println("Finish application");
 	}
 }

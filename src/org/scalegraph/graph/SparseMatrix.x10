@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.graph;
 
 import x10.util.Team;
@@ -5,8 +16,8 @@ import x10.compiler.Ifndef;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.concurrent.Parallel;
-import org.scalegraph.concurrent.Team2;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Team2;
 
 /** Sparse matrix representation.
  */
@@ -28,7 +39,7 @@ public struct SparseMatrix {
 	public def attribute[T](values :MemoryChunk[T], localV :Long) =
 		values.subpart(offsets(localV), offsets(localV+1) - offsets(localV));
 
-	public def vertexRange() = 0..(offsets.size()-1);
+	public def vertexRange() = 0..(offsets.size()-2);
 
 	private def this(offsets :MemoryChunk[Long], vertexes :MemoryChunk[Long], edgeIndexes :MemoryChunk[Long]) {
 		this.offsets = offsets;
@@ -100,8 +111,8 @@ public struct SparseMatrix {
 				counts.atomicAdd(edges(i).get1(), 1);
 		});
 
-		Parallel.scan(1L..offsetLength, offsets_, 0L,
-			(i:Long, v:Long) => counts(i-1) + v,
+		Parallel.scan(counts.range(), offsets_, 0L,
+			(i:Long, v:Long) => counts(i) + v,
 			(v1:Long, v2:Long) => v1 + v2);
 
 		Parallel.iter(counts.range(), (tid :Long, r :LongRange) => {
@@ -153,8 +164,8 @@ public struct SparseMatrix {
 				counts.atomicAdd(edges(i).get1(), 1);
 		});
 
-		Parallel.scan(1L..edges.size(), offsets_, 0L,
-			(i:Long, v:Long) => counts(i-1) + v,
+		Parallel.scan(counts.range(), offsets_, 0L,
+			(i:Long, v:Long) => counts(i) + v,
 			(v1:Long, v2:Long) => v1 + v2);
 
 		Parallel.iter(counts.range(), (tid :Long, r :LongRange) => {

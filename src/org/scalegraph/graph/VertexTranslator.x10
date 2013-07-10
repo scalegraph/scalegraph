@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.graph;
 
 import x10.util.ArrayList;
@@ -10,9 +21,9 @@ import x10.compiler.Pinned;
 import x10.compiler.Pragma;
 import x10.compiler.Inline;
 
-import org.scalegraph.concurrent.Parallel;
-import org.scalegraph.concurrent.DistScatterGather;
-import org.scalegraph.concurrent.HashMap;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.DistScatterGather;
+import org.scalegraph.util.HashMap;
 import org.scalegraph.util.Debug;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
