@@ -12,51 +12,51 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-struct SCCVertex {
-	val leaderId:Long; 
-	val front:Boolean; 
-	val back:Boolean;
-	val minimId:Long;
-	def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long) {
-		leaderId = leader; 
-		front = fro; 
-		back = bac;
-		minimId = tmp;
-	}
-}
-struct MessageA {
-	val leaderId:Long;
-	val dir:Boolean;
-	def this(lead:Long, d:Boolean) {
-		leaderId = lead;
-		dir = d;	
-	}
-
-	@Native("c++", "(#this)->FMGL(dir) = #v")
-	native def setDir(v :Boolean) :void;
-}
-
-struct MessageB {
-	val front:Boolean;
-	val back:Boolean;
-	val id:Long;
-	def this(fro:Boolean, bac:Boolean, idNum:Long  ) {
-		front = fro;
-		back = bac;
-		id = idNum;
-	}
-}
-
-struct MessageC {
-	val leaderId:Long;
-	val minimId:Long;
-	def this(leader:Long, m:Long) {
-		minimId = m;
-		leaderId = leader;
-	}
-}
-
 public class SCCDebug{
+	private static struct SCCVertex {
+		val leaderId:Long; 
+		val front:Boolean; 
+		val back:Boolean;
+		val minimId:Long;
+		def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long) {
+			leaderId = leader; 
+			front = fro; 
+			back = bac;
+			minimId = tmp;
+		}
+	}
+	private static struct MessageA {
+		val leaderId:Long;
+		val dir:Boolean;
+		def this(lead:Long, d:Boolean) {
+			leaderId = lead;
+			dir = d;	
+		}
+
+		@Native("c++", "(#this)->FMGL(dir) = #v")
+		native def setDir(v :Boolean) :void;
+	}
+
+	private static struct MessageB {
+		val front:Boolean;
+		val back:Boolean;
+		val id:Long;
+		def this(fro:Boolean, bac:Boolean, idNum:Long  ) {
+			front = fro;
+			back = bac;
+			id = idNum;
+		}
+	}
+
+	private static struct MessageC {
+		val leaderId:Long;
+		val minimId:Long;
+		def this(leader:Long, m:Long) {
+			minimId = m;
+			leaderId = leader;
+		}
+	}
+
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;	
 		val inputFormat = (s:String) => {
@@ -209,40 +209,15 @@ public class SCCDebug{
 					val newInfo = new SCCVertex(messages(0).id ,false, false, ctx.id());
 					ctx.setValue(newInfo);
 					ctx.setVertexShouldBeActive(true);
-				/*	
-					val mes = new MessageB(true, true, ctx.value().leaderId);
-					for(i in ctx.outEdgesId().range()) 
-						ctx.sendMessage(ctx.outEdgesId()(i), mes);
-					for(i in ctx.inEdgesId().range())
-						ctx.sendMessage(ctx.inEdgesId()(i),mes);
-				*/
 				}
-				
-				//最も影響が大きそうな、隣に同じ辺がないようなものをどうにか取り除く処理を行う
-				//BFS処理を行う
-				
-				// if(ctx.superstep()==3 && !ctx.value().front && !ctx.value().back) {
-					// var hasEdge:Boolean = false;
-					// for(i in messages.range()) {
-						// if(messages(i).id == ctx.value().leaderId)
-							// hasEdge = true;
-					// }
-					// //!hasEdgeが実行される <=> ctx.revive()されている頂点 で同じleaderの隣接点なし<=> 
-					// 次生きていていて隣接点はない
-					// if(!hasEdge) {
-						// val newInfo = new SCCVertex(ctx.id(), true, true, -1L);
-						// ctx.setValue(newInfo);
-					// }
-					// ctx.voteToHalt();
-				// } 
-				
 				 
 			},
 			//aggregateは多分使わないので適当なことを書いた
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
 			//終了条件は、最終的には全部のセルが止まった状態になればよい
 			(superstep :Int, aggVal :Long) => (superstep >= 2) );
-		
+			
+			xpregel.updateInEdge();
 			//PhaseC : 連結成分が異なるところを分けるための処理
 			xpregel.iterate[MessageC, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageC, Long ], messages :MemoryChunk[MessageC] ) => {

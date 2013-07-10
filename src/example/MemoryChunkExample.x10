@@ -1,4 +1,4 @@
-package test;
+package example;
 
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.*;

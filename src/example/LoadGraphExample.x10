@@ -19,7 +19,6 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.util.DistMemoryChunk;
 
-
 public class LoadGraphExample {
     
     public static val inputFormat = (s: String) => {

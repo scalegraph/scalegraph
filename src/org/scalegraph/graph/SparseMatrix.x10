@@ -28,7 +28,7 @@ public struct SparseMatrix {
 	public def attribute[T](values :MemoryChunk[T], localV :Long) =
 		values.subpart(offsets(localV), offsets(localV+1) - offsets(localV));
 
-	public def vertexRange() = 0..(offsets.size()-1);
+	public def vertexRange() = 0..(offsets.size()-2);
 
 	private def this(offsets :MemoryChunk[Long], vertexes :MemoryChunk[Long], edgeIndexes :MemoryChunk[Long]) {
 		this.offsets = offsets;

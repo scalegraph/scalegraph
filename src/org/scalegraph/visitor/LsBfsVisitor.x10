@@ -149,7 +149,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     private static native def add_and_fetch[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
 
     /**
-     * Factor method to create visitor
+     * Factory method for creating visitor
      * @param csr csr representation of a graph
      * @param h handler for handling event when visit a node
      * @param source source vertex 

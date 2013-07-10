@@ -176,6 +176,7 @@ class EdgeProvider [E] {E haszero} {
 	def inEdgesValue(srcid :Long) {
 		val start = mInOffset(srcid);
 		val length = mInOffset(srcid + 1) - start;
+//		Console.OUT.println("inEdgeValueRange"+start+" "+length);
 		return mInValue.subpart(start, length);
 	}
 	
