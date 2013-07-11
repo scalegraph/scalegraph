@@ -26,8 +26,9 @@ import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.Attribute;
 import org.scalegraph.generator.GraphGenerator;
 import org.scalegraph.gimv.GIMV;
+import org.scalegraph.harness.sx10Test;
 
-public class GIMVPageRank {
+public class GIMVPageRank extends sx10Test {
 
 	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
 
@@ -113,10 +114,24 @@ public class GIMVPageRank {
 
 		return vector;
 	}
-
+	
 	public static def main(args: Array[String](1)) {
+	    val t = new GIMVPageRank();
+	    t.execute();
+	}
+	
+	public def run(): Boolean {
+	    val par = [8 , 14, 18];
+	    
+	    for (i in 0..(par.size - 1)) {
+	        entry(par(i));
+	    }
+	    
+	    return true;
+	}
+
+	public def entry(scale: Int) {
 		val team = Team.WORLD;
-		val scale = Int.parse(args(0));
 		val g = generate_graph(scale, team, true);
 
 		// normalize weight //
