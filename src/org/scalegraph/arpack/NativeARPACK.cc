@@ -1,5 +1,5 @@
 #include <x10aux/config.h>
-#include "ARPACK.h"
+#include "NativeARPACK.h"
 
 extern "C" {
 int dsaupd_(int *ido, char *bmat, int *n, char *which, int *nev,

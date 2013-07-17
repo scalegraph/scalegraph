@@ -1,6 +1,7 @@
 package test;
 
 import x10.compiler.Native;
+import x10.compiler.NativeCPPInclude;
 import x10.util.Random;
 import x10.util.Team;
 
@@ -12,6 +13,7 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 
 
+@NativeCPPInclude("mpi.h")
 public class SpectralClustering {
 	
 	public static def main(args:Array[String](1)) {

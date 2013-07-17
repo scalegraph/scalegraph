@@ -4,8 +4,8 @@ import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit;
 
-@NativeCPPInclude("ARPACK.h")
-@NativeCPPCompilationUnit("ARPACK.cc")
+@NativeCPPInclude("NativeARPACK.h")
+@NativeCPPCompilationUnit("NativeARPACK.cc")
 public class ARPACK {
 	
 	public static val LA:Int = 1;
