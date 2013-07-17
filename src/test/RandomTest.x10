@@ -12,19 +12,26 @@
 package test;
 
 import org.scalegraph.util.random.Random;
+import org.scalegraph.harness.sx10Test;
 
-public class RandomTest {
+public class RandomTest extends sx10Test {
 
 	public static def main(args: Array[String](1)) {
-		val t1 = new Random(1, 2);
+		val t = new RandomTest();
+		t.execute();
+	}
+	
+	public def run(): Boolean {
+	    val t1 = new Random(1, 2);
 
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    return true;
 	}
 }

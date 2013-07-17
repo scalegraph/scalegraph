@@ -12,12 +12,17 @@
 package test;
 
 import org.scalegraph.graph.VertexTranslator;
+import org.scalegraph.harness.sx10Test;
 
-public class TestVertexTranslator {
+public class TestVertexTranslator extends sx10Test {
     private def run1() {
     }
 
     public static def main(Array[String](1)) {
 
+    }
+    
+    public def run(): Boolean {
+        return true;
     }
 }

@@ -10,14 +10,16 @@
  */
 
 package test;
+
 import x10.util.Team;
 import x10.util.Timer;
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Debug;
 import org.scalegraph.util.RemoteGetContext;
 import org.scalegraph.util.RemotePutContext;
 import org.scalegraph.util.RemoteContextEmulation;
 
-public class TeamBenchmark {
+public class TeamBenchmark extends sx10Test {
     private static def message (str:String) : void {
         Console.OUT.println("" + Timer.milliTime() + ":tb: " + here + "(" + Runtime.workerId() + ")" + str);
         Console.OUT.flush();
@@ -311,34 +313,46 @@ public class TeamBenchmark {
             }
         }
     }
-    public static def main(args:Array[String](1)) : void {
+    
+    public static def main(args:Array[String](1)) {
+        val t = new TeamBenchmark();
+        t.execute();
+    }
+    
+    public def run(): Boolean {
+        val args = ["1024", "10"];
+        entry(args);
+        
+        return true;
+    }
+    public static def entry(args:Array[String](1)) : void {
         val size = Int.parse(args(0));
         val count = Int.parse(args(1));
         var tests: Int = ~0;
-	if (args.size >= 2) {
-		tests = Int.parse(args(2),2);
-	}
+        if (args.size >= 3) {
+            tests = Int.parse(args(2),2);
+        }
         val comm = Team.WORLD;
         message("Team.WORLD: " + Team.WORLD);
         message("members of Team(0): " + Team.WORLD.places());
-
-	if ((tests & 1) == 1) testBarrier(comm, size, count);
-	tests >>= 1;
+        
+        if ((tests & 1) == 1) testBarrier(comm, size, count);
+        tests >>= 1;
         if ((tests & 1) == 1) testScatter(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
         if ((tests & 1) == 1) testScatterAuto(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
         if ((tests & 1) == 1) testScattervAuto(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
         if ((tests & 1) == 1) testGather(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
         if ((tests & 1) == 1) testGathervAuto(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
         if ((tests & 1) == 1) testAlltoall(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
         if ((tests & 1) == 1) testAlltoallvAuto(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
         if ((tests & 1) == 1) testAllgathervAuto(comm, size, count);
-	tests >>= 1;
+        tests >>= 1;
     }
 }

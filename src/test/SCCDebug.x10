@@ -12,12 +12,14 @@
 package test;
 
 import x10.util.Team;
+import x10.util.Timer;
 import x10.compiler.Native;
 
-//import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
+import org.scalegraph.util.random.Random;
 import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.generator.GraphGenerator;
 import org.scalegraph.graph.Graph;
 
 import org.scalegraph.xpregel.VertexContext;
@@ -68,30 +70,53 @@ public class SCCDebug {
 		}
 	}
 	
+	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
+
+	    Console.OUT.println("Generating edge list ...");
+	    val rnd = new Random(2, 3);
+	    val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+	    val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+
+	    Console.OUT.println("Creating graph object ...");
+
+	    val g = new Graph(team, Graph.VertexType.Long, useTranslator);
+	    val start = Timer.nanoTime();
+	    g.addEdges(edgelist);
+	    Console.OUT.printf("addEdges: time = %g\n", (Timer.nanoTime() - start));
+	    g.setEdgeAttribute[Double]("weight", weigh);
+
+	    // check results
+	    Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());
+
+	    return g;
+	}
+	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;	
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					1.0
-			);
-		};
-		
-		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-		
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
+		// val inputFormat = (s:String) => {
+		// 	val elements = s.split(",");
+		// 	return new Tuple3[Long,Long,Double](
+		// 			Long.parse(elements(0)),
+		// 			Long.parse(elements(1)),
+		// 			1.0
+		// 	);
+		// };
+		// 
+		// val start_read_time = System.currentTimeMillis();
+		// val graphData = DistributedReader.read(team,args,inputFormat);
+		// val end_read_time = System.currentTimeMillis();
+		// Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
+		// 
+		// val edgeList = graphData.get1();
+		// val weigh = graphData.get2();
+		// val g = new Graph(team,Graph.VertexType.Long,false);
+		// val start_init_graph = System.currentTimeMillis();
+		// g.addEdges(edgeList.raw(team.placeGroup()));
+		// g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
+		// val end_init_graph = System.currentTimeMillis();
+		// Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
+		val scale = 14;
+		val g = generate_graph(scale, team, true);
 		
 		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val xpregel = new XPregelGraph[SCCVertex, Long](team, csr);

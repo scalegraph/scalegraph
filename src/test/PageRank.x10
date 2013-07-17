@@ -17,13 +17,27 @@ import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.harness.sx10Test;
 
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class PageRank {
+public class PageRank extends sx10Test {
+    
+    public static def main(args:Array[String](1)) {
+        val t = new PageRank();
+        t.execute();
+    }
+    
+    public def run(): Boolean {
+        val arg: Array[String] = new Array[String](1);
+        arg(0) = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
+        entry(arg);
+        
+        return true;
+    }
 	
-	public static def main(args:Array[String](1)) {
+	public def entry(args:Array[String]) {
 		val team = Team.WORLD;
 		val inputFormat = (s:String) => {
 			val elements = s.split(",");

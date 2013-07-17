@@ -11,17 +11,19 @@
 
 package test;
 
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
 import x10.util.Team;
+
+import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.gimv.GIMV;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.gimv.GIMV;
+import org.scalegraph.util.tuple.*;
 
-public class GraphTest {
+public class GraphTest extends sx10Test {
 	
 	public static inputFormat_g1 = (s:String)=> {
 		val elements = s.split(",");
@@ -345,6 +347,16 @@ public class GraphTest {
 	}
 	
     public static def main(args: Array[String](1)) {
-        ditributed_sssp_test(args(1), args(0));
+        val t = new GraphTest();
+        t.execute();
     }
+    
+    public def run(): Boolean {
+        val file = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
+        val parttition = "1x" + Place.MAX_PLACES;
+        ditributed_sssp_test(file, parttition);
+        
+        return true;
+    }
+    
 }
