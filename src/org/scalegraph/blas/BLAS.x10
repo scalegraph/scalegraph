@@ -117,6 +117,64 @@ public class BLAS {
 		});
 	}
 	
+	public static def mult_[T](alpha :T, A :DistSparseMatrix[T], trans :Boolean, x :DistMemoryChunk[T], beta :T, y :DistMemoryChunk[T])
+	{ T haszero, T <: Arithmetic[T] }
+	{
+		val allTeam = Team2(A.dist().allTeam());
+		
+		if(trans) throw new UnsupportedOperationException();
+		if(A.ids().outerOrInner) throw new UnsupportedOperationException();
+		
+			try {
+				val dist = A.dist();
+				val ids = A.ids();
+				val R = dist.R();
+				val C = dist.C();
+				val localSize = 1L << ids.lgl;
+				val localWidth = 1L << (ids.lgl + ids.lgr);
+				val localHeight = 1L << (ids.lgl + ids.lgc);
+				val A_ = A();
+				val y_ = y();
+				val columnTeam = Team2(A.dist().columnTeam());
+				val rowTeam = Team2(A.dist().rowTeam());
+				//
+				val refVector = new MemoryChunk[T](localWidth);
+				val tmpSendVector = new MemoryChunk[T](localHeight);
+				val tmpRecvVector = new MemoryChunk[T](localHeight);
+				
+				columnTeam.allgather(x(), refVector);
+
+				Parallel.iter(0L..(localHeight-1), (tid :Long, range :LongRange) => {
+					for(i in range) {
+						val off = A_.offsets(i);
+						val next = A_.offsets(i+1);
+						var sum :T = Zero.get[T]();
+						for(ei in off..(next-1)) {
+							sum += A_.values(ei) * refVector(A_.vertexes(ei));
+						}
+						tmpSendVector(i) = sum;
+					}
+				});
+				
+				rowTeam.alltoall(tmpSendVector, tmpRecvVector);
+
+				Parallel.iter(0L..(localSize-1), (tid :Long, range :LongRange) => {
+					for(i in range) {
+						var sum :T = Zero.get[T]();
+						for(j in 0L..(C-1)) {
+							sum += tmpRecvVector(i + j * localSize);
+						}
+						y_(i) = alpha * sum + beta * y_(i);
+					}
+				});
+
+				refVector.del();
+				tmpSendVector.del();
+				tmpRecvVector.del();
+				
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+	}
+	
 	/** B <- alpha * A + beta * B */
 	public static def add[T](alpha :T, A :IdentityMatrix, beta :T, B: DistSparseMatrix[T])
 	{ T haszero, T <: Arithmetic[T] }

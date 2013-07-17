@@ -1,6 +1,7 @@
 package test;
 
 import x10.compiler.Native;
+import x10.util.Random;
 import x10.util.Team;
 
 import org.scalegraph.arpack.ARPACK;
@@ -16,6 +17,8 @@ public class SpectralClustering {
 	public static def main(args:Array[String](1)) {
 		val fileName = args(1);
 		val numCluster = Int.parse(args(2));
+		val maxitr = Int.parse(args(3));
+		val threshold = Double.parse(args(4));
 		val team = Team.WORLD;
 		val inputFormat = (s:String) => {
 			val elements = s.split(" ");
@@ -50,7 +53,7 @@ public class SpectralClustering {
 		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, false, 0.0, W);
 		
 		val V = calcEigenVectors(team, W, N * RC, N, numCluster);
-		val result = kmeans(team, V, numCluster);
+		val result = kmeans(team, V, numCluster, maxitr, threshold);
 	}
 	
 	
@@ -72,6 +75,8 @@ public class SpectralClustering {
 		val ldu:Int = nloc;
 		val maxitr = 1000;  // param (default = ?)
 		val lworkl:Int = ncv * (ncv + 8);  // param (default = ncv * (ncv + 8))
+		val x = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
+		val y = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
 		
 		// global params for pdseupd
 		val rvec:Int = 1;  // param (default = 1)
@@ -127,12 +132,13 @@ public class SpectralClustering {
 					}
 				}
 				
-				if(ido == -1) {
+				if(ido == -1 || ido == 1) {
 					// y <- OP(x)
-					
-				} else if(ido == 1) {
-					// z <- Bx
-					// y <- OP(z)
+					val x_ = new MemoryChunk[Double](workd.raw(), ipntr(0) - 1, nloc);
+					val y_ = new MemoryChunk[Double](workd.raw(), ipntr(1) - 1, nloc);
+					MemoryChunk.copy[Double](x_, 0L, x(), 0L, nloc);
+					BLAS.mult_[Double](1.0, A, false, x, 0.0, y);
+					MemoryChunk.copy[Double](y(), 0L, y_, 0L, nloc);
 					
 				} else if(ido == 2) {
 					// y <- Bx
@@ -183,13 +189,96 @@ public class SpectralClustering {
 	/*
 	 * It's better to implement Kmeans++ method.
 	 */
-	static def kmeans(team : Team, dmc : DistMemoryChunk[Double], k : Int, maxitr : Int) : DistMemoryChunk[Int] {
+	static def kmeans(team : Team, dmc : DistMemoryChunk[Double], k : Int, maxitr : Int, threshold : Double) : DistMemoryChunk[Int] {
 		assert(dmc().size() % k == 0L);
+		val team2 = new Team2(team);
+		val root = team.role()(0);
 		val assign = new DistMemoryChunk[Int](team.placeGroup(), () => new MemoryChunk[Int](dmc().size() / k));
-		val gcentroid = new MemoryChunk[Double](k * k);
-		val gcount = new MemoryChunk[Long](k);
-		val lcentroid = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](k * k));
-		val lcount = new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](k));
+		val curC = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](k * k));
+		val nextC = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](k * k));
+		val count = new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](k));
 		
+		team2.placeGroup().broadcastFlat(() => {
+			val mc = dmc();
+			val lassign = assign();
+			val lcurC = curC();
+			val lnextC = nextC();
+			val lcount = count();
+			
+			// create initial centroids
+			val r = new Random();
+			for(j in 0..(k-1)) {
+				val i = r.nextLong();
+				for(l in 0..(k-1)) {
+					lnextC(j * k + l) = mc(i * k + l);
+				}
+				lcount(j)++;
+			}
+			
+			for(itr in 1..maxitr) {
+				
+				// reduce centroids
+				team2.allreduce(lnextC, lnextC, Team.ADD);
+				team2.allreduce(lcount, lcount, Team.ADD);
+				
+				for(j in 0..(k-1)) {
+					for(l in 0..(k-1)) {
+						lnextC(j * k + l) /= lcount(j);
+					}
+				}
+				
+				// check convergence
+				if(itr >= 2) {
+					var converge:Boolean = true;
+					for(j in 0..(k-1)) {
+						var norm2:Double = 0.0;
+						for(l in 0..(k-1)) {
+							val x = lnextC(j * k + l) - lcurC(j * k + l);
+							norm2 += x * x;
+						}
+						if(norm2 > threshold) {
+							converge = false;
+							break;
+						}
+					}
+					if(converge) {
+						break;
+					}
+				}
+				
+				// move lnextC to lcurC, clear lnextC and lcount
+				for(j in 0..(k-1)) {
+					for(l in 0..(k-1)) {
+						lcurC(j * k + l) = lnextC(j * k + l);
+						lnextC(j * k + l) = 0.0;
+					}
+					lcount(j) = 0L;
+				}
+				
+				// assign vertices to the nearest cluster
+				for(i in mc.range()) {
+					var best:Int = -1;
+					var bestNorm2:Double = Double.MAX_VALUE;
+					for(j in 0..(k-1)) {
+						var norm2:Double = 0.0;
+						for(l in 0..(k-1)) {
+							val x = mc(i * k + l) - lcurC(j * k + l);
+							norm2 += x * x;
+						}
+						if(norm2 < bestNorm2) {
+							best = j;
+							bestNorm2 = norm2;
+						}
+					}
+					lassign(i) = best;
+					for(l in 0..(k-1)) {
+						lnextC(best * k + l) += mc(i * k + l);
+					}
+					lcount(best)++;
+				}
+			}
+		});
+		
+		return assign;
 	}
 }
