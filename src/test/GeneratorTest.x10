@@ -12,7 +12,7 @@
 package test;
 import x10.util.Team;
 import org.scalegraph.util.random.Random;
-import org.scalegraph.generator.GraphGenerator;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.harness.sx10Test;
 import org.scalegraph.fileread.DistributedReader;

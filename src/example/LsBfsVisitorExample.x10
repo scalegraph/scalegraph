@@ -18,10 +18,10 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.Parallel;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.visitor.LsBfsVisitor;
 
 public class LsBfsVisitorExample {
@@ -49,7 +49,7 @@ public class LsBfsVisitorExample {
         g.addEdges(edgeList.raw(team.placeGroup()));
         
         // Create dist sparse matrix
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
                                               true);

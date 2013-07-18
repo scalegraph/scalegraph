@@ -18,7 +18,7 @@ import x10.util.Team;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.util.Dist2D;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.Bitmap2;
 import org.scalegraph.graph.id.OnedC;
 import x10.util.concurrent.AtomicLong;
@@ -33,7 +33,7 @@ public class TestLsBfs extends sx10Test {
         val vtoS: OnedC.VtoS;
         val vertexCount: AtomicLong;
         val edgeCount:AtomicLong;
-        def this(csr: DistSparseMatrix) {
+        def this(csr: DistSparseMatrix[Long]) {
             val ids = csr.ids();
             localVertices = ids.numberOfLocalVertexes();
             visited = new Bitmap2(localVertices);
@@ -72,7 +72,7 @@ public class TestLsBfs extends sx10Test {
         g.addEdges(edgeList.raw(team.placeGroup()));
         
         // Create dist sparse matrix
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
                                               true);

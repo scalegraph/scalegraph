@@ -21,10 +21,11 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.blas.GIMV;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.Attribute;
-import org.scalegraph.generator.GraphGenerator;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.gimv.GIMV;
 import org.scalegraph.harness.sx10Test;
 
@@ -58,8 +59,8 @@ public class GIMVPageRank extends sx10Test {
 
 		val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
 		// directed, outer
-		val columnDistGraph = g.constructDistSparseMatrix(distColumn, true, true);
-		val columnDistWeight = g.constructDistAttribute[Double](columnDistGraph, false, "weight");
+		val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, true, true);
+		val columnDistWeight = g.createDistAttribute[Double](columnDistGraph, false, "weight");
 
 		Console.OUT.println("Normalizing weights ...");
 
@@ -93,7 +94,7 @@ public class GIMVPageRank extends sx10Test {
 	 * @param weight Edge weights
 	 * @param n The number of vertices in the graph.
 	 */
-	public static def pagerank(g :DistSparseMatrix, weight :DistMemoryChunk[Double], n :Long) {
+	public static def pagerank(g :DistSparseMatrix[Long], weight :DistMemoryChunk[Double], n :Long) {
 		val team = g.dist().allTeam();
 		val c = 0.85;
 		val map = (mij :Double , vj :Double) => c * mij * vj;
@@ -140,8 +141,8 @@ public class GIMVPageRank extends sx10Test {
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 
 		// directed, inner edge
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
-		val weight = g.constructDistAttribute[Double](csr, false, "normalized_weight");
+		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
+		val weight = g.createDistAttribute[Double](csr, false, "normalized_weight");
 
 		val vector = pagerank(csr, weight, g.numberOfVertices());
 

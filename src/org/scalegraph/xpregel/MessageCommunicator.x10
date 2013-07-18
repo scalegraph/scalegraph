@@ -29,6 +29,13 @@ struct MessageBuffer[M] { M haszero } {
 }
 
 class MessageCommunicator[M] { M haszero } {
+	/* Name form
+	 * UC : UniCast message
+	 * BC : BroadCast message
+	 * xxC : buffer for Compute phase
+	 * xxS : send buffer
+	 * xxR : receive buffer
+	 */
 	val mTeam :Team2;
 	val mIds :IdStruct;
 	val mNumThreads :Int;
@@ -44,31 +51,31 @@ class MessageCommunicator[M] { M haszero } {
 	var mInEdgesVertex :MemoryChunk[Long];
 	var mInEdgesMask :Bitmap;
 
-	var mEOREnabled :Boolean;
-	var mVOREnabled :Boolean;
+	var mUCREnabled :Boolean;
+	var mBCREnabled :Boolean;
 	
-	var mEOCMessages :MemoryChunk[MessageBuffer[M]];
+	var mUCCMessages :MemoryChunk[MessageBuffer[M]];
 	
-	var mVOCHasMessage :Bitmap;
-	var mVOCMessages :MemoryChunk[M];
+	var mBCCHasMessage :Bitmap;
+	var mBCCMessages :MemoryChunk[M];
 	
-	var mEOSCount :MemoryChunk[Int];
-	var mEOSOffset :MemoryChunk[Int];
-	var mEOSIds :MemoryChunk[Long];
-	var mEOSMessages :MemoryChunk[M];
+	var mUCSCount :MemoryChunk[Int];
+	var mUCSOffset :MemoryChunk[Int];
+	var mUCSIds :MemoryChunk[Long];
+	var mUCSMessages :MemoryChunk[M];
 	
-	var mVOSInputCount :Long;
-	var mVOSCount :MemoryChunk[Int];
-	var mVOSOffset :MemoryChunk[Int];
-	var mVOSMessages :MemoryChunk[M];
-	var mVOSMask :Bitmap;
+	var mBCSInputCount :Long;
+	var mBCSCount :MemoryChunk[Int];
+	var mBCSOffset :MemoryChunk[Int];
+	var mBCSMessages :MemoryChunk[M];
+	var mBCSMask :Bitmap;
 	
-	var mEORMessages :MemoryChunk[M];
-	var mEOROffset :MemoryChunk[Long];
+	var mUCRMessages :MemoryChunk[M];
+	var mUCROffset :MemoryChunk[Long];
 	
-	var mVORHasMessage :Bitmap;
-	var mVOROffset :MemoryChunk[Long];
-	var mVORMessages :MemoryChunk[M];
+	var mBCRHasMessage :Bitmap;
+	var mBCROffset :MemoryChunk[Long];
+	var mBCRMessages :MemoryChunk[M];
 	
 	var mNumActiveVertexes :Long;
 	
@@ -86,33 +93,33 @@ class MessageCommunicator[M] { M haszero } {
 		mStoV = new OnedC.StoV(ids, rank_c);
 
 		// TODO: optimize
-		mEOCMessages = new MemoryChunk[MessageBuffer[M]](mNumThreads * mTeam.size(),
+		mUCCMessages = new MemoryChunk[MessageBuffer[M]](mNumThreads * mTeam.size(),
 				(i:Long) => new MessageBuffer[M]());
-		mVOCHasMessage = new Bitmap(mIds.numberOfLocalVertexes(), false);
-		mVOCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
+		mBCCHasMessage = new Bitmap(mIds.numberOfLocalVertexes(), false);
+		mBCCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
 	}
 	
 	def del() {
 		// TODO:
 	}
 	
-	def messageBuffer(tid :Long) = mEOCMessages.subpart(tid * mTeam.size(), mTeam.size());
+	def messageBuffer(tid :Long) = mUCCMessages.subpart(tid * mTeam.size(), mTeam.size());
 	
 	def message(srcid :Long, buffer :GrowableMemory[M]) {
-		if(mEOREnabled) {
-			// edge orient
-			if(mEOROffset.size() == 0L)
+		if(mUCREnabled) {
+			// unicast messages
+			if(mUCROffset.size() == 0L)
 				return new MemoryChunk[M](0);
 			
-			val start = mEOROffset(srcid);
-			val length = mEOROffset(srcid + 1) - start;
-			return mEORMessages.subpart(start, length);
+			val start = mUCROffset(srcid);
+			val length = mUCROffset(srcid + 1) - start;
+			return mUCRMessages.subpart(start, length);
 		}
-		else if(mVOREnabled) {
-			// vertex orient
-			val bmp = mVORHasMessage;
-			val offset = mVOROffset;
-			val mes = mVORMessages;
+		else if(mBCREnabled) {
+			// broadcast messages
+			val bmp = mBCRHasMessage;
+			val offset = mBCROffset;
+			val mes = mBCRMessages;
 			val start = mInEdgesOffset(srcid);
 			val end = mInEdgesOffset(srcid + 1);
 			val length = end - start;
@@ -128,6 +135,9 @@ class MessageCommunicator[M] { M haszero } {
 						MathAppend.popcount(bmp.word(wordOffset) & wordMask);
 					buffer(i) = mes(mesOffset);
 				}
+				else {
+					// TODO !!!!
+				}
 			}
 			
 			return buffer.raw();
@@ -137,21 +147,21 @@ class MessageCommunicator[M] { M haszero } {
 	
 	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) {V haszero, E haszero, A haszero } {
 		mNumActiveVertexes += ctx.mNumActiveVertexes; ctx.mNumActiveVertexes = 0L;
-		mVOSInputCount += ctx.mVOSInputCount; ctx.mVOSInputCount = 0L;
+		mBCSInputCount += ctx.mBCSInputCount; ctx.mBCSInputCount = 0L;
 	}
 	
-	private def preProcessEdgeOrientMessages(combine : (MemoryChunk[M]) => M) {
+	private def preProcessUnicastMessages(combine : (MemoryChunk[M]) => M) {
 		val numPlaces = mTeam.size();
 		val combineEnabled = (combine != null);
 		val nullMessage = Zero.get[M]();
 		
-		val numMessages = Algorithm.reduce(mEOCMessages.range(),
-				(i:Long) => mEOCMessages(i).messages.size()) as Int;
+		val numMessages = Algorithm.reduce(mUCCMessages.range(),
+				(i:Long) => mUCCMessages(i).messages.size()) as Int;
 		if(numMessages == 0)
 			return [ 0L as Long , 0L as Long ]; // short cut
 		
-		mEOSCount = new MemoryChunk[Int](numPlaces);
-		mEOSOffset = new MemoryChunk[Int](numPlaces + 1);
+		mUCSCount = new MemoryChunk[Int](numPlaces);
+		mUCSOffset = new MemoryChunk[Int](numPlaces + 1);
 		val mesCount :MemoryChunk[Int];
 		val mesOffset :MemoryChunk[Int];
 		if(combineEnabled) {
@@ -159,8 +169,8 @@ class MessageCommunicator[M] { M haszero } {
 			mesOffset = new MemoryChunk[Int](numPlaces + 1);
 		}
 		else {
-			mesCount = mEOSCount;
-			mesOffset = mEOSOffset;
+			mesCount = mUCSCount;
+			mesOffset = mUCSOffset;
 		}
 		mesOffset(0) = 0;
 		for(p in 0..(numPlaces-1)) mesCount(p) = 0;
@@ -168,7 +178,7 @@ class MessageCommunicator[M] { M haszero } {
 		// count number of messages
 		for(th in 0..(mNumThreads-1)) {
 			for(p in 0..(numPlaces-1)) {
-				mesCount(p) += mEOCMessages(th * numPlaces + p).messages.size() as Int;
+				mesCount(p) += mUCCMessages(th * numPlaces + p).messages.size() as Int;
 			}
 		}
 		for(p in 0..(numPlaces-1)) {
@@ -184,10 +194,10 @@ class MessageCommunicator[M] { M haszero } {
 			idsTmp = new MemoryChunk[Long](numMessages);
 		}
 		else {
-			mEOSIds = new MemoryChunk[Long](numMessages);
-			mEOSMessages = new MemoryChunk[M](numMessages);
-			idsTmp = mEOSIds;
-			mesTmp = mEOSMessages;
+			mUCSIds = new MemoryChunk[Long](numMessages);
+			mUCSMessages = new MemoryChunk[M](numMessages);
+			idsTmp = mUCSIds;
+			mesTmp = mUCSMessages;
 		}
 		
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
@@ -198,7 +208,7 @@ class MessageCommunicator[M] { M haszero } {
 			var offset :Long = 0;
 			
 			for(th in 0..(mNumThreads-1)) {
-				val src = mEOCMessages(th * numPlaces + p);
+				val src = mUCCMessages(th * numPlaces + p);
 				val size = src.messages.size();
 				MemoryChunk.copy(src.messages.raw(), 0L, mesLocal, offset, size);
 				MemoryChunk.copy(src.dstIds.raw(), 0L, idsLocal, offset, size);
@@ -236,7 +246,7 @@ class MessageCommunicator[M] { M haszero } {
 					idsLocal(resultLength) = vid;
 					++resultLength;
 				}
-				mEOSCount(p) = resultLength;
+				mUCSCount(p) = resultLength;
 			}
 		});
 
@@ -244,20 +254,20 @@ class MessageCommunicator[M] { M haszero } {
 		if(combine != null) {
 			// compact
 			for(p in 0..(numPlaces-1)) {
-				mEOSOffset(p + 1) = mEOSOffset(p) + mEOSCount(p);
+				mUCSOffset(p + 1) = mUCSOffset(p) + mUCSCount(p);
 			}
-			numCombinedMessages = mEOSOffset(numPlaces);
+			numCombinedMessages = mUCSOffset(numPlaces);
 
-			mEOSIds = new MemoryChunk[Long](numCombinedMessages);
-			mEOSMessages = new MemoryChunk[M](numCombinedMessages);
-			val idsBuffer = mEOSIds;
-			val mesBuffer = mEOSMessages;
+			mUCSIds = new MemoryChunk[Long](numCombinedMessages);
+			mUCSMessages = new MemoryChunk[M](numCombinedMessages);
+			val idsBuffer = mUCSIds;
+			val mesBuffer = mUCSMessages;
 			
 			Parallel.iter(0..(numPlaces-1), (p :Int) => {
 				val tmpOffset = mesOffset(p) as Long;
-				val bufOffset = mEOSOffset(p) as Long;
-				val length = mEOSCount(p) as Long;
-				assert (mEOSOffset(p + 1) - bufOffset == length);
+				val bufOffset = mUCSOffset(p) as Long;
+				val length = mUCSCount(p) as Long;
+				assert (mUCSOffset(p + 1) - bufOffset == length);
 				MemoryChunk.copy(mesTmp, tmpOffset, mesBuffer, bufOffset, length);
 				MemoryChunk.copy(idsTmp, tmpOffset, idsBuffer, bufOffset, length);
 			});
@@ -287,25 +297,25 @@ class MessageCommunicator[M] { M haszero } {
 		tmpMask.del();
 	}
 	
-	private def preProcessVertexOrientMessages(combine : (MemoryChunk[M]) => M) :Long {
+	private def preProcessBroadcastMessages(combine : (MemoryChunk[M]) => M) :Long {
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
 		val nullMessage = Zero.get[M]();
 		
-		if(mVOSInputCount == 0L) return 0L;
+		if(mBCSInputCount == 0L) return 0L;
 		
 		if(mInEdgesMask == null) createInEdgesMask();
 		
-		mVOSMask = new Bitmap(numLocalVertexes2N * numPlaces);
-		mVOSCount = new MemoryChunk[Int](numPlaces);
-		mVOSOffset = new MemoryChunk[Int](numPlaces + 1);
+		mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces);
+		mBCSCount = new MemoryChunk[Int](numPlaces);
+		mBCSOffset = new MemoryChunk[Int](numPlaces + 1);
 		
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
 			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
-			val placeHasMessage = mVOSMask.raw().subpart(startWordOffset, lengthInWords);
+			val placeHasMessage = mBCSMask.raw().subpart(startWordOffset, lengthInWords);
 			val placeInEdgeMask = mInEdgesMask.raw().subpart(startWordOffset, lengthInWords);
-			val rawHasMessage = mVOCHasMessage.raw();
+			val rawHasMessage = mBCCHasMessage.raw();
 			
 			var placeNumMessage :Int = 0;
 			for(i in placeHasMessage.range()) {
@@ -313,76 +323,76 @@ class MessageCommunicator[M] { M haszero } {
 				placeNumMessage += MathAppend.popcount(placeHasMessage(i));
 				rawHasMessage(i) = 0UL; // clear bitmap
 			}
-			mVOSCount(p) = placeNumMessage;
+			mBCSCount(p) = placeNumMessage;
 		});
 		
-		mVOSOffset(0) = 0;
+		mBCSOffset(0) = 0;
 		for(i in 0..(numPlaces-1)) {
-			mVOSOffset(i + 1) = mVOSOffset(i) + mVOSCount(i);
+			mBCSOffset(i + 1) = mBCSOffset(i) + mBCSCount(i);
 		}
 		
-		mVOSMessages = new MemoryChunk[M](mVOSOffset(numPlaces));
+		mBCSMessages = new MemoryChunk[M](mBCSOffset(numPlaces));
 
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
 			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
-			val placeHasMessage = new Bitmap(mVOSMask.raw().subpart(startWordOffset, lengthInWords));
+			val placeHasMessage = new Bitmap(mBCSMask.raw().subpart(startWordOffset, lengthInWords));
 			
-			val start = mVOSOffset(p);
-			val length = mVOSCount(p);
-			val mesLocalBuffer = mVOSMessages.subpart(start, length);
+			val start = mBCSOffset(p);
+			val length = mBCSCount(p);
+			val mesLocalBuffer = mBCSMessages.subpart(start, length);
 			
 			var offset :Int = 0L;
-			for(i in mVOCMessages.range()) {
+			for(i in mBCCMessages.range()) {
 				if(placeHasMessage(i)) {
-					mesLocalBuffer(offset++) = mVOCMessages(i);
-					mVOCMessages(i) = nullMessage; // clear
+					mesLocalBuffer(offset++) = mBCCMessages(i);
+			//		mBCCMessages(i) = nullMessage; // clear
 				}
 			}
 			assert (offset == length);
 		});
 
-		return mVOSOffset(numPlaces);
+		return mBCSOffset(numPlaces);
 	}
 	
 	def resetSRBuffer() {
-		if(mEORMessages.size() > 0) mEORMessages.del();
-		if(mEOROffset.size() > 0) mEOROffset.del();
-		if(mVORHasMessage != null) mVORHasMessage.del();
-		if(mVOROffset.size() > 0) mVOROffset.del();
-		if(mVORMessages.size() > 0) mVORMessages.del();
+		if(mUCRMessages.size() > 0) mUCRMessages.del();
+		if(mUCROffset.size() > 0) mUCROffset.del();
+		if(mBCRHasMessage != null) mBCRHasMessage.del();
+		if(mBCROffset.size() > 0) mBCROffset.del();
+		if(mBCRMessages.size() > 0) mBCRMessages.del();
 	}
 	
 	def preProcess(combine : (MemoryChunk[M]) => M) {
 		resetSRBuffer();
 
 		val r0 = mNumActiveVertexes;
-		val [ r1, r2 ] = preProcessEdgeOrientMessages(combine);
-		val r3 = preProcessVertexOrientMessages(combine);
+		val [ r1, r2 ] = preProcessUnicastMessages(combine);
+		val r3 = preProcessBroadcastMessages(combine);
 
-		mVOSInputCount = 0L;
+		mBCSInputCount = 0L;
 		mNumActiveVertexes = 0L;
 		
 		return [ r0, r1, r2, r3 ];
 	}
 	
-	def exchangeMessages(EOEnable :Boolean, VOEnable :Boolean) :void {
+	def exchangeMessages(UCEnable :Boolean, BCEnable :Boolean) :void {
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
 
-		mEOREnabled = EOEnable;
-		mVOREnabled = VOEnable;
+		mUCREnabled = UCEnable;
+		mBCREnabled = BCEnable;
 		
-		if(EOEnable) {
-			if(mEOSCount.size() == 0L) {
+		if(UCEnable) {
+			if(mUCSCount.size() == 0L) {
 				// this place has no message to send but it must prepare for receiving messages
-				mEOSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
-				mEOSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
+				mUCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
+				mUCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
 			}
 			
-			mTeam.alltoall(mEOSCount, recvCount);
+			mTeam.alltoall(mUCSCount, recvCount);
 			
 			recvOffset(0) = 0;
 			for(i in recvCount.range()) {
@@ -391,40 +401,40 @@ class MessageCommunicator[M] { M haszero } {
 			
 			val recvSize = recvOffset(numPlaces);
 
-			val EORIdsTmp = new MemoryChunk[Long](recvSize);
-			mTeam.alltoallv(mEOSIds, mEOSOffset, mEOSCount, EORIdsTmp, recvOffset, recvCount);
-			mEOSIds.del();
+			val UCRIdsTmp = new MemoryChunk[Long](recvSize);
+			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIdsTmp, recvOffset, recvCount);
+			mUCSIds.del();
 
-			val EORMessagesTmp = new MemoryChunk[M](recvSize);
-			mTeam.alltoallv(mEOSMessages, mEOSOffset, mEOSCount, EORMessagesTmp, recvOffset, recvCount);
-			mEOSMessages.del();
+			val UCRMessagesTmp = new MemoryChunk[M](recvSize);
+			mTeam.alltoallv(mUCSMessages, mUCSOffset, mUCSCount, UCRMessagesTmp, recvOffset, recvCount);
+			mUCSMessages.del();
 			
-			mEOSCount.del();
-			mEOSOffset.del();
+			mUCSCount.del();
+			mUCSOffset.del();
 
-			val EORIds = new MemoryChunk[Long](recvSize);
-			mEORMessages = new MemoryChunk[M](recvSize);
+			val UCRIds = new MemoryChunk[Long](recvSize);
+			mUCRMessages = new MemoryChunk[M](recvSize);
 			
-			Parallel.sort(mIds.lgl, EORIdsTmp, EORMessagesTmp, EORIds, mEORMessages);
+			Parallel.sort(mIds.lgl, UCRIdsTmp, UCRMessagesTmp, UCRIds, mUCRMessages);
 
-			EORMessagesTmp.del();
-			EORIdsTmp.del();
+			UCRMessagesTmp.del();
+			UCRIdsTmp.del();
 			
 			val numLocalVertexes = mIds.numberOfLocalVertexes();
-			mEOROffset = new MemoryChunk[Long](numLocalVertexes+1);
-			Parallel.makeOffset(EORIds, mEOROffset);
-			EORIds.del();
+			mUCROffset = new MemoryChunk[Long](numLocalVertexes+1);
+			Parallel.makeOffset(UCRIds, mUCROffset);
+			UCRIds.del();
 		}
 		
-		if(VOEnable) {
-			if(mVOSCount.size() == 0L) {
+		if(BCEnable) {
+			if(mBCSCount.size() == 0L) {
 				// this place has no message to send but it must prepare for receiving messages
-				mVOSMask = new Bitmap(numLocalVertexes2N * numPlaces, false);
-				mVOSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
-				mVOSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
+				mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces, false);
+				mBCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
+				mBCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
 			}
 			
-			mTeam.alltoall(mVOSCount, recvCount);
+			mTeam.alltoall(mBCSCount, recvCount);
 			
 			recvOffset(0) = 0;
 			for(i in recvCount.range()) {
@@ -433,21 +443,21 @@ class MessageCommunicator[M] { M haszero } {
 
 			val recvSize = recvOffset(numPlaces);
 			
-			mVORMessages = new MemoryChunk[M](recvSize);
-			mTeam.alltoallv(mVOSMessages, mVOSOffset, mVOSCount, mVORMessages, recvOffset, recvCount);
-			mVOSMessages.del();
+			mBCRMessages = new MemoryChunk[M](recvSize);
+			mTeam.alltoallv(mBCSMessages, mBCSOffset, mBCSCount, mBCRMessages, recvOffset, recvCount);
+			mBCSMessages.del();
 
-			mVORHasMessage = new Bitmap(numLocalVertexes2N * numPlaces);
-			mTeam.alltoall(mVOSMask.raw(), mVORHasMessage.raw());
-			mVOSMask.del();
+			mBCRHasMessage = new Bitmap(numLocalVertexes2N * numPlaces);
+			mTeam.alltoall(mBCSMask.raw(), mBCRHasMessage.raw());
+			mBCSMask.del();
 			
-			mVOROffset = new MemoryChunk[Long](Bitmap.numWords(mVORHasMessage.size()) + 1);
-			Parallel.scan(mVORHasMessage.raw().range(), mVOROffset, 0L,
-					(i:Long, v:Long) => MathAppend.popcount(mVORHasMessage.word(i)) + v,
+			mBCROffset = new MemoryChunk[Long](Bitmap.numWords(mBCRHasMessage.size()) + 1);
+			Parallel.scan(mBCRHasMessage.raw().range(), mBCROffset, 0L,
+					(i:Long, v:Long) => MathAppend.popcount(mBCRHasMessage.word(i)) + v,
 					(v1:Long, v2:Long) => v1 + v2);
 			
 			assert recvOffset(numPlaces) as Long ==
-				mVOROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
+				mBCROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
 		}
 
 		recvCount.del();
