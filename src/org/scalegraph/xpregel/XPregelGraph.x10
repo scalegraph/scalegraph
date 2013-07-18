@@ -25,6 +25,15 @@ public class XPregelGraph[V,E]{V haszero, E haszero} {
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
 	
+	public def ids() = mWorkers().mIds;
+	public def localVertexes() = mWorkers().mVertexValue;
+	public def localEdgesId() = mWorkers().mOutEdge.vertexes;
+	public def localEdgesValue() = mWorkers().mOutEdge.value;
+	public def stealOutput[T](index :Int) :DistMemoryChunk[T] {
+		return null;
+	}
+	public def aggregatedValue[T]() = mWorkers().mLastAggVal as T;
+	
 	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long])
 	{
 		mTeam = new Team2(team);

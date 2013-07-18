@@ -49,27 +49,27 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	/**
 	 * get the vertex id
 	 */
-	public def id() = mCtx.mStoD(mSrcid);
+	public def id() = mWorker.mStoD(mSrcid);
 	
 	/**
 	 * get real vertex id
 	 */
-	public def realId() = mCtx.mStoV(mSrcid);
+	public def realId() = mWorker.mStoV(mSrcid);
 
 	/**
 	 * get the minimum vertex id of the region assigned to the current place
 	 */
-	public def placeBaseVertexId() = mCtx.mStoD(0L);
+	public def placeBaseVertexId() = mWorker.mStoD(0L);
 	
 	/**
 	 * get real vertex id from dst id
 	 */
-	public def realId(id :Long) = mCtx.mDtoV(id);
+	public def realId(id :Long) = mWorker.mDtoV(id);
 	
 	/**
 	 * get dst id from read vertex id
 	 */
-	public def dstId(realId :Long) = mCtx.mVtoD(realId);
+	public def dstId(realId :Long) = mWorker.mVtoD(realId);
 	
 	/**
 	 * get the number of vertices of the graph
@@ -209,6 +209,10 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 * get the halted flag for the current vertex
 	 */
 	public def isHalted() = mWorker.mVertexActive(mSrcid);
+	
+	public def output[T](index :Int, value :T) {
+		// TODO:
+	}
 }
 
 

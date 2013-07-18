@@ -17,10 +17,20 @@ import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.IdStruct;
 
 import org.scalegraph.xpregel.VertexContext;
+import org.scalegraph.util.DistMemoryChunk;
+import x10.compiler.Native;
 
 class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
+	static val MAX_OUTPUT_NUMBER = 8;
+	
 	val mTeam :Team2;
 	val mIds :IdStruct;
+
+	val mVtoD :OnedC.VtoD;
+	val mDtoV :OnedC.DtoV;
+	val mDtoS :OnedC.DtoS;
+	val mStoD :OnedC.StoD;
+	val mStoV :OnedC.StoV;
 	
 	var mVertexValue :MemoryChunk[V];
 	val mVertexActive :Bitmap;
@@ -29,10 +39,21 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	val mOutEdge :GraphEdge[E];
 	val mInEdge :GraphEdge[E];
 	var mInEdgesMask :Bitmap;
+
+	val numThreads = Runtime.NTHREADS;
+	var mLastAggVal :Any;
+	val mOutput :MemoryChunk[MemoryChunk[MemoryChunk[Any]]];
 	
 	public def this(team :Team, ids :IdStruct) {
+		val rank_c = team.role()(0);
 		mTeam = new Team2(team);
 		mIds = ids;
+		
+		mVtoD = new OnedC.VtoD(ids);
+		mDtoV = new OnedC.DtoV(ids);
+		mDtoS = new OnedC.DtoS(ids);
+		mStoD = new OnedC.StoD(ids, rank_c);
+		mStoV = new OnedC.StoV(ids, rank_c);
 		
 		val numVertexes = mIds.numberOfLocalVertexes();
 		
@@ -42,6 +63,9 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 
 		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
+		
+		mOutput = new MemoryChunk[MemoryChunk[MemoryChunk[Any]]](numThreads,
+				(Long)=>new MemoryChunk[MemoryChunk[Any]](MAX_OUTPUT_NUMBER));
 		
 		if (here.id == 0) {
 			Console.OUT.println("lgl = " + mIds.lgl);
@@ -232,7 +256,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			end :(Int,A)=>Boolean) { M haszero, A haszero }
 	{
 		val root = (mTeam.base.role()(0) == 0);
-		val numThreads = Runtime.NTHREADS;
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mIds, numThreads);
@@ -293,6 +316,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			
 			// exchange messages
 			if(exchangeMessages(mTeam, ectx, statistics)) {
+				mLastAggVal = aggVal;
 				break;
 			}
 		}
@@ -300,5 +324,31 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mInEdgesMask = ectx.mInEdgesMask;
 		
 		ectx.del();
+	}
+	
+	@Native("c++", "reinterpret_cast<org::scalegraph::util::MemoryChunk<#T > >(#v)")
+	private static native def castTo[T](v :MemoryChunk[Any]) :MemoryChunk[T];
+	
+	public def stealOutput[T](index :Int) :MemoryChunk[T] {
+		if(index > MAX_OUTPUT_NUMBER)
+			throw new ArrayIndexOutOfBoundsException();
+		
+		var length :Long = 0L;
+		for(i in 0..(numThreads-1)) {
+			length += mOutput(i)(index).size();
+		}
+		
+		val outMem = new MemoryChunk[T](length);
+		var offset :Long = 0L;
+		finish for(i in 0..(numThreads-1)) {
+			val src_len = mOutput(i)(index).size();
+			val offset_ = offset;
+			async {
+				MemoryChunk.copy(castTo[T](mOutput(i)(index)), 0L, outMem, offset_, src_len);
+			}
+			offset += src_len;
+		}
+		
+		return outMem;
 	}
 }
