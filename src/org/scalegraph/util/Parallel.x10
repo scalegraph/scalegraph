@@ -715,6 +715,7 @@ public class Parallel {
 
 	public static @Inline def reduce[U](range :IntRange, func :(Int,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1);
 		val intermid = new Array[U](nthreads);
@@ -735,6 +736,7 @@ public class Parallel {
 
 	public static @Inline def reduce[U](range :LongRange, func :(Long,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0L) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
 		val intermid = new MemoryChunk[U](nthreads);
@@ -755,6 +757,7 @@ public class Parallel {
 
 	public static @Inline def scan[U](range :IntRange, dst :Array[U](1), init :U, func :(Int,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1);
 		dst(range.min) = init;
@@ -798,6 +801,7 @@ public class Parallel {
 
 	public static @Inline def scan[U](range :LongRange, dst :MemoryChunk[U], init :U, func :(Long,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0L) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
 		dst(range.min) = init;
