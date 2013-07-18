@@ -17,7 +17,6 @@ import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
-
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.metrics.MinimumSpanningTree;
