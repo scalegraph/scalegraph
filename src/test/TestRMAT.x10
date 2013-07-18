@@ -51,15 +51,16 @@ public class TestRMAT {
         
         val result = Degree.getInDegree(g);
         
-        for (p in team.placeGroup()) {
-            at (p) {
-                val dat = result();
-                Console.OUT.println("Dat: " + dat + " : Size-> " + dat.size());
-                for (i in 0..(dat.size() - 1)) {
-                    val deg = i * team.size();
-                    Console.OUT.printf("%ld %ld\n", deg, dat(i));
-                }
-            }
-        }
+        // for (p in team.placeGroup()) {
+        //     at (p) {
+        //         val dat = result();
+        //         Console.OUT.println("Dat: " + dat + " : Size-> " + dat.size());
+        //         for (i in 0..(dat.size() - 1)) {
+        //             val deg = i * team.size();
+        //             Console.OUT.printf("%ld %ld\n", deg, dat(i));
+        //         }
+        //     }
+        // }
+        DistributedReader.write("out-%d", team, result.raw(team.placeGroup()));
     }
 }

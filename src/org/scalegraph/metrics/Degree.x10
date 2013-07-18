@@ -12,7 +12,7 @@ public class Degree {
 	
 	private static def degreeDistribution(g :Graph, directed :Boolean, outerOrInner :Boolean) {
 		val team = g.team();
-		val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
+		val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
 		val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
 		val result = new DistGrowableMemory[Long](team.placeGroup());
 		
