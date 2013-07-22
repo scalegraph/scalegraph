@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.metrics;
 
 import x10.compiler.Ifndef;
@@ -43,11 +54,11 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     private val lgc: Int;
     private val lgr: Int;
     private val role: Int;
-    private val localGraph: SparseMatrix;
+    private val localGraph: SparseMatrix[Long];
     
     public static class LocalState {
         // 1D CSR graph
-        val _distSparseMatrix: DistSparseMatrix;
+        val _distSparseMatrix: DistSparseMatrix[Long];
         
         val _currentSource: Cell[Vertex];
         val _queues: IndexedMemoryChunk[Bitmap2];
@@ -110,7 +121,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _sigmaBuf: Array[Array[ArrayList[Long]]];
         val _muBuf: Array[Array[ArrayList[Long]]];                
         
-        protected def this(dsm: DistSparseMatrix,
+        protected def this(dsm: DistSparseMatrix[Long],
                            buffSize: Int,
                            nAllVerticesInG: Long,
                            nSrc: Long,
@@ -309,7 +320,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val team = g.team();
         val places = team.placeGroup();
         // Represent graph as CSR
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                 Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                 directed,
                 true);        

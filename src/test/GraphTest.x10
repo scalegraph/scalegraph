@@ -1,9 +1,21 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package test;
 
 import x10.util.Team;
 
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
@@ -11,7 +23,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.GIMV;
 
-public class GraphTest {
+public class GraphTest extends sx10Test {
 	
 	public static inputFormat_g1 = (s:String)=> {
 		val elements = s.split(",");
@@ -335,6 +347,16 @@ public class GraphTest {
 	}
 	
     public static def main(args: Array[String](1)) {
-        ditributed_sssp_test(args(1), args(0));
+        val t = new GraphTest();
+        t.execute();
     }
+    
+    public def run(): Boolean {
+        val file = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
+        val parttition = "1x" + Place.MAX_PLACES;
+        ditributed_sssp_test(file, parttition);
+        
+        return true;
+    }
+    
 }

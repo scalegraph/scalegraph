@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.util;
 
 import x10.compiler.Inline;
@@ -474,9 +485,9 @@ public class Parallel {
     }
     
     public static def sort[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
-    	val numThreads = Runtime.NTHREADS;
-    	val logChunks = MathAppend.ceilLog2(numThreads * 4);
-    	val numChunks = 1 << logChunks;
+    	val numThreads = Runtime.NTHREADS as Long;
+    	val logChunks = MathAppend.ceilLog2(numThreads * 4L);
+    	val numChunks = 1L << logChunks;
     	val numShift = rangeScale - logChunks;
     	val sg = new ScatterGather(numChunks);
     	
@@ -487,7 +498,7 @@ public class Parallel {
     	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
     		val counts = sg.counts(tid as Int);
     		for(i in r) {
-    			counts(src_i(i) >> numShift)++;
+    			counts(src_i(i) >> numShift as Int)++;
     		}
     	});
     	
@@ -496,7 +507,7 @@ public class Parallel {
     	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
     		val offsets = sg.offsets(tid as Int);
     		for(i in r) {
-    			val dstIndex = offsets(src_i(i) >> numShift)++;
+    			val dstIndex = offsets(src_i(i) >> numShift as Int)++;
     			dst_i(dstIndex) = src_i(i);
     			dst_v(dstIndex) = src_v(i);
     		}
@@ -748,6 +759,7 @@ public class Parallel {
 
 	public static @Inline def reduce[U](range :IntRange, func :(Int,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1);
 		val intermid = new Array[U](nthreads);
@@ -768,6 +780,7 @@ public class Parallel {
 
 	public static @Inline def reduce[U](range :LongRange, func :(Long,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0L) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
 		val intermid = new MemoryChunk[U](nthreads);
@@ -788,6 +801,7 @@ public class Parallel {
 
 	public static @Inline def scan[U](range :IntRange, dst :Array[U](1), init :U, func :(Int,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1);
 		dst(range.min) = init;
@@ -831,6 +845,7 @@ public class Parallel {
 
 	public static @Inline def scan[U](range :LongRange, dst :MemoryChunk[U], init :U, func :(Long,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
+		if(size == 0L) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
 		dst(range.min) = init;

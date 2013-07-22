@@ -1,12 +1,24 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package test;
 import x10.util.Team;
 import x10.util.Timer;
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Debug;
 import org.scalegraph.util.RemoteGetContext;
 import org.scalegraph.util.RemotePutContext;
 import org.scalegraph.util.RemoteContextEmulation;
 
-public class OneSidedBenchmark {
+public class OneSidedBenchmark extends sx10Test {
 	private static def message (str:String) : void {
 		Console.OUT.println("" + Timer.milliTime() + ":osc: " + here + "(" + Runtime.workerId() + ")" + str);
 		Console.OUT.flush();
@@ -120,13 +132,25 @@ public class OneSidedBenchmark {
 	}
 	
 	public static def main(args:Array[String](1)) : void{
-		message("Team.WORLD: " + Team.WORLD);
-		message("members of Team(0): " + Team.WORLD.places());
-		
-		val size = Int.parse(args(0));
-		val count = Int.parse(args(1));
-		getAlone(size, count);
-		getAll(size, count);
-		putAll(size, count);
+		val t = new OneSidedBenchmark();
+		t.execute();
+	}
+	
+	public def run(): Boolean {
+	    val args = ["1024", "16"];
+	    entry(args);
+	    
+	    return true;
+	}
+	
+	public def entry(args:Array[String](1))  { 
+	    message("Team.WORLD: " + Team.WORLD);
+	    message("members of Team(0): " + Team.WORLD.places());
+	    
+	    val size = Int.parse(args(0));
+	    val count = Int.parse(args(1));
+	    getAlone(size, count);
+	    getAll(size, count);
+	    putAll(size, count);
 	}
 }

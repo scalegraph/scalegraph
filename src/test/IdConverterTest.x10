@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package test;
 
 import org.scalegraph.graph.id.IdStruct;
@@ -5,8 +16,9 @@ import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.id.Twod;
 import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.OnedR;
+import org.scalegraph.harness.sx10Test;
 
-public class IdConverterTest {
+public class IdConverterTest extends sx10Test {
 	
 	public static def refVtoS(ids :IdStruct, rr :Long) {
 		val lgr = ids.lgr;
@@ -107,9 +119,17 @@ public class IdConverterTest {
 	}
 	
     public static def main(args: Array[String]) {
-    	twodTest();
-    	onedCTest();
-    	onedRTest();
-    	Console.OUT.println("All ID Test Succeeded!");
+    	val t = new IdConverterTest();
+    	t.execute();
     }
+    
+    public def run(): Boolean {
+        twodTest();
+        onedCTest();
+        onedRTest();
+        Console.OUT.println("All ID Test Succeeded!");
+        return true;
+    }
+
+
 }

@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.metrics;
 
 import x10.io.SerialData;
@@ -14,6 +25,8 @@ import org.scalegraph.util.Dist2D;
 import org.scalegraph.graph.*;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Bitmap2;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 
 
 /**
@@ -46,9 +59,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private val lch: PlaceLocalHandle[LocalState];
     
     private static class LocalState {
-        val gCsr: DistSparseMatrix;
+        val gCsr: DistSparseMatrix[Long];
         val gWeight: DistMemoryChunk[Double];
-        val csr: SparseMatrix;
+        val csr: SparseMatrix[Long];
         val weight: MemoryChunk[Double];
         val distance: IndexedMemoryChunk[Double];
         val dependencies: IndexedMemoryChunk[Double];
@@ -100,7 +113,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val deltaBuf: Array[Array[ArrayList[Double]]];
         val muBuf: Array[Array[ArrayList[Double]]];
         
-        private def this (csr_: DistSparseMatrix,
+        private def this (csr_: DistSparseMatrix[Long],
                             weight_: DistMemoryChunk[Double],
                             transferBufSize: Int,
                             vInGraph: Long,
@@ -413,12 +426,12 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val transBuf = 1 << 10;
         val vInGraph = g.numberOfVertices();
         // Represent graph as CSR
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
                                               true);
         // Construct attribute
-        val weightAttr = g.constructDistAttribute[Double](csr, false, weightAttrName);
+        val weightAttr = g.createDistAttribute[Double](csr, false, weightAttrName);
         // create local state for bc on each place
         val localState = PlaceLocalHandle.make[LocalState](places, () => {
             return new LocalState(csr, weightAttr, transBuf, vInGraph, delta, numSource, sources, sourceRange);
