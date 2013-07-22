@@ -17,13 +17,13 @@ import org.scalegraph.graph.Graph;
 public class SpectralClustering {
 	
 	public static def main(args:Array[String](1)) {
-		val fileName = args(1);
-		val numCluster = Int.parse(args(2));
-		val maxitr = Int.parse(args(3));
-		val threshold = Double.parse(args(4));
+		val fileList = new Array[String](1, args(0));
+		val numCluster = Int.parse(args(1));
+		val maxitr = Int.parse(args(2));
+		val threshold = Double.parse(args(3));
 		val team = Team.WORLD;
 		val inputFormat = (s:String) => {
-			val elements = s.split(" ");
+			val elements = s.split(",");
 			return new Tuple3[Long,Long,Double](
 					Long.parse(elements(0)),
 					Long.parse(elements(1)),
@@ -31,7 +31,7 @@ public class SpectralClustering {
 			);
 		};
 		
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(team,fileList,inputFormat);
 		val edgeList = graphData.get1();
 		val weight = graphData.get2();
 		val g = Graph.make(team, edgeList.raw(team.placeGroup()));

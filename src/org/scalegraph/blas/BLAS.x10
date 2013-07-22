@@ -66,54 +66,7 @@ public class BLAS {
 		if(A.ids().outerOrInner) throw new UnsupportedOperationException();
 		
 		allTeam.placeGroup().broadcastFlat(() => {
-			try {
-				val dist = A.dist();
-				val ids = A.ids();
-				val R = dist.R();
-				val C = dist.C();
-				val localSize = 1L << ids.lgl;
-				val localWidth = 1L << (ids.lgl + ids.lgr);
-				val localHeight = 1L << (ids.lgl + ids.lgc);
-				val A_ = A();
-				val y_ = y();
-				val columnTeam = Team2(A.dist().columnTeam());
-				val rowTeam = Team2(A.dist().rowTeam());
-				//
-				val refVector = new MemoryChunk[T](localWidth);
-				val tmpSendVector = new MemoryChunk[T](localHeight);
-				val tmpRecvVector = new MemoryChunk[T](localHeight);
-				
-				columnTeam.allgather(x(), refVector);
-
-				Parallel.iter(0L..(localHeight-1), (tid :Long, range :LongRange) => {
-					for(i in range) {
-						val off = A_.offsets(i);
-						val next = A_.offsets(i+1);
-						var sum :T = Zero.get[T]();
-						for(ei in off..(next-1)) {
-							sum += A_.values(ei) * refVector(A_.vertexes(ei));
-						}
-						tmpSendVector(i) = sum;
-					}
-				});
-				
-				rowTeam.alltoall(tmpSendVector, tmpRecvVector);
-
-				Parallel.iter(0L..(localSize-1), (tid :Long, range :LongRange) => {
-					for(i in range) {
-						var sum :T = Zero.get[T]();
-						for(j in 0L..(C-1)) {
-							sum += tmpRecvVector(i + j * localSize);
-						}
-						y_(i) = alpha * sum + beta * y_(i);
-					}
-				});
-
-				refVector.del();
-				tmpSendVector.del();
-				tmpRecvVector.del();
-				
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+			mult_[T](alpha, A, trans, x, beta, y);
 		});
 	}
 	
@@ -125,54 +78,68 @@ public class BLAS {
 		if(trans) throw new UnsupportedOperationException();
 		if(A.ids().outerOrInner) throw new UnsupportedOperationException();
 		
-			try {
-				val dist = A.dist();
-				val ids = A.ids();
-				val R = dist.R();
-				val C = dist.C();
-				val localSize = 1L << ids.lgl;
-				val localWidth = 1L << (ids.lgl + ids.lgr);
-				val localHeight = 1L << (ids.lgl + ids.lgc);
-				val A_ = A();
-				val y_ = y();
-				val columnTeam = Team2(A.dist().columnTeam());
-				val rowTeam = Team2(A.dist().rowTeam());
-				//
-				val refVector = new MemoryChunk[T](localWidth);
-				val tmpSendVector = new MemoryChunk[T](localHeight);
-				val tmpRecvVector = new MemoryChunk[T](localHeight);
-				
-				columnTeam.allgather(x(), refVector);
-
-				Parallel.iter(0L..(localHeight-1), (tid :Long, range :LongRange) => {
-					for(i in range) {
-						val off = A_.offsets(i);
-						val next = A_.offsets(i+1);
-						var sum :T = Zero.get[T]();
-						for(ei in off..(next-1)) {
-							sum += A_.values(ei) * refVector(A_.vertexes(ei));
-						}
-						tmpSendVector(i) = sum;
+		try {
+			val dist = A.dist();
+			val ids = A.ids();
+			val R = dist.R();
+			val C = dist.C();
+			val localSize = 1L << ids.lgl;
+			val localWidth = 1L << (ids.lgl + ids.lgr);
+			val localHeight = 1L << (ids.lgl + ids.lgc);
+			val A_ = A();
+			val y_ = y();
+			val columnTeam = Team2(A.dist().columnTeam());
+			val rowTeam = Team2(A.dist().rowTeam());
+			//
+			val refVector = new MemoryChunk[T](localWidth);
+			val tmpSendVector = new MemoryChunk[T](localHeight);
+			val tmpRecvVector = new MemoryChunk[T](localHeight);
+			
+			columnTeam.allgather(x(), refVector);
+			//‚±‚±‚Åx(), refVector‚ðo—Í‚³‚¹‚½‚¢
+			if(A.dist().allTeam().role()(0) == 0) {
+				Console.OUT.println("x() = " + x());
+				Console.OUT.println("refVector = " + refVector);
+			}
+			
+			Parallel.iter(0L..(localHeight-1), (tid :Long, range :LongRange) => {
+				for(i in range) {
+					val off = A_.offsets(i);
+					val next = A_.offsets(i+1);
+					var sum :T = Zero.get[T]();
+					for(ei in off..(next-1)) {
+						sum += A_.values(ei) * refVector(A_.vertexes(ei));
 					}
-				});
-				
-				rowTeam.alltoall(tmpSendVector, tmpRecvVector);
-
-				Parallel.iter(0L..(localSize-1), (tid :Long, range :LongRange) => {
-					for(i in range) {
-						var sum :T = Zero.get[T]();
-						for(j in 0L..(C-1)) {
-							sum += tmpRecvVector(i + j * localSize);
-						}
-						y_(i) = alpha * sum + beta * y_(i);
+					tmpSendVector(i) = sum;
+				}
+			});
+			if(A.dist().allTeam().role()(0) == 0) {
+				Console.OUT.println("tmpSendVector = " + tmpSendVector);
+			}
+			
+			rowTeam.alltoall(tmpSendVector, tmpRecvVector);
+			if(A.dist().allTeam().role()(0) == 0) {
+				Console.OUT.println("tmpRecvVector = " + tmpRecvVector);
+			}
+			
+			Parallel.iter(0L..(localSize-1), (tid :Long, range :LongRange) => {
+				for(i in range) {
+					var sum :T = Zero.get[T]();
+					for(j in 0L..(C-1)) {
+						sum += tmpRecvVector(i + j * localSize);
 					}
-				});
-
-				refVector.del();
-				tmpSendVector.del();
-				tmpRecvVector.del();
-				
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+					y_(i) = alpha * sum + beta * y_(i);
+				}
+			});
+			if(A.dist().allTeam().role()(0) == 0) {
+				Console.OUT.println("y_ = " + y_);
+			}
+			
+			refVector.del();
+			tmpSendVector.del();
+			tmpRecvVector.del();
+			
+		} catch (e :CheckedThrowable) { e.printStackTrace(); }
 	}
 	
 	/** B <- alpha * A + beta * B */
