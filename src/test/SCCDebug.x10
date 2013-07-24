@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package test;
 
 import x10.util.Team;
@@ -12,51 +23,52 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-struct SCCVertex {
-	val leaderId:Long; 
-	val front:Boolean; 
-	val back:Boolean;
-	val minimId:Long;
-	def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long) {
-		leaderId = leader; 
-		front = fro; 
-		back = bac;
-		minimId = tmp;
+public class SCCDebug {
+	private static struct SCCVertex {
+		val leaderId:Long; 
+		val front:Boolean; 
+		val back:Boolean;
+		val minimId:Long;
+		def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long) {
+			leaderId = leader; 
+			front = fro; 
+			back = bac;
+			minimId = tmp;
+		}
 	}
-}
-struct MessageA {
-	val leaderId:Long;
-	val dir:Boolean;
-	def this(lead:Long, d:Boolean) {
-		leaderId = lead;
-		dir = d;	
+	private static struct MessageA {
+		val leaderId:Long;
+		val dir:Boolean;
+		def this(lead:Long, d:Boolean) {
+			leaderId = lead;
+			dir = d;	
+		}
+
+		@Native("c++", "(#this)->FMGL(dir) = #v")
+		native def setDir(v :Boolean) :void;
+
 	}
 
-	@Native("c++", "(#this)->FMGL(dir) = #v")
-	native def setDir(v :Boolean) :void;
-}
-
-struct MessageB {
-	val front:Boolean;
-	val back:Boolean;
-	val id:Long;
-	def this(fro:Boolean, bac:Boolean, idNum:Long  ) {
-		front = fro;
-		back = bac;
-		id = idNum;
+	private static struct MessageB {
+		val front:Boolean;
+		val back:Boolean;
+		val id:Long;
+		def this(fro:Boolean, bac:Boolean, idNum:Long  ) {
+			front = fro;
+			back = bac;
+			id = idNum;
+		}
 	}
-}
 
-struct MessageC {
-	val leaderId:Long;
-	val minimId:Long;
-	def this(leader:Long, m:Long) {
-		minimId = m;
-		leaderId = leader;
+	private static struct MessageC {
+		val leaderId:Long;
+		val minimId:Long;
+		def this(leader:Long, m:Long) {
+			minimId = m;
+			leaderId = leader;
+		}
 	}
-}
-
-public class StronglyConnectedComponent2 {
+	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;	
 		val inputFormat = (s:String) => {
@@ -96,23 +108,23 @@ public class StronglyConnectedComponent2 {
 		var recursion:Int = 0;
 		while(recursion<10) {
 			recursion++;
-			//phaseA : BFS“I‚É“`”À
+			//phaseA : BFSçš„ã«ä¼æ¬
 			xpregel.iterate[MessageA, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageA, Long ], messages :MemoryChunk[MessageA] ) => {
 						
 				if(ctx.superstep()==0) {
-					//—×Ú“_‚ª‚È‚¯‚ê‚Î‚»‚Ì’¸“_‚Í‚·‚®‚ÉI‚í‚ç‚¹‚é
+					//éš£æ¥ç‚¹ãŒãªã‘ã‚Œã°ãã®é ‚ç‚¹ã¯ã™ãã«çµ‚ã‚ã‚‰ã›ã‚‹
 					if(ctx.outEdgesId().size()==0L && ctx.inEdgesId().size()==0L && ctx.id()!=0L) {
 						val newInfo = new SCCVertex(ctx.id(), true,true,-1L);
 						ctx.setValue(newInfo);
 					}
-					//phaseC‚Ås‚Á‚½Œ‹‰Ê‚Ì”½‰f
+					//phaseCã§è¡Œã£ãŸçµæœã®åæ˜ 
 					if(ctx.value().minimId!=-1L) {
 						val newInfo = new SCCVertex(ctx.value().minimId, ctx.value().front, ctx.value().back, -1L);
 						ctx.setValue(newInfo);
 					}
 					
-					//‚±‚±‚Åfalse‚É‚³‚ê‚é‚Ì‚ÍAŠù‚ÉŠm’è‚µ‚½‚©A“¯‚¶leaderId‚ğ‚Â“_‚ª‹ß–T‚É‘¶İ‚µ‚È‚¢‚©‚ç
+					//ã“ã“ã§falseã«ã•ã‚Œã‚‹ã®ã¯ã€æ—¢ã«ç¢ºå®šã—ãŸã‹ã€åŒã˜leaderIdã‚’æŒã¤ç‚¹ãŒè¿‘å‚ã«å­˜åœ¨ã—ãªã„ã‹ã‚‰
 					if(ctx.value().front && ctx.value().back)
 						ctx.setVertexShouldBeActive(false);
 					else 
@@ -159,12 +171,12 @@ public class StronglyConnectedComponent2 {
 				ctx.voteToHalt();
 				
 			},
-			//aggregate‚Í‘½•ªg‚í‚È‚¢‚Ì‚Å“K“–‚È‚±‚Æ‚ğ‘‚¢‚½
+			//aggregateã¯å¤šåˆ†ä½¿ã‚ãªã„ã®ã§é©å½“ãªã“ã¨ã‚’æ›¸ã„ãŸ
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
-			//I—¹ğŒ‚ÍAÅI“I‚É‚Í‘S•”‚ÌƒZƒ‹‚ª~‚Ü‚Á‚½ó‘Ô‚É‚È‚ê‚Î‚æ‚¢
+			//çµ‚äº†æ¡ä»¶ã¯ã€æœ€çµ‚çš„ã«ã¯å…¨éƒ¨ã®ã‚»ãƒ«ãŒæ­¢ã¾ã£ãŸçŠ¶æ…‹ã«ãªã‚Œã°ã‚ˆã„
 			(superstep :Int, aggVal :Long) => (superstep >= 100 ) );
 			
-			//phaseB:Leader‚Éî•ñ‚ğ“`”À/Leader‚©‚çî•ñ‚ğ“`”À
+			//phaseB:Leaderã«æƒ…å ±ã‚’ä¼æ¬/Leaderã‹ã‚‰æƒ…å ±ã‚’ä¼æ¬
 			xpregel.iterate[MessageB, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageB, Long ], messages :MemoryChunk[MessageB] ) => {
 				if(ctx.superstep()==0) {
@@ -196,7 +208,7 @@ public class StronglyConnectedComponent2 {
 					ctx.voteToHalt();
 				}
 				if(ctx.superstep()==2) {
-					//message‚Í‚»‚ê‚¼‚êˆê‚Â‚µ‚©‚±‚È‚¢‚Ì‚ÅA0‚Ì‚Í‚¸
+					//messageã¯ãã‚Œãã‚Œä¸€ã¤ã—ã‹ã“ãªã„ã®ã§ã€0ã®ã¯ãš
 					Console.OUT.println("    :ctx.realId() "+ctx.realId() );
 					Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
 //					Console.OUT.println("     value" + ctx.value().leaderId);
@@ -209,41 +221,18 @@ public class StronglyConnectedComponent2 {
 					val newInfo = new SCCVertex(messages(0).id ,false, false, ctx.id());
 					ctx.setValue(newInfo);
 					ctx.setVertexShouldBeActive(true);
-				/*	
-					val mes = new MessageB(true, true, ctx.value().leaderId);
-					for(i in ctx.outEdgesId().range()) 
-						ctx.sendMessage(ctx.outEdgesId()(i), mes);
-					for(i in ctx.inEdgesId().range())
-						ctx.sendMessage(ctx.inEdgesId()(i),mes);
-				*/
 				}
-				
-				//Å‚à‰e‹¿‚ª‘å‚«‚»‚¤‚ÈA—×‚É“¯‚¶•Ó‚ª‚È‚¢‚æ‚¤‚È‚à‚Ì‚ğ‚Ç‚¤‚É‚©æ‚èœ‚­ˆ—‚ğs‚¤
-				//BFSˆ—‚ğs‚¤
-				
-				// if(ctx.superstep()==3 && !ctx.value().front && !ctx.value().back) {
-					// var hasEdge:Boolean = false;
-					// for(i in messages.range()) {
-						// if(messages(i).id == ctx.value().leaderId)
-							// hasEdge = true;
-					// }
-					// //!hasEdge‚ªÀs‚³‚ê‚é <=> ctx.revive()‚³‚ê‚Ä‚¢‚é’¸“_ ‚Å“¯‚¶leader‚Ì—×Ú“_‚È‚µ<=> 
-					// Ÿ¶‚«‚Ä‚¢‚Ä‚¢‚Ä—×Ú“_‚Í‚È‚¢
-					// if(!hasEdge) {
-						// val newInfo = new SCCVertex(ctx.id(), true, true, -1L);
-						// ctx.setValue(newInfo);
-					// }
-					// ctx.voteToHalt();
-				// } 
-				
+
 				 
 			},
-			//aggregate‚Í‘½•ªg‚í‚È‚¢‚Ì‚Å“K“–‚È‚±‚Æ‚ğ‘‚¢‚½
+			//aggregateã¯å¤šåˆ†ä½¿ã‚ãªã„ã®ã§é©å½“ãªã“ã¨ã‚’æ›¸ã„ãŸ
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
-			//I—¹ğŒ‚ÍAÅI“I‚É‚Í‘S•”‚ÌƒZƒ‹‚ª~‚Ü‚Á‚½ó‘Ô‚É‚È‚ê‚Î‚æ‚¢
+			//çµ‚äº†æ¡ä»¶ã¯ã€æœ€çµ‚çš„ã«ã¯å…¨éƒ¨ã®ã‚»ãƒ«ãŒæ­¢ã¾ã£ãŸçŠ¶æ…‹ã«ãªã‚Œã°ã‚ˆã„
 			(superstep :Int, aggVal :Long) => (superstep >= 2) );
+
 		
-			//PhaseC : ˜AŒ‹¬•ª‚ªˆÙ‚È‚é‚Æ‚±‚ë‚ğ•ª‚¯‚é‚½‚ß‚Ìˆ—
+			//PhaseC : é€£çµæˆåˆ†ãŒç•°ãªã‚‹ã¨ã“ã‚ã‚’åˆ†ã‘ã‚‹ãŸã‚ã®å‡¦ç†
+
 			xpregel.iterate[MessageC, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageC, Long ], messages :MemoryChunk[MessageC] ) => {
 				
@@ -272,9 +261,9 @@ public class StronglyConnectedComponent2 {
 				}
 				ctx.voteToHalt();
 			},
-			//aggregate‚Í‘½•ªg‚í‚È‚¢‚Ì‚Å“K“–‚È‚±‚Æ‚ğ‘‚¢‚½
+			//aggregateã¯å¤šåˆ†ä½¿ã‚ãªã„ã®ã§é©å½“ãªã“ã¨ã‚’æ›¸ã„ãŸ
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
-			//I—¹ğŒ‚ÍAÅI“I‚É‚Í‘S•”‚ÌƒZƒ‹‚ª~‚Ü‚Á‚½ó‘Ô‚É‚È‚ê‚Î‚æ‚¢
+			//çµ‚äº†æ¡ä»¶ã¯ã€æœ€çµ‚çš„ã«ã¯å…¨éƒ¨ã®ã‚»ãƒ«ãŒæ­¢ã¾ã£ãŸçŠ¶æ…‹ã«ãªã‚Œã°ã‚ˆã„
 			(superstep :Int, aggVal :Long) => (superstep >= 100) );
 		}
 		val end_time = System.currentTimeMillis();

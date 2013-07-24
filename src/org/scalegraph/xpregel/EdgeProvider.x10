@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package org.scalegraph.xpregel;
 
 import org.scalegraph.util.MemoryChunk;
@@ -186,6 +197,7 @@ class EdgeProvider [E] {E haszero} {
 	def inEdgesValue(srcid :Long) {
 		val start = mInOffset(srcid);
 		val length = mInOffset(srcid + 1) - start;
+//		Console.OUT.println("inEdgeValueRange"+start+" "+length);
 		return mInValue.subpart(start, length);
 	}
 	

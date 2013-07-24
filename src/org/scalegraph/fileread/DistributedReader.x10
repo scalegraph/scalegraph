@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 /* this is a study version
  * simple distributed file reader
  */
@@ -30,16 +41,16 @@ public class DistributedReader {
         }
     }
  
- 	public static def read(
+ 	public static def read[T](
  		team : Team,
  		fileList : Array[String],
- 		inputFormat : (String) => Tuple3[Long, Long, Double]) {
+ 		inputFormat : (String) => Tuple3[Long, Long, T]) {
  		
  		val places = team.places();
  		val teamSize = team.size();
 		val splits = new ArrayList[InputSplit]();
 		val edgelist = new DistGrowableMemory[Long](team.placeGroup());
-		val weight = new DistGrowableMemory[Double](team.placeGroup());
+		val weight = new DistGrowableMemory[T](team.placeGroup());
 		
 		var all_size: Long= 0;
 		for(path in fileList.values()) {
@@ -112,7 +123,7 @@ public class DistributedReader {
 			}
 		}
 		
-		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[Double]](edgelist, weight);
+		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[T]](edgelist, weight);
 	}
  	
  	public static def write(
