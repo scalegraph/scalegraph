@@ -1,14 +1,3 @@
-/* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
- * 
- *  This file is licensed to You under the Eclipse Public License (EPL);
- *  You may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *      http://www.opensource.org/licenses/eclipse-1.0.php
- * 
- *  (C) Copyright ScaleGraph Team 2011-2012.
- */
-
 package test;
 
 import x10.util.Team;
@@ -17,14 +6,14 @@ import x10.io.FileReader;
 import x10.io.IOException;
 
 import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.metrics.Degree;
 
-public class TestRMAT {
+public class TestDegreeDist {
     
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");
@@ -62,15 +51,16 @@ public class TestRMAT {
         
         val result = Degree.getInDegree(g);
         
-        for (p in team.placeGroup()) {
-            at (p) {
-                val dat = result();
-                Console.OUT.println("Dat: " + dat + " : Size-> " + dat.size());
-                for (i in 0..(dat.size() - 1)) {
-                    val deg = i * team.size();
-                    Console.OUT.printf("%ld %ld\n", deg, dat(i));
-                }
-            }
-        }
+        // for (p in team.placeGroup()) {
+        //     at (p) {
+        //         val dat = result();
+        //         Console.OUT.println("Dat: " + dat + " : Size-> " + dat.size());
+        //         for (i in 0..(dat.size() - 1)) {
+        //             val deg = i * team.size();
+        //             Console.OUT.printf("%ld %ld\n", deg, dat(i));
+        //         }
+        //     }
+        // }
+        DistributedReader.write("out-%d", team, result.raw(team.placeGroup()));
     }
 }

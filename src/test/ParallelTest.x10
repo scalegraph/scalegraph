@@ -16,8 +16,9 @@ import x10.util.Team;
 import x10.util.Random;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.harness.sx10Test;
 
-public final class ParallelTest {
+public final class ParallelTest extends sx10Test {
 	static def testscan(): void{
 		Console.OUT.println("Scan Test");
 		val n = 10L;
@@ -71,11 +72,20 @@ public final class ParallelTest {
 		}
 	}
 	public static def main(args:Array[String](1)) : void{
-		Console.OUT.println("Team.WORLD: " + Team.WORLD);
-		Console.OUT.println("members of Team(0): " + Team.WORLD.places());
-		
-		testscan();
-		testsort();
-		testpartition();
+		val t = new ParallelTest();
+		t.execute();
 	}
+	
+	public def run(): Boolean {
+	    Console.OUT.println("Team.WORLD: " + Team.WORLD);
+	    Console.OUT.println("members of Team(0): " + Team.WORLD.places());
+	    
+	    testscan();
+	    testsort();
+	    testpartition();
+	    
+	    return true;
+	}
+
+
 }

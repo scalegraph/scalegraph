@@ -26,9 +26,9 @@ import x10.util.Team;
 
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
@@ -54,11 +54,11 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     private val lgc: Int;
     private val lgr: Int;
     private val role: Int;
-    private val localGraph: SparseMatrix;
+    private val localGraph: SparseMatrix[Long];
     
     public static class LocalState {
         // 1D CSR graph
-        val _distSparseMatrix: DistSparseMatrix;
+        val _distSparseMatrix: DistSparseMatrix[Long];
         
         val _currentSource: Cell[Vertex];
         val _queues: IndexedMemoryChunk[Bitmap2];
@@ -121,7 +121,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _sigmaBuf: Array[Array[ArrayList[Long]]];
         val _muBuf: Array[Array[ArrayList[Long]]];                
         
-        protected def this(dsm: DistSparseMatrix,
+        protected def this(dsm: DistSparseMatrix[Long],
                            buffSize: Int,
                            nAllVerticesInG: Long,
                            nSrc: Long,
@@ -320,7 +320,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val team = g.team();
         val places = team.placeGroup();
         // Represent graph as CSR
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                 Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                 directed,
                 true);        

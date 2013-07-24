@@ -22,8 +22,8 @@ import org.scalegraph.util.Bitmap;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
 
-import org.scalegraph.graph.DistSparseMatrix;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.IdStruct;
 
@@ -41,9 +41,9 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	val mInEdge :GraphEdge[E];
 	var mInEdgesMask :Bitmap;
 	
-	public def this(team :Team, matrix :DistSparseMatrix) {
+	public def this(team :Team, ids :IdStruct) {
 		mTeam = new Team2(team);
-		mIds = matrix.ids();
+		mIds = ids;
 		
 		val numVertexes = mIds.numberOfLocalVertexes();
 		
@@ -51,7 +51,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mVertexActive = new Bitmap(numVertexes, true);
 		mVertexShouldBeActive = new Bitmap(numVertexes, true);
 
-		mOutEdge = new GraphEdge[E](matrix());
+		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
 		
 		if (here.id == 0) {
@@ -61,6 +61,12 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		}
 	}
 	
+	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long]) {
+		this(team, edgeIndexMatrix.ids());
+		mOutEdge.offsets = edgeIndexMatrix().offsets;
+		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
+	}
+	
 	public def updateInEdge() {
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
@@ -68,13 +74,13 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
 		
 		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
-			val EOCMessages = mesComm.messageBuffer(tid);
+			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
 			for(vid in r) {
 				val vid_ = StoD(vid);
 				for(i in offset(vid)..(offset(vid + 1) - 1)) {
-					val mesBuf = EOCMessages(mesComm.mDtoV.c(id(i)));
+					val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
 					mesBuf.messages.add(vid_);
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
@@ -84,10 +90,10 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mesComm.preProcess(null);
 		mesComm.exchangeMessages(true, false);
 
-		mInEdge.offsets = mesComm.mEOROffset;
-		mInEdge.vertexes = mesComm.mEORMessages;
-		mesComm.mEOROffset = new MemoryChunk[Long]();
-		mesComm.mEORMessages = new MemoryChunk[Long]();
+		mInEdge.offsets = mesComm.mUCROffset;
+		mInEdge.vertexes = mesComm.mUCRMessages;
+		mesComm.mUCROffset = new MemoryChunk[Long]();
+		mesComm.mUCRMessages = new MemoryChunk[Long]();
 		mesComm.del();
 	}
 	
@@ -98,14 +104,14 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
 		
 		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
-			val EOCMessages = mesComm.messageBuffer(tid);
+			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
 			val value = mOutEdge.value;
 			for(vid in r) {
 				val vid_ = StoD(vid);
 				for(i in offset(vid)..(offset(vid + 1) - 1)) {
-					val mesBuf = EOCMessages(mesComm.mDtoV.c(id(i)));
+					val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
 					mesBuf.messages.add(Tuple2[Long, E](vid_, value(i)));
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
@@ -115,21 +121,21 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mesComm.preProcess(null);
 		mesComm.exchangeMessages(true, false);
 		
-		val numEdges = mesComm.mEORMessages.size();
+		val numEdges = mesComm.mUCRMessages.size();
 		val id = new MemoryChunk[Long](numEdges);
 		val value = new MemoryChunk[E](numEdges);
 		Parallel.iter(0..(numEdges-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
-				id(i) = mesComm.mEORMessages(i).get1();
-				value(i) = mesComm.mEORMessages(i).get2();
+				id(i) = mesComm.mUCRMessages(i).get1();
+				value(i) = mesComm.mUCRMessages(i).get2();
 			}
 		});
 
-		mInEdge.offsets = mesComm.mEOROffset;
+		mInEdge.offsets = mesComm.mUCROffset;
 		mInEdge.vertexes = id;
 		mInEdge.value = value;
 		
-		mesComm.mEOROffset = new MemoryChunk[Long]();
+		mesComm.mUCROffset = new MemoryChunk[Long]();
 		mesComm.del();
 	}
 	

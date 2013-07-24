@@ -20,8 +20,10 @@ import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.harness.sx10Test;
 
 class Sort {
+    
     static val debug = false;
     private static @Inline def debugln (str:String) : void {
 		if (debug) {
@@ -68,7 +70,7 @@ class Sort {
 
 }
 
-public class TestSort {
+public class TestSort extends sx10Test {
     private static def print(str:String) {
         Console.OUT.println(str);
         Console.OUT.flush();
@@ -111,9 +113,18 @@ public class TestSort {
     }
 
     public static def main(args:Array[String](1)) {
-        val n = Int.parse(args(0));
-        val m = Int.parse(args(1));
+        val t = new TestSort();
+        t.execute();
+    }
+    
+    public def run(): Boolean {
+        // val n = Int.parse(args(0));
+        // val m = Int.parse(args(1));
 
+        val n = 1 << 16;
+        val m = n;
         runtest(n, m);
+        
+        return true;
     }
 }

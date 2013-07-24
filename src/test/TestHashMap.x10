@@ -22,8 +22,9 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.StopWatch;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.HashMap;
+import org.scalegraph.harness.sx10Test;
 
-public class TestHashMap {
+public class TestHashMap extends sx10Test {
     val n : Int;
     val ne : Int;
 
@@ -257,18 +258,28 @@ public class TestHashMap {
     }
 
     public static def main(args:Array[String](1)) {
-        val n = (args.size > 0) ? Int.parse(args(0)) : -1;
-        val m = (args.size > 0) ? Int.parse(args(1)) : -1;
+        // val n = (args.size > 0) ? Int.parse(args(0)) : -1;
+        // val m = (args.size > 0) ? Int.parse(args(1)) : -1;
+        // Charuawt: pass default
+        val n = -1;
+        val m = -1;
 
         val test = new TestHashMap(n, m);
-        test.benchSeqPut();
-        test.benchParPut();
-        test.benchGet();
+        test.execute();
+    }
+    
+    public def run(): Boolean {
+        
+        benchSeqPut();
+        benchParPut();
+        benchGet();
 
-        test.run3();
-        test.run4();
-        test.run5();
-        test.runNewKeys();
-        test.benchNewKeys();
+        run3();
+        run4();
+        run5();
+        runNewKeys();
+        benchNewKeys();
+        
+        return true;
     }
 }

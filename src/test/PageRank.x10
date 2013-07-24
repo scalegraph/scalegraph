@@ -17,13 +17,27 @@ import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.harness.sx10Test;
 
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class PageRank {
+public class PageRank extends sx10Test {
+    
+    public static def main(args:Array[String](1)) {
+        val t = new PageRank();
+        t.execute();
+    }
+    
+    public def run(): Boolean {
+        val arg: Array[String] = new Array[String](1);
+        arg(0) = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
+        entry(arg);
+        
+        return true;
+    }
 	
-	public static def main(args:Array[String](1)) {
+	public def entry(args:Array[String]) {
 		val team = Team.WORLD;
 		val inputFormat = (s:String) => {
 			val elements = s.split(",");
@@ -40,17 +54,14 @@ public class PageRank {
 	
 		val edgeList = graphData.get1();
 		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[Double, Double](team, csr);
-		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
-		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+		val start_init_graph = System.currentTimeMillis();
+		
+		val g = Graph.make(team, edgeList.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("edgevalue", weigh.raw(team.placeGroup()));		
+		val xpregel = XPregelGraph.make[Double, Double](team,
+				g.createDistSparseMatrix[Double](
+					Dist2D.make2D(team, 1, team.size()), "edgevalue", true, true));
 		
 		val start_time = System.currentTimeMillis();
 		

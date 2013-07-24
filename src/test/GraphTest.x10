@@ -11,17 +11,19 @@
 
 package test;
 
+import x10.util.Team;
+
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
-import x10.util.Team;
-import org.scalegraph.graph.Graph;
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.gimv.GIMV;
+import org.scalegraph.graph.Graph;
+import org.scalegraph.blas.GIMV;
 
-public class GraphTest {
+public class GraphTest extends sx10Test {
 	
 	public static inputFormat_g1 = (s:String)=> {
 		val elements = s.split(",");
@@ -71,8 +73,8 @@ public class GraphTest {
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 		
 		// undirected, inner edge
-		val csr1 = g.constructDistSparseMatrix(dist2d, true, false);
-		val att1 = g.constructDistAttribute[Double](csr1, false, "weight");
+		val csr1 = g.createDistEdgeIndexMatrix(dist2d, true, false);
+		val att1 = g.createDistAttribute[Double](csr1, false, "weight");
 
 		// chech results
 		for(p in team.placeGroup()) at (p) {
@@ -83,8 +85,8 @@ public class GraphTest {
 		Console.OUT.println("Constructing 2DCSR [undirected, outer] ...");
 		
 		// undirected, inner edge
-		val csr2 = g.constructDistSparseMatrix(dist2d, false, true);
-		val att2 = g.constructDistAttribute[Double](csr2, false, "weight");
+		val csr2 = g.createDistEdgeIndexMatrix(dist2d, false, true);
+		val att2 = g.createDistAttribute[Double](csr2, false, "weight");
 
 		// chech results
 		for(p in team.placeGroup()) at (p) {
@@ -104,8 +106,8 @@ public class GraphTest {
 		Console.OUT.println("Constructing Row-Distributed CSR [directed, inner] ...");
 		
 		// undirected, inner edge
-		val csr1 = g.constructDistSparseMatrix(distRow, true, false);
-		val att1 = g.constructDistAttribute[Double](csr1, false, "weight");
+		val csr1 = g.createDistEdgeIndexMatrix(distRow, true, false);
+		val att1 = g.createDistAttribute[Double](csr1, false, "weight");
 
 		// chech results
 		for(p in team.placeGroup()) at (p) {
@@ -118,8 +120,8 @@ public class GraphTest {
 		Console.OUT.println("Constructing Column-Distributed CSR [undirected, outer] ...");
 		
 		// undirected, inner edge
-		val csr2 = g.constructDistSparseMatrix(distColumn, false, true);
-		val att2 = g.constructDistAttribute[Double](csr2, false, "weight");
+		val csr2 = g.createDistEdgeIndexMatrix(distColumn, false, true);
+		val att2 = g.createDistAttribute[Double](csr2, false, "weight");
 
 		// chech results
 		for(p in team.placeGroup()) at (p) {
@@ -137,8 +139,8 @@ public class GraphTest {
 		
 		val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
 		// directed, outer
-		val columnDistGraph = g.constructDistSparseMatrix(distColumn, true, true);
-		val columnDistWeight = g.constructDistAttribute[Double](columnDistGraph, false, "weight");
+		val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, true, true);
+		val columnDistWeight = g.createDistAttribute[Double](columnDistGraph, false, "weight");
 		
 		Console.OUT.println("Normalizing weights ...");
 		
@@ -193,8 +195,8 @@ public class GraphTest {
 		val dist2d = Dist2D.make2D(team, R, C);
 		
 		// undirected, inner edge
-		val csr = g.constructDistSparseMatrix(dist2d, true, false);
-		val weight = g.constructDistAttribute[Double](csr, false, "weight");
+		val csr = g.createDistEdgeIndexMatrix(dist2d, true, false);
+		val weight = g.createDistAttribute[Double](csr, false, "weight");
 
 		// check results
 		for(p in team.placeGroup()) at (p) {
@@ -235,8 +237,8 @@ public class GraphTest {
 		val dist2d = Dist2D.make2D(team, R, C);
 		
 		// directed, inner edge
-		val csr = g.constructDistSparseMatrix(dist2d, true, false);
-		val weight = g.constructDistAttribute[Double](csr, false, "weight");
+		val csr = g.createDistEdgeIndexMatrix(dist2d, true, false);
+		val weight = g.createDistAttribute[Double](csr, false, "weight");
 
 		// check results
 		for(p in team.placeGroup()) at (p) {
@@ -301,8 +303,8 @@ public class GraphTest {
 		val dist2d = Dist2D.make2D(team, R, C);
 		
 		// directed, inner edge
-		val csr = g.constructDistSparseMatrix(dist2d, true, false);
-		val weight = g.constructDistAttribute[Double](csr, false, "normalized_weight");
+		val csr = g.createDistEdgeIndexMatrix(dist2d, true, false);
+		val weight = g.createDistAttribute[Double](csr, false, "normalized_weight");
 
 		// check results
 		for(p in team.placeGroup()) at (p) {
@@ -345,6 +347,16 @@ public class GraphTest {
 	}
 	
     public static def main(args: Array[String](1)) {
-        ditributed_sssp_test(args(1), args(0));
+        val t = new GraphTest();
+        t.execute();
     }
+    
+    public def run(): Boolean {
+        val file = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
+        val parttition = "1x" + Place.MAX_PLACES;
+        ditributed_sssp_test(file, parttition);
+        
+        return true;
+    }
+    
 }

@@ -21,13 +21,15 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.blas.GIMV;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.Attribute;
-import org.scalegraph.generator.GraphGenerator;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.gimv.GIMV;
+import org.scalegraph.harness.sx10Test;
 
-public class GIMVPageRank {
+public class GIMVPageRank extends sx10Test {
 
 	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
 
@@ -57,8 +59,8 @@ public class GIMVPageRank {
 
 		val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
 		// directed, outer
-		val columnDistGraph = g.constructDistSparseMatrix(distColumn, true, true);
-		val columnDistWeight = g.constructDistAttribute[Double](columnDistGraph, false, "weight");
+		val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, true, true);
+		val columnDistWeight = g.createDistAttribute[Double](columnDistGraph, false, "weight");
 
 		Console.OUT.println("Normalizing weights ...");
 
@@ -92,7 +94,7 @@ public class GIMVPageRank {
 	 * @param weight Edge weights
 	 * @param n The number of vertices in the graph.
 	 */
-	public static def pagerank(g :DistSparseMatrix, weight :DistMemoryChunk[Double], n :Long) {
+	public static def pagerank(g :DistSparseMatrix[Long], weight :DistMemoryChunk[Double], n :Long) {
 		val team = g.dist().allTeam();
 		val c = 0.85;
 		val map = (mij :Double , vj :Double) => c * mij * vj;
@@ -113,10 +115,24 @@ public class GIMVPageRank {
 
 		return vector;
 	}
-
+	
 	public static def main(args: Array[String](1)) {
+	    val t = new GIMVPageRank();
+	    t.execute();
+	}
+	
+	public def run(): Boolean {
+	    val par = [8 , 14, 18];
+	    
+	    for (i in 0..(par.size - 1)) {
+	        entry(par(i));
+	    }
+	    
+	    return true;
+	}
+
+	public def entry(scale: Int) {
 		val team = Team.WORLD;
-		val scale = Int.parse(args(0));
 		val g = generate_graph(scale, team, true);
 
 		// normalize weight //
@@ -125,8 +141,8 @@ public class GIMVPageRank {
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 
 		// directed, inner edge
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
-		val weight = g.constructDistAttribute[Double](csr, false, "normalized_weight");
+		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
+		val weight = g.createDistAttribute[Double](csr, false, "normalized_weight");
 
 		val vector = pagerank(csr, weight, g.numberOfVertices());
 

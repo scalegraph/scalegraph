@@ -21,8 +21,8 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
 
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.DistSparseMatrix;
 import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.Attribute;
 
@@ -33,14 +33,48 @@ import org.scalegraph.graph.Attribute;
  */
 public class XPregelGraph[V,E]{V haszero, E haszero} {
 
-	var mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
+	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
 	
-	public def this(team :Team, data :DistSparseMatrix)
+	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long])
 	{
 		mTeam = new Team2(team);
 		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),
-				() => new WorkerPlaceGraph[V,E](team, data));
+				() => new WorkerPlaceGraph[V,E](team, edgeIndexMatrix));
+	}
+	
+	private def this(team :Team, workers :PlaceLocalHandle[WorkerPlaceGraph[V,E]])
+	{
+		mTeam = new Team2(team);
+		mWorkers = workers;
+	}
+	
+	public static def make[V, E](team :Team, graph :DistSparseMatrix[E]) {V haszero, E haszero} {
+		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
+			(team.placeGroup(), () => new WorkerPlaceGraph[V, E](team, graph.ids())));
+		g.setGraphAndEdgeValue(graph);
+		return g;
+	}
+	
+	public static def make[V, E](team :Team, graph :DistSparseMatrix[E], iv :V) {V haszero, E haszero} {
+		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
+		(team.placeGroup(), () => new WorkerPlaceGraph[V, E](team, graph.ids())));
+		g.setGraphAndEdgeValue(graph);
+		g.initVertexValue(iv);
+		return g;
+	}
+	
+	public def setGraphAndEdgeValue(graph :DistSparseMatrix[E])
+	{
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				// TODO: check whether the graph id is equivalent to the current graph id.
+				w.mOutEdge.set(graph());
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
 	}
 	
 	public def initVertexValue(value : V)
