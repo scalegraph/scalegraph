@@ -19,7 +19,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.util.random.Random;
-import org.scalegraph.generator.GraphGenerator;
+import org.scalegraph.graph.GraphGenerator;
 
 import org.scalegraph.xpregel.InitVertexContext;
 import org.scalegraph.xpregel.VertexContext;
@@ -38,20 +38,17 @@ public class SSSP {
 		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
 
 		val start_init_graph = System.currentTimeMillis();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		g.addEdges(edgeList);
-		g.setEdgeAttribute[Double]("edgevalue", weigh);		
-		
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
+		val g = Graph.make(team, edgeList);
+		g.setEdgeAttribute("edgevalue", weigh);
+		val csr = g.createDistSparseMatrix[Double](
+				Dist2D.make2D(team, 1, team.size()), "edgevalue", true, true);
 
 		// release graph data
 		g.del();
 		edgeList.del();
 		weigh.del();
-		
-		val xpregel = new XPregelGraph[Double, Double](team, csr);
-		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+
+		val xpregel = XPregelGraph.make[Double, Double](team, csr);
 		
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + " ms");
@@ -66,13 +63,13 @@ public class SSSP {
 				if(mindist > messages(i)) mindist = messages(i);
 			// This is OK because operations on positive infinity produce sensible output.
 			if(mindist < ctx.value()) {
-			//	Console.OUT.println("V: " + ctx.id() + " is updated: " + ctx.value() + " -> " + mindist);
+				Console.OUT.println("V: " + ctx.id() + " is updated: " + ctx.value() + " -> " + mindist);
 				ctx.setValue(mindist);
 				val outEdge = ctx.outEdgesId();
 				val outEdgeValue = ctx.outEdgesValue();
 				for(i in outEdge.range()) {
 					ctx.sendMessage(outEdge(i), mindist + outEdgeValue(i));
-			//		Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
+					Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
 				}
 			}
 			ctx.voteToHalt();

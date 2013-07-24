@@ -10,9 +10,10 @@
  */
 
 package org.scalegraph.visitor;
-import org.scalegraph.graph.DistSparseMatrix;
+
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.MemoryChunk;
 import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
@@ -45,9 +46,9 @@ public class DeltaSteppingVisitor {
     private val role: Int;
     
     private static class LocalState {
-        val gCsr: DistSparseMatrix;
+        val gCsr: DistSparseMatrix[Long];
         val gWeight: DistMemoryChunk[Double];
-        val csr: SparseMatrix;
+        val csr: SparseMatrix[Long];
         val weight: MemoryChunk[Double];
         val distance: IndexedMemoryChunk[Double];
         val predecessors: IndexedMemoryChunk[ArrayList[Vertex]];
@@ -75,7 +76,7 @@ public class DeltaSteppingVisitor {
         val tentBuf: Array[Array[ArrayList[Double]]];
         val callBack: DeltaSteppingHandler;
         
-        private def this (csr_: DistSparseMatrix,
+        private def this (csr_: DistSparseMatrix[Long],
                           weight_: DistMemoryChunk[Double],
                           transferBufSize: Int,
                           source: Long,
@@ -157,7 +158,7 @@ public class DeltaSteppingVisitor {
      * @param h handler for handling event when visit a node
      * @param source source vertex 
      */
-    public static def make(csr: DistSparseMatrix, weight:DistMemoryChunk[Double], source: Vertex, delta: Int, h: DeltaSteppingHandler) {
+    public static def make(csr: DistSparseMatrix[Long], weight:DistMemoryChunk[Double], source: Vertex, delta: Int, h: DeltaSteppingHandler) {
         val team = csr.dist().allTeam();
         val places = team.placeGroup();
         // Create local state for LsBfs on each place in team

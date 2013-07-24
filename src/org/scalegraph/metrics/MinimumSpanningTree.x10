@@ -11,7 +11,10 @@
 
 package org.scalegraph.metrics;
 
+import x10.compiler.Native;
 import x10.util.Team;
+import x10.util.ArrayList;
+import x10.util.HashMap;
 
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MemoryChunk;
@@ -19,14 +22,8 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
-
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
-import x10.util.ArrayList;
-import x10.compiler.Native;
-import x10.util.HashMap;
-
-public type State = Long;
 
 public class MinimumSpanningTree {
         

@@ -93,10 +93,9 @@ public class StronglyConnectedComponent2 {
 		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[SCCVertex, Long](team, csr);
-//		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
+
+		val xpregel = XPregelGraph.make[SCCVertex, Long](team,
+				g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true));
 		val start_time = System.currentTimeMillis();
 		xpregel.updateInEdge();
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");

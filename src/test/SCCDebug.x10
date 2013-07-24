@@ -118,8 +118,9 @@ public class SCCDebug {
 		val scale = 14;
 		val g = generate_graph(scale, team, true);
 		
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[SCCVertex, Long](team, csr);
+//		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val xpregel = XPregelGraph.make[SCCVertex, Long](team,
+				g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true));
 //		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
 		val start_time = System.currentTimeMillis();
 		xpregel.updateInEdge();

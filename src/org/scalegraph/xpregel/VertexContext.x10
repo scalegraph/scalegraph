@@ -33,7 +33,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	val mEdgeProvider :EdgeProvider[E];
 
 	// messages
-	val mEOCMessages :MemoryChunk[MessageBuffer[M]];
+	val mUCCMessages :MemoryChunk[MessageBuffer[M]];
 	
 	// aggregate values
 	var mAggregatedValue :A;
@@ -43,13 +43,13 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	
 	// statictics
 	var mNumActiveVertexes :Long = 0L;
-	var mVOSInputCount :Long = 0L;
+	var mBCSInputCount :Long = 0L;
 	
 	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
 		mWorker = worker;
 		mCtx = ctx;
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
-		mEOCMessages = mCtx.messageBuffer(tid);
+		mUCCMessages = mCtx.messageBuffer(tid);
 	}
 	
 	/**
@@ -163,7 +163,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	public def sendMessage(id :Long, mes :M) {
 		val dstPlace = mCtx.mDtoV.c(id);
 		val srcId = mCtx.mDtoS(id);
-		val mesBuf = mEOCMessages(dstPlace);
+		val mesBuf = mUCCMessages(dstPlace);
 		mesBuf.messages.add(mes);
 		mesBuf.dstIds.add(srcId);
 	}
@@ -176,7 +176,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 		for(i in id.range()) {
 			val dstPlace = mCtx.mDtoV.c(id(i));
 			val srcId = mCtx.mDtoS(id(i));
-			val mesBuf = mEOCMessages(dstPlace);
+			val mesBuf = mUCCMessages(dstPlace);
 			mesBuf.messages.add(mes(i));
 			mesBuf.dstIds.add(srcId);
 		}
@@ -190,9 +190,9 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 */
 	public def sendMessageToAllNeighbors(mes :M) {
 		// TODO: handle multiple messages
-		++mVOSInputCount;
-		mCtx.mVOCHasMessage.set(mSrcid);
-		mCtx.mVOCMessages(mSrcid) = mes;
+		++mBCSInputCount;
+		mCtx.mBCCHasMessage.set(mSrcid);
+		mCtx.mBCCMessages(mSrcid) = mes;
 	}
 	
 	/**

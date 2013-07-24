@@ -9,7 +9,7 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package org.scalegraph.gimv;
+package org.scalegraph.blas;
 
 import x10.compiler.Inline;
 import x10.util.Team;
@@ -19,7 +19,7 @@ import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MathAppend;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
@@ -60,7 +60,7 @@ public class GIMV {
 	 * T: weight, U: vector
 	 */ 
 	public static @Inline def main2DCSR[T, U](
-			matrix : DistSparseMatrix,
+			matrix : DistSparseMatrix[Long],
 			weight : DistMemoryChunk[T],
 			vector : DistMemoryChunk[U],
 			map : (T, U)=>U,
@@ -195,7 +195,7 @@ public class GIMV {
 	 * T: weight, U: vector
 	 */ 
 	public static @Inline def main1DCSR[T, U](
-			matrix : DistSparseMatrix,
+			matrix : DistSparseMatrix[Long],
 			weight : DistMemoryChunk[T],
 			vector : DistMemoryChunk[U],
 			map : (T, U)=>U,

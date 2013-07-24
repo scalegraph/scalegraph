@@ -13,6 +13,10 @@ package org.scalegraph.graph.id;
 
 /**
  * ID Converter method collection for 2D distributions.
+ * 
+ * V : Real Vertex ID
+ * S : Source form ID
+ * D : Destination form ID
  */
 public class Twod {
 	/** Vertex ID to Source ID Converter */
