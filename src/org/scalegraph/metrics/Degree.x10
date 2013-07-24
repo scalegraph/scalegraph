@@ -19,9 +19,11 @@ public class Degree {
 		team.placeGroup().broadcastFlat(() => {
 			val teamSize = team.size();
 			val m = columnDistGraph();
+			val ids = columnDistGraph.ids();
 			val mOffsets = m.offsets;
+			val vertexRange = 0..(ids.numberOfLocalVertexes()-1);
 			val scatterGather = new DistScatterGather(team);
-			Parallel.iter(m.vertexRange(), (tid :Long, r :LongRange) => {
+			Parallel.iter(vertexRange, (tid :Long, r :LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				for(i in r) {
 					val degree = m.offsets(i+1) - m.offsets(i);
@@ -30,7 +32,7 @@ public class Degree {
 			});
 			scatterGather.sum();
 			val requests = new MemoryChunk[Long](scatterGather.sendCount());
-			Parallel.iter(m.vertexRange(), (tid :Long, r :LongRange) => {
+			Parallel.iter(vertexRange, (tid :Long, r :LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				for(i in r) {
 					val degree = m.offsets(i+1) - m.offsets(i);

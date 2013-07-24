@@ -13,7 +13,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.metrics.Degree;
 
-public class TestRMAT {
+public class TestDegreeDist {
     
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");
@@ -49,18 +49,12 @@ public class TestRMAT {
         val g = new Graph(team, Graph.VertexType.Long, false);
         g.addEdges(edgeList.raw(team.placeGroup()));
         
-        val result = Degree.getInDegree(g);
-        
-        // for (p in team.placeGroup()) {
-        //     at (p) {
-        //         val dat = result();
-        //         Console.OUT.println("Dat: " + dat + " : Size-> " + dat.size());
-        //         for (i in 0..(dat.size() - 1)) {
-        //             val deg = i * team.size();
-        //             Console.OUT.printf("%ld %ld\n", deg, dat(i));
-        //         }
-        //     }
-        // }
-        DistributedReader.write("out-%d", team, result.raw(team.placeGroup()));
+        val indegResult = Degree.getInDegree(g);
+        val outdegResult = Degree.getOutDegree(g);
+        val inOutdegResult = Degree.getInOutDegree(g);
+
+        DistributedReader.write("out/indeg-%d", team, indegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/outdeg-%d", team, outdegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/inoutdeg-%d", team, inOutdegResult.raw(team.placeGroup()));
     }
 }
