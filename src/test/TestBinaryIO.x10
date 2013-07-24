@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package test;
 
 import x10.io.File;
@@ -12,26 +23,47 @@ import org.scalegraph.fileread.DistributedReader;
 
 import org.scalegraph.io.GraphHeader;
 import org.scalegraph.io.NamedDistData;
-// import org.scalegraph.io.Import;
 import org.scalegraph.io.fbio.FBIOSupport;
 import org.scalegraph.io.fbio.AttributeHandler;
+import org.scalegraph.harness.sx10Test;
 
-public class TestBinaryIO {
+public class TestBinaryIO extends sx10Test {
 	
+    public static def entry(args : Array[String](1)) {
+        if(args(0).equals("read")) {
+            read(args, false);
+        } else if(args(0).equals("readtest")) {
+            read(args, true);
+        } else if(args(0).equals("write")) {
+            write(args);
+        } else if(args(0).equals("writetest")) {
+            writeTestData(args);
+        } else if(args(0).equals("import")) {
+            importFromEdgeList(args);
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
 	public static def main(args : Array[String](1)) {
-		if(args(0).equals("read")) {
-			read(args, false);
-		} else if(args(0).equals("readtest")) {
-			read(args, true);
-		} else if(args(0).equals("write")) {
-			write(args);
-		} else if(args(0).equals("writetest")) {
-			writeTestData(args);
-		} else if(args(0).equals("import")) {
-			importFromEdgeList(args);
-		} else {
-			throw new IllegalArgumentException();
-		}
+	    val t = new TestBinaryIO();
+	    t.execute();
+	    // t.run();
+	}
+	
+	public def run(): Boolean {
+	    Console.OUT.println("\nTest Reading");
+	    val p1 = ["read","/nfs/data1/ogata/scalegraph/kronecker", "4"];
+	    entry(p1);
+	    
+	    Console.OUT.println("\nTest Writing");
+	    val p2 = ["write","/nfs/data0/testdata/RMAT_SCALE_20", "/nfs/data0/testdata/write_temp/f1", "true"];
+	    entry(p2);
+	    
+	    Console.OUT.println("\nTest importing");
+	    val p3 = ["import","/nfs/data0/testdata/RMAT_SCALE_20", "/nfs/data0/testdata/write_temp/", " ", "2097152", "true"];
+	    entry(p3);
+	    	    
+	    return true;
 	}
 	
 	

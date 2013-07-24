@@ -1,3 +1,14 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
 package test;
 
 import x10.util.Team;
@@ -8,8 +19,9 @@ import x10.util.Pair;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Remote;
+import org.scalegraph.harness.sx10Test;
 
-public class TestRemote {
+public class TestRemote extends sx10Test {
     static val test = true;
     def this() {
 
@@ -147,11 +159,16 @@ public class TestRemote {
 
     public static def main(args: Array[String]) {
         val test = new TestRemote();
+        test.execute();
+    }
+    
+    public def run(): Boolean {
+        // val size = Int.parse(args(0));
+        val size = 1 << 15;
+
         val comm = Team.WORLD;
-
-        val size = Int.parse(args(0));
-
-        test.testGet(comm, size);
-        test.testPut(comm, size);
+        testGet(comm, size);
+        testPut(comm, size);
+        return true;
     }
 }
