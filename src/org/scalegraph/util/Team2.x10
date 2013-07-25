@@ -33,7 +33,8 @@ public struct Team2 {
 	public def this(baseTeam : Team) {
 		base = baseTeam;
 	}
-	
+
+	public @Inline def role() = base.role()(0);
 	public @Inline def size() = base.size();
 	public @Inline def places() = base.places();
 	public @Inline def placeGroup() = base.placeGroup();
@@ -46,9 +47,9 @@ public struct Team2 {
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeScatterv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryPointer[Int], dst:MemoryPointer[T], dst_count:Int) : void {
+	private static def nativeScatterv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_scatterv(id, role, root, src->pointer(), src_offs, src_counts, dst->pointer(), dst_count, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_scatterv(id, role, root, src->pointer(), src_offs, src_counts->pointer(), dst->pointer(), dst_count, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 

@@ -30,6 +30,7 @@ import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.util.DistMemoryChunk;
 import x10.compiler.Native;
+import x10.io.Printer;
 
 class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	static val MAX_OUTPUT_NUMBER = 8;
@@ -53,7 +54,10 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 
 	val numThreads = Runtime.NTHREADS;
 	var mLastAggVal :Any;
-	val mOutput :MemoryChunk[MemoryChunk[MemoryChunk[Any]]];
+	val mOutput :MemoryChunk[GrowableMemory[Int]];
+	
+	var mLogLevel :Int;
+	var mLogPrinter :Printer;
 	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_c = team.role()(0);
@@ -75,8 +79,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
 		
-		mOutput = new MemoryChunk[MemoryChunk[MemoryChunk[Any]]](numThreads,
-				(Long)=>new MemoryChunk[MemoryChunk[Any]](MAX_OUTPUT_NUMBER));
+		mOutput = new MemoryChunk[GrowableMemory[Int]](numThreads * MAX_OUTPUT_NUMBER, 0, true);
 		
 		if (here.id == 0) {
 			Console.OUT.println("lgl = " + mIds.lgl);
@@ -163,34 +166,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mesComm.del();
 	}
 	
-	public def run(compute :(ctx :InitVertexContext[V,E]) => void)
-	{
-		val root = (mTeam.base.role()(0) == 0);
-		val numThreads = Runtime.NTHREADS;
-		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val vctxs = new MemoryChunk[InitVertexContext[V, E]](numThreads,
-				(i :Long) => new InitVertexContext[V, E](this));
-		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads,
-				(i:Long) => vctxs(i).mEdgeProvider);
-		
-		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
-			val vc = vctxs(tid);
-			val ep = vc.mEdgeProvider;
-			for(srcid in r) {
-				vc.mSrcid = srcid;
-				if(mVertexShouldBeActive(srcid)) {
-					
-					compute(vc);
-
-					if(ep.mEdgeChanged) ep.fixModifiedEdges(srcid);
-				}
-			}
-		});
-		
-		// update out edges
-		EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
-	}
-	
 	// src will be destroyed
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],
 			aggregator :(MemoryChunk[A])=>A) :A
@@ -209,14 +184,15 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 	private static val STT_VERTEX_MESSAGE = 3;
 	private static val STT_MAX = 4;
 
-	private static def exchangeMessages[M](team :Team2,
-			ectx :MessageCommunicator[M], statistics :MemoryChunk[Long]) { M haszero } :Boolean
+	private static def gatherInformation[M](team :Team2,
+			ectx :MessageCommunicator[M], statistics :MemoryChunk[Long],
+			combiner :(messages:MemoryChunk[M]) => M) { M haszero } :Boolean
 	{
 		// if end is satisfied, we skip message processing.
 		if(statistics(STT_END_COUNT) == 0L) {
 			// merge messages and combine if combiner is provided
 			val [ numActive, numRawMessages, numCombinedMessages, numVertexMessages ]
-					= ectx.preProcess(null);
+					= ectx.preProcess(combiner);
 			
 			statistics(STT_ACTIVE_VERTEX) = numActive;
 			statistics(STT_COMBINED_MESSAGE) = numCombinedMessages;
@@ -232,16 +208,6 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
 		team.allreduce(statistics.subpart(0, STT_MAX), recvStatistics, Team.ADD);
 		
-		///
-		if(here.id() == 0) {
-			Console.OUT.println("TEAM_SIZE" + team.size());
-			Console.OUT.println("STT_END_COUNT: " + recvStatistics(STT_END_COUNT));
-			Console.OUT.println("STT_ACTIVE_VERTEX: " + recvStatistics(STT_ACTIVE_VERTEX));
-			Console.OUT.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
-			Console.OUT.println("STT_VERTEX_MESSAGE: " + recvStatistics(STT_VERTEX_MESSAGE));
-		}
-		
-		
 		if(recvStatistics(STT_END_COUNT) > 0) {
 			// terminate
 			return true;
@@ -254,16 +220,13 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			return true;
 		}
 		
-		// transfer messages
-		ectx.exchangeMessages(
-				recvStatistics(STT_COMBINED_MESSAGE) > 0L,
-				recvStatistics(STT_VERTEX_MESSAGE) > 0L);
-		
 		return false;
 	}
 	
-	public def run[M, A](compute :(ctx:VertexContext[V,E,M,A], messages:MemoryChunk[M]) => void, 
+	public def run[M, A](
+			compute :(VertexContext[V,E,M,A], MemoryChunk[M]) => void,
 			aggregator :(MemoryChunk[A])=>A,
+			combiner :(MemoryChunk[M]) => M,
 			end :(Int,A)=>Boolean) { M haszero, A haszero }
 	{
 		val root = (mTeam.base.role()(0) == 0);
@@ -277,6 +240,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		val intermedAggregateValue = new MemoryChunk[A](numThreads);
 		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
 		val statistics = new MemoryChunk[Long](STT_MAX*2);
+		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
 
 		ectx.mInEdgesOffset = mInEdge.offsets;
 		ectx.mInEdgesVertex = mInEdge.vertexes;
@@ -321,15 +285,32 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
 			
 			// aggregate
-			val aggVal = computeAggregate[A](mTeam, intermedAggregateValue, aggregateBuffer, aggregator);
+			val aggVal = (aggregator != null)
+				? computeAggregate[A](mTeam, intermedAggregateValue, aggregateBuffer, aggregator)
+				: Zero.get[A]();
+				
 			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
+
+			//
+			val terminate = gatherInformation(mTeam, ectx, statistics, combiner);
+
+			if(here.id() == 0 && mLogPrinter != null) {
+				mLogPrinter.println("STT_END_COUNT: " + recvStatistics(STT_END_COUNT));
+				mLogPrinter.println("STT_ACTIVE_VERTEX: " + recvStatistics(STT_ACTIVE_VERTEX));
+				mLogPrinter.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
+				mLogPrinter.println("STT_VERTEX_MESSAGE: " + recvStatistics(STT_VERTEX_MESSAGE));
+			}
 			
-			// exchange messages
-			if(exchangeMessages(mTeam, ectx, statistics)) {
+			if(terminate) {
 				mLastAggVal = aggVal;
 				break;
 			}
+
+			// exchange messages
+			ectx.exchangeMessages(
+					recvStatistics(STT_COMBINED_MESSAGE) > 0L,
+					recvStatistics(STT_VERTEX_MESSAGE) > 0L);
 		}
 		
 		mInEdgesMask = ectx.mInEdgesMask;
@@ -337,8 +318,10 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		ectx.del();
 	}
 	
-	@Native("c++", "reinterpret_cast<org::scalegraph::util::MemoryChunk<#T > >(#v)")
-	private static native def castTo[T](v :MemoryChunk[Any]) :MemoryChunk[T];
+	@Native("c++", "reinterpret_cast<org::scalegraph::util::GrowableMemory<#T >*>(#v)")
+	static native def castTo[T](v :GrowableMemory[Int]) :GrowableMemory[T];
+	
+	def outBuffer(tid :Long) = mOutput.subpart(tid * MAX_OUTPUT_NUMBER, MAX_OUTPUT_NUMBER);
 	
 	public def stealOutput[T](index :Int) :MemoryChunk[T] {
 		if(index > MAX_OUTPUT_NUMBER)
@@ -346,16 +329,19 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		
 		var length :Long = 0L;
 		for(i in 0..(numThreads-1)) {
-			length += mOutput(i)(index).size();
+			length += mOutput(i * MAX_OUTPUT_NUMBER + index).size();
 		}
 		
 		val outMem = new MemoryChunk[T](length);
 		var offset :Long = 0L;
 		finish for(i in 0..(numThreads-1)) {
-			val src_len = mOutput(i)(index).size();
+			val buf = mOutput(i * MAX_OUTPUT_NUMBER + index);
+			val src_len = buf.size();
 			val offset_ = offset;
 			async {
-				MemoryChunk.copy(castTo[T](mOutput(i)(index)), 0L, outMem, offset_, src_len);
+				val typed_buf = castTo[T](buf);
+				MemoryChunk.copy(typed_buf.raw(), 0L, outMem, offset_, src_len);
+				typed_buf.clear();
 			}
 			offset += src_len;
 		}

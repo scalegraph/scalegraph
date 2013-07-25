@@ -16,7 +16,6 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Pair;
 import x10.util.Timer;
-import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Algorithm;

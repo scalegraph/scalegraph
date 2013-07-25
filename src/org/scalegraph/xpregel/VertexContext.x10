@@ -41,6 +41,9 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 
 	var mSrcid :Long;
 	
+	// Output
+	val mOut :MemoryChunk[GrowableMemory[Int]];
+	
 	// statictics
 	var mNumActiveVertexes :Long = 0L;
 	var mBCSInputCount :Long = 0L;
@@ -50,6 +53,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 		mCtx = ctx;
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
 		mUCCMessages = mCtx.messageBuffer(tid);
+		mOut = worker.outBuffer(tid);
 	}
 	
 	/**
@@ -221,8 +225,12 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 */
 	public def isHalted() = mWorker.mVertexActive(mSrcid);
 	
+	public def output[T](value :T) { output(0, value); }
+	
 	public def output[T](index :Int, value :T) {
-		// TODO:
+		// TODO: ensure the value type is same
+		assert (index < WorkerPlaceGraph.MAX_OUTPUT_NUMBER);
+		WorkerPlaceGraph.castTo[T](mOut(index)).add(value);
 	}
 }
 

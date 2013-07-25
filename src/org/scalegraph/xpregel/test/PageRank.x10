@@ -66,14 +66,9 @@ public class PageRank {
 			else
 				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
 
-			if (ctx.superstep() < 30) {
-				ctx.aggregate(Math.abs(value - ctx.value()));
-				ctx.setValue(value);
-				ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
-			}
-			else {
-				ctx.voteToHalt();
-			}
+			ctx.aggregate(Math.abs(value - ctx.value()));
+			ctx.setValue(value);
+			ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
@@ -83,9 +78,18 @@ public class PageRank {
 			return (superstep >= 30 || aggVal < 0.0001);
 		});
 		
+		xpregel.once((ctx :VertexContext[Double, Double, Any, Any]) => {
+			ctx.output(ctx.value());
+		});
+		
+		val pagerank = xpregel.stealOutput[Double]();
+		
 		val end_time = System.currentTimeMillis();
 	
 		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
+		
+		DistributedReader.write("pagerank-%d", team, pagerank);
+		
 		Console.OUT.println("Finish application");
 	}
 }
