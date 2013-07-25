@@ -54,7 +54,9 @@ public class SpectralClustering {
 		});
 		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, false, 0.0, W);
 		
-		val V = calcEigenVectors(team, W, N * RC, N, numCluster);
+		val params = new ARPACK.Params();
+		params.nev = numCluster;
+		val V = calcEigenVectors(team, W, params);
 		val result = kmeans(team, V, numCluster, maxitr, threshold);
 	}
 	
@@ -62,7 +64,14 @@ public class SpectralClustering {
 	/*
 	 * returns row-major dense matrix whose columns are nev eigenvectors
 	 */
-	static def calcEigenVectors(team : Team, A : DistSparseMatrix[Double], n_ : Long, nloc_ : Long, nev : Int) : DistMemoryChunk[Double] {
+	static def calcEigenVectors(team : Team, A : DistSparseMatrix[Double], params : ARPACK.Params) : DistMemoryChunk[Double] {
+		
+		assert(team.equals(Team.WORLD));
+		
+		val nloc_ = A.ids().numberOfLocalVertexes2N();
+		val n_ = nloc_ * team.size();
+		
+		assert(n_ <= Int.MAX_VALUE);
 		
 		// global params for pdsaupd
 		val n = n_ as Int;
@@ -70,21 +79,22 @@ public class SpectralClustering {
 		var comm_:Int = 0;
 		@Native("c++", "comm_ = MPI_COMM_WORLD;") {}
 		val comm = comm_;
-		val bmat:Char = 'I';  // param (default = 'I')
-		val which:Int = ARPACK.LA;  // param (default = LA)
-		val tol:Double = 0.0;  // param (default = 0.0)
-		val ncv:Int = Math.min(nev * 2, n);  // param (default = nev * 2)
+		val nev:Int = params.nev;
+		val bmat:Char = params.bmat;
+		val which:Int = params.which;
+		val tol:Double = params.tol;
+		val ncv:Int = Math.min(params.ncv, n);
 		val ldu:Int = nloc;
-		val maxitr = 1000;  // param (default = ?)
-		val lworkl:Int = ncv * (ncv + 8);  // param (default = ncv * (ncv + 8))
+		val maxitr = params.maxitr;
+		val lworkl:Int = params.lworkl;
 		val x = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
 		val y = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
 		
 		// global params for pdseupd
-		val rvec:Int = 1;  // param (default = 1)
-		val howmny:Char = 'A';  // param (default = 'A')
+		val rvec:Int = params.rvec;
+		val howmny:Char = params.howmny;
 		val ldv:Int = nloc;
-		val sigma:Double = 0.0;  // param (default = 0.0)
+		val sigma:Double = params.sigma;
 		
 		return new DistMemoryChunk[Double](team.placeGroup(), () => {
 			// local workspaces for pdsaupd

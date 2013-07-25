@@ -28,7 +28,7 @@ public class BLASTest {
 		Console.OUT.println("Graph generation ...");
 		
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+		val edgelist = GraphGenerator.genRMAT(scale, 2, 0.45, 0.15, 0.15, rnd, team);
 		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));

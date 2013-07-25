@@ -562,7 +562,19 @@ public class Parallel {
     	finish for(i in 0..(numChunks-1)) async {
     		val off = sg.offsets()(i);
     		val len = sg.counts()(i);
+    		if(here.id == 0 && i == 0) {
+    		Console.OUT.println("before sort");
+    		Console.OUT.println("dst_i = " + dst_i.subpart(off, len));
+    		Console.OUT.println("dst_v1 = " + dst_v1.subpart(off, len));
+    		Console.OUT.println("dst_v2 = " + dst_v2.subpart(off, len));
+    		}
     		Algorithm.sort(dst_i.subpart(off, len), dst_v1.subpart(off, len), dst_v2.subpart(off, len));
+    		if(here.id == 0 && i == 0) {
+    		Console.OUT.println("after sort");
+    		Console.OUT.println("dst_i = " + dst_i.subpart(off, len));
+    		Console.OUT.println("dst_v1 = " + dst_v1.subpart(off, len));
+    		Console.OUT.println("dst_v2 = " + dst_v2.subpart(off, len));
+    		}
     	}
     }
 

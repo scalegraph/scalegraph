@@ -100,6 +100,13 @@ public struct DistScatterGather {
 			}
 			assert (threadOffsets(maxThreads*width + r) == sendOffsets(r + 1));
 		}
+		for(p in team.placeGroup()) {
+			if(here == p) {
+				Console.OUT.println(here);
+				Console.OUT.println("threadOffsets = " + threadOffsets);
+			}
+			team.base.barrier(team.base.role()(0));
+		}
 	}
 
 	public def sendCount() = sendOffsets(team.size());

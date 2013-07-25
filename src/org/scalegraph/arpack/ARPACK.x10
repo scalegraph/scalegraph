@@ -14,6 +14,20 @@ public class ARPACK {
 	public static val SM:Int = 4;
 	public static val BE:Int = 5;
 	
+	public static class Params {
+		public var nev:Int = 1;
+		public var bmat:Char = 'I';
+		public var which:Int = LA;
+		public var tol:Double = 0.0;
+		public var ncv:Int = nev * 2;
+		public var maxitr:Int = 1000;
+		public var lworkl:Int = ncv * (ncv + 8);
+		
+		public var rvec:Int = 1;
+		public var howmny:Char = 'A';
+		public var sigma:Double = 0.0;
+	}
+	
 	@Native("c++", "dsaupd_wrap(&#ido, #bmat, #n, #which, #nev, #tol, (#resid)->raw()->raw(), #ncv, (#v)->raw()->raw(), #ldv, (#iparam)->raw()->raw(), (#ipntr)->raw()->raw(), (#workd)->raw()->raw(), (#workl)->raw()->raw(), #lworkl, &#info)")
 	public native static def dsaupd(
 		ido:Int, bmat:Char, n:Int, which:Int, nev:Int,

@@ -136,6 +136,7 @@ namespace org { namespace scalegraph { namespace util {
 		{ }
 		operator T1 () const { return v1; }
 		pointer_tri_value& operator=(const pointer_tri_value& o) { v1 = o.v1; v2 = o.v2; v3 = o.v3; return *this; }
+		bool operator<(const pointer_tri_value& o) const { return v1 == o.v1 ? v2 == o.v2 ? v3 < o.v3 : v2 < o.v2 : v1 < o.v1; }
 	};
 
 	template <typename T1, typename T2, typename T3>
