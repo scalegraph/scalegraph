@@ -78,7 +78,7 @@ public class MinimumSpanningTree {
 	    val team = g.team();
 		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), false, true);
 		val xpregel = new XPregelGraph[VertexValue, Double](team, csr);
-		val edgeValue = g.constructDistAttribute[Double](csr, false, "weight");
+		val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
 		
 		xpregel.initVertexValue((Long) => new VertexValue());
 		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
