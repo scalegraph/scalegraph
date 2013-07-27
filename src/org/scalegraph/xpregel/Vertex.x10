@@ -14,6 +14,8 @@ public final struct Vertex[V, E] {
 		mWorker = worker;
 		mSrcid = id;
 	}
+	
+	public def srcId() = mSrcid;
 
 	/**
 	 * get the vertex id

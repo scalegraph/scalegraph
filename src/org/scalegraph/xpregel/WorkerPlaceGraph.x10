@@ -92,6 +92,7 @@ final class WorkerPlaceGraph[V,E] {
 		this(team, edgeIndexMatrix.ids());
 		mOutEdge.offsets = edgeIndexMatrix().offsets;
 		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
+		mOutEdge.value = new MemoryChunk[E](mOutEdge.vertexes.size());
 	}
 	
 	public def updateInEdge() {
@@ -306,7 +307,9 @@ final class WorkerPlaceGraph[V,E] {
 			
 			if(terminate) {
 				mLastAggVal = aggVal;
-				break;
+				mInEdgesMask = ectx.mInEdgesMask;
+				ectx.del();
+				return ;
 			}
 
 			// exchange messages
@@ -315,9 +318,7 @@ final class WorkerPlaceGraph[V,E] {
 					recvStatistics(STT_VERTEX_MESSAGE) > 0L);
 		}
 		
-		mInEdgesMask = ectx.mInEdgesMask;
-		
-		ectx.del();
+		throw new Exception("Superstep limit exceeded. # of supterstep > 10000");
 	}
 	
 	@Native("c++", "reinterpret_cast<org::scalegraph::util::GrowableMemory<#T >*>(#v)")

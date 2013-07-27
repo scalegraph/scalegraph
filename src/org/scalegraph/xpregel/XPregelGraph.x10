@@ -69,7 +69,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 		return g;
 	}
 	
-	public def setGraphAndEdgeValue(graph :DistSparseMatrix[E])
+	private def setGraphAndEdgeValue(graph :DistSparseMatrix[E])
 	{
 		val team_ = mTeam;
 		val workers_ = mWorkers;
@@ -93,6 +93,8 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 		mWorkers().mLogPrinter = printer;
 		mWorkers().mLogLevel = level;
 	}
+	
+	public def ids() = mWorkers().mIds;
 	
 	public def initVertexValue(value : V)
 	{
@@ -256,7 +258,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 	/** Returns the number of local vertexes.
 	 */
 	public def size() = mWorkers().mIds.numberOfLocalVertexes();
-
+	
 	/** Returns the interface of the i-th local vertex.
 	 */
 	public @Inline operator this(index :Long) {
@@ -407,7 +409,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 				val actual_compute =
 					(ctx:VertexContext[V,E,Any,Any],messages:MemoryChunk[Any])
 					=> { compute(ctx); };
-				workers_().run[Any,Any](actual_compute, null, null, (Int,Any) => false);
+				workers_().run[Any,Any](actual_compute, null, null, (Int,Any) => true);
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
