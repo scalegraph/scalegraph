@@ -67,7 +67,7 @@ public class TestEdgeModify {
 		
 		//-----init xpregel
 		Console.OUT.println("init xpregal");
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val xpregel = new XPregelGraph[Long, Long](team, csr);
 		//-----
 		
@@ -95,7 +95,7 @@ public class TestEdgeModify {
 				val myId = ctx.realId();
 				
 				//display current status
-				mesBuf().add("---Id " + myId + " superstep " + ctx.superstep() + " start---\n");
+				mesBuf().add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
 				
 				//remove out edge
 				val e = (myId+1)%ctx.numberOfVertices();
@@ -111,7 +111,7 @@ public class TestEdgeModify {
 				val OEsId = ctx.outEdgesId();
 				for(eI in OEsId){
 					atomic {
-						mesBuf().add(myId + "->" + eI + "\t\t");
+						mesBuf().add(myId + "->" + eI + "\n");
 					}
 				}
 				
@@ -132,7 +132,7 @@ public class TestEdgeModify {
 		
 		val ps=team.places();
 		for(p in ps) at(ps(p)) {// ...
-			Console.OUT.println(p + "\n" + mesBuf().toString());
+			Console.OUT.println(p + ":\n" + mesBuf().toString());
 		}
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));
