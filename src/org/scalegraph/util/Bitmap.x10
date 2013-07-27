@@ -14,7 +14,7 @@ package org.scalegraph.util;
 import x10.compiler.Ifndef;
 import x10.compiler.Inline;
 
-public class Bitmap {
+public final class Bitmap {
 	public static val BitsPerWord = 64;
 	var mc :MemoryChunk[ULong];
 	var size :Long;

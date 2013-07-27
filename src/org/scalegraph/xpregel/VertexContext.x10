@@ -27,7 +27,7 @@ import org.scalegraph.util.Bitmap;
  * M: Message value type
  * A: Aggreator value type
  */
-public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A haszero } {
+public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
@@ -41,6 +41,9 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 
 	var mSrcid :Long;
 	
+	// Output
+	val mOut :MemoryChunk[GrowableMemory[Int]];
+	
 	// statictics
 	var mNumActiveVertexes :Long = 0L;
 	var mBCSInputCount :Long = 0L;
@@ -50,6 +53,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 		mCtx = ctx;
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
 		mUCCMessages = mCtx.messageBuffer(tid);
+		mOut = worker.outBuffer(tid);
 	}
 	
 	/**
@@ -60,27 +64,27 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	/**
 	 * get the vertex id
 	 */
-	public def id() = mCtx.mStoD(mSrcid);
+	public def id() = mWorker.mStoD(mSrcid);
 	
 	/**
 	 * get real vertex id
 	 */
-	public def realId() = mCtx.mStoV(mSrcid);
+	public def realId() = mWorker.mStoV(mSrcid);
 
 	/**
 	 * get the minimum vertex id of the region assigned to the current place
 	 */
-	public def placeBaseVertexId() = mCtx.mStoD(0L);
+	public def placeBaseVertexId() = mWorker.mStoD(0L);
 	
 	/**
 	 * get real vertex id from dst id
 	 */
-	public def realId(id :Long) = mCtx.mDtoV(id);
+	public def realId(id :Long) = mWorker.mDtoV(id);
 	
 	/**
 	 * get dst id from read vertex id
 	 */
-	public def dstId(realId :Long) = mCtx.mVtoD(realId);
+	public def dstId(realId :Long) = mWorker.mVtoD(realId);
 	
 	/**
 	 * get the number of vertices of the graph
@@ -220,6 +224,15 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 * get the halted flag for the current vertex
 	 */
 	public def isHalted() = mWorker.mVertexActive(mSrcid);
+	
+	public def output[T](value :T) { output(0, value); }
+	
+	public def output[T](index :Int, value :T) {
+		// TODO: ensure the value type is same
+		assert (index < WorkerPlaceGraph.MAX_OUTPUT_NUMBER);
+		val outbuf = WorkerPlaceGraph.castTo[T](mOut(index));
+		outbuf.add(value);
+	}
 }
 
 

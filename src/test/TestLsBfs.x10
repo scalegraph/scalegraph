@@ -23,7 +23,7 @@ import org.scalegraph.util.Bitmap2;
 import org.scalegraph.graph.id.OnedC;
 import x10.util.concurrent.AtomicLong;
 
-public class TestLsBfs extends sx10Test {
+public final class TestLsBfs extends sx10Test {
     
     val inputFile: Array[String] = new Array[String](1, (Int) => "/nfs/data0/testdata/RMAT_SCALE_8");
     

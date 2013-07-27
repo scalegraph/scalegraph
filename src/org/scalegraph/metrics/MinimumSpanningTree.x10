@@ -20,14 +20,15 @@ import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.tuple.*;
+import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class MinimumSpanningTree {
+public final class MinimumSpanningTree {
         
-    public static class VertexValue {
+    public static final class VertexValue {
         var root: Long;
         var edgeTable: MemoryChunk[EdgeInfo];
         var incomingEdges: MemoryChunk[EdgeInfo];
@@ -76,12 +77,9 @@ public class MinimumSpanningTree {
 	
 	public static def run(g: Graph) {
 	    val team = g.team();
-		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), false, true);
-		val xpregel = new XPregelGraph[VertexValue, Double](team, csr);
-		val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
-		
-		xpregel.initVertexValue((Long) => new VertexValue());
-		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+	    val dist = Dist2D.make2D(team, 1, team.size());
+		val csr = g.createDistSparseMatrix[Double](dist, "weight", false, true);
+		val xpregel = XPregelGraph.make[VertexValue, Double](team, csr);
 		
 		xpregel.updateInEdge();
 		

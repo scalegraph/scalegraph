@@ -15,7 +15,7 @@ import org.scalegraph.util.DistGrowableMemory;
 
 /** An attribute for the graph.
  */
-public class Attribute[T] (typeId :Int) {T haszero} {
+public final class Attribute[T] (typeId :Int) {T haszero} {
 	private values :DistGrowableMemory[T];
 	
 	private static def internalGetTypeId[T](t :T) {

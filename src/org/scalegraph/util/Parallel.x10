@@ -16,7 +16,6 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Pair;
 import x10.util.Timer;
-import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Algorithm;
@@ -24,7 +23,7 @@ import org.scalegraph.util.GrowableMemory;
 
 /** Thread Parallel Library.
  */
-public class Parallel {
+public final class Parallel {
 	static val threashold1 = 16;
     static val threashold2 = 16;
 	static val debug = false;

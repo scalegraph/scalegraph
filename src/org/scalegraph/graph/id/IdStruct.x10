@@ -14,7 +14,7 @@ package org.scalegraph.graph.id;
 /**
  * Provides the information of the ID conversion and the number of vertixes for DistSparseMatrix.
  */
-public struct IdStruct {
+public final struct IdStruct {
 	
 	/** MathAppend.ceilLog2(R) */
 	public val lgr: Int;

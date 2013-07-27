@@ -24,7 +24,7 @@ import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
 
-public class GIMV {
+public final class GIMV {
 	
 	private static struct Buffer[U] {
 		public dstv : MemoryChunk[U]; // destination vector (length: local size for each place)

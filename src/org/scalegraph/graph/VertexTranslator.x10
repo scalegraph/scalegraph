@@ -30,7 +30,7 @@ import org.scalegraph.util.DistMemoryChunk;
 /** Vertex ID translator. The purpose of this class is assigning the small integer number for each vertex.
  * The instances of this class are pinned to a particular place because moving the instance to another place is not worth.
  */
-@Pinned public class VertexTranslator[T] {T haszero} {
+@Pinned public final class VertexTranslator[T] {T haszero} {
 
 	static val debug = true;
 	private @Inline static def debugln (str:String) : void {

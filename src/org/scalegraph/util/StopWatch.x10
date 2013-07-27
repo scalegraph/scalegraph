@@ -15,7 +15,7 @@ import x10.util.Timer;
 import x10.util.concurrent.AtomicLong;
 import x10.util.concurrent.AtomicInteger;
 
-public class StopWatch {
+public final class StopWatch {
     val timer = new Array[AtomicLong](Runtime.MAX_THREADS, (Int)=>new AtomicLong(0L));
     val score = new Array[AtomicLong](Runtime.MAX_THREADS, (Int)=>new AtomicLong(0L));
     val realScore = new AtomicLong(0L);

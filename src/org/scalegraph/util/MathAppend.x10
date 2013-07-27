@@ -15,7 +15,7 @@ import x10.compiler.Native;
 import x10.util.Ordered;
 import x10.compiler.Inline;
 
-public class MathAppend {
+public final class MathAppend {
 	
 	public static def abs[T](a :T) {T <: Arithmetic[T], T <: Ordered[T], T haszero} = a > Zero.get[T]() ? a : -a;
 

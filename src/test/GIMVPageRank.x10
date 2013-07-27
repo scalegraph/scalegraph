@@ -28,7 +28,7 @@ import org.scalegraph.graph.Attribute;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.harness.sx10Test;
 
-public class GIMVPageRank extends sx10Test {
+public final class GIMVPageRank extends sx10Test {
 
 	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
 
