@@ -13,7 +13,7 @@ package org.scalegraph.util;
 
 import org.scalegraph.util.MemoryChunk;
 
-public class OrderedPlaceGroup extends PlaceGroup {
+public final class OrderedPlaceGroup extends PlaceGroup {
 	
 	private val places :MemoryChunk[Place];
 	

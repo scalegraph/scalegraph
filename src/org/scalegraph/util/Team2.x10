@@ -27,7 +27,7 @@ import org.scalegraph.util.tuple.Tuple2;
 
 /** Team2 provides the collectives for MemoryChunk. Currently Team2 only support lowest level collectives.
  */
-public struct Team2 {
+public final struct Team2 {
 	
 	public val base :Team;
 	

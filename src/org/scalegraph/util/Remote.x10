@@ -23,7 +23,7 @@ import org.scalegraph.util.*;
 /** Fine grained communication library.
  * Usage : .... (Now printing)
  */
-public class Remote {
+public final class Remote {
 	private static def debugprint(tag :String) {
 		Console.OUT.println("Place: " + here.id + ": Remote: " + tag);
 	}

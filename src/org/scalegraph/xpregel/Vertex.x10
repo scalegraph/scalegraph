@@ -6,7 +6,7 @@ import org.scalegraph.util.MemoryChunk;
 /**
  * Provides access to the vertex and its edges of the XPregelGraph.
  */
-public struct Vertex[V, E] {
+public final struct Vertex[V, E] {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mSrcid :Long;
 	

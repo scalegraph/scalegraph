@@ -21,7 +21,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class BlondelTest {
+public final class BlondelTest {
 	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;

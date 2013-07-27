@@ -2,7 +2,7 @@ package test;
 
 import org.scalegraph.harness.sx10Test;
 
-public class HarnessTest extends sx10Test {
+public final class HarnessTest extends sx10Test {
 
 	public def run() :boolean {
 		finish for(p in Place.places()) at(p) async {

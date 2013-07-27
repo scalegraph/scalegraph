@@ -30,7 +30,7 @@ import x10.util.IndexedMemoryChunk;
  * This structure is highly optimized for C++ backend.
  */
 @NativeRep("c++", "org::scalegraph::util::MCData_Impl<#T >", "org::scalegraph::util::MCData_Impl<#T >", null)
-struct MemoryChunkData[T] {
+final struct MemoryChunkData[T] {
 	public val raw :IndexedMemoryChunk[T];
 	public val offset :Long;
 	public val size :Long;

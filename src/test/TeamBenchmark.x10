@@ -16,7 +16,7 @@ import x10.util.Timer;
 import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Debug;
 
-public class TeamBenchmark extends sx10Test {
+public final class TeamBenchmark extends sx10Test {
     private static def message (str:String) : void {
         Console.OUT.println("" + Timer.milliTime() + ":tb: " + here + "(" + Runtime.workerId() + ")" + str);
         Console.OUT.flush();

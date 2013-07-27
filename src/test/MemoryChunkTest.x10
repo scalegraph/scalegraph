@@ -2,7 +2,7 @@ package test;
 
 import org.scalegraph.util.MemoryChunk;
 
-public class MemoryChunkTest {
+public final class MemoryChunkTest {
 	
 	static struct SampleStruct {
 		val a:Int;
@@ -21,6 +21,7 @@ public class MemoryChunkTest {
 		def this(a_ :Int, b_ :Long) {
 			a = a_; b = b_;
 		}
+		public def print() { Console.OUT.println(""); }
 		public def toString() = "a = " + a + ", b = " + b;
 	}
 	

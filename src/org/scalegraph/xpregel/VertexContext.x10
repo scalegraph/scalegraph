@@ -27,7 +27,7 @@ import org.scalegraph.util.Bitmap;
  * M: Message value type
  * A: Aggreator value type
  */
-public class VertexContext[V, E, M, A] { M haszero, A haszero } {
+public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
@@ -230,7 +230,8 @@ public class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	public def output[T](index :Int, value :T) {
 		// TODO: ensure the value type is same
 		assert (index < WorkerPlaceGraph.MAX_OUTPUT_NUMBER);
-		WorkerPlaceGraph.castTo[T](mOut(index)).add(value);
+		val outbuf = WorkerPlaceGraph.castTo[T](mOut(index));
+		outbuf.add(value);
 	}
 }
 

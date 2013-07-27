@@ -23,7 +23,7 @@ import org.scalegraph.util.GrowableMemory;
 
 /** Thread Parallel Library.
  */
-public class Parallel {
+public final class Parallel {
 	static val threashold1 = 16;
     static val threashold2 = 16;
 	static val debug = false;

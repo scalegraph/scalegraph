@@ -26,7 +26,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.util.random.Random;
 
 
-public class HyperANF_Pregel {
+public final class HyperANF_Pregel {
 	public static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
 		var Z:Double = 0.0;
 		val M:Double = counter.size();

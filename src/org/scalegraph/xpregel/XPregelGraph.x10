@@ -36,7 +36,7 @@ import org.scalegraph.graph.Attribute;
  * V: Vertex value type
  * E: Edge value type
  */
-public class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
+public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;

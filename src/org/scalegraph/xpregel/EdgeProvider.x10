@@ -17,7 +17,7 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.Parallel;
 
-class EdgeProvider [E] {
+final class EdgeProvider [E] {
 	// modified out edges
 	// srcid, offset
 	val mDiffOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();

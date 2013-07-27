@@ -16,7 +16,6 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
-import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.StopWatch;
@@ -24,7 +23,7 @@ import org.scalegraph.util.Parallel;
 import org.scalegraph.util.HashMap;
 import org.scalegraph.harness.sx10Test;
 
-public class TestHashMap extends sx10Test {
+public final class TestHashMap extends sx10Test {
     val n : Int;
     val ne : Int;
 

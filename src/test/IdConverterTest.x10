@@ -18,7 +18,7 @@ import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.OnedR;
 import org.scalegraph.harness.sx10Test;
 
-public class IdConverterTest extends sx10Test {
+public final class IdConverterTest extends sx10Test {
 	
 	public static def refVtoS(ids :IdStruct, rr :Long) {
 		val lgr = ids.lgr;

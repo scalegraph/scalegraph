@@ -10,7 +10,7 @@
  */
 
 package org.scalegraph.util.tuple;
-public struct Tuple1 [T1] {
+public final struct Tuple1 [T1] {
     public val1: T1;
 
     public def this(val1: T1) {

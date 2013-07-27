@@ -25,7 +25,7 @@ import x10.util.IndexedMemoryChunk;
 /** The pointer representation for MemoryChunk. Using this representation directly is unsafe on the C++ backend.
  */
 @NativeRep("c++", "#T *", "#T *", null)
-public struct MemoryPointer[T] {
+public final struct MemoryPointer[T] {
 	
 	@Ifndef("__CPP__")
 	public transient val raw :IndexedMemoryChunk[T];

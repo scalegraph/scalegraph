@@ -32,7 +32,7 @@ import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.DistMemoryChunk;
  
-public class DistributedReader {
+public final class DistributedReader {
 	
 	private static struct InputSplit {
 		private val path : String;

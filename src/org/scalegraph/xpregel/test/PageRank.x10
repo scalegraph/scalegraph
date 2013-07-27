@@ -24,7 +24,7 @@ import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class PageRank {
+public final class PageRank {
 	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;

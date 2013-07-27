@@ -2,7 +2,7 @@ package test;
 
 import x10.util.ParallelSerialization;
 
-public class TeamSerializationTest {
+public final class TeamSerializationTest {
 
 	public static def main(args:Array[String](1)) {
 		val arr1 = new Array[Cell[Int]](10, (i:Int)=>new Cell[Int](i));

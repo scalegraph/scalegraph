@@ -21,11 +21,10 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 
-import org.scalegraph.xpregel.InitVertexContext;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class SSSP {
+public final class SSSP {
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;
 		val scale = Int.parse(args(0));

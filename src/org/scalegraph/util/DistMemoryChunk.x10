@@ -13,7 +13,7 @@ package org.scalegraph.util;
 
 /** Distributed memory chunk.
  */
-public struct DistMemoryChunk[T] {
+public final struct DistMemoryChunk[T] {
 	private val plh :PlaceLocalHandle[Cell[MemoryChunk[T]]];
 	
 	private def this(plh :PlaceLocalHandle[Cell[MemoryChunk[T]]]) {

@@ -2,7 +2,7 @@ package org.scalegraph.blas;
 
 import org.scalegraph.util.DistMemoryChunk;
 
-public struct DistDiagonalMatrix[T] {
+public final struct DistDiagonalMatrix[T] {
 	private val data :DistMemoryChunk[T];
 	
 	public def this(data :DistMemoryChunk[T]) {

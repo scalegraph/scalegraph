@@ -32,7 +32,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import x10.compiler.Native;
 import x10.io.Printer;
 
-class WorkerPlaceGraph[V,E] {
+final class WorkerPlaceGraph[V,E] {
 	static val MAX_OUTPUT_NUMBER = 8;
 	
 	val mTeam :Team2;
@@ -271,7 +271,9 @@ class WorkerPlaceGraph[V,E] {
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
-				intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
+				if(aggregator != null) {
+					intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
+				}
 				vc.mAggregateValue.clear();
 				vc.mNumActiveVertexes = numProcessed;
 			});
@@ -339,6 +341,10 @@ class WorkerPlaceGraph[V,E] {
 			val src_len = buf.size();
 			val offset_ = offset;
 			async {
+				// GrowableMemory must be declared as final.
+				// If it is not, all method call to typed_buf
+				// will invoke the method of GrowableMemory<int> 
+				// through its virtual function table.
 				val typed_buf = castTo[T](buf);
 				MemoryChunk.copy(typed_buf.raw(), 0L, outMem, offset_, src_len);
 				typed_buf.clear();

@@ -15,7 +15,7 @@ import org.scalegraph.blas.BLAS;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.blas.DistDiagonalMatrix;
 
-public class BLASTest {
+public final class BLASTest {
 	public static def main(args: Array[String](1)) {
 		val team = Team.WORLD;
 		val scale = Int.parse(args(0));

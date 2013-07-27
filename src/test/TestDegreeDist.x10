@@ -13,7 +13,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.metrics.Degree;
 
-public class TestDegreeDist {
+public final class TestDegreeDist {
     
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");

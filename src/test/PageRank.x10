@@ -19,7 +19,7 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.harness.sx10Test;
 
-public class PageRank extends sx10Test {
+public final class PageRank extends sx10Test {
     
     public static def main(args:Array[String](1)) {
         val t = new PageRank();
@@ -27,7 +27,7 @@ public class PageRank extends sx10Test {
     }
     
     public def run(): Boolean {
-        val arg: Array[String] = new Array[String](1);
+        val arg = new Array[String](1);
         arg(0) = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
         entry(arg);
         

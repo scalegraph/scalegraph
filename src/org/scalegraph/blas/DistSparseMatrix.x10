@@ -10,7 +10,7 @@ import org.scalegraph.util.Dist2D;
 
 /** Distributed sparse matrix.
  */
-public struct DistSparseMatrix[T] {
+public final struct DistSparseMatrix[T] {
 
 	private static struct Data[T] {
 		public val dist :Dist2D;

@@ -36,7 +36,7 @@ import org.scalegraph.blas.SparseMatrix;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving this instance to another place is not worth.
  */
-@Pinned public class Graph(vertexType :Int) {
+@Pinned public final class Graph(vertexType :Int) {
 	static type EDGE = Tuple2[Long,Long];
 	
     private team :Team;

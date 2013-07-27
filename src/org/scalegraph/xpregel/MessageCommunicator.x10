@@ -21,14 +21,14 @@ import org.scalegraph.util.Team2;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.graph.id.OnedC;
 
-struct MessageBuffer[M] { M haszero } {
+final struct MessageBuffer[M] { M haszero } {
 	val messages :GrowableMemory[M] = new GrowableMemory[M]();
 	val dstIds :GrowableMemory[Long] = new GrowableMemory[Long]();
 	
 	def this() { }
 }
 
-class MessageCommunicator[M] { M haszero } {
+final class MessageCommunicator[M] { M haszero } {
 	/* Name form
 	 * UC : UniCast message
 	 * BC : BroadCast message

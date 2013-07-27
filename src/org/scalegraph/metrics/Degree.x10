@@ -19,7 +19,7 @@ import org.scalegraph.util.DistScatterGather;
 import org.scalegraph.util.Parallel;
 import x10.util.Team;
 
-public class Degree {
+public final class Degree {
 	
 	private static def degreeDistribution(g :Graph, directed :Boolean, outerOrInner :Boolean) {
 		val team = g.team();

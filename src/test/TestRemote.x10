@@ -21,7 +21,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Remote;
 import org.scalegraph.harness.sx10Test;
 
-public class TestRemote extends sx10Test {
+public final class TestRemote extends sx10Test {
     static val test = true;
     def this() {
 

@@ -17,7 +17,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.harness.sx10Test;
 
-public class TestDistributedReader extends sx10Test {
+public final class TestDistributedReader extends sx10Test {
 	public static inputFormat_g1 = (s:String)=> {
 		val elements = s.split(",");
 		return Tuple3[Long, Long, Double](
