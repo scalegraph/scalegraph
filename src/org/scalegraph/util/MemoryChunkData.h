@@ -183,14 +183,14 @@ public:
 };
 
 // specialized for class types
-// class type is determined whether it has _deserialize_body method
-template <typename T, void(T::*)(x10aux::deserialization_buffer&)>
+// class type is determined whether it has default constructor (constructor that have no parameters)
+template <typename T, void(T::*)()>
 struct MCData_sfinae_helper { typedef void type; };
 
-template<class T> class MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_deserialize_body>::type>
-	: public MCData_Base<MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_deserialize_body>::type>, T> {
+template<class T> class MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type>
+	: public MCData_Base<MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type>, T> {
 public:
-	typedef MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_deserialize_body>::type> THIS;
+	typedef MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type> THIS;
 	typedef MCData_Base<THIS, T> BASE;
 	typedef T ELEM;
 	typedef T* TYPE;
@@ -206,7 +206,8 @@ public:
 	static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
 		THIS this_ = BASE::_make(numElements, alignment, zeroed);
 		for(x10_long i = 0; i < numElements; ++i) {
-			new (&this_.FMGL(pointer)[i]) T();
+			T* elem = new (&this_.FMGL(pointer)[i]) T();
+			elem->_constructor();
 		}
 		return this_;
 	}

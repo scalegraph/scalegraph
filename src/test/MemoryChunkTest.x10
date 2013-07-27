@@ -17,7 +17,7 @@ public final class MemoryChunkTest {
 		var a:Int;
 		var b:Long;
 
-		def this() { }
+		def this() { a = -1; b = -1L; }
 		def this(a_ :Int, b_ :Long) {
 			a = a_; b = b_;
 		}
@@ -30,9 +30,7 @@ public final class MemoryChunkTest {
     	val mc2 = new MemoryChunk[SampleClass](10);
     //	val mc2 = new MemoryChunk[SampleClass](10, (Long)=>new SampleClass());
     	val mc3 = new MemoryChunk[Any](10, (i :Long)=>new SampleClass(i as Int, i));
-    	for(i in mc2.range()) {
-    		mc2(i).a = i as Int; mc2(i).b = i;
-    	}
+    //	for(i in mc2.range()) { mc2(i).a = i as Int; mc2(i).b = i; }
     	
     	at(here.next()) {
     		Console.OUT.println("mc1\n" + mc1);

@@ -111,78 +111,6 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 		});
 	}
 	
-	public def initVertexValue(compute :(realId :Long) => V)
-	{
-		ensurePlaceRoot();
-		val team_ = mTeam;
-		val workers_ = mWorkers;
-		team_.placeGroup().broadcastFlat( () => {
-			try {
-				val w = workers_();
-				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
-					for(i in r) w.mVertexValue(i) = compute(StoV(i));
-				});
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
-		});
-	}
-	
-	public def initVertexValue[T](a_ :DistMemoryChunk[T], compute :(realId :Long, v :T) => V){T haszero}
-	{
-		ensurePlaceRoot();
-		val team_ = mTeam;
-		val workers_ = mWorkers;
-		team_.placeGroup().broadcastFlat( () => {
-			try {
-				val w = workers_();
-				val a = a_();
-				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
-					for(i in r) w.mVertexValue(i) = compute(StoV(i), a(i));
-				});
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
-		});
-	}
-	
-	public def initVertexValue[T1,T2](a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], 
-			compute :(Long, T1, T2) => V) {T1 haszero, T2 haszero}
-	{
-		ensurePlaceRoot();
-		val team_ = mTeam;
-		val workers_ = mWorkers;
-		team_.placeGroup().broadcastFlat( () => {
-			try {
-				val w = workers_();
-				val a1 = a1_();
-				val a2 = a2_();
-				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
-					for(i in r) w.mVertexValue(i) = compute(StoV(i), a1(i), a2(i));
-				});
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
-		});
-	}
-	
-	public def initVertexValue[T1,T2,T3](a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], a3_ :DistMemoryChunk[T3],
-			compute : (Long, T1, T2, T3) => V) {T1 haszero, T2 haszero, T3 haszero}
-	{
-		ensurePlaceRoot();
-		val team_ = mTeam;
-		val workers_ = mWorkers;
-		team_.placeGroup().broadcastFlat( () => {
-			try {
-				val w = workers_();
-				val a1 = a1_();
-				val a2 = a2_();
-				val a3 = a3_();
-				Parallel.iter(w.mVertexValue.range(), (tid :Long, r :LongRange) => {
-					val StoV = new OnedC.StoV(w.mIds, w.mTeam.base.role()(0));
-					for(i in r) w.mVertexValue(i) = compute(StoV(i), a1(i), a2(i), a3(i));
-				});
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
-		});
-	}
-
 	public def initEdgeValue(value : E)
 	{
 		ensurePlaceRoot();
@@ -197,60 +125,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
-			
-	public def initEdgeValue[T] (a_ :DistMemoryChunk[T], compute :(T) => E) {T haszero}
-	{
-		ensurePlaceRoot();
-		val team_ = mTeam;
-		val workers_ = mWorkers;
-		team_.placeGroup().broadcastFlat( () => {
-			try {
-				val w = workers_().mOutEdge;
-				val a = a_();
-				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-					for(i in r) w.value(i) = compute(a(i));
-				});
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
-		});
-	}
-	
-	public def initEdgeValue[T1,T2] (a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], 
-			compute :(T1, T2) => E) {T1 haszero, T2 haszero}
-	{
-		ensurePlaceRoot();
-		val team_ = mTeam;
-		val workers_ = mWorkers;
-		team_.placeGroup().broadcastFlat( () => {
-			try {
-				val w = workers_().mOutEdge;
-				val a1 = a1_();
-				val a2 = a2_();
-				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-					for(i in r) w.value(i) = compute(a1(i), a2(i));
-				});
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
-		});
-	}
-			
-	public def initEdgeValue[T1,T2,T3] (a1_ :DistMemoryChunk[T1], a2_ :DistMemoryChunk[T2], a3_ :DistMemoryChunk[T3],
-			compute :(T1, T2, T3) => E) {T1 haszero, T2 haszero, T3 haszero}
-	{
-		ensurePlaceRoot();
-		val team_ = mTeam;
-		val workers_ = mWorkers;
-		team_.placeGroup().broadcastFlat( () => {
-			try {
-				val w = workers_().mOutEdge;
-				val a1 = a1_();
-				val a2 = a2_();
-				val a3 = a3_();
-				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-					for(i in r) w.value(i) = compute(a1(i), a2(i), a3(i));
-				});
-			} catch (e :CheckedThrowable) { e.printStackTrace(); }
-		});
-	}
-	
+
 	/** Returns the place group that this XPregelGraph is spread on.
 	 */
 	public def placeGroup() = mTeam.placeGroup();

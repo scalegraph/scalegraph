@@ -40,7 +40,7 @@ public final class PageRank {
 
 		val start_init_graph = System.currentTimeMillis();
 		val g = Graph.make(team, edgeList);
-		g.setEdgeAttribute[Double]("edgevalue", rawWeight);		
+		g.setEdgeAttribute[Double]("edgevalue", rawWeight);
 		/*
 		val csr = g.createDistSparseMatrix[Double](dist, "edgevalue", true, true);
 		val xpregel = XPregelGraph.make[Double, Double](team, csr);
@@ -48,7 +48,6 @@ public final class PageRank {
 		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(dist, true, true);
 		val edgeWeight = g.createDistAttribute[Double](edgeIndexMatrix, false, "edgevalue");
 		val xpregel = new XPregelGraph[Double, Double](team, edgeIndexMatrix);
-		/*
 		team.placeGroup().broadcastFlat(() => { try {
 			Parallel.iter(xpregel.range(), (tid :Long, r :LongRange) => {
 				val edgeIndexMatrix_ = edgeIndexMatrix();
@@ -61,7 +60,7 @@ public final class PageRank {
 				}
 			});
 		} catch (e :CheckedThrowable) { e.printStackTrace(); } });
-		*/
+		/*
 		team.placeGroup().broadcastFlat(() => { try {
 			val edgeIndexMatrix_ = edgeIndexMatrix();
 			val edgeWeight_ = edgeWeight();
@@ -72,6 +71,7 @@ public final class PageRank {
 				MemoryChunk.copy(w_, 0L, ev_, 0L, w_.size());
 			}
 		} catch (e :CheckedThrowable) { e.printStackTrace(); } });
+ */
 
 		// release graph data
 		g.del();
