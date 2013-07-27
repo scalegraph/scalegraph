@@ -111,8 +111,8 @@ public:
 	}
 };
 
-// base case for struct types
-template<class T> class MCData_Impl : public MCData_Base<MCData_Impl<T>, T> {
+// base case for struct and interface types
+template<class T, typename SFINAE = void> class MCData_Impl : public MCData_Base<MCData_Impl<T>, T> {
 public:
 	typedef MCData_Impl<T> THIS;
 	typedef MCData_Base<MCData_Impl<T>, T> BASE;
@@ -133,15 +133,15 @@ public:
 
 	T& operator[](x10_long index) { return this->FMGL(pointer)[index]; }
 	T& operator[](x10_int index) { return this->FMGL(pointer)[index]; }
-	void set(x10_long index, T value) { this->FMGL(pointer)[index] = value; }
-	void set(x10_int index, T value) { this->FMGL(pointer)[index] = value; }
+	void set(x10_long index, const T value) { this->FMGL(pointer)[index] = value; }
+	void set(x10_int index, const T value) { this->FMGL(pointer)[index] = value; }
 
-	T& atomicAdd(x10_long index, T value){ return __sync_fetch_and_add(&this->FMGL(pointer)[index], value); }
-	T& atomicOr(x10_long index, T value){ return __sync_fetch_and_or(&this->FMGL(pointer)[index], value); }
-	T& atomicAnd(x10_long index, T value){ return __sync_fetch_and_and(&this->FMGL(pointer)[index], value); }
-	T& atomicXor(x10_long index, T value){ return __sync_fetch_and_xor(&this->FMGL(pointer)[index], value); }
+	T atomicAdd(x10_long index, const T value){ return __sync_fetch_and_add(&this->FMGL(pointer)[index], value); }
+	T atomicOr(x10_long index, const T value){ return __sync_fetch_and_or(&this->FMGL(pointer)[index], value); }
+	T atomicAnd(x10_long index, const T value){ return __sync_fetch_and_and(&this->FMGL(pointer)[index], value); }
+	T atomicXor(x10_long index, const T value){ return __sync_fetch_and_xor(&this->FMGL(pointer)[index], value); }
 
-	x10_boolean atomicCAS(x10_long index, T expect, T value){
+	x10_boolean atomicCAS(x10_long index, const T expect, const T value){
 		return __sync_bool_compare_and_swap(&this->FMGL(pointer)[index], expect, value);
 	}
 
@@ -183,10 +183,15 @@ public:
 };
 
 // specialized for class types
-template<class T> class MCData_Impl<T*> : public MCData_Base<MCData_Impl<T*>, T> {
+// class type is determined whether it has _deserialize_body method
+template <typename T, void(T::*)(x10aux::deserialization_buffer&)>
+struct MCData_sfinae_helper { typedef void type; };
+
+template<class T> class MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_deserialize_body>::type>
+	: public MCData_Base<MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_deserialize_body>::type>, T> {
 public:
-	typedef MCData_Impl<T*> THIS;
-	typedef MCData_Base<MCData_Impl<T*>, T> BASE;
+	typedef MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_deserialize_body>::type> THIS;
+	typedef MCData_Base<THIS, T> BASE;
 	typedef T ELEM;
 	typedef T* TYPE;
 
@@ -218,15 +223,15 @@ public:
 
 	x10_boolean atomicCAS(x10_long index, T* expect, T* value){ return false; }
 
-	static void copy(MCData_Impl<T*> src, x10_long srcIndex,
-			MCData_Impl<T*> dst, x10_long dstIndex, x10_long numElems)
+	static void copy(THIS src, x10_long srcIndex,
+			THIS dst, x10_long dstIndex, x10_long numElems)
 	{
 		for(x10_long i = 0; i < numElems; ++i) {
 			dst.FMGL(pointer)[i + dstIndex] = src.FMGL(pointer)[i + srcIndex];
 		}
 	}
 
-	static void _serialize(MCData_Impl<T*> this_, x10aux::serialization_buffer& buf) {
+	static void _serialize(THIS this_, x10aux::serialization_buffer& buf) {
 		x10_long size = this_->FMGL(size);
 		void* data = this_->FMGL(pointer);
 		buf.write(size);
@@ -237,11 +242,11 @@ public:
 		}
 	}
 
-	static MCData_Impl<T*> _deserialize(x10aux::deserialization_buffer& buf) {
+	static THIS _deserialize(x10aux::deserialization_buffer& buf) {
 		x10_long size = buf.read<x10_long>();
-		MCData_Impl<T*> allocMem = _make(size, 0, false);
+		THIS allocMem = _make(size, 0, false);
 		for(x10_long i = 0; i < size; ++i) {
-		    T* elem = new (&allocMem.FMGL(pointer)[i]) T();
+		    T* elem = new (&allocMem->FMGL(pointer)[i]) T();
 		    buf.record_reference(elem);
 		    elem->_deserialize_body(buf);
 		}

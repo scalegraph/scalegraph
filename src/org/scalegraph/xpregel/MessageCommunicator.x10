@@ -145,7 +145,7 @@ class MessageCommunicator[M] { M haszero } {
 		return new MemoryChunk[M]();
 	}
 	
-	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) {V haszero, E haszero, A haszero } {
+	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) { M haszero, A haszero } {
 		mNumActiveVertexes += ctx.mNumActiveVertexes; ctx.mNumActiveVertexes = 0L;
 		mBCSInputCount += ctx.mBCSInputCount; ctx.mBCSInputCount = 0L;
 	}
@@ -346,7 +346,6 @@ class MessageCommunicator[M] { M haszero } {
 			for(i in mBCCMessages.range()) {
 				if(placeHasMessage(i)) {
 					mesLocalBuffer(offset++) = mBCCMessages(i);
-			//		mBCCMessages(i) = nullMessage; // clear
 				}
 			}
 			assert (offset == length);

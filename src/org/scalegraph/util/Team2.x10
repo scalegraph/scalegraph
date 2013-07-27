@@ -70,9 +70,9 @@ public struct Team2 {
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 	
-	private static def nativeReduce[T](id:Int, role:Int, root:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count:Int, op:Int) : void {
+	private static def nativeReduce[T](id:Int, role:Int, root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int, op:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_reduce(id, role, root, src, dst, (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_reduce(id, role, root, src->pointer(), dst->pointer(), (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
@@ -377,15 +377,15 @@ public struct Team2 {
 	
 	public def reduce[T](root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
 		val role = base.role()(0);
-		if(src.size() != dst.size())
+		if(role == root && src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeReduce[T](base.id(), role, root, src.pointer(), dst.pointer(), src.size() as Int, op);
+			finish nativeReduce[T](base.id(), role, root, src, dst, src.size() as Int, op);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.reduce(role, root, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, src.size() as Int, op);
 		}
 	}

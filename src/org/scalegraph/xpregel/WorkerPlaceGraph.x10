@@ -32,7 +32,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import x10.compiler.Native;
 import x10.io.Printer;
 
-class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
+class WorkerPlaceGraph[V,E] {
 	static val MAX_OUTPUT_NUMBER = 8;
 	
 	val mTeam :Team2;
@@ -124,7 +124,7 @@ class WorkerPlaceGraph[V,E] {V haszero, E haszero} {
 		mesComm.del();
 	}
 	
-	public def updateInEdgeWithValue() {
+	public def updateInEdgeWithValue() {E haszero} {
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();

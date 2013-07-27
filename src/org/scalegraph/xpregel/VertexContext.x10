@@ -27,7 +27,7 @@ import org.scalegraph.util.Bitmap;
  * M: Message value type
  * A: Aggreator value type
  */
-public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A haszero } {
+public class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];

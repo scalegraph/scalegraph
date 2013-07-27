@@ -36,7 +36,7 @@ import org.scalegraph.graph.Attribute;
  * V: Vertex value type
  * E: Edge value type
  */
-public class XPregelGraph[V,E]{V haszero, E haszero} implements Iterable[Vertex[V, E]] {
+public class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
@@ -271,8 +271,7 @@ public class XPregelGraph[V,E]{V haszero, E haszero} implements Iterable[Vertex[
 	 */
 	public def range() = 0L..(size()-1L);
 	
-	private static class VertexIterator[V, E]
-		{V haszero, E haszero} implements Iterator[Vertex[V, E]]
+	private static class VertexIterator[V, E] implements Iterator[Vertex[V, E]]
 	{
 		val mWorker :WorkerPlaceGraph[V, E];
 		var cur :Long;
@@ -324,7 +323,7 @@ public class XPregelGraph[V,E]{V haszero, E haszero} implements Iterable[Vertex[
 	 * update out-edges
 	 * This method update the in-edge destination vertex id and in-edge values also.
 	 */
-	public def updateInEdgeAndValue() {
+	public def updateInEdgeAndValue() { E haszero } {
 		ensurePlaceRoot();
 		val team_ = mTeam;
 		val workers_ = mWorkers;
