@@ -26,7 +26,6 @@ import org.scalegraph.blas.GIMV;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.Attribute;
 import org.scalegraph.graph.GraphGenerator;
-import org.scalegraph.gimv.GIMV;
 import org.scalegraph.harness.sx10Test;
 
 public class GIMVPageRank extends sx10Test {

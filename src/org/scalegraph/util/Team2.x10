@@ -21,6 +21,7 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.Team;
 import org.scalegraph.util.MemoryPointer;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
 
 // TODO: range check
 
@@ -38,6 +39,10 @@ public struct Team2 {
 	public @Inline def size() = base.size();
 	public @Inline def places() = base.places();
 	public @Inline def placeGroup() = base.placeGroup();
+	
+	public def barrier (role:Int) : void {
+		base.barrier(role);
+	}
 	
 	/* native methods */
 	
@@ -62,6 +67,12 @@ public struct Team2 {
 	private static def nativeGatherv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_count:Int, dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		Runtime.increaseParallelism(); // for MPI transport
 		@Native("c++", "x10rt_gatherv(id, role, root, src->pointer(), src_count, dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		Runtime.decreaseParallelism(1); // for MPI transport
+	}
+	
+	private static def nativeReduce[T](id:Int, role:Int, root:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count:Int, op:Int) : void {
+		Runtime.increaseParallelism(); // for MPI transport
+		@Native("c++", "x10rt_reduce(id, role, root, src, dst, (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
@@ -163,6 +174,21 @@ public struct Team2 {
 			base.scatterv(role, root, wrapPointer(srcp), wrapOffsets(src_offs, srcp.offset as Int), wrapCounts(src_counts), wrapPointer(dstp), dstp.offset as Int, dst.size() as Int);
 		}
 	 }
+	
+	/** This is equivalent to MPI_scatterv
+	 */
+	public def scatterv[T] (root:Int, src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : MemoryChunk[T] {
+		val role = base.role()(0);
+		val dst_size = new MemoryChunk[Int](1);
+		val src_offs = root == role ? new MemoryChunk[Int](src_counts.size() + 1) : MemoryChunk.getNull[Int]();
+		if(root == role){
+			countOffsets(src_counts, src_offs, 0);
+		}
+		scatter(root, src_counts, dst_size);
+		val dst = new MemoryChunk[T](dst_size(0));
+		scatterv(root, src, src_offs, src_counts, dst);
+		return dst;
+	}
 
 	/** This is equivalent to MPI_gather
 	 */
@@ -193,6 +219,32 @@ public struct Team2 {
 			base.gatherv(role, root, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
+	
+	public def gatherv[T] (root:Int, src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
+		val role = base.role()(0);
+		val src_size = new MemoryChunk[Int](1);
+		src_size(0) = src.size() as Int;
+		
+		if(root == role){
+			val dst_counts = new MemoryChunk[Int](size());
+			gather(root, src_size, dst_counts);
+			var dst_size :Int = 0;
+			for(i in dst_counts.range()){
+				dst_size += dst_counts(i);
+			}
+			val dst = new MemoryChunk[T](dst_size);
+			val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+			countOffsets(dst_counts, dst_offs, 0);
+			gatherv(root, src, dst, dst_offs, dst_counts);
+			return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
+			
+		}
+		val nullInt = MemoryChunk.getNull[Int]();
+		val nullT = MemoryChunk.getNull[T]();
+		gather(root, src_size, nullInt);
+		gatherv(root, src, nullT, nullInt, nullInt);
+		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](nullT ,nullInt);		
+	}
 
 	public def bcast[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
 		val role = base.role()(0);
@@ -236,6 +288,23 @@ public struct Team2 {
 			base.allgatherv(role, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
+	
+	public def allgatherv[T] (src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]]  {
+		val role = base.role()(0);
+		val src_size = new MemoryChunk[Int](1);
+		val dst_counts = new MemoryChunk[Int](size());
+		src_size(0) = src.size() as Int;
+		allgather(src_size, dst_counts);
+		var dst_size :Int = 0;
+		for(i in dst_counts.range()){
+			dst_size += dst_counts(i);
+		}
+		val dst = new MemoryChunk[T](dst_size);
+		val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+		countOffsets(dst_counts, dst_offs, 0);
+		allgatherv(src, dst, dst_offs, dst_counts);
+		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
+	}
 
 	public def alltoall[T](src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
 		val role = base.role()(0);
@@ -265,6 +334,23 @@ public struct Team2 {
 					wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
+	
+	public def alltoallv[T] (src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
+		val role = base.role()(0);
+		val src_offs = new MemoryChunk[Int](src_counts.size() + 1);
+		countOffsets(src_counts, src_offs, 0);
+		val dst_counts = new MemoryChunk[Int](size());
+		alltoall(src_counts, dst_counts);
+		var dst_size :Int = 0;
+		for(i in dst_counts.range()){
+			dst_size += dst_counts(i);
+		}
+		val dst = new MemoryChunk[T](dst_size);
+		val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+		countOffsets(dst_counts, dst_offs, 0);
+		alltoallv(src, src_offs, src_counts, dst, dst_offs, dst_counts);
+		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
+	}
 
 	public def allreduce[T](src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
 		val role = base.role()(0);
@@ -281,10 +367,35 @@ public struct Team2 {
 		}
 	 }
 	
-	/** (Not implemented) 
-	 */
-	public def reduce[T](src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
-		// TODO:
+	public def allreduce[T](src:T, op:Int) : T {
+		val src_ = new MemoryChunk[T](1);
+		val dst = new MemoryChunk[T](1);
+		src_(0) = src;
+		allreduce(src_, dst, op);
+		return dst(0);
+	}
+	
+	public def reduce[T](root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
+		val role = base.role()(0);
+		if(src.size() != dst.size())
+			throw new IllegalArgumentException("src.size() != dst.size()");
+		
+		@Ifdef("__CPP__") {
+			finish nativeReduce[T](base.id(), role, root, src.pointer(), dst.pointer(), src.size() as Int, op);
+		}
+		@Ifndef("__CPP__") {
+			val srcp = src.pointer();
+			val dstp = dst.pointer();
+			base.reduce(role, root, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, src.size() as Int, op);
+		}
+	}
+	
+	public def reduce[T](root:Int, src:T, op:Int) : T {
+		val src_ = new MemoryChunk[T](1);
+		val dst = new MemoryChunk[T](1);
+		src_(0) = src;
+		reduce(root, src_, dst, op);
+		return dst(0);
 	}
 	
 	/* utility methods */
@@ -298,4 +409,15 @@ public struct Team2 {
 			offsets(i + 1) = offsets(i) + counts(i);
 		}
 	}
+	
+	public static def getCounts[T](offsets :MemoryChunk[T]) {T <: Arithmetic[T]} :MemoryChunk[T] {
+		if(offsets.size() == 0L)
+			throw new IllegalArgumentException();
+		val counts = new MemoryChunk[T](offsets.size()-1);
+		for(i in offsets.range()){
+			counts(i) = offsets(i + 1) - offsets(i);
+		}
+		return counts;
+	}
+	
 }
