@@ -17,6 +17,8 @@ import x10.util.Team;
 
 import x10.compiler.Pinned;
 
+import org.scalegraph.Config;
+
 import org.scalegraph.util.DistScatterGather;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Remote;
@@ -119,38 +121,38 @@ import org.scalegraph.blas.SparseMatrix;
 		}
 	}
 	
-	public static def make(team :Team, edges :DistMemoryChunk[Long]) {
-		val g = new Graph(team,Graph.VertexType.Long,false);
+	public static def make(edges :DistMemoryChunk[Long]) {
+		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
 		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def make(team :Team, edges :DistMemoryChunk[Double]) {
-		val g = new Graph(team,Graph.VertexType.Double,false);
+	public static def make(edges :DistMemoryChunk[Double]) {
+		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,false);
 		g.addEdges(edges);
 		return g;
 	}
 	/*
-	public static def make(team :Team, edges :DistMemoryChunk[String]) {
-		val g = new Graph(team,Graph.VertexType.String,false);
+	public static def make(edges :DistMemoryChunk[String]) {
+		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,false);
 		g.addEdges(edges);
 		return g;
 	}
 	*/
-	public static def makeWithTranslator(team :Team, edges :DistMemoryChunk[Long]) {
-		val g = new Graph(team,Graph.VertexType.Long,true);
+	public static def makeWithTranslator(edges :DistMemoryChunk[Long]) {
+		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,true);
 		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def makeWithTranslator(team :Team, edges :DistMemoryChunk[Double]) {
-		val g = new Graph(team,Graph.VertexType.Double,true);
+	public static def makeWithTranslator(edges :DistMemoryChunk[Double]) {
+		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,true);
 		g.addEdges(edges);
 		return g;
 	}
 	/*
-	 * public static def makeWithTranslator(team :Team, edges :DistMemoryChunk[String]) {
-	 * val g = new Graph(team,Graph.VertexType.String,true);
+	 * public static def makeWithTranslator(edges :DistMemoryChunk[String]) {
+	 * val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
 	 * g.addEdges(edges);
 	 * return g;
 	 * }

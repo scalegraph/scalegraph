@@ -14,9 +14,10 @@ import x10.compiler.Native;
 import x10.compiler.NativeRep;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit;
+import x10.compiler.NativeCPPOutputFile;
 
 @NativeCPPInclude("StringHelper.h")
-//@NativeCPPInclude("LazyCollection.h")
+@NativeCPPOutputFile("SString__TokenIterator.h")
 @NativeCPPCompilationUnit("StringHelper.cc")
 
 public final struct SString {
@@ -29,14 +30,14 @@ public final struct SString {
 	@Native("c++", "org::scalegraph::util::charsToUTF8_(#chars)")
 	private static native def charsToUTF8(chars: MemoryChunk[Char]): MemoryChunk[Byte];
 
-//	@Native("c++", "org::scalegraph::util::charToUTF8_(#ch, #bytes)")
-//	private static native def charToUTF8(ch: Char, bytes: MemoryChunk[Byte]): MemoryChunk[Byte];
+	@Native("c++", "org::scalegraph::util::charToUTF8_(#ch, #bytes)")
+	private static native def charToUTF8(ch: Char, bytes: MemoryChunk[Byte]): MemoryChunk[Byte];
 
 	@Native("c++", "org::scalegraph::util::UTF8ToChars_(#bytes)")
 	private static native def UTF8ToChars(bytes: MemoryChunk[Byte]): MemoryChunk[Char];
 
-//	@Native("c++", "org::scalegraph::util::UTF8CodeLength_((x10_byte)#b0)")
-//	private static native def UTF8CodeLength(b0: Byte): Int;
+	@Native("c++", "org::scalegraph::util::UTF8CodeLength_((x10_byte)#b0)")
+	private static native def UTF8CodeLength(b0: Byte): Int;
 	
 	@Native("c++", "org::scalegraph::util::StringCstr_(#this)")
 	private native def nativeCstr(): MemoryPointer[Byte];
@@ -65,17 +66,11 @@ public final struct SString {
 		content = charsToUTF8(r);
 	}
 	
-	public static operator (str: String) = new SString(str);
+	public static operator (str: String) = SString(str);
 	
 	public def equals(that: Any): Boolean {
-		if(that instanceof SString) {
-			val that_ = that as SString;
-			return equals(that_);
-		}
-		if(that instanceof String) {
-			val that_ = that as String;
-			return equals(that_);
-		}
+		if(that instanceof SString) return equals(that as SString);
+		if(that instanceof String) return equals(SString(that as String));
 		return false;
 	}
 
@@ -126,44 +121,57 @@ public final struct SString {
 	@Native("c++", "org::scalegraph::util::StringIndexOf_((#this).FMGL(content), (#str).FMGL(content), #idx)")
 	public native def indexOf(str: SString, idx: Int): Int;
 	
-	public def lastIndexOf(ch: Char) = indexOf(ch, 0);
+	public def lastIndexOf(ch: Char) = lastIndexOf(ch, 0);
 
 	@Native("c++", "org::scalegraph::util::StringLastIndexOf_((#this).FMGL(content), #ch, #idx)")
 	public native def lastIndexOf(ch: Char, idx: Int): Int;
 	
-	public def lastIndexOf(str: SString) = indexOf(str, 0);
+	public def lastIndexOf(str: SString) = lastIndexOf(str, 0);
 
 	@Native("c++", "org::scalegraph::util::StringLastIndexOf_((#this).FMGL(content), (#str).FMGL(content), #idx)")
 	public native def lastIndexOf(str: SString, idx: Int): Int;
 	
-	/*
-	static struct TokenIterator implements Iterator[SString] {
-		val str: SString;
-		val splitter: Char;
-		val index: Int;
+	public def replace(oldChar :Char, newChar :Char) {
+		// shortcut
+		if(indexOf(oldChar, 0) == -1) return this;
 		
-		@Native("c++", "(#this).FMGL(index) = #v")
-		private native def setIndex(v: Int): void;
-		
-		public def this(str: SString, splitter: Char) {
-			this.str = str;
-			this.splitter = splitter;
-			this.index = 0;
+		val new_char = charToUTF8(newChar, new MemoryChunk[Byte](4));
+		val buf = new GrowableMemory[Byte]();
+		buf.grow(content.size());
+		var cur_pos :Int = 0;
+		while(true) {
+			val next_pos = indexOf(oldChar, cur_pos);
+			if(next_pos == -1) break;
+			buf.add(content.subpart(cur_pos, next_pos - cur_pos));
+			buf.add(new_char);
+			cur_pos = next_pos + UTF8CodeLength(content(next_pos));
 		}
-		
-		public def next() {
-			var nextIndex: Int = str.indexOf(splitter, index);
-			if(nextIndex == -1) nextIndex = str.size();
-			val ret = str.substring(index, nextIndex);
-			setIndex(nextIndex + 1);
-			return ret;
-		}
-
-		public def hasNext() = (index < str.size());
+		buf.add(content.subpart(cur_pos, content.size() - cur_pos));
+		buf.add(0Y);
+		new_char.del();
+		return new SString(buf.backingStore().subpart(0, buf.size()-1));
 	}
-	*/
 	
-	@NativeRep("c++", "org::scalegraph::util::TokenIter<#T >", null, null)
+	public def replace(target :SString, replacement :SString) {
+		// shortcut
+		if(indexOf(target, 0) == -1) return this;
+		
+		val buf = new GrowableMemory[Byte]();
+		buf.grow(content.size());
+		var cur_pos :Int = 0;
+		while(true) {
+			val next_pos = indexOf(target, cur_pos);
+			if(next_pos == -1) break;
+			buf.add(content.subpart(cur_pos, next_pos - cur_pos));
+			buf.add(replacement.content);
+			cur_pos = next_pos + target.size();
+		}
+		buf.add(content.subpart(cur_pos, content.size() - cur_pos));
+		buf.add(0Y);
+		return new SString(buf.backingStore().subpart(0, buf.size()-1));
+	}
+	
+	@NativeRep("c++", "org::scalegraph::util::SString__TokenIterator<#T >", null, null)
 	public static struct TokenIterator[T] implements Iterator[SString] {
 		public native def this(str_ :SString, splitter_ :T);
 		public native def next(): SString;
@@ -181,62 +189,31 @@ public final struct SString {
 			for(t in this) ++tokenCount;
 			return tokenCount;
 		}
-		public def array() {
+		public def result() {
 			val array = new MemoryChunk[SString](size());
 			var tokenCount: Int = 0;
 			for(t in this) array(tokenCount++) = t;
 			return array;
 		}
-		public def iterator() {
-			return TokenIterator(str, splitter);
-		}
+		public def iterator() = TokenIterator(str, splitter);
+		public def iterator_() = TokenIterator(str, splitter);
 	}
-	/*
-	static struct TokenCollection implements Iterable[SString] {
-		val str: SString;
-		val splitter: Char;
-		val array: Array[SString];
-		
-		@Native("c++", "(#this).FMGL(array) = #v")
-		private native def setArray(v: Array[SString]): void;
-		
-		public def this(str: SString, splitter: Char) {
-			this.str = str;
-			this.splitter = splitter;
-			this.array = null;
-		}
-		
-		public def size() {
-			if(array == null) createArray();
-			return array.size;
-		}
-		
-		public operator this(index: Int) {
-			if(array == null) createArray();
-			return array(index);
-		}
-		
-		private def createArray() {
-			var tokenCount: Int = 0;
-			for(t in this) ++tokenCount;
-			val array = new Array[SString](tokenCount);
-			tokenCount = 0;
-			for(t in this) array(tokenCount++) = t;
-			setArray(array);
-		}
-		
-		public def iterator(): TokenIterator = new TokenIterator(str, splitter);
-	}
-	*/
 	
 	public def split(ch: Char) = new TokenCollection(this, ch);
 	
 	public def split(str: String) = new TokenCollection(this, str);
 	
 	public def trim() {
-		for(var i: Int = content.size() as Int - 1; i >= 0; --i) {
-			if(content(i) > 0x20Y) {
-				return SString(content.subpart(0, i+1L));
+		val length = content.size();
+		var start :Int = 0;
+		for( ; start < length; ++start) {
+			if(content(start) > 0x20Y) {
+				break;
+			}
+		}
+		for(var end: Int = length as Int - 1; end >= start; --end) {
+			if(content(end) > 0x20Y) {
+				return SString(content.subpart(start, end + 1 - start));
 			}
 		}
 		return SString(MemoryChunk[Byte]());

@@ -41,23 +41,23 @@ class SString;
 /**
  * returns null terminated utf-8 string.
  */
-MemoryChunk<x10_byte> charsToUTF8_(MemoryChunk<x10_char>& chars);
+MemoryChunk<x10_byte> charsToUTF8_(const MemoryChunk<x10_char>& chars);
 
 /**
  * Encodes ch and store the result to bytes array.
  * Returns the length of encoded stream.
  */
-int charToUTF8_(x10_char ch, MemoryChunk<x10_byte>& bytes);
+MemoryChunk<x10_byte> charToUTF8_(x10_char ch, const MemoryChunk<x10_byte>& bytes);
 
 /**
  * Returns non null terminated chars String
  */
-MemoryChunk<x10_char> UTF8ToChars_(MemoryChunk<x10_byte>& bytes);
+MemoryChunk<x10_char> UTF8ToChars_(const MemoryChunk<x10_byte>& bytes);
 
 /**
  * Returns the number of characters in the input byte stream.
  */
-int UTF8charsCount_(MemoryChunk<x10_byte>& bytes);
+int UTF8charsCount_(const MemoryChunk<x10_byte>& bytes);
 
 static inline int UTF8CodeLength_(x10_byte b0) {
 	int len = 0;
@@ -71,21 +71,21 @@ static inline int UTF8CodeLength_(x10_char ch) {
 	return len;
 }
 
-int StringIndexOf_(MemoryChunk<x10_byte>& th, x10_char ch, int from);
+int StringIndexOf_(const MemoryChunk<x10_byte>& th, x10_char ch, int from);
 
-int StringIndexOf_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str, int from);
+int StringIndexOf_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str, int from);
 
-int StringLastIndexOf_(MemoryChunk<x10_byte>& th, x10_char ch, int from);
+int StringLastIndexOf_(const MemoryChunk<x10_byte>& th, x10_char ch, int from);
 
-int StringLastIndexOf_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str, int from);
+int StringLastIndexOf_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str, int from);
 
-bool StringEqual_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str);
+bool StringEqual_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str);
 
-int StringCompare_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str);
+int StringCompare_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str);
 
-bool StringStartsWith_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str);
+bool StringStartsWith_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str);
 
-bool StringEndsWith_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str);
+bool StringEndsWith_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str);
 
 /**
  * Returns null terminated string poitner.

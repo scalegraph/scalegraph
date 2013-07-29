@@ -18,7 +18,7 @@ import x10.io.IOException;
 import org.scalegraph.util.MemoryChunk;
 
 public class FileWriter {
-	private val nf: NativeFile;
+	private transient val nf: NativeFile;
 	private var fileOffset: Long;
 	
 	public def this(file: File, fileMode :Int) {

@@ -20,7 +20,7 @@ import org.scalegraph.util.SString;
 
 public final class FileReader {
 	private static val BUFFER_SIZE = 128*1024L;
-	private val nf: NativeFile;
+	private transient val nf: NativeFile;
 	private val buffer: GrowableMemory[Byte];
 	private var offset: Long;
 	private var length: Long;
@@ -149,14 +149,17 @@ public final class FileReader {
 				val ch = data(i) as Char;
 				if(ch == '\r') cr = true;
 				else if(ch == '\n') {
-					val line_length = i - offset - (cr ? 1 : 0);
-					offset = i + 1;
-					return data.subpart(offset, line_length);
+					val cur_offset = offset;
+					val next_offset = i + 1;
+					val line_length = i - cur_offset - (cr ? 1 : 0);
+					fileOffset += next_offset - cur_offset;
+					offset = next_offset;
+					return data.subpart(cur_offset, line_length);
 				}
 			}
 			cur = length - offset;
 
-			if(offset > 0) {
+			if(cur < buffer.size()) {
 				MemoryChunk.copy(data, offset, data, 0L, cur);
 				offset = 0;
 				length = cur;
@@ -167,6 +170,7 @@ public final class FileReader {
 			// offset == 0 here
 			if(fillBuffer() <= 0L) {
 				val line_length = length;
+				fileOffset += length;
 				length = 0L;
 				if(line_length == 0L) {
 					throw new EOFException();
@@ -189,6 +193,4 @@ public final class FileReader {
 	}
 	
 	public def fastReadLine() = SString(internalReadLine());
-	
-
 }

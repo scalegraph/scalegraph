@@ -2,6 +2,7 @@ package org.scalegraph.api;
 
 import x10.util.Team;
 
+import org.scalegraph.Config;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Dist2D;
@@ -16,11 +17,13 @@ public final class PageRank {
 	public static def run(g :Graph, edgeWeight :String) :DistMemoryChunk[Double] {
 		val team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Dist2D.make2D(team, 1, team.size()), edgeWeight, true, true);
+				Config.get().distXPregel(), edgeWeight, true, true);
 		return run(team, matrix);
 	}
 	
-	public static def run(team :Team, matrix :DistSparseMatrix[Double]) :DistMemoryChunk[Double] {
+	public static def run(matrix :DistSparseMatrix[Double]) = run(Config.get().worldTeam(), matrix);
+	
+	private static def run(team :Team, matrix :DistSparseMatrix[Double]) :DistMemoryChunk[Double] {
 		val xpgraph = XPregelGraph.make[Double, Double](team, matrix);
 		xpgraph.updateInEdge();
 		return run(xpgraph);

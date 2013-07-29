@@ -11,25 +11,26 @@
 
 package org.scalegraph.harness;
 
-import x10.util.*;
+import x10.util.StringBuilder;
 import x10.io.Console;
+import org.scalegraph.util.SString;
 
 abstract public class sx10Test {
 	private static val buffer = new StringBuilder();
-	private static val prefix = "    "; // 4 space
-	private static val postfix = "\n";
+	private static val linebreak = "\n    "; // 4 space
 
-    abstract public def run() :boolean;
+    abstract public def run(args: Array[String](1)) :boolean;
 
-    public def execute() :void {
-    	x10.io.Console.ERR.print("  " + typeName() + ": |\n");
+    public def execute(args: Array[String](1)) {
+    	x10.io.Console.ERR.print("  " + typeName() + ": |" + linebreak);
        var b :boolean = false;
        try {
-           finish b = this.run();
+           finish b = this.run(args);
         }
        catch (e :CheckedThrowable) {
     	   printException(e);
         }
+       buffer.add("\n");
        flush();
        reportResult(b);
     }
@@ -39,19 +40,19 @@ abstract public class sx10Test {
     }
     
     private atomic static def printException(e :CheckedThrowable, nested :Int) {
-    	var nested_prefix :String = prefix;
+    	var nested_prefix :String = "";
     	for(n in 0..(nested-1)) nested_prefix += "| ";
-    	
+
     	buffer.add(nested_prefix);
-    	buffer.add(e.toString());
-    	buffer.add(postfix);
+    	buffer.add(escapeString(e.toString()));
+    	buffer.add(linebreak);
     	
     	val stackTrace = e.getStackTrace();
     	for ([i] in stackTrace) {
     		buffer.add(nested_prefix);
     		buffer.add("        at ");
-    		buffer.add(stackTrace(i));
-    		buffer.add(postfix);
+    		buffer.add(escapeString(stackTrace(i)));
+    		buffer.add(linebreak);
     	}
     	
     	if(e instanceof MultipleExceptions) {
@@ -59,7 +60,7 @@ abstract public class sx10Test {
     		val excs = me.exceptions();
     		buffer.add(nested_prefix);
     		buffer.add("Caused by ");
-    		buffer.add(postfix);
+    		buffer.add(linebreak);
     		for([i] in excs) {
     			printException(excs(i), nested + 1);
     		}
@@ -79,34 +80,15 @@ abstract public class sx10Test {
     }
     
     public atomic static def print(str :String) {
-    	if(str.indexOf("\n") == -1) {
-    		buffer.add("    "); // 4 space
-    		buffer.add(str);
-    	}
-    	else {
-    		val lines = str.split("\n");
-    		for([i] in lines) {
-    			buffer.add("    "); // 4 space
-    			buffer.add(lines(i));
-    			buffer.add("\n");
-    		}
-    	}
+    	buffer.add(escapeString(str));
     }
     
+    private static def escapeString(str :String) =
+    	SString(str).replace("\n", linebreak).toString(); // 4 space
+    
     public atomic static def println(str :String) {
-    	if(str.indexOf("\n") == -1) {
-    		buffer.add("    "); // 4 space
-    		buffer.add(str);
-    		buffer.add("\n");
-    	}
-    	else {
-    		val lines = str.split("\n");
-	    	for([i] in lines) {
-	    		buffer.add("    "); // 4 space
-	    		buffer.add(lines(i));
-	    		buffer.add("\n");
-	    	}
-    	}
+    	buffer.add(escapeString(str));
+    	buffer.add(linebreak);
     }
 
     public static def success(): void = {

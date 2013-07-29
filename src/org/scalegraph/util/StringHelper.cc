@@ -78,16 +78,16 @@ namespace org { namespace scalegraph { namespace util {
 	}
 
 
-MemoryChunk<x10_byte> charsToUTF8_(MemoryChunk<x10_char>& chars) {
+MemoryChunk<x10_byte> charsToUTF8_(const MemoryChunk<x10_char>& chars) {
 	int bytesCount = 0;
-	int chars_size = chars.size();
-	x10_char* chars_ptr = chars.pointer();
+	int chars_size = chars.FMGL(data).FMGL(size);
+	x10_char* chars_ptr = chars.FMGL(data).FMGL(pointer);
 	for(int i = 0; i < chars_size; ++i) {
 		x10_char c = chars_ptr[i];
 		UTF8_CHAR_BYTES(c, bytesCount);
 	}
 	MemoryChunk<x10_byte> bytes = MemoryChunk<x10_byte>::_make(bytesCount + 1);
-	x10_byte* bytes_ptr = bytes.pointer();
+	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
 	int bytesIndex = 0;
 	for(int i = 0; i < chars_size; ++i) {
 		x10_char c = chars_ptr[i];
@@ -98,23 +98,24 @@ MemoryChunk<x10_byte> charsToUTF8_(MemoryChunk<x10_char>& chars) {
 	return bytes.subpart(0, bytesIndex);
 }
 
-int charToUTF8_(x10_char ch, MemoryChunk<x10_byte>& bytes) {
+MemoryChunk<x10_byte> charToUTF8_(x10_char ch, const MemoryChunk<x10_byte>& bytes) {
 	int bytesCount = 0;
-	x10_byte* bytes_ptr = bytes.pointer();
+	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
 	UTF8_ENCODE_CHAR(ch, bytes_ptr, bytesCount);
-	return bytesCount;
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(bytes_ptr, bytes_ptr, bytesCount) };
+	return mc;
 }
 
-MemoryChunk<x10_char> UTF8ToChars_(MemoryChunk<x10_byte>& bytes) {
-	x10_byte* bytes_ptr = bytes.pointer();
-	int bytes_size = bytes.size();
+MemoryChunk<x10_char> UTF8ToChars_(const MemoryChunk<x10_byte>& bytes) {
+	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
+	int bytes_size = bytes.FMGL(data).FMGL(size);
 	int charsCount = 0;
 	for(int i = 0; i < bytes_size; ++charsCount) {
 		int b0 = bytes_ptr[i];
 		UTF8_CODE_LENGTH(b0, i);
 	}
 	MemoryChunk<x10_char> chars = MemoryChunk<x10_char>::_make(charsCount);
-	x10_char* chars_ptr = chars.pointer();
+	x10_char* chars_ptr = chars.FMGL(data).FMGL(pointer);
 	charsCount = 0;
 	for(int i = 0; i < bytes_size; ++charsCount) {
 		UTF8_DECODE_CHAR(ch, bytes_ptr, i);
@@ -123,9 +124,9 @@ MemoryChunk<x10_char> UTF8ToChars_(MemoryChunk<x10_byte>& bytes) {
 	return chars;
 }
 
-int UTF8charsCount_(MemoryChunk<x10_byte>& bytes) {
-	x10_byte* bytes_ptr = bytes.pointer();
-	int bytes_size = bytes.size();
+int UTF8charsCount_(const MemoryChunk<x10_byte>& bytes) {
+	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
+	int bytes_size = bytes.FMGL(data).FMGL(size);
 	int charsCount = 0;
 	for(int i = 0; i < bytes_size; ++charsCount) {
 		int b0 = bytes_ptr[i];
@@ -136,9 +137,9 @@ int UTF8charsCount_(MemoryChunk<x10_byte>& bytes) {
 
 // TODO: optimize search methods
 
-int StringIndexOf_(MemoryChunk<x10_byte>& th, x10_char ch, int from) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
+int StringIndexOf_(const MemoryChunk<x10_byte>& th, x10_char ch, int from) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
 	x10_byte buf[4];
 	int bytesCount = 0;
 	UTF8_ENCODE_CHAR(ch, buf, bytesCount);
@@ -172,11 +173,11 @@ int StringIndexOf_(MemoryChunk<x10_byte>& th, x10_char ch, int from) {
 	return -1;
 }
 
-int StringIndexOf_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str, int from) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
-	x10_byte* str_ptr = str.pointer();
-	int str_size = str.size();
+int StringIndexOf_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str, int from) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
+	x10_byte* str_ptr = str.FMGL(data).FMGL(pointer);
+	int str_size = str.FMGL(data).FMGL(size);
 	int lastIndex = size - str_size;
 	for(int i = from; i <= lastIndex; ++i) {
 		if(memcmp(ptr + i, str_ptr, str_size) == 0)
@@ -185,9 +186,9 @@ int StringIndexOf_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str, int fr
 	return -1;
 }
 
-int StringLastIndexOf_(MemoryChunk<x10_byte>& th, x10_char ch, int from) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
+int StringLastIndexOf_(const MemoryChunk<x10_byte>& th, x10_char ch, int from) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
 	x10_byte buf[4];
 	int bytesCount = 0;
 	UTF8_ENCODE_CHAR(ch, buf, bytesCount);
@@ -221,11 +222,11 @@ int StringLastIndexOf_(MemoryChunk<x10_byte>& th, x10_char ch, int from) {
 	return -1;
 }
 
-int StringLastIndexOf_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str, int from) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
-	x10_byte* str_ptr = str.pointer();
-	int str_size = str.size();
+int StringLastIndexOf_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str, int from) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
+	x10_byte* str_ptr = str.FMGL(data).FMGL(pointer);
+	int str_size = str.FMGL(data).FMGL(size);
 	int lastIndex = size - str_size;
 	for(int i = lastIndex; i >= from; --i) {
 		if(memcmp(ptr + i, str_ptr, str_size) == 0)
@@ -234,52 +235,52 @@ int StringLastIndexOf_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str, in
 	return -1;
 }
 
-bool StringEqual_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
-	x10_byte* str_ptr = str.pointer();
-	int str_size = str.size();
+bool StringEqual_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
+	x10_byte* str_ptr = str.FMGL(data).FMGL(pointer);
+	int str_size = str.FMGL(data).FMGL(size);
 	if(size != str_size) return false;
 	return memcmp(ptr, str_ptr, size) == 0;
 }
 
-int StringCompare_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
-	x10_byte* str_ptr = str.pointer();
-	int str_size = str.size();
+int StringCompare_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
+	x10_byte* str_ptr = str.FMGL(data).FMGL(pointer);
+	int str_size = str.FMGL(data).FMGL(size);
 	int cmp_size = size < str_size ? size : str_size;
 	int cmp = memcmp(ptr, str_ptr, cmp_size);
 	if(cmp == 0) cmp = size - str_size;
 	return cmp;
 }
 
-bool StringStartsWith_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
-	x10_byte* str_ptr = str.pointer();
-	int str_size = str.size();
+bool StringStartsWith_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
+	x10_byte* str_ptr = str.FMGL(data).FMGL(pointer);
+	int str_size = str.FMGL(data).FMGL(size);
 	if(size < str_size) return false;
 	return memcmp(ptr, str_ptr, str_size) == 0;
 }
 
-bool StringEndsWith_(MemoryChunk<x10_byte>& th, MemoryChunk<x10_byte>& str) {
-	x10_byte* ptr = th.pointer();
-	int size = th.size();
-	x10_byte* str_ptr = str.pointer();
-	int str_size = str.size();
+bool StringEndsWith_(const MemoryChunk<x10_byte>& th, const MemoryChunk<x10_byte>& str) {
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	int size = th.FMGL(data).FMGL(size);
+	x10_byte* str_ptr = str.FMGL(data).FMGL(pointer);
+	int str_size = str.FMGL(data).FMGL(size);
 	if(size < str_size) return false;
 	x10_byte* cmp_ptr = ptr + size - str_size;
 	return memcmp(cmp_ptr, str_ptr, str_size) == 0;
 }
 
 x10_byte* StringCstr_(SString& str) {
-	x10_byte* ptr = str.FMGL(content).pointer();
-	int size = str.FMGL(content).size();
+	x10_byte* ptr = str.FMGL(content).FMGL(data).FMGL(pointer);
+	int size = str.FMGL(content).FMGL(data).FMGL(size);
 	if(ptr[size] != 0) {
 		x10_byte* old_ptr = ptr;
 		MemoryChunk<x10_byte> nb = MemoryChunk<x10_byte>::_make(size+1);
-		ptr = nb.pointer();
+		ptr = nb.FMGL(data).FMGL(pointer);
 		memcpy(ptr, old_ptr, size);
 		ptr[size] = 0;
 		str.FMGL(content) = nb.subpart(0, size);
@@ -289,8 +290,7 @@ x10_byte* StringCstr_(SString& str) {
 
 MemoryChunk<x10_byte> StringFromX10String(x10::lang::String* x10str) {
 	x10_byte* ptr = reinterpret_cast<x10_byte*>(const_cast<char*>(x10str->c_str()));
-	MemoryChunk<x10_byte> mc;
-	mc._constructor(MCData_Impl<x10_byte>(ptr, ptr, x10str->length()));
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(ptr, ptr, x10str->length()) };
 	return mc;
 }
 

@@ -16,12 +16,14 @@ import x10.compiler.NativeRep;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit;
 
+import x10.compiler.Pinned;
+
 import org.scalegraph.util.MemoryChunk;
 
 @NativeCPPInclude("NativeFile.h")
 @NativeCPPCompilationUnit("NativeFile.cc")
 @NativeRep("c++", "org::scalegraph::io::NativeFile", "org::scalegraph::io::NativeFile", null)
-public struct NativeFile {
+@Pinned public struct NativeFile {
 	@Native("c++", "0")
 	public static val BEGIN: Int = 0;
 	@Native("c++", "1")
