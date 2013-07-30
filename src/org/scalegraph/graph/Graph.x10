@@ -84,7 +84,8 @@ import org.scalegraph.blas.SparseMatrix;
 		return Tuple2[Any, Any](vertexNameAtt, vertexTranslator as Any);
 	}
 	
-	/** Creates empty raw graph object.
+	/** 
+	 * Creates empty raw graph object.
 	 * @param team_ The team that the data is spread into
 	 * @param vertexType_ The type of vertex ID
 	 * @param useTranslator Whether you want to use translator. When you use translator, it will assign each vertex with a small integer value.

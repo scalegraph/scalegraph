@@ -21,7 +21,8 @@
 #include <x10/io/IOException.h>
 #include <x10/lang/IllegalArgumentException.h>
 
-#include "org/scalegraph/io/NativeFile.h"
+#include <org/scalegraph/util/SString.h>
+#include <org/scalegraph/io/NativeFile.h>
 
 namespace org { namespace scalegraph { namespace io {
 
@@ -30,13 +31,13 @@ using ::x10::io::FileNotFoundException;
 using ::x10::io::IOException;
 using ::x10::lang::IllegalArgumentException;
 
-NativeFile NativeFile::_make(x10::lang::String* name, int  fileMode, int fileAccess) {
+NativeFile NativeFile::_make(org::scalegraph::util::SString name, int  fileMode, int fileAccess) {
 	NativeFile ret;
 	ret._constructor(name, fileMode, fileAccess);
 	return ret;
 }
 
-void NativeFile::_constructor (x10::lang::String* name, int  fileMode, int fileAccess) {
+void NativeFile::_constructor (org::scalegraph::util::SString name, int  fileMode, int fileAccess) {
 	int flags = 0;
 	switch(fileAccess) {
 	case 0: // Read

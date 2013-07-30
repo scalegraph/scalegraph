@@ -294,6 +294,167 @@ MemoryChunk<x10_byte> StringFromX10String(x10::lang::String* x10str) {
 	return mc;
 }
 
+// Type conversion
+x10_boolean StringToBoolean(const MemoryChunk<x10_byte>& th) {
+	if(th.FMGL(data).FMGL(size) != 4) return (x10_boolean) false;
+	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
+	if( (ptr[0] == 't' | ptr[0] == 'T') &
+	    (ptr[1] == 'r' | ptr[1] == 'R') &
+	    (ptr[2] == 'u' | ptr[2] == 'U') &
+	    (ptr[3] == 'e' | ptr[3] == 'E') )
+	{
+		return true;
+	}
+	return false;
+}
+
+void throwNumberFormatException(const MemoryChunk<x10_byte>& th) {
+	throwException(NumberFormatException::_make(
+			x10::lang::String::_make(reinterpret_cast<char*>(
+					StringCstr_(org::scalegraph::util::SString::_make(th))), true)));
+}
+
+#define C_STR_FOR_SHORT_STRING \
+	char* start = reinterpret_cast<char*>(th.FMGL(data).FMGL(poitner)); \
+	int len = th.FMGL(data).FMGL(size); \
+	char stackbuf[128]; \
+	if(start[len] == 0) { } \
+	else if(len < 128) { \
+		memcpy(stackbuf, str, len); \
+		stackbuf[len] = 0; \
+		str = stackbuf; \
+	} \
+	else { \
+		throwNumberFormatException(th); \
+	}
+
+x10_float StringToFloat_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_float ans = strtof(start, &end);
+    if (errno != 0 || ((end-start) != len)) {
+        throwNumberFormatException(th);
+    }
+    return ans;
+}
+
+x10_double StringToDouble_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_double ans = strtod(start, &end);
+    if (errno != 0 || ((end-start) != len)) {
+        x10aux::throwException(x10::lang::NumberFormatException::_make(s));
+    }
+    return ans;
+}
+
+x10_byte StringToByte_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_int ans = strtol(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        (ans != (x10_byte)ans) ||
+        ((end-start) != len)) {
+    	throwNumberFormatException(th);
+    }
+    return (x10_byte)ans;
+}
+
+x10_short StringToShort_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_int ans = strtol(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        (ans != (x10_short)ans) ||
+        ((end-start) != len)) {
+        throwNumberFormatException(th);
+    }
+    return (x10_short)ans;
+}
+
+x10_int StringToInt_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_int ans = strtol(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        ((end-start) != len)) {
+        throwNumberFormatException(th);
+    }
+    return ans;
+}
+
+x10_long StringToLong_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_long ans = strtoll(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        ((end-start) != len)) {
+        throwNumberFormatException(th);
+    }
+    return ans;
+}
+
+x10_ubyte StringToUByte_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_uint ans = strtoul(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        (ans != (x10_ubyte)ans) ||
+        ((end-start) != len)) {
+    	throwNumberFormatException(th);
+    }
+    return (x10_ubyte)ans;
+}
+
+x10_ushort StringToUShort_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_uint ans = strtoul(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        (ans != (x10_ushort)ans) ||
+        ((end-start) != len)) {
+        throwNumberFormatException(th);
+    }
+    return (x10_ushort)ans;
+}
+
+x10_uint StringToUInt_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    char *end;
+    errno = 0;
+    x10_uint ans = strtoul(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        ((end-start) != len)) {
+        throwNumberFormatException(th);
+    }
+    return ans;
+}
+
+x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th) {
+	C_STR_FOR_SHORT_STRING;
+    const char *start = nullCheck(s)->c_str();
+    char *end;
+    errno = 0;
+    x10_ulong ans = strtoull(start, &end, radix);
+    if (errno == ERANGE || (errno != 0 && ans == 0) ||
+        ((end-start) != len)) {
+        throwNumberFormatException(th);
+    }
+    return ans;
+}
+
+template <typename T> x10_int StringBuilderAppend_(MemoryChunk<x10_byte>& th, const T& x) {
+
+}
+
 #undef UTF8_CHAR_BYTES
 #undef UTF8_ENCODE_CHAR
 #undef UTF8_CODE_LENGTH

@@ -69,6 +69,7 @@ public class NamedDistData {
 		this.data = data_;
 		this.header = header_;
 		this.datatype =
+			(header_ == null) ? ID.HEADER_NONE :
 			(header_ instanceof GraphHeader) ? ID.HEADER_GRAPH :
 			(header_ instanceof MatrixHeader) ? ID.HEADER_MATRIX :
 			(header_ instanceof VectorHeader) ? ID.HEADER_VECTOR :

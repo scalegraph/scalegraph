@@ -2,7 +2,7 @@ package org.scalegraph.util;
 
 import x10.compiler.Ifdef;
 import x10.util.Timer;
-import org.scalegraph.api.Config;
+import org.scalegraph.Config;
 
 // TODO: rename package name -> utils
 public class Utils {
@@ -19,4 +19,6 @@ public class Utils {
 			Console.OUT.flush();
 		}
 	}
+	
+	public static def 
 }

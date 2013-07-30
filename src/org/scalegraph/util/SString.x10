@@ -227,4 +227,38 @@ public final struct SString {
 
 	@Native("c++", "org::scalegraph::util::StringEndsWith_((#this).FMGL(content), (#str).FMGL(content))")
 	public native def endsWith(str: SString): Boolean;
+	
+	// Type Conversion: String -> Value
+	@Native("c++", "org::scalegraph::util::StringToBoolean_((#this).FMGL(content))")
+	public native def toBoolean() :Boolean;
+
+	@Native("c++", "org::scalegraph::util::StringToFloat_((#this).FMGL(content))")
+	public native def toFloat() :Float;
+
+	@Native("c++", "org::scalegraph::util::StringToDouble_((#this).FMGL(content))")
+	public native def toDouble() :Double;
+
+	@Native("c++", "org::scalegraph::util::StringToByte_((#this).FMGL(content))")
+	public native def toByte() :Byte;
+
+	@Native("c++", "org::scalegraph::util::StringToShort_((#this).FMGL(content))")
+	public native def toShort() :Short;
+
+	@Native("c++", "org::scalegraph::util::StringToInt_((#this).FMGL(content))")
+	public native def toInt() :Int;
+
+	@Native("c++", "org::scalegraph::util::StringToLong_((#this).FMGL(content))")
+	public native def toLong() :Long;
+
+	@Native("c++", "org::scalegraph::util::StringToUByte_((#this).FMGL(content))")
+	public native def toUByte() :UByte;
+
+	@Native("c++", "org::scalegraph::util::StringToShort_((#this).FMGL(content))")
+	public native def toUShort() :UShort;
+
+	@Native("c++", "org::scalegraph::util::StringToUInt_((#this).FMGL(content))")
+	public native def toUInt() :UInt;
+	
+	@Native("c++", "org::scalegraph::util::StringToULong_((#this).FMGL(content))")
+	public native def toULong() :ULong;
 }

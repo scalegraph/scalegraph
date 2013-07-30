@@ -26,8 +26,8 @@ public final class FileReader {
 	private var length: Long;
 	private var fileOffset: Long;
 	
-	public def this(file: File) {
-		nf = new NativeFile(file.getPath(), FileMode.Open, FileAccess.Read);
+	public def this(path: SString) {
+		nf = new NativeFile(path, FileMode.Open, FileAccess.Read);
 		buffer = new GrowableMemory[Byte]();
 		buffer.setSize(BUFFER_SIZE);
 		offset = length = 0L;

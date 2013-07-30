@@ -23,6 +23,7 @@ public class ID {
 	public static val HEADER_VECTOR	: Byte = 3;
 	public static val HEADER_ANY		: Byte = -128; // Serialized with X10
 	
+	public static val TYPE_NONE		: Int = 0;
 	public static val TYPE_BOOLEAN	: Int = 1;
 	public static val TYPE_BYTE		: Int = 2;
 	public static val TYPE_SHORT	: Int = 3;

@@ -19,6 +19,7 @@ import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.Pinned;
 
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.SString;
 
 @NativeCPPInclude("NativeFile.h")
 @NativeCPPCompilationUnit("NativeFile.cc")
@@ -31,7 +32,7 @@ import org.scalegraph.util.MemoryChunk;
 	@Native("c++", "2")
 	public static val END: Int = 2;
 	
-	public native def this(name: String, fileMode :Int, fileAccess :Int);
+	public native def this(name: SString, fileMode :Int, fileAccess :Int);
 	public native def close(): void;
 	public native def read(buffer: MemoryChunk[Byte]): Long;
 	public native def write(buffer: MemoryChunk[Byte]): Long;
