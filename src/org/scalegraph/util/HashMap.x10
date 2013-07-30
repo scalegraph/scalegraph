@@ -36,7 +36,7 @@ struct Pair[T, U] {
   }
 }
 
-public class HashMap[K,V] {K haszero, V haszero} {
+public final class HashMap[K,V] {K haszero, V haszero} {
   static struct HashEntry[Key, Value] {Key haszero, Value haszero} {
 
     static EMPTY : Byte = 0 as Byte;

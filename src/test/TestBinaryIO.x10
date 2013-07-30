@@ -27,7 +27,7 @@ import org.scalegraph.io.fbio.FBIOSupport;
 import org.scalegraph.io.fbio.AttributeHandler;
 import org.scalegraph.harness.sx10Test;
 
-public class TestBinaryIO extends sx10Test {
+public final class TestBinaryIO extends sx10Test {
 	
     public static def entry(args : Array[String](1)) {
         if(args(0).equals("read")) {

@@ -12,7 +12,7 @@ import org.scalegraph.util.Algorithm;
 
 /** Sparse matrix representation.
  */
-public struct SparseMatrix[T] {
+public final struct SparseMatrix[T] {
 	public val offsets :MemoryChunk[Long];
 	public val vertexes :MemoryChunk[Long];
 	public val values :MemoryChunk[T];

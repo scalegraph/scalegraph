@@ -16,13 +16,12 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
-import org.scalegraph.util.LongIndexedMemoryChunk;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.harness.sx10Test;
 
-class Sort {
+final class Sort {
     
     static val debug = false;
     private static @Inline def debugln (str:String) : void {

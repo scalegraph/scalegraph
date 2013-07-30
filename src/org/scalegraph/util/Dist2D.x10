@@ -25,7 +25,7 @@ import org.scalegraph.graph.id.IdStruct;
  * In the most case, single 2d distributed plane is enough. The plane means a single R x C distribution.
  * This class supports the multiple 2d distributed plane. 
  */
-public struct Dist2D {
+public final struct Dist2D {
 	public static DISTRIBUTE_ROWS :Int = 1;
 	public static DISTRIBUTE_COLUMNS :Int = 2;
 	

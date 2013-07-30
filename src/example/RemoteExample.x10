@@ -9,18 +9,15 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package org.scalegraph.util.tuple;
-public final struct Tuple1 [T1] {
-    public val1: T1;
+package example;
 
-    public def this(val1: T1) {
-        this.val1 = val1;
-    }
+import x10.util.Team;
+import x10.util.Timer;
 
-    public def get1() = val1;
+import org.scalegraph.util.Remote;
 
-    public def toString() : String {
-        return ("Tuple1("+val1+")");
-    }
-
+public class RemoteExample {
+	public static def main(args:Array[String](1)) : void{
+		// TODO: create this example
+	}
 }

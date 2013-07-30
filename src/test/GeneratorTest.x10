@@ -18,7 +18,7 @@ import org.scalegraph.harness.sx10Test;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.util.Dist2D;
 
-public class GeneratorTest extends sx10Test {
+public final class GeneratorTest extends sx10Test {
 	
 	private static def rmat_test() {
 		val team = Team.WORLD;

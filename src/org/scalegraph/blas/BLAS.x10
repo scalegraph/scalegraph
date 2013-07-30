@@ -5,7 +5,7 @@ import org.scalegraph.util.Team2;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 
-public class BLAS {
+public final class BLAS {
 	
 	/** C <- alpha * op(A) * op(B) + beta * C */
 	public static def mult[T](alpha :T, A :DistSparseMatrix[T], transA :Boolean, B :DistSparseMatrix[T], transB :Boolean, beta :T, C :DistSparseMatrix[T])

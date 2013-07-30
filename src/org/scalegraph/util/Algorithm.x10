@@ -17,7 +17,7 @@ import x10.compiler.NativeCPPInclude;
 import org.scalegraph.util.MemoryChunk;
 
 @NativeCPPInclude("NativeAlgorithm.h")
-public class Algorithm {
+public final class Algorithm {
 	
 	public static def sort[I, V](index :MemoryChunk[I], value :MemoryChunk[V]) {
 		sortWithLt(index, value);

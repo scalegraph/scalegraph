@@ -18,7 +18,7 @@ import x10.util.StringBuilder;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 
-public class Team2Test {
+public final class Team2Test {
 	private static val mesBuf = PlaceLocalHandle.make[StringBuilder](Team.WORLD.placeGroup(), ()=> new StringBuilder());
 	private static def message (str:String) : void {
 		//Console.OUT.println("TIME:" + Timer.milliTime() + ": " + here + "(" + Runtime.workerId() + ")" + str);

@@ -19,7 +19,7 @@ import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.generator.GraphGenerator;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
 
 import org.scalegraph.xpregel.VertexContext;

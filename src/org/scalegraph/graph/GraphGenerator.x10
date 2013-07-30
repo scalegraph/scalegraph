@@ -20,7 +20,7 @@ import org.scalegraph.util.Parallel;
 /**
  * Provides various graph generators.
  */
-public class GraphGenerator {
+public final class GraphGenerator {
 
 	/** Generates a 2D-grid graph of Rows rows and Cols columns. */
 	public static def genGrid(rows :Long, columns :Long, team :Team)

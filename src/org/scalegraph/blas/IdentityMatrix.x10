@@ -1,5 +1,5 @@
 package org.scalegraph.blas;
 
-public struct IdentityMatrix {
+public final struct IdentityMatrix {
 	
 }

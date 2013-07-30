@@ -19,10 +19,7 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.harness.sx10Test;
 
-import org.scalegraph.xpregel.VertexContext;
-import org.scalegraph.xpregel.XPregelGraph;
-
-public class PageRank extends sx10Test {
+public final class PageRank extends sx10Test {
     
     public static def main(args:Array[String](1)) {
         val t = new PageRank();
@@ -30,7 +27,7 @@ public class PageRank extends sx10Test {
     }
     
     public def run(): Boolean {
-        val arg: Array[String] = new Array[String](1);
+        val arg = new Array[String](1);
         arg(0) = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
         entry(arg);
         
@@ -55,47 +52,11 @@ public class PageRank extends sx10Test {
 		val edgeList = graphData.get1();
 		val weigh = graphData.get2();
 		
-		val start_init_graph = System.currentTimeMillis();
-		
 		val g = Graph.make(team, edgeList.raw(team.placeGroup()));
 		g.setEdgeAttribute[Double]("edgevalue", weigh.raw(team.placeGroup()));		
-		val xpregel = XPregelGraph.make[Double, Double](team,
-				g.createDistSparseMatrix[Double](
-					Dist2D.make2D(team, 1, team.size()), "edgevalue", true, true));
 		
-		val start_time = System.currentTimeMillis();
+		val result = org.scalegraph.api.PageRank.run(g, "edgevalue");
 		
-		xpregel.updateInEdge();
-		
-		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
-		
-		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
-			val value :Double;
-			if(ctx.superstep() == 0)
-				value = 1.0 / ctx.numberOfVertices();
-			else
-				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
-
-			if (ctx.superstep() < 30) {
-				ctx.aggregate(Math.abs(value - ctx.value()));
-				ctx.setValue(value);
-				ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
-			}
-			else {
-				ctx.voteToHalt();
-			}
-		},
-		(values :MemoryChunk[Double]) => MathAppend.sum(values),
-		(superstep :Int, aggVal :Double) => {
-			if (here.id == 0) {
-				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
-			}
-			return (superstep >= 30 || aggVal < 0.0001);
-		});
-		
-		val end_time = System.currentTimeMillis();
-	
-		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
-		Console.OUT.println("Finish application");
+		DistributedReader.write("pagerank-%d", team, result);
 	}
 }

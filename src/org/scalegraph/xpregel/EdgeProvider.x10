@@ -60,13 +60,9 @@ class EdgeProvider [E] {E haszero} {
 		
 		Parallel.iter(0..(numVertexes-1), (tid :Long, r :LongRange) => {
 			val e = list(tid);
-			
 			var diffIndex :Long = 0L;
-			
 			var numEdges :Long = 0L;
-			
 			e.mDiffOffset.add(new Tuple2[Long, Long](-1, e.mDiffVertex.size()));
-			
 			val diffOffset = e.mDiffOffset.raw();
 			
 			for(srcid in r) {
@@ -91,7 +87,6 @@ class EdgeProvider [E] {E haszero} {
 		val newValue = new MemoryChunk[E](newNumEdges);
 		newOffset(0) = 0L;
 		Parallel.iter(0..(numVertexes-1), (tid :Long, r :LongRange) => {
-			
 			val e = list(tid);
 			var diffIndex :Long = 0;
 			var offset :Long = offsetPerThread(tid);
@@ -99,7 +94,6 @@ class EdgeProvider [E] {E haszero} {
 			val diffOffset = e.mDiffOffset.raw();
 			val diffVertex = e.mDiffVertex.raw();
 			val diffValue = e.mDiffValue.raw();
-			
 			val outOffset = e.mOutOffset;
 			val outVertex = e.mOutVertex;
 			val outValue = e.mOutValue;
