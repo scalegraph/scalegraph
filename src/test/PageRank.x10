@@ -53,9 +53,9 @@ public final class PageRank extends sx10Test {
 		val weigh = graphData.get2();
 		
 		val g = Graph.make(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue", weigh.raw(team.placeGroup()));		
+		g.setEdgeAttribute[Double]("weight", weigh.raw(team.placeGroup()));		
 		
-		val result = org.scalegraph.api.PageRank.run(g, "edgevalue");
+		val result = org.scalegraph.api.PageRank.run(g);
 		
 		DistributedReader.write("pagerank-%d", team, result);
 	}

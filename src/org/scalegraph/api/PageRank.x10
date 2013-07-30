@@ -14,39 +14,68 @@ import org.scalegraph.blas.DistSparseMatrix;
 
 /**
  * Calculates the Google PageRank.
+ * Details: TODO: write the algorithm description
  */
 public final class PageRank {
 	
-	// Member variables are algorithm parameters.
-	// Parameters are defined with default values.
+	// The member variables are algorithm parameters.
+	// The parameters are defined with the default values.
 	
 	/** The team that provides place group the calculation will take on.
-	 * If the Graph object provides different team, this variable is overridden with Graph's one. */
+	 * If the graph object provides different team, this variable is overridden with Graph's one. 
+	 * Default: Config.get().worldTeam()
+	 */
 	public var team :Team = Config.get().worldTeam();
-	/**
-	 * 
+	
+	/** If directed is true, the graph is considered directed graph.
+	 * Default: true
 	 */
 	public var directed :Boolean = true;
+	
+	/** The damping factor ('d' in the original paper).
+	 * Default: 0.85
+	 */
 	public var damping :Double = 0.85;
+	
+	/** The name of the attribute used to give edge weights for the calculation of weighted PageRank.
+	 * Default: "weight"
+	 */
+	public var weights :String = "weight";
+	
+	/** The algorithm consider the calculation complete, 
+	 * if the sum of PageRank value difference between iterations 
+	 * becomes less than this value.
+	 * Default: 0.001
+	 */
 	public var eps :Double = 0.001;
+	
+	/** Maximum number of iterations.
+	 * Default: 1000
+	 */
 	public var niter :Int = 30; // TODO: We need to use more large value.
 	
-	// The algorithm interface needs two execute method.
-	// 1) Accept a Graph object and the name of attributes.
-	// 2) Accept a sparse matrix and constructed attribute data (if required)
-	// If the attribute data is optional, it shold be a member variable of the algorithm class.
-	
-	public def execute(g :Graph, edgeWeight :String) {
-		// Since Graph object has its own team, we shold use Graph's one.
+	// The algorithm interface needs two execute methods.
+	// 1) Accept a Graph object.
+	// 2) Accept a sparse matrix.
+
+	/** Run the calculation of PageRank.
+	 * @param g The graph object. 
+	 */
+	public def execute(g :Graph) {
+		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), edgeWeight, directed, true);
+				Config.get().distXPregel(), weights, directed, true);
 		return execute(matrix);
 	}
 	
+	/** Run the calculation of PageRank.
+	 * This method is faster than run(Graph) method when it is called several times on the same graph.
+	 * @param matrix 1D row distributed adjacency matrix with edge weights.
+	 */
 	public def execute(matrix :DistSparseMatrix[Double]) = execute(this, matrix);
 
-	// Algorithm implementation is defined as a static method to avoid
+	// Algorithm implementations are defined as static methods to avoid
 	// unexpected deep copy of 'this' object.
 	
 	private static def execute(param :PageRank, matrix :DistSparseMatrix[Double]) {
@@ -56,7 +85,7 @@ public final class PageRank {
 		val eps = param.eps;
 		val niter = param.niter;
 		
-		// compute Page Rank
+		// compute PageRank
 		val xpgraph = XPregelGraph.make[Double, Double](team, matrix);
 		xpgraph.updateInEdge();
 		
@@ -86,8 +115,17 @@ public final class PageRank {
 		return xpgraph.stealOutput[Double]();
 	}
 
-	// The algorithm interface also needs two helper method like this.
+	// The algorithm interface also needs two helper methods like this.
 	
-	public static def run(g :Graph, edgeWeight :String) = new PageRank().execute(g, edgeWeight);
+	/** Run the calculation of PageRank with default parameters.
+	 * @param g The graph object. 
+	 */
+	public static def run(g :Graph) = new PageRank().execute(g);
+	
+	/** Run the calculation of PageRank with default parameters.
+	 * This method is faster than run(Graph) method when it is called several times on the same graph.
+	 * @param matrix 1D row distributed adjacency matrix with edge weights.
+	 */
 	public static def run(matrix :DistSparseMatrix[Double]) = new PageRank().execute(matrix);
+	
 }
