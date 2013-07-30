@@ -95,7 +95,7 @@ public class TestEdgeModify {
 				val myId = ctx.realId();
 				
 				//display current status
-				mesBuf().add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
+				//mesBuf().add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
 				
 				//remove out edge
 				val e = (myId+1)%ctx.numberOfVertices();
@@ -104,16 +104,16 @@ public class TestEdgeModify {
 					atomic {
 						mesBuf().add(myId + ":\tRemove:\t" + e + "\n");
 					}
-					removeOutEdge(ctx,e);
+					//removeOutEdge(ctx,e);
 				}
 				
 				//display current out edges
-				val OEsId = ctx.outEdgesId();
-				for(eI in OEsId){
-					atomic {
-						mesBuf().add(myId + "->" + eI + "\n");
-					}
-				}
+				//val OEsId = ctx.outEdgesId();
+				//for(eI in OEsId){
+				//	atomic {
+				//		mesBuf().add(myId + "->" + eI + "\n");
+				//	}
+				//}
 				
 				if(ctx.superstep()>=5){
 					ctx.voteToHalt();

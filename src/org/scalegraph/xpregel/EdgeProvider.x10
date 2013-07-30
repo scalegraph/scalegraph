@@ -17,7 +17,7 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.Parallel;
 
-class EdgeProvider [E] {E haszero} {
+class EdgeProvider [E]/* {E haszero} */{
 	// srcid, offset
 	val mDiffOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();
 	val mDiffVertex :GrowableMemory[Long] = new GrowableMemory[Long]();
@@ -42,7 +42,7 @@ class EdgeProvider [E] {E haszero} {
 		mInValue = inEdge.value;
 	}
 	
-	static def updateOutEdge[E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) {E haszero} {
+	static def updateOutEdge[E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) /*{E haszero}*/ {
 		var changed :Boolean = false;
 		for(i in list.range()) {
 			if(list(i).mDiffOffset.size() > 0) {
