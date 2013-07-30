@@ -62,6 +62,7 @@ public final class HyperANF_Pregel {
 	
 	public static def main(args:Array[String](1)) {
 		val team = Team.WORLD;	
+		val dist = Dist2D.make2D(team, 1, team.size());
 		val inputFormat = (s:String) => {
 			val elements = s.split(",");
 			return new Tuple3[Long,Long,Double](
@@ -84,12 +85,9 @@ public final class HyperANF_Pregel {
 		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
 
-		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](team, csr);
-		val edgeValue = g.createDistAttribute[Double](csr, false, "edgevalue");
-		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
+		val csr = g.createDistSparseMatrix[Double](dist, "edgevalue", true, true);
+		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](team, csr);
 		
 		val start_time = System.currentTimeMillis();
 		
