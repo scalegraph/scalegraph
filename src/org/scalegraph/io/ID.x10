@@ -109,4 +109,37 @@ public class ID {
 			//			return null;
 		}
 	}
+
+	public static def typeId(typeName :String) :Int {
+		val name = typeName.toLowerCase();
+		// TODO: This is too slow ?
+		if(name.equals("boolean") || name.equals("bool"))
+			return ID.TYPE_BOOLEAN << 8;
+		if(name.equals("byte"))
+			return ID.TYPE_BYTE << 8;
+		if(name.equals("short"))
+			return ID.TYPE_SHORT << 8;
+		if(name.equals("int"))
+			return ID.TYPE_INT << 8;
+		if(name.equals("long"))
+			return ID.TYPE_LONG << 8;
+		if(name.equals("float"))
+			return ID.TYPE_FLOAT << 8;
+		if(name.equals("double"))
+			return ID.TYPE_DOUBLE << 8;
+		if(name.equals("ubyte") || name.equals("unsigned byte"))
+			return ID.TYPE_UBYTE << 8;
+		if(name.equals("ushort") || name.equals("unsigned short"))
+			return ID.TYPE_USHORT << 8;
+		if(name.equals("uint") || name.equals("unsigned int"))
+			return ID.TYPE_UINT << 8;
+		if(name.equals("ulong") || name.equals("unsigned long"))
+			return ID.TYPE_ULONG << 8;
+		if(name.equals("char"))
+			return ID.TYPE_CHAR << 8;
+		if(name.equals("string"))
+			return ID.TYPE_STRING << 8;
+		else
+			throw new Exception("invalid data type");
+	}
 }

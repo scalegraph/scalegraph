@@ -68,6 +68,8 @@ public final struct SString {
 	
 	public static operator (str: String) = SString(str);
 	
+	public def raw() = content;
+	
 	public def equals(that: Any): Boolean {
 		if(that instanceof SString) return equals(that as SString);
 		if(that instanceof String) return equals(SString(that as String));
@@ -261,4 +263,12 @@ public final struct SString {
 	
 	@Native("c++", "org::scalegraph::util::StringToULong_((#this).FMGL(content))")
 	public native def toULong() :ULong;
+	
+	// TODO:
+	public static native def format[T1](fmt :SString, o1 :T1) :SString;
+	public static native def format[T1,T2](fmt :SString, o1 :T1, o2 :T2) :SString;
+	public static native def format[T1,T2,T3](fmt :SString, o1 :T1, o2 :T2, o3 :T3) :SString;
+	public static native def format[T1,T2,T3,T4](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4) :SString;
+	public static native def format[T1,T2,T3,T4,T5](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4, o5 :T5) :SString;
+	public static native def format[T1,T2,T3,T4,T5,T6](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4, o5 :T5, o6 :T6) :SString;
 }

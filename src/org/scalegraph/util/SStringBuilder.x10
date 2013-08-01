@@ -10,7 +10,7 @@ import x10.compiler.NativeCPPOutputFile;
 @NativeCPPCompilationUnit("StringHelper.cc")
 
 public class SStringBuilder {
-	private var buffer :GrowableMemory[Byte];
+	private var buffer :GrowableMemory[Byte] = new GrowableMemory[Byte]();
 	
 	public def this() { }
 	
@@ -18,10 +18,16 @@ public class SStringBuilder {
 		buffer.setMemory(str.bytes());
 	}
 	
-//	@Native("c++", "
+	// TODO:
 	public native def add[T](x :T) :SStringBuilder;
-	
-	public native def add[T](fmt :SString, x :T) :SStringBuilder;
+
+	// TODO:
+	public native def add[T1](fmt :SString, o1 :T1) :SStringBuilder;
+	public native def add[T1,T2](fmt :SString, o1 :T1, o2 :T2) :SStringBuilder;
+	public native def add[T1,T2,T3](fmt :SString, o1 :T1, o2 :T2, o3 :T3) :SStringBuilder;
+	public native def add[T1,T2,T3,T4](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4) :SStringBuilder;
+	public native def add[T1,T2,T3,T4,T5](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4, o5 :T5) :SStringBuilder;
+	public native def add[T1,T2,T3,T4,T5,T6](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4, o5 :T5, o6 :T6) :SStringBuilder;
 	
 	public def capacity() = buffer.capacity();
 	
@@ -37,15 +43,13 @@ public class SStringBuilder {
 	public def grow(minCapacity :Int) :void { buffer.grow(minCapacity); }
 	
 	public def indexOf(str :SString) = indexOf(str, 0);
-	
+
+	// TODO:
 	public native def indexOf(str :SString, from :Int) :Int;
 	
-	public native def insert[T](p :Int, x :T) :SStringBuilder;
-	
-	public native def insert[T](p :Int, fmt :SString, x :T) :SStringBuilder;
-	
 	public def lastIndexOf(str :SString) = lastIndexOf(str, 0);
-	
+
+	// TODO:
 	public native def lastIndexOf(str :SString, from :Int) :Int;
 	
 	public def result() = SString(buffer.raw().subpart(0, size()));

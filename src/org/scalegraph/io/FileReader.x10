@@ -43,7 +43,7 @@ public final class FileReader {
 	public def skip(n: Long):void {
 		fileOffset += n;
 		val buffered = length - offset;
-		if(buffered >= n) {
+		if(buffered >= n && offset + n >= 0) {
 			offset += n;
 		}
 		else {
