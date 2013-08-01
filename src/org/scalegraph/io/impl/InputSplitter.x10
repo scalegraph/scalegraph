@@ -1,3 +1,13 @@
+/*
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 package org.scalegraph.io.impl;
 
 import org.scalegraph.util.MemoryChunk;
@@ -13,6 +23,26 @@ import x10.io.IOException;
 public abstract class InputSplitter {
 	
 	public static T_CHUNK_SIZE = 1*1024*1024;
+	
+	/**
+	 * Returns the position of the next line start from the specified offset.
+	 * @param data The target which contains string.
+	 * @param offset Search from this offset.
+	 * @return offset + n where n >= 0
+	 */
+	public abstract def nextBreak(data :MemoryChunk[Byte], offset :Long) :Long;
+	
+	/**
+	 * Progress the position of reader by the next line start and
+	 * returns the data at the region between the current position and
+	 * the next line start.
+	 * @param reader The FileReader whose target contains string.
+	 * @return MemoryChunk[Byte] that contains data  at the region between the current position and
+	  * the next line start.
+	 */
+	public abstract def nextBreak(reader :FileReader) :MemoryChunk[Byte];
+	
+	// End of InputSplitter definition //
 	
 	public static struct InputSplit {
 		public val path : SString;
@@ -36,36 +66,19 @@ public abstract class InputSplitter {
 		}
 	}
 	
-	/**
-	 * Returns the position of the next line start from the specified offset.
-	 * @param data The target which contains string.
-	 * @param offset Search from this offset.
-	 * @return offset + n where n >= 0
-	 */
-	public abstract def nextBreak(data :MemoryChunk[Byte], offset :Long) :Long;
-	
-	/**
-	 * Progress the position of reader by the next line start and
-	 * returns the data at the region between the current position and
-	 * the next line start.
-	 * @param reader The FileReader whose target contains string.
-	 * @return MemoryChunk[Byte] that contains data  at the region between the current position and
-	  * the next line start.
-	 */
-	public abstract def nextBreak(reader :FileReader) :MemoryChunk[Byte];
-	
 	private class SplitterContext {
-		private val nthreads = Runtime.NTHREADS;
+		private val nthreads :Int;
 		private val splits :MemoryChunk[InputSplit];
-		private val parse :(Long, MemoryChunk[Byte]) => void;
+		private val parse :(Int, MemoryChunk[Byte]) => void;
 		private val monitor = new Monitor();
 		private var numLauchTasks :Int = 0;
 		private var frontBuffer :GrowableMemory[Byte] = new GrowableMemory[Byte]();
 		private var backBuffer :GrowableMemory[Byte] = new GrowableMemory[Byte]();
 		
-		public def this(splits :MemoryChunk[InputSplit], parse :(Long, MemoryChunk[Byte]) => void) {
+		public def this(splits :MemoryChunk[InputSplit], parse :(Int, MemoryChunk[Byte]) => void, nthreads :Int) {
 			this.splits = splits;
 			this.parse = parse;
+			this.nthreads = nthreads;
 		}
 		
 		private def cycleBuffers(numTasksToLaunch :Int) {
@@ -121,6 +134,7 @@ public abstract class InputSplitter {
 					if(remain < s_chunk_size * 3 / 2) {
 						backBuffer.setSize(remain);
 						reader.read(backBuffer.raw());
+						backBuffer.grow(remain + 1); // for null teminate
 						cycleBuffers(1);
 						async subtask();
 						break;
@@ -128,6 +142,7 @@ public abstract class InputSplitter {
 					backBuffer.setSize(s_chunk_size);
 					reader.read(backBuffer.raw());
 					backBuffer.add(nextBreak(reader));
+					backBuffer.grow(backBuffer.size() + 1); // for null teminate
 					cycleBuffers(1);
 					async subtask();
 				}
@@ -136,7 +151,9 @@ public abstract class InputSplitter {
 		}
 	}
 	
-	public def split(team :Team, fman :FileNameProvider, offset :Long, parse :(Long, MemoryChunk[Byte]) => void) {
+	public def split(team :Team, fman :FileNameProvider, offset :Long,
+			nthreads :Int, parse :(Int, MemoryChunk[Byte]) => void)
+	{
 		val splits = new GrowableMemory[InputSplit]();
 
 		val places = team.places();
@@ -207,7 +224,7 @@ public abstract class InputSplitter {
 			val splits_end = Math.min((role + 1) * splits_per_place, splits.size());
 			val splits_here = splits.raw().subpart(splits_begin, splits_end - splits_begin);
 			
-			finish new SplitterContext(splits_here, parse).split();
+			finish new SplitterContext(splits_here, parse, nthreads).split();
 			
 		});
 	}

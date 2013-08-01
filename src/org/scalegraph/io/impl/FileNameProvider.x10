@@ -1,3 +1,13 @@
+/*
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 package org.scalegraph.io.impl;
 
 import x10.io.File;
@@ -97,7 +107,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 	 * @param path filename passed by user
 	 * @param scattered hint to choose file manager
 	 */
-	public static def create(path :SString, scattered :Boolean) {
+	private static def create(path :SString, isRead :Boolean, scattered :Boolean) {
 		val num_pos = path.indexOf("%d");
 		if(num_pos != -1) {
 			val last_sep = path.lastIndexOf(File.SEPARATOR);
@@ -106,9 +116,33 @@ public abstract class FileNameProvider implements Iterable[SString] {
 			}
 			return new NumberScatteredFileNameProvider(path);
 		}
-		if(scattered) {
+		if(isRead) {
+			if(new File(path.toString()).isFile()) {
+				return new SingleFileNameProvider(path);
+			}
 			return new DirectoryScatteredFileNameProvider(path);
 		}
-		return new SingleFileNameProvider(path);
+		else {
+			if(scattered) {
+				return new DirectoryScatteredFileNameProvider(path);
+			}
+			return new SingleFileNameProvider(path);
+		}
 	}
+	
+	/**
+	 * Creates appropriate file manager instance.
+	 * @param path filename passed by user
+	 * @param scattered hint to choose file manager
+	 */
+	public static def createForRead(path :SString)
+			= create(path, true, false);
+	
+	/**
+	 * Creates appropriate file manager instance.
+	 * @param path filename passed by user
+	 * @param scattered hint to choose file manager
+	 */
+	public static def createForWrite(path :SString, scattered :Boolean)
+			= create(path, false, scattered);
 }

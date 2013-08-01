@@ -275,6 +275,51 @@ restart:
 	return buf->raw();
 }
 
+x10_long CSVReaderParseChunk(MemoryChunk<x10_byte> data, MemoryChunk<x10_byte*> elemBuf, int numElems, int stride) {
+	CSVParser p;
+	x10_byte* ptr = data->pointer();
+	x10_byte* end = ptr + data->size();
+	x10_byte** out = elemBuf->pointer();
+
+	if(numElems == 0) {
+		x10aux::throwException(x10::lang::IllegalArgumentException::_make(String::Lit(
+				"No attribute ?")));
+	}
+	if(stride == 0) {
+		x10aux::throwException(x10::lang::IllegalArgumentException::_make(String::Lit(
+				"No storage to store output ?")));
+	}
+
+	// initialize
+	memset(out, 0x00, sizeof(x10_byte*)*elemBuf->size());
+
+	for(int i = 0; i < stride; ++i) {
+		for(int e = 0; e < numElems; ++e) {
+			p.parse(ptr, end);
+			*p.end = '\0'; // null terminate
+			out[stride * e + i] = p.start;
+			ptr = ptr.next;
+			if(p.corrupted) {
+				printf("Error: CSV Parser: corrupted CSV.\n");
+			}
+			if(p.lastElement) {
+				if(e + 1 < numElems) {
+					printf("Error: CSV Parser: not enough attributes\n");
+				}
+				break;
+			}
+		}
+		// skip unnecessary elements
+		while(!p.lastElement) {
+			p.parse(ptr, end); ptr = p.next;
+		}
+		if(ptr == end) {
+			// TODO: output size;
+			break;
+		}
+	}
+}
+
 
 } } } } // namespace org { namespace scalegraph { namespace io { namespace impl {
 
