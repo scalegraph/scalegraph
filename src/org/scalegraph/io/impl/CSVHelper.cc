@@ -22,6 +22,8 @@
 
 #include <org/scalegraph/io/impl/CSVHelper.h>
 
+#include <errno.h>
+
 namespace org { namespace scalegraph { namespace io { namespace impl {
 
 using namespace ::x10::lang;
@@ -253,7 +255,7 @@ next:
 
 MemoryChunk<x10_byte> DQCSVNextBreak(FileReader* reader)
 {
-	GrowableMemory* buf == GrowableMemory::_make();
+	GrowableMemory<x10_byte>* buf = GrowableMemory<x10_byte>::_make();
 restart:
 	MemoryChunk<x10_byte> line = reader->fastReadLine()->raw();
 	buf->add(line);
@@ -266,7 +268,7 @@ restart:
 		if(*ptr == '"') {
 			ptr = skipSpace(ptr+1, end);
 			if(ptr == end) {
-				return ; // OK
+				return buf->raw(); // OK
 			}
 			if(*ptr == ',') {
 				break;
@@ -277,7 +279,7 @@ restart:
 	for(++ptr ; ; ++ptr) {
 		if(ptr == end) {
 			if(DQcount % 2 == 0) {
-				return ; // OK
+				return buf->raw(); // OK
 			}
 			line = reader->fastReadLine()->raw();
 			buf->add(line);
@@ -309,10 +311,10 @@ x10_long CSVReaderParseChunk(MemoryChunk<x10_byte> data, MemoryChunk<x10_byte*> 
 
 	for(int i = 0; i < stride; ++i) {
 		for(int e = 0; e < numElems; ++e) {
-			p.parse(ptr, end);
+			p.nextElement(ptr, end);
 			*p.end = '\0'; // null terminate
 			out[stride * e + i] = p.start;
-			ptr = ptr.next;
+			ptr = p.next;
 			if(p.corrupted) {
 				printf("Error: CSV Parser: corrupted CSV.\n");
 			}
@@ -325,7 +327,7 @@ x10_long CSVReaderParseChunk(MemoryChunk<x10_byte> data, MemoryChunk<x10_byte*> 
 		}
 		// skip unnecessary elements
 		while(!p.lastElement) {
-			p.parse(ptr, end); ptr = p.next;
+			p.nextElement(ptr, end); ptr = p.next;
 		}
 		if(ptr == end) {
 			// TODO: output size;
@@ -343,58 +345,58 @@ template <> x10_boolean strtot<x10_boolean>(const char* str, char **endptr) {
 	    (str[3] == 'e' | str[3] == 'E') &&
 	    (str[4] == '\0'))
 	{
-		*endptr = &str[4];
+		*endptr = const_cast<char*>(&str[4]);
 		return (x10_boolean) true;
 	}
-	*endptr = str + strlen(str);
+	*endptr = const_cast<char*>(str) + strlen(str);
 	return (x10_boolean) false;
 }
 template <> x10_byte strtot<x10_byte>(const char* str, char **endptr) {
-	x10_int r = strtol(ptr, endptr, 10);
+	x10_int r = strtol(str, endptr, 10);
 	if(r != (x10_byte) r) errno = ERANGE;
 	return (x10_byte) r;
 }
 template <> x10_ubyte strtot<x10_ubyte>(const char* str, char **endptr) {
-	x10_int r = strtol(ptr, endptr, 10);
+	x10_int r = strtol(str, endptr, 10);
 	if(r != (x10_ubyte) r) errno = ERANGE;
 	return (x10_ubyte) r;
 }
 template <> x10_short strtot<x10_short>(const char* str, char **endptr) {
-	x10_int r = strtol(ptr, endptr, 10);
+	x10_int r = strtol(str, endptr, 10);
 	if(r != (x10_short) r) errno = ERANGE;
 	return (x10_short) r;
 }
 template <> x10_ushort strtot<x10_ushort>(const char* str, char **endptr) {
-	x10_int r = strtol(ptr, endptr, 10);
+	x10_int r = strtol(str, endptr, 10);
 	if(r != (x10_ushort) r) errno = ERANGE;
 	return (x10_ushort) r;
 }
 template <> x10_int strtot<x10_int>(const char* str, char **endptr) {
-	x10_int r = strtol(ptr, endptr, 10);
+	x10_int r = strtol(str, endptr, 10);
 	return r;
 }
 template <> x10_uint strtot<x10_uint>(const char* str, char **endptr) {
-	x10_uint r = strtoul(ptr, endptr, 10);
+	x10_uint r = strtoul(str, endptr, 10);
 	return r;
 }
 template <> x10_long strtot<x10_long>(const char* str, char **endptr) {
-	x10_long r = strtoll(ptr, endptr, 10);
+	x10_long r = strtoll(str, endptr, 10);
 	return r;
 }
 template <> x10_ulong strtot<x10_ulong>(const char* str, char **endptr) {
-	x10_ulong r = strtoull(ptr, endptr, 10);
+	x10_ulong r = strtoull(str, endptr, 10);
 	return r;
 }
 template <> x10_float strtot<x10_float>(const char* str, char **endptr) {
-	x10_float r = strtof(ptr, endptr);
+	x10_float r = strtof(str, endptr);
 	return r;
 }
 template <> x10_double strtot<x10_double>(const char* str, char **endptr) {
-	x10_double r = strtod(ptr, endptr);
+	x10_double r = strtod(str, endptr);
 	return r;
 }
 template <> x10_char strtot<x10_char>(const char* str, char **endptr) {
-	x10_int r = strtol(ptr, endptr, 16);
+	x10_int r = strtol(str, endptr, 16);
 	if(r != (x10_short) r) errno = ERANGE;
 	return x10_char(r);
 }

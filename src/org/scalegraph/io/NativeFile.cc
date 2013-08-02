@@ -8,21 +8,22 @@
  * 
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-
-
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 #include <x10aux/config.h>
 
+#include <x10/lang/String.h>
 #include <x10/io/FileNotFoundException.h>
 #include <x10/io/IOException.h>
 #include <x10/lang/IllegalArgumentException.h>
 
 #include <org/scalegraph/util/SString.h>
+#include <org/scalegraph/util/MemoryChunk.h>
+
 #include <org/scalegraph/io/NativeFile.h>
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 namespace org { namespace scalegraph { namespace io {
 
