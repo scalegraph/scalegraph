@@ -19,9 +19,6 @@
 #define ORG_SCALEGRAPH_UTIL_GROWABLEMEMORY_H_NODEPS
 #include <org/scalegraph/util/GrowableMemory.h>
 #undef ORG_SCALEGRAPH_UTIL_GROWABLEMEMORY_H_NODEPS
-#define ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
-#include <org/scalegraph/util/SString.h>
-#undef ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
 
 namespace org { namespace scalegraph { namespace util {
 

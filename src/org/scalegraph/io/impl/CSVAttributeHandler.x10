@@ -49,7 +49,7 @@ public abstract class CSVAttributeHandler {
 	private static class PrimitiveHandler[T] extends CSVAttributeHandler {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
 		
-		@Native("c++", "org::scalegraph::io::impl::CSVParseElements<#T >(#elemPtrs. #outBuf)")
+		@Native("c++", "org::scalegraph::io::impl::CSVParseElements<#T >(#elemPtrs, #outBuf)")
 		private static native def nativeParseElements[T](
 				elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :GrowableMemory[T]) :void;
 
@@ -94,7 +94,7 @@ public abstract class CSVAttributeHandler {
 	private static class StringHandler extends PrimitiveHandler[String] {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
 		
-		@Native("c++", "org::scalegraph::io::impl::CSVParseStringElements(#elemPtrs. #outBuf)")
+		@Native("c++", "org::scalegraph::io::impl::CSVParseStringElements(#elemPtrs, #outBuf)")
 		private static native def nativeParseElements(
 				elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :GrowableMemory[String]) :void;
 		

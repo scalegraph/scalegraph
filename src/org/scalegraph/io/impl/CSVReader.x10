@@ -31,7 +31,7 @@ import x10.util.Team;
 public class CSVReader {
 
 	@NativeCPPInclude("CSVHelper.h")
-	@NativeCPPOutputFile("CSVAttribute.h")
+	@NativeCPPOutputFile("CSVReader__CSVAttribute.h")
 	@NativeRep("c++", "org::scalegraph::io::impl::NativeCSVAttribute*",
 			"org::scalegraph::io::impl::NativeCSVAttribute*", null)
 	private static struct CSVAttribute {
@@ -46,7 +46,7 @@ public class CSVReader {
 	}
 	
 	@NativeCPPInclude("CSVHelper.h")
-	@NativeCPPOutputFile("NativeCSVHeader.h")
+	@NativeCPPOutputFile("CSVReader__NativeCSVHeader.h")
 	@NativeRep("c++", "org::scalegraph::io::impl::NativeCSVHeader*",
 			"org::scalegraph::io::impl::NativeCSVHeader*", null)
    private static struct NativeCSVHeader {

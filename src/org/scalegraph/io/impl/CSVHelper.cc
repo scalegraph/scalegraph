@@ -436,11 +436,12 @@ void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SStr
 		char *endptr;
 		if(ptrs[i] == NULL) {
 			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(NULL, NULL, 0) };
-			tmp[i] = SString(mc);
+			tmp[i].FMGL(content) = mc;
 		}
 		else {
 			// count the length
 			int len = 0;
+			x10_byte* strbuf;
 			if(doubleQuoated) {
 				int off = 0;
 				x10_byte* ptr = ptrs[i];
@@ -450,7 +451,7 @@ void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SStr
 					}
 					++off; ++len;
 				}
-				x10_byte* strbuf = x10aux::alloc<x10_byte>(len+1);
+				strbuf = x10aux::alloc<x10_byte>(len+1);
 				len = 0; off = 0;
 				while(ptr[off] != '\0') {
 					if(ptr[off] == '"' && ptr[off+1] == '"') {
@@ -462,15 +463,15 @@ void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SStr
 			}
 			else {
 				len = strlen((char*)ptrs[i]);
-				x10_byte* strbuf = x10aux::alloc<x10_byte>(len+1);
+				strbuf = x10aux::alloc<x10_byte>(len+1);
 				memcpy(strbuf, ptrs[i], len+1);
 			}
 			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(strbuf, strbuf, len) };
-			tmp[i] = SString(mc);
+			tmp[i].FMGL(content) = mc;
 		}
 	}
 
-	MemoryChunk<T> mc = { MCData_Impl<T>(tmp, tmp, lines) };
+	MemoryChunk<SString> mc = { MCData_Impl<SString>(tmp, tmp, lines) };
 	outBuf->add(mc);
 }
 
