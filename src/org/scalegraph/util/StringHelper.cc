@@ -480,7 +480,7 @@ x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th, int radix) {
 
 
 template <typename T> void StringBuilderAdd_(GrowableMemory<x10_byte>* th, const T& x) {
-	Reference* tmp = reinterpret_cast<x10::lang::Reference*>(x);
+	x10::lang::Reference* tmp = reinterpret_cast<x10::lang::Reference*>(x);
 
 	int size = th->size();
 	int capacity = th->capacity();
@@ -498,45 +498,44 @@ template <typename T> void StringBuilderAdd_(GrowableMemory<x10_byte>* th, const
 	}
 }
 
-template void StringBuilderAdd_<SString>(GrowableMemory<x10_byte>* th, const SStirng& x) {
+template <> void StringBuilderAdd_<SString>(GrowableMemory<x10_byte>* th, const SString& x) {
 	th->org::scalegraph::util::GrowableMemoy<x10_byte>::add(x.FMGL(content));
 }
-
-template void StringBuilderAdd_<x10_int>(GrowableMemory<x10_byte>* th, const x10_int& x) {
-	StringBuilderFmtAdd_(th, "%d",x);
+template <> void StringBuilderAdd_<x10_int>(GrowableMemory<x10_byte>* th, const x10_int& x) {
+	StringBuilderFmtAdd_(th, "%d", x);
 }
-template void StringBuilderAdd_<x10_uint>(GrowableMemory<x10_byte>* th, const x10_uint& x) {
-	StringBuilderFmtAdd_(th, "%u",x);
+template <> void StringBuilderAdd_<x10_uint>(GrowableMemory<x10_byte>* th, const x10_uint& x) {
+	StringBuilderFmtAdd_(th, "%u", x);
 }
-template void StringBuilderAdd_<x10_float>(GrowableMemory<x10_byte>* th, const x10_float& x) {
-	StringBuilderFmtAdd_(th, "%f",x);
+template <> void StringBuilderAdd_<x10_float>(GrowableMemory<x10_byte>* th, const x10_float& x) {
+	StringBuilderFmtAdd_(th, "%f", x);
 }
-template void StringBuilderAdd_<x10_double>(GrowableMemory<x10_byte>* th, const x10_double& x) {
-	StringBuilderFmtAdd_(th, "%lf",x);
+template <> void StringBuilderAdd_<x10_double>(GrowableMemory<x10_byte>* th, const x10_double& x) {
+	StringBuilderFmtAdd_(th, "%lf", x);
 }
-template void StringBuilderAdd_<x10_long>(GrowableMemory<x10_byte>* th, const x10_long& x) {
-	StringBuilderFmtAdd_(th, "%ld",x);
+template <> void StringBuilderAdd_<x10_long>(GrowableMemory<x10_byte>* th, const x10_long& x) {
+	StringBuilderFmtAdd_(th, "%ld", x);
 }
-template void StringBuilderAdd_<x10_ulong>(GrowableMemory<x10_byte>* th, const x10_ulong& x) {
-	StringBuilderFmtAdd_(th, "%lu",x);
+template <> void StringBuilderAdd_<x10_ulong>(GrowableMemory<x10_byte>* th, const x10_ulong& x) {
+	StringBuilderFmtAdd_(th, "%lu", x);
 }
-template void StringBuilderAdd_<x10_short>(GrowableMemory<x10_byte>* th, const x10_short& x) {
-	StringBuilderFmtAdd_(th, "%d",x);
+template <> void StringBuilderAdd_<x10_short>(GrowableMemory<x10_byte>* th, const x10_short& x) {
+	StringBuilderFmtAdd_(th, "%d", x);
 }
-template void StringBuilderAdd_<x10_ushort>(GrowableMemory<x10_byte>* th, const x10_ushort& x) {
-	StringBuilderFmtAdd_(th, "%u",x);
+template <> void StringBuilderAdd_<x10_ushort>(GrowableMemory<x10_byte>* th, const x10_ushort& x) {
+	StringBuilderFmtAdd_(th, "%u", x);
 }
-template void StringBuilderAdd_<x10_char>(GrowableMemory<x10_byte>* th, const x10_char& x) {
-	StringBuilderFmtAdd_(th, "%c",x);
+template <> void StringBuilderAdd_<x10_char>(GrowableMemory<x10_byte>* th, const x10_char& x) {
+	StringBuilderFmtAdd_(th, "%c", x);
 }
-template void StringBuilderAdd_<x10_byte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x) {
-	StringBuilderFmtAdd_(th, "%d",x);
+template <> void StringBuilderAdd_<x10_byte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x) {
+	StringBuilderFmtAdd_(th, "%d", x);
 }
-template void StringBuilderAdd_<x10_ubyte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x) {
-	StringBuilderFmtAdd_(th, "%u",x);
+template <> void StringBuilderAdd_<x10_ubyte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x) {
+	StringBuilderFmtAdd_(th, "%u", x);
 }
-template void StringBuilderAdd_<x10_boolean>(GrowableMemory<x10_byte>* th, const x10_boolean& x) {
-	StringBuilderFmtAdd_(th, x ? "true" : "false" );
+template <> void StringBuilderAdd_<x10_boolean>(GrowableMemory<x10_byte>* th, const x10_boolean& x) {
+	StringBuilderFmtAdd_(th, x ? "true" : "false");
 }
 
 void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const char* fmt, ...) {
@@ -598,9 +597,9 @@ SString StringFormat_(const MemoryChunk<x10_byte>& fmt, ...) {
 }
 
 // explisit instantiation
-template void StringBuilderAdd_<SString>(GrowableMemory<x10_byte>* th, const SStirng& x);
-template void StringBuilderAdd_<x10_int>(GrowableMemory<x10_byte>* th, const x10_int& x);
-template void StringBuilderAdd_<x10_uint>(GrowableMemory<x10_byte>* th, const x10_uint& x);
+template <> void StringBuilderAdd_<SString>(GrowableMemory<x10_byte>* th, const SString& x);
+template <> void StringBuilderAdd_<x10_int>(GrowableMemory<x10_byte>* th, const x10_int& x);
+template <> void StringBuilderAdd_<x10_uint>(GrowableMemory<x10_byte>* th, const x10_uint& x);
 template void StringBuilderAdd_<x10_float>(GrowableMemory<x10_byte>* th, const x10_float& x);
 template void StringBuilderAdd_<x10_double>(GrowableMemory<x10_byte>* th, const x10_double& x);
 template void StringBuilderAdd_<x10_long>(GrowableMemory<x10_byte>* th, const x10_long& x);

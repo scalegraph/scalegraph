@@ -19,9 +19,6 @@
 #define ORG_SCALEGRAPH_UTIL_GROWABLEMEMORY_H_NODEPS
 #include <org/scalegraph/util/GrowableMemory.h>
 #undef ORG_SCALEGRAPH_UTIL_GROWABLEMEMORY_H_NODEPS
-#define ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
-#include <org/scalegraph/util/SString.h>
-#undef ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
 
 namespace org { namespace scalegraph { namespace util {
 
@@ -116,9 +113,13 @@ x10_uint StringToUInt_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
 x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
+
 template <typename T> void StringBuilderAdd_(GrowableMemory<x10_byte>* th, const T& x);
+
 void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const char* fmt, ...);
+
 void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const MemoryChunk<x10_byte>& fmt, ...);
+
 SString StringFormat_(const MemoryChunk<x10_byte>& fmt, ...);
 
 /**
