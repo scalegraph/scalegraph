@@ -475,7 +475,86 @@ x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th, int radix) {
 
 
 template <typename T> void StringBuilderAdd_(GrowableMemory<x10_byte>* th, const T& x) {
-	// TODO:
+	Reference* tmp = reinterpret_cast<x10::lang::Reference*>(x);
+
+	int size = th->size();
+	int capacity = th->capacity();
+	int space = capacity - size;
+	char* ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
+	int reqsize = snprintf(ptr + size, space, tmp->toString()->c_str());
+	th->grow(size + reqsize + 1);
+	th->setSize(size + reqsize);
+	if(reqsize >= space) {
+		// insufficient buffer
+		ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
+		int ret = snprintf(ptr + size, reqsize + 1, tmp->toString()->c_str());
+		(void) ret;
+		assert (ret == reqsize);
+	}
+}
+
+template void StringBuilderAdd_<SString>(GrowableMemory<x10_byte>* th, const SStirng& x) {
+	th->org::scalegraph::util::GrowableMemoy<x10_byte>::add(x.FMGL(content));
+}
+
+template void StringBuilderAdd_<x10_int>(GrowableMemory<x10_byte>* th, const x10_int& x) {
+	StringBuilderFmtAdd_(th, "%d",x);
+}
+template void StringBuilderAdd_<x10_uint>(GrowableMemory<x10_byte>* th, const x10_uint& x) {
+	StringBuilderFmtAdd_(th, "%u",x);
+}
+template void StringBuilderAdd_<x10_float>(GrowableMemory<x10_byte>* th, const x10_float& x) {
+	StringBuilderFmtAdd_(th, "%f",x);
+}
+template void StringBuilderAdd_<x10_double>(GrowableMemory<x10_byte>* th, const x10_double& x) {
+	StringBuilderFmtAdd_(th, "%lf",x);
+}
+template void StringBuilderAdd_<x10_long>(GrowableMemory<x10_byte>* th, const x10_long& x) {
+	StringBuilderFmtAdd_(th, "%ld",x);
+}
+template void StringBuilderAdd_<x10_ulong>(GrowableMemory<x10_byte>* th, const x10_ulong& x) {
+	StringBuilderFmtAdd_(th, "%lu",x);
+}
+template void StringBuilderAdd_<x10_short>(GrowableMemory<x10_byte>* th, const x10_short& x) {
+	StringBuilderFmtAdd_(th, "%d",x);
+}
+template void StringBuilderAdd_<x10_ushort>(GrowableMemory<x10_byte>* th, const x10_ushort& x) {
+	StringBuilderFmtAdd_(th, "%u",x);
+}
+template void StringBuilderAdd_<x10_char>(GrowableMemory<x10_byte>* th, const x10_char& x) {
+	StringBuilderFmtAdd_(th, "%c",x);
+}
+template void StringBuilderAdd_<x10_byte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x) {
+	StringBuilderFmtAdd_(th, "%d",x);
+}
+template void StringBuilderAdd_<x10_ubyte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x) {
+	StringBuilderFmtAdd_(th, "%u",x);
+}
+template void StringBuilderAdd_<x10_boolean>(GrowableMemory<x10_byte>* th, const x10_boolean& x) {
+	StringBuilderFmtAdd_(th, x ? "true" : "false" );
+}
+
+void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const char* fmt, ...) {
+	va_list ap;
+
+	int size = th->size();
+	int capacity = th->capacity();
+	int space = capacity - size;
+	char* ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
+	va_start(ap, fmt);
+	int reqsize = vsnprintf(ptr + size, space, fmt, ap);
+	va_end(ap);
+	th->grow(size + reqsize + 1);
+	th->setSize(size + reqsize);
+	if(reqsize >= space) {
+		// insufficient buffer
+		ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
+		va_start(ap, fmt);
+		int ret = vsnprintf(ptr + size, reqsize + 1, fmt, ap);
+		va_end(ap);
+	    (void) ret;
+	    assert (ret == reqsize);
+	}
 }
 
 void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const MemoryChunk<x10_byte>& fmt, ...) {
@@ -489,7 +568,8 @@ void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const MemoryChunk<x10_by
 	va_start(ap, fmt);
 	int reqsize = vsnprintf(ptr + size, space, start, ap);
 	va_end(ap);
-	th->setSize(size + reqsize + 1);
+	th->grow(size + reqsize + 1);
+	th->setSize(size + reqsize);
 	if(reqsize >= space) {
 		// insufficient buffer
 		ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
@@ -501,6 +581,15 @@ void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const MemoryChunk<x10_by
 	}
 
 	C_STR_END;
+}
+
+SString StringFormat_(const MemoryChunk<x10_byte>& fmt, ...) {
+	va_list ap;
+	GrowableMemory<x10_byte>* th = GrowableMemory<x10_byte>::_make();
+	va_start(ap, fmt);
+	StringBuilderFmtAdd_(th, fmt, ap);
+	va_end(ap);
+	return SString::_make(th);
 }
 
 #undef C_STR_BEGIN
