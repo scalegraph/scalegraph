@@ -21,6 +21,8 @@ using ::org::scalegraph::util::GrowableMemory;
 using ::org::scalegraph::io::FileReader;
 using ::scalegraph::gc_std;
 
+enum { H_CHUNK_SIZE = 256 };
+
 struct NativeCSVAttribute {
 	bool includeType;
 	bool doubleQuoated;
@@ -39,5 +41,10 @@ NativeCSVHeader* readCSVHeader(SString headerLine);
 
 x10_long DQCSVNextBreak(MemoryChunk<x10_byte> data, x10_long offset);
 MemoryChunk<x10_byte> DQCSVNextBreak(FileReader* reader);
+
+template <typename T>
+void CSVParseElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<T>* outBuf);
+
+void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SString>* outBuf, bool doubleQuoated);
 
 } } } } // namespace org { namespace scalegraph { namespace io { namespace impl {

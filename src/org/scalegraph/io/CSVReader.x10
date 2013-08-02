@@ -179,10 +179,13 @@ public class CSVReader {
 		val attrIds = new Array[Int](enabledColumns);
 		var attrIndex :Int = 0;
 		for(e in 0..(numColumns-1)) {
-			attributes(attrIndex) = attHandler(e).mergeResult(team,
-					(tid :Int) => bufferPLH()(tid).buffer(e));
-			attrNames(attrIndex) = columnNames(e).toString();
-			attrIds(attrIndex) = attHandler(e).typeId();
+			if(!attHandler(e).isSkip()) {
+				attributes(attrIndex) = attHandler(e).mergeResult(team,
+						(tid :Int) => bufferPLH()(tid).buffer(e));
+				attrNames(attrIndex) = columnNames(e).toString();
+				attrIds(attrIndex) = attHandler(e).typeId();
+				++attrIndex;
+			}
 		}
 
 		return new NamedDistData(attrNames, attrIds, attributes, null);

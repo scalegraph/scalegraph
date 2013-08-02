@@ -94,21 +94,21 @@ x10_float StringToFloat_(const MemoryChunk<x10_byte>& th);
 
 x10_double StringToDouble_(const MemoryChunk<x10_byte>& th);
 
-x10_byte StringToByte_(const MemoryChunk<x10_byte>& th);
+x10_byte StringToByte_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
-x10_short StringToShort_(const MemoryChunk<x10_byte>& th);
+x10_short StringToShort_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
-x10_int StringToInt_(const MemoryChunk<x10_byte>& th);
+x10_int StringToInt_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
-x10_long StringToLong_(const MemoryChunk<x10_byte>& th);
+x10_long StringToLong_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
-x10_ubyte StringToUByte_(const MemoryChunk<x10_byte>& th);
+x10_ubyte StringToUByte_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
-x10_ushort StringToUShort_(const MemoryChunk<x10_byte>& th);
+x10_ushort StringToUShort_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
-x10_uint StringToUInt_(const MemoryChunk<x10_byte>& th);
+x10_uint StringToUInt_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
-x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th);
+x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th, int radix = 10);
 
 /**
  * Returns null terminated string poitner.

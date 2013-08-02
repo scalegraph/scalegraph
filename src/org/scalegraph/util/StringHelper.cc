@@ -15,6 +15,8 @@
 #include <org/scalegraph/util/StringHelper.h>
 #include <org/scalegraph/util/SString.h>
 
+#include <stdlib.h>
+
 namespace org { namespace scalegraph { namespace util {
 
 #define UTF8_CHAR_BYTES(c, bytesCount) \
@@ -354,7 +356,7 @@ x10_double StringToDouble_(const MemoryChunk<x10_byte>& th) {
     return ans;
 }
 
-x10_byte StringToByte_(const MemoryChunk<x10_byte>& th) {
+x10_byte StringToByte_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;
@@ -369,7 +371,7 @@ x10_byte StringToByte_(const MemoryChunk<x10_byte>& th) {
     return (x10_byte)ans;
 }
 
-x10_short StringToShort_(const MemoryChunk<x10_byte>& th) {
+x10_short StringToShort_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;
@@ -384,7 +386,7 @@ x10_short StringToShort_(const MemoryChunk<x10_byte>& th) {
     return (x10_short)ans;
 }
 
-x10_int StringToInt_(const MemoryChunk<x10_byte>& th) {
+x10_int StringToInt_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;
@@ -398,7 +400,7 @@ x10_int StringToInt_(const MemoryChunk<x10_byte>& th) {
     return ans;
 }
 
-x10_long StringToLong_(const MemoryChunk<x10_byte>& th) {
+x10_long StringToLong_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;
@@ -412,7 +414,7 @@ x10_long StringToLong_(const MemoryChunk<x10_byte>& th) {
     return ans;
 }
 
-x10_ubyte StringToUByte_(const MemoryChunk<x10_byte>& th) {
+x10_ubyte StringToUByte_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;
@@ -427,7 +429,7 @@ x10_ubyte StringToUByte_(const MemoryChunk<x10_byte>& th) {
     return (x10_ubyte)ans;
 }
 
-x10_ushort StringToUShort_(const MemoryChunk<x10_byte>& th) {
+x10_ushort StringToUShort_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;
@@ -442,7 +444,7 @@ x10_ushort StringToUShort_(const MemoryChunk<x10_byte>& th) {
     return (x10_ushort)ans;
 }
 
-x10_uint StringToUInt_(const MemoryChunk<x10_byte>& th) {
+x10_uint StringToUInt_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;
@@ -456,7 +458,7 @@ x10_uint StringToUInt_(const MemoryChunk<x10_byte>& th) {
     return ans;
 }
 
-x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th) {
+x10_ulong StringToULong_(const MemoryChunk<x10_byte>& th, int radix) {
 	C_STR_BEGIN(th);
     char *end;
     errno = 0;

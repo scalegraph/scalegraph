@@ -11,6 +11,7 @@
 
 #include <org/scalegraph/io/impl/CSVHelper.h>
 
+#include <stdlib.h>
 
 namespace org { namespace scalegraph { namespace io { namespace impl {
 
@@ -319,6 +320,157 @@ x10_long CSVReaderParseChunk(MemoryChunk<x10_byte> data, MemoryChunk<x10_byte*> 
 		}
 	}
 }
+
+template <typename T> T strtot(const char* str, char **endptr);
+
+template <> x10_boolean strtot<x10_boolean>(const char* str, char **endptr) {
+	if( (str[0] == 't' | str[0] == 'T') &&
+	    (str[1] == 'r' | str[1] == 'R') &&
+	    (str[2] == 'u' | str[2] == 'U') &&
+	    (str[3] == 'e' | str[3] == 'E') &&
+	    (str[4] == '\0'))
+	{
+		*endptr = &str[4];
+		return (x10_boolean) true;
+	}
+	*endptr = str + strlen(str);
+	return (x10_boolean) false;
+}
+template <> x10_byte strtot<x10_byte>(const char* str, char **endptr) {
+	x10_int r = strtol(ptr, endptr, 10);
+	if(r != (x10_byte) r) errno = ERANGE;
+	return (x10_byte) r;
+}
+template <> x10_ubyte strtot<x10_ubyte>(const char* str, char **endptr) {
+	x10_int r = strtol(ptr, endptr, 10);
+	if(r != (x10_ubyte) r) errno = ERANGE;
+	return (x10_ubyte) r;
+}
+template <> x10_short strtot<x10_short>(const char* str, char **endptr) {
+	x10_int r = strtol(ptr, endptr, 10);
+	if(r != (x10_short) r) errno = ERANGE;
+	return (x10_short) r;
+}
+template <> x10_ushort strtot<x10_ushort>(const char* str, char **endptr) {
+	x10_int r = strtol(ptr, endptr, 10);
+	if(r != (x10_ushort) r) errno = ERANGE;
+	return (x10_ushort) r;
+}
+template <> x10_int strtot<x10_int>(const char* str, char **endptr) {
+	x10_int r = strtol(ptr, endptr, 10);
+	return r;
+}
+template <> x10_uint strtot<x10_uint>(const char* str, char **endptr) {
+	x10_uint r = strtoul(ptr, endptr, 10);
+	return r;
+}
+template <> x10_long strtot<x10_long>(const char* str, char **endptr) {
+	x10_long r = strtoll(ptr, endptr, 10);
+	return r;
+}
+template <> x10_ulong strtot<x10_ulong>(const char* str, char **endptr) {
+	x10_ulong r = strtoull(ptr, endptr, 10);
+	return r;
+}
+template <> x10_float strtot<x10_float>(const char* str, char **endptr) {
+	x10_float r = strtof(ptr, endptr);
+	return r;
+}
+template <> x10_double strtot<x10_double>(const char* str, char **endptr) {
+	x10_double r = strtod(ptr, endptr);
+	return r;
+}
+template <> x10_char strtot<x10_char>(const char* str, char **endptr) {
+	x10_int r = strtol(ptr, endptr, 16);
+	if(r != (x10_short) r) errno = ERANGE;
+	return x10_char(r);
+}
+
+template <typename T>
+void CSVParseElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<T>* outBuf) {
+	int lines = elemPtrs->size();
+	x10_byte** ptrs = elemPtrs->pointer();
+	T tmp[H_CHUNK_SIZE];
+
+	for(int i = 0; i < lines; ++i) {
+		char *endptr;
+		if(ptrs[i] == NULL) {
+			tmp[i] = T(0);
+		}
+		else {
+			tmp[i] = strtot<T>((char*)ptrs[i], &endptr);
+			if(errno == ERANGE) {
+				printf("Warning: CSV Parser: Value range over.\n");
+			}
+			if(*endptr != '\0') {
+				printf("Error: CSV Parser: Format error.\n");
+			}
+		}
+	}
+
+	MemoryChunk<T> mc = { MCData_Impl<T>(tmp, tmp, lines) };
+	outBuf->add(mc);
+}
+
+void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SString>* outBuf, bool doubleQuoated) {
+	int lines = elemPtrs->size();
+	x10_byte** ptrs = elemPtrs->pointer();
+	SString tmp[H_CHUNK_SIZE];
+
+	for(int i = 0; i < lines; ++i) {
+		char *endptr;
+		if(ptrs[i] == NULL) {
+			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(NULL, NULL, 0) };
+			tmp[i] = SString(mc);
+		}
+		else {
+			// count the length
+			int len = 0;
+			if(doubleQuoated) {
+				int off = 0;
+				x10_byte* ptr = ptrs[i];
+				while(ptr[off] != '\0') {
+					if(ptr[off] == '"' && ptr[off+1] == '"') {
+						++off;
+					}
+					++off; ++len;
+				}
+				x10_byte* strbuf = x10aux::alloc<x10_byte>(len+1);
+				len = 0; off = 0;
+				while(ptr[off] != '\0') {
+					if(ptr[off] == '"' && ptr[off+1] == '"') {
+						++off;
+					}
+					strbuf[len++] = ptr[off++];
+				}
+				strbuf[len] = '\0';
+			}
+			else {
+				len = strlen((char*)ptrs[i]);
+				x10_byte* strbuf = x10aux::alloc<x10_byte>(len+1);
+				memcpy(strbuf, ptrs[i], len+1);
+			}
+			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(strbuf, strbuf, len) };
+			tmp[i] = SString(mc);
+		}
+	}
+
+	MemoryChunk<T> mc = { MCData_Impl<T>(tmp, tmp, lines) };
+	outBuf->add(mc);
+}
+
+// explisit instantiation
+template void CSVParseElements<x10_boolean>(MemoryChunk<x10_byte*>, GrowableMemory<x10_boolean>*);
+template void CSVParseElements<x10_byte>(MemoryChunk<x10_byte*>, GrowableMemory<x10_byte>*);
+template void CSVParseElements<x10_ubyte>(MemoryChunk<x10_byte*>, GrowableMemory<x10_ubyte>*);
+template void CSVParseElements<x10_short>(MemoryChunk<x10_byte*>, GrowableMemory<x10_short>*);
+template void CSVParseElements<x10_ushort>(MemoryChunk<x10_byte*>, GrowableMemory<x10_ushort>*);
+template void CSVParseElements<x10_int>(MemoryChunk<x10_byte*>, GrowableMemory<x10_int>*);
+template void CSVParseElements<x10_uint>(MemoryChunk<x10_byte*>, GrowableMemory<x10_uint>*);
+template void CSVParseElements<x10_long>(MemoryChunk<x10_byte*>, GrowableMemory<x10_long>*);
+template void CSVParseElements<x10_ulong>(MemoryChunk<x10_byte*>, GrowableMemory<x10_ulong>*);
+template void CSVParseElements<x10_float>(MemoryChunk<x10_byte*>, GrowableMemory<x10_float>*);
+template void CSVParseElements<x10_char>(MemoryChunk<x10_byte*>, GrowableMemory<x10_char>*);
 
 
 } } } } // namespace org { namespace scalegraph { namespace io { namespace impl {
