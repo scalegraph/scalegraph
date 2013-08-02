@@ -8,16 +8,29 @@
  *
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
+#ifndef __ORG_SCALEGRAPH_IO_IMPL_CSVHELPER_H
+#define __ORG_SCALEGRAPH_IO_IMPL_CSVHELPER_H
 
 #include <gc_allocator.h>
 
+#define ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_H_NODEPS
+#include <org/scalegraph/util/MemoryChunk.h>
+#undef ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_GROWABLEMEMORY_H_NODEPS
+#include <org/scalegraph/util/GrowableMemory.h>
+#undef ORG_SCALEGRAPH_UTIL_GROWABLEMEMORY_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
+#include <org/scalegraph/util/SString.h>
+#undef ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
+#define ORG_SCALEGRAPH_IO_FILEREADER_H_NODEPS
+#include <org/scalegraph/io/FileReader.h>
+#undef ORG_SCALEGRAPH_IO_FILEREADER_H_NODEPS
+
 namespace org { namespace scalegraph { namespace io { namespace impl {
 
-using namespace ::x10::lang;
-using ::x10::io::IOException;
-using ::org::scalegraph::util::SString;
 using ::org::scalegraph::util::MemoryChunk;
 using ::org::scalegraph::util::GrowableMemory;
+using ::org::scalegraph::util::SString;
 using ::org::scalegraph::io::FileReader;
 using ::scalegraph::gc_std;
 
@@ -48,3 +61,5 @@ void CSVParseElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<T>* outBuf
 void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SString>* outBuf, bool doubleQuoated);
 
 } } } } // namespace org { namespace scalegraph { namespace io { namespace impl {
+
+#endif // __ORG_SCALEGRAPH_IO_IMPL_CSVHELPER_H

@@ -10,12 +10,17 @@
  */
 #include <x10aux/config.h>
 
+#include <x10aux/throw.h>
+
 #include <x10/lang/String.h>
+#include <x10/lang/NumberFormatException.h>
 
 #include <org/scalegraph/util/StringHelper.h>
 #include <org/scalegraph/util/SString.h>
 
 #include <stdlib.h>
+#include <errno.h>
+#include <stdarg.h>
 
 namespace org { namespace scalegraph { namespace util {
 
@@ -297,7 +302,7 @@ MemoryChunk<x10_byte> StringFromX10String(x10::lang::String* x10str) {
 }
 
 // Type conversion
-x10_boolean StringToBoolean(const MemoryChunk<x10_byte>& th) {
+x10_boolean StringToBoolean_(const MemoryChunk<x10_byte>& th) {
 	if(th.FMGL(data).FMGL(size) != 4) return (x10_boolean) false;
 	x10_byte* ptr = th.FMGL(data).FMGL(pointer);
 	if( (ptr[0] == 't' | ptr[0] == 'T') &
@@ -311,21 +316,22 @@ x10_boolean StringToBoolean(const MemoryChunk<x10_byte>& th) {
 }
 
 void throwNumberFormatException(const MemoryChunk<x10_byte>& th) {
-	throwException(NumberFormatException::_make(
+	org::scalegraph::util::SString str = { th };
+	x10aux::throwException(x10::lang::NumberFormatException::_make(
 			x10::lang::String::_make(reinterpret_cast<char*>(
-					StringCstr_(org::scalegraph::util::SString::_make(th))), true)));
+					StringCstr_(str)), true)));
 }
 
 #define C_STR_BEGIN(th) \
-	char* orig_ = reinterpret_cast<char*>((th).FMGL(data).FMGL(poitner)); \
-	char* start_ = orig; \
-	int len_ = (th).FMGL(data).FMGL(size); \
+	char* orig_ = reinterpret_cast<char*>((th).FMGL(data).FMGL(pointer)); \
+	char* start = orig_; \
+	int len = (th).FMGL(data).FMGL(size); \
 	char stackbuf_[128]; \
 	char* heapbuf_ = NULL; \
-	if(start_[len_] != 0) { \
-		start_ = (len_ < 128) ? stackbuf_ : (heapbuf_ = new char[len_+1]); \
-		memcpy(start_, orig_, len_); \
-		start_[len_] = 0; \
+	if(start[len] != 0) { \
+		start = (len < 128) ? stackbuf_ : (heapbuf_ = new char[len+1]); \
+		memcpy(start, orig_, len); \
+		start[len] = 0; \
 	}
 
 #define C_STR_END delete [] heapbuf_
