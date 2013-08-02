@@ -9,7 +9,12 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
+#include <x10aux/config.h>
+#include <x10aux/alloc.h>
+
 #include <stddef.h>
+
+#include <limits>
 
 namespace std {
 
@@ -70,12 +75,9 @@ namespace scalegraph {
 		}
 	};
 
-	template <typename T> struct gc_std {
-		typedef std::vector<T, gc_allocator<T> > vector;
-	};
-
-	template <typename T, typename U> struct gc_std {
+	template <typename T, typename U = void> struct gc_std {
 		typedef std::map<T, U, std::less<void*>, gc_allocator< std::pair<T, U> > > map;
+		typedef std::vector<T, gc_allocator<T> > vector;
 	};
 
 } // namespace scalegraph {

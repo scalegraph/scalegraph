@@ -9,11 +9,24 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-#include <org/scalegraph/io/impl/CSVHelper.h>
+#include <x10aux/config.h>
 
 #include <stdlib.h>
 
+#include <org/scalegraph/util/MemoryChunk.h>
+#include <org/scalegraph/util/GrowableMemory.h>
+#include <org/scalegraph/util/SString.h>
+#include <org/scalegraph/io/FileReader.h>
+
+#include <org/scalegraph/util/MemoryChunkData.h>
+
+#include <org/scalegraph/io/impl/CSVHelper.h>
+
 namespace org { namespace scalegraph { namespace io { namespace impl {
+
+using namespace ::x10::lang;
+using ::x10::io::IOException;
+using ::org::scalegraph::util::MCData_Impl;
 
 class CSVParser {
 
@@ -22,10 +35,10 @@ public:
 	x10_byte* end;
 	x10_byte* next;
 	bool lastElement;
-	boole corrupted;
+	bool corrupted;
 	bool doubleQuoated;
 
-	void elementSize() { return end - start; }
+	size_t elementSize() { return end - start; }
 
 	void nextElement(x10_byte* ptr, x10_byte* terminal) {
 		// skip space
@@ -144,7 +157,7 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 	x10_byte* terminal = ptr + size;
 	CSVParser p;
 	while(true) {
-		p.parse(ptr, terminal);
+		p.nextElement(ptr, terminal);
 		x10_byte* attName = skipSpace(p.start, p.end);
 		x10_byte* attNameEnd = trimSpace(p.end, attName);
 		x10_byte* typeName = NULL;
@@ -196,7 +209,7 @@ NativeCSVHeader* readCSVHeader(SString headerLine) {
 x10_long DQCSVNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
 {
 	x10_byte* start = data->pointer();
-	x10_byte* end = ptr + data->size();
+	x10_byte* end = start + data->size();
 	x10_byte* ptr = start + offset;
 	for( ; ; ++ptr) {
 		if(ptr == end) {

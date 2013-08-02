@@ -13,6 +13,7 @@ package org.scalegraph.io.impl;
 import org.scalegraph.util.MemoryPointer;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.util.DistMemoryChunk;
 
 import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.NativeCPPOutputFile;
@@ -40,29 +41,67 @@ public abstract class CSVAttributeHandler {
 	public def typeId() :Int = typeId;
 	public abstract def createBlockGrowableMemory() :Any;
 	public abstract def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) :void;
-	public abstract def mergeResult(team :Team, getBuffer :(tid :Int) => Any) :Any;
+	public abstract def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any;
+	public abstract def print(team :Team, dmc : Any) : void;
 	
 	// End of CSVAttributeHandler definition //
+	
 	private static class PrimitiveHandler[T] extends CSVAttributeHandler {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
+		
+		@Native("c++", "org::scalegraph::io::impl::CSVParseElements<#T >(#elemPtrs. #outBuf)")
+		private static native def nativeParseElements[T](
+				elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :GrowableMemory[T]) :void;
 
 		public def createBlockGrowableMemory() = new GrowableMemory[T]();
 		
-		// TODO:
-		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) :void;
-		public def mergeResult(team :Team, getBuffer :(tid :Int) => Any) :Any;
+		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) {
+			val typedOutBuf = outBuf as GrowableMemory[T];
+			nativeParseElements[T](elemPtrs, typedOutBuf);
+		}
+		public def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any {
+			val ret = DistMemoryChunk.make[T](team.placeGroup(), ()=> {
+				var totalSize :Long = 0;
+				// compute the size
+				for(tid in 0..(nthreads-1)) {
+					val buf = getBuffer(tid) as GrowableMemory[T];
+					totalSize += buf.size();
+				}
+				val outbuf = new MemoryChunk[T](totalSize);
+				// copy the result
+				var offset :Long = 0;
+				for(tid in 0..(nthreads-1)) {
+					val buf = getBuffer(tid) as GrowableMemory[T];
+					MemoryChunk.copy(buf.raw(), 0l, outbuf, offset, buf.size());
+					offset += buf.size();
+				}
+				assert (offset == totalSize);
+				return outbuf;
+			});
+			return ret;
+		}
+		
+		public def print(team :Team, any : Any) {
+			val dmc = any as DistMemoryChunk[T];
+			for(var i:Int = 0; i < team.size(); i++) at(team.places()(i)) {
+				Console.OUT.print(dmc() + " ");
+			}
+			Console.OUT.println("");
+		}
 		
 	}
 	
-	private static class StringHandler extends CSVAttributeHandler {
+	private static class StringHandler extends PrimitiveHandler[String] {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
-
-		public def createBlockGrowableMemory() = new GrowableMemory[T]();
 		
-		// TODO:
-		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) :void;
-		public def mergeResult(team :Team, getBuffer :(tid :Int) => Any) :Any;
+		@Native("c++", "org::scalegraph::io::impl::CSVParseStringElements(#elemPtrs. #outBuf)")
+		private static native def nativeParseElements(
+				elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :GrowableMemory[String]) :void;
 		
+		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) {
+			val typedOutBuf = outBuf as GrowableMemory[String];
+			nativeParseElements(elemPtrs, typedOutBuf);
+		}
 	}
 	
 	private static class SkipHandler extends CSVAttributeHandler {
@@ -70,7 +109,10 @@ public abstract class CSVAttributeHandler {
 		public def createBlockGrowableMemory() = null;
 		public def isSkip() = true;
 		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) :void { }
-		public def mergeResult(team :Team, getBuffer :(tid :Int) => Any) :Any {
+		public def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any {
+			throw new IllegalOperationException("Type NULL Handler does not contain any data.");
+		}
+		public def print(team :Team, any : Any) {
 			throw new IllegalOperationException("Type NULL Handler does not contain any data.");
 		}
 	}
