@@ -62,7 +62,7 @@ class EdgeProvider [E]/* {E haszero} */{
 			val e = list(tid);
 			var diffIndex :Long = 0L;
 			var numEdges :Long = 0L;
-			e.mDiffOffset.add(new Tuple2[Long, Long](-1, e.mDiffVertex.size()));
+			e.mDiffOffset.add(new Tuple2[Long, Long](-1L, e.mDiffVertex.size()));
 			val diffOffset = e.mDiffOffset.raw();
 			
 			for(srcid in r) {
@@ -94,7 +94,7 @@ class EdgeProvider [E]/* {E haszero} */{
 			val diffOffset = e.mDiffOffset.raw();
 			val diffVertex = e.mDiffVertex.raw();
 			val diffValue = e.mDiffValue.raw();
-			val outOffset = e.mOutOffset;
+		//	val outOffset = e.mOutOffset;
 			val outVertex = e.mOutVertex;
 			val outValue = e.mOutValue;
 			
@@ -116,6 +116,10 @@ class EdgeProvider [E]/* {E haszero} */{
 				}
 				newOffset(srcid + 1) = offset;
 			}
+			e.mOutOffset = newOffset;
+			e.mOutVertex = newVertex;
+			e.mOutValue = newValue;
+			
 			assert newOffset(r.max + 1) == offsetPerThread(tid + 1);
 
 		});
@@ -129,6 +133,8 @@ class EdgeProvider [E]/* {E haszero} */{
 			e.mDiffOffset.clear();
 			e.mDiffVertex.clear();
 			e.mDiffValue.clear();
+			e.mDiffStartOffset = 0L;
+			e.mEdgeChanged = false;
 		}
 	}
 	
@@ -151,6 +157,8 @@ class EdgeProvider [E]/* {E haszero} */{
 			val start = mOutOffset(srcid);
 			val length = mOutOffset(srcid + 1) - start;
 			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
+					//kono sansyou no shikata wo surunara WorkerPlacegraph no mOutEdge:GraphEdge[E] wo
+					//each thread ni copy shita mono wo sansyou sureba iikiga suru
 					mOutVertex.subpart(start, length),
 					mOutValue.subpart(start, length));
 		}
