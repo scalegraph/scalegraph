@@ -598,6 +598,22 @@ SString StringFormat_(const MemoryChunk<x10_byte>& fmt, ...) {
 	return SString::_make(th);
 }
 
+// explisit instantiation
+template void StringBuilderAdd_<SString>(GrowableMemory<x10_byte>* th, const SStirng& x);
+template void StringBuilderAdd_<x10_int>(GrowableMemory<x10_byte>* th, const x10_int& x);
+template void StringBuilderAdd_<x10_uint>(GrowableMemory<x10_byte>* th, const x10_uint& x);
+template void StringBuilderAdd_<x10_float>(GrowableMemory<x10_byte>* th, const x10_float& x);
+template void StringBuilderAdd_<x10_double>(GrowableMemory<x10_byte>* th, const x10_double& x);
+template void StringBuilderAdd_<x10_long>(GrowableMemory<x10_byte>* th, const x10_long& x);
+template void StringBuilderAdd_<x10_ulong>(GrowableMemory<x10_byte>* th, const x10_ulong& x);
+template void StringBuilderAdd_<x10_short>(GrowableMemory<x10_byte>* th, const x10_short& x);
+template void StringBuilderAdd_<x10_ushort>(GrowableMemory<x10_byte>* th, const x10_ushort& x);
+template void StringBuilderAdd_<x10_char>(GrowableMemory<x10_byte>* th, const x10_char& x);
+template void StringBuilderAdd_<x10_byte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x);
+template void StringBuilderAdd_<x10_ubyte>(GrowableMemory<x10_byte>* th, const x10_ubyte& x);
+template void StringBuilderAdd_<x10_boolean>(GrowableMemory<x10_byte>* th, const x10_boolean& x);
+
+
 #undef C_STR_BEGIN
 #undef C_STR_END
 
