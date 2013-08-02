@@ -18,7 +18,6 @@
 #include <org/scalegraph/util/StringHelper.h>
 #include <org/scalegraph/util/SString.h>
 
-#include <stdlib.h>
 #include <errno.h>
 #include <stdarg.h>
 

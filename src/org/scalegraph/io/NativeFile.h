@@ -13,9 +13,17 @@
 #define __ORG_SCALEGRAPH_IO_NATIVEFILE_H
 
 #include <x10rt.h>
-#include <x10/lang/String.h>
 
-#include "org/scalegraph/util/MemoryChunk.h"
+
+#define X10_LANG_STRING_H_NODEPS
+#include <x10/lang/String.h>
+#undef X10_LANG_STRING_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
+#include <org/scalegraph/util/SString.h>
+#undef ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_H_NODEPS
+#include <org/scalegraph/util/MemoryChunk.h>
+#undef ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_H_NODEPS
 
 namespace org { namespace scalegraph { namespace io {
 

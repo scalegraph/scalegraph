@@ -26,6 +26,8 @@
 #include <org/scalegraph/io/FileReader.h>
 #undef ORG_SCALEGRAPH_IO_FILEREADER_H_NODEPS
 
+#include <vector>
+
 namespace org { namespace scalegraph { namespace io { namespace impl {
 
 using ::org::scalegraph::util::MemoryChunk;
