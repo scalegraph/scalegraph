@@ -376,11 +376,14 @@ final class MessageCommunicator[M] { M haszero } {
 	}
 	
 	def exchangeMessages(UCEnable :Boolean, BCEnable :Boolean) :void {
+		//returns 2^(ceilLog2(numberOfLocalVertexes))
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
+		//receive box
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
-
+		
+		//is send message available
 		mUCREnabled = UCEnable;
 		mBCREnabled = BCEnable;
 		
@@ -391,8 +394,10 @@ final class MessageCommunicator[M] { M haszero } {
 				mUCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
 			}
 			
+			//send synchronously
 			mTeam.alltoall(mUCSCount, recvCount);
 			
+			//receive
 			recvOffset(0) = 0;
 			for(i in recvCount.range()) {
 				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
