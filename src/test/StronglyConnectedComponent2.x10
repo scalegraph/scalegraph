@@ -23,6 +23,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
+
 public class StronglyConnectedComponent2 {
 
 	private static struct SCCVertex {
@@ -143,7 +144,7 @@ public class StronglyConnectedComponent2 {
 				if(ctx.superstep()>0) {
 					if(ctx.value().front && ctx.value().back)
 						return;
-					Console.OUT.println(ctx.realId());
+//					Console.OUT.println(ctx.realId());
 					var existFront:Boolean = false;
 					var existBack:Boolean = false;
 					for(i in messages.range()) {
@@ -207,6 +208,7 @@ public class StronglyConnectedComponent2 {
 					ctx.voteToHalt();
 				}
 				if(ctx.superstep()==2) {
+
 					//messageはそれぞれ一つしかこないので、0のはず
 					Console.OUT.println("    :ctx.realId() "+ctx.realId() );
 					Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
@@ -220,34 +222,9 @@ public class StronglyConnectedComponent2 {
 					val newInfo = new SCCVertex(messages(0).id ,false, false, ctx.id());
 					ctx.setValue(newInfo);
 					ctx.setVertexShouldBeActive(true);
-				/*	
-					val mes = new MessageB(true, true, ctx.value().leaderId);
-					for(i in ctx.outEdgesId().range()) 
-						ctx.sendMessage(ctx.outEdgesId()(i), mes);
-					for(i in ctx.inEdgesId().range())
-						ctx.sendMessage(ctx.inEdgesId()(i),mes);
-				*/
 				}
 				
-				//最も影響が大きそうな、隣に同じ辺がないようなものをどうにか取り除く処理を行う
-				//BFS処理を行う
-				
-				// if(ctx.superstep()==3 && !ctx.value().front && !ctx.value().back) {
-					// var hasEdge:Boolean = false;
-					// for(i in messages.range()) {
-						// if(messages(i).id == ctx.value().leaderId)
-							// hasEdge = true;
-					// }
-					// //!hasEdgeが実行される <=> ctx.revive()されている頂点 で同じleaderの隣接点なし<=> 
-					// 次生きていていて隣接点はない
-					// if(!hasEdge) {
-						// val newInfo = new SCCVertex(ctx.id(), true, true, -1L);
-						// ctx.setValue(newInfo);
-					// }
-					// ctx.voteToHalt();
-				// } 
-				
-				 
+
 			},
 			//aggregateは多分使わないので適当なことを書いた
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
@@ -273,7 +250,7 @@ public class StronglyConnectedComponent2 {
 						}
 					}
 				}
-				Console.OUT.println("value.minimId"+ctx.realId()+" " + ctx.value().minimId);
+//				Console.OUT.println("value.minimId"+ctx.realId()+" " + ctx.value().minimId);
 				if(update) {
 					val mes = new MessageC(ctx.value().leaderId, ctx.value().minimId);
 					for(i in ctx.outEdgesId().range())
