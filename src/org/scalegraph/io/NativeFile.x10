@@ -35,7 +35,7 @@ import org.scalegraph.util.SString;
 	public native def this(name: SString, fileMode :Int, fileAccess :Int);
 	public native def close(): void;
 	public native def read(buffer: MemoryChunk[Byte]): Long;
-	public native def write(buffer: MemoryChunk[Byte]): Long;
+	public native def write(buffer: MemoryChunk[Byte]): void;
 	public native def seek(offset: Long, origin: Int): void;
 	public native def getpos(): Long;
 }

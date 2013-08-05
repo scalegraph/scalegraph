@@ -47,8 +47,7 @@ public class FileWriter {
 	}
 	
 	public def write(b: MemoryChunk[Byte]) {
-		if(nf.write(b) < b.size())
-			throw new IOException();
+		nf.write(b);
 	}
 	/*
 	public def write(str: SString) {

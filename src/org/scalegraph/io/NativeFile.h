@@ -37,8 +37,8 @@ public:
 	explicit NativeFile(int fd_) : FMGL(fd)(fd_) { }
 	NativeFile() : FMGL(fd)(-1) { }
 
-	static NativeFile _make(org::scalegraph::util::SString* name, int  fileMode, int fileAccess);
-	void _constructor (org::scalegraph::util::SString* name, int  fileMode, int fileAccess);
+	static NativeFile _make(org::scalegraph::util::SString name, int  fileMode, int fileAccess);
+	void _constructor (org::scalegraph::util::SString name, int  fileMode, int fileAccess);
 
 	NativeFile* operator->() { return this; }
 

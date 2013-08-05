@@ -22,10 +22,11 @@ import x10.compiler.NativeRep;
 import x10.compiler.Native;
 import x10.util.Team;
 import org.scalegraph.io.ID;
+import org.scalegraph.util.SString;
 
 
 @NativeCPPInclude("CSVHelper.h")
-public abstract class CSVAttributeHandler {
+public class CSVAttributeHandler {
 	@Native("c++", "org::scalegraph::io::impl::H_CHUNK_SIZE")
 	public static val H_CHUNK_SIZE :Long = 256;
 	
@@ -37,28 +38,24 @@ public abstract class CSVAttributeHandler {
 		this.doubleQuoated = doubleQuoated;
 	}
 	
-	public def isSkip() :Boolean = false;
+	public def isSkip() :Boolean = true;
 	public def typeId() :Int = typeId;
-	public abstract def createBlockGrowableMemory() :Any;
-	public abstract def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) :void;
-	public abstract def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any;
-	public abstract def print(team :Team, dmc : Any) : void;
+	public def createBlockGrowableMemory() :Any = null;
+	public def parseElements(elemPtrs :MemoryPointer[MemoryPointer[Byte]], lines :Int, outBuf :Any) :void { }
+	public def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any {
+		throw new IllegalOperationException("Type NULL Handler does not contain any data.");
+	}
+	public def print(team :Team, any : Any) {
+		throw new IllegalOperationException("Type NULL Handler does not contain any data.");
+	}
 	
 	// End of CSVAttributeHandler definition //
 	
-	private static class PrimitiveHandler[T] extends CSVAttributeHandler {
+	private abstract static class BaseHandler[T] extends CSVAttributeHandler {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
-		
-		@Native("c++", "org::scalegraph::io::impl::CSVParseElements<#T >(#elemPtrs, #outBuf)")
-		private static native def nativeParseElements[T](
-				elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :GrowableMemory[T]) :void;
 
 		public def createBlockGrowableMemory() = new GrowableMemory[T]();
 		
-		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) {
-			val typedOutBuf = outBuf as GrowableMemory[T];
-			nativeParseElements[T](elemPtrs, typedOutBuf);
-		}
 		public def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any {
 			val ret = DistMemoryChunk.make[T](team.placeGroup(), ()=> {
 				var totalSize :Long = 0;
@@ -88,39 +85,38 @@ public abstract class CSVAttributeHandler {
 			}
 			Console.OUT.println("");
 		}
-		
 	}
 	
-	private static class StringHandler extends PrimitiveHandler[String] {
+	private static class PrimitiveHandler[T] extends BaseHandler[T] {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
 		
-		@Native("c++", "org::scalegraph::io::impl::CSVParseStringElements(#elemPtrs, #outBuf)")
+		@Native("c++", "org::scalegraph::io::impl::CSVParseElements<#T >(#elemPtrs, #lines, #outBuf)")
+		private static native def nativeParseElements[T](
+				elemPtrs :MemoryPointer[MemoryPointer[Byte]], lines :Int, outBuf :GrowableMemory[T]) :void;
+
+		public def parseElements(elemPtrs :MemoryPointer[MemoryPointer[Byte]], lines :Int, outBuf :Any) {
+			val typedOutBuf = outBuf as GrowableMemory[T];
+			nativeParseElements[T](elemPtrs, lines, typedOutBuf);
+		}
+	}
+	
+	private static class StringHandler extends BaseHandler[SString] {
+		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
+		
+		@Native("c++", "org::scalegraph::io::impl::CSVParseStringElements(#elemPtrs, #lines, #outBuf, #doubleQuoated)")
 		private static native def nativeParseElements(
-				elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :GrowableMemory[String]) :void;
+				elemPtrs :MemoryPointer[MemoryPointer[Byte]], lines :Int, outBuf :GrowableMemory[SString], doubleQuoated :Boolean) :void;
 		
-		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) {
-			val typedOutBuf = outBuf as GrowableMemory[String];
-			nativeParseElements(elemPtrs, typedOutBuf);
-		}
-	}
-	
-	private static class SkipHandler extends CSVAttributeHandler {
-		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
-		public def createBlockGrowableMemory() = null;
-		public def isSkip() = true;
-		public def parseElements(elemPtrs :MemoryChunk[MemoryPointer[Byte]], outBuf :Any) :void { }
-		public def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any {
-			throw new IllegalOperationException("Type NULL Handler does not contain any data.");
-		}
-		public def print(team :Team, any : Any) {
-			throw new IllegalOperationException("Type NULL Handler does not contain any data.");
+		public def parseElements(elemPtrs :MemoryPointer[MemoryPointer[Byte]], lines :Int, outBuf :Any) {
+			val typedOutBuf = outBuf as GrowableMemory[SString];
+			nativeParseElements(elemPtrs, lines, typedOutBuf, doubleQuoated);
 		}
 	}
 	
 	public static def create(typeId :Int, doubleQuoated :Boolean) :CSVAttributeHandler {
 		switch(typeId) {
 		case ID.TYPE_NONE:
-			return new SkipHandler(typeId, doubleQuoated);
+			return new CSVAttributeHandler(typeId, doubleQuoated);
 		case ID.TYPE_BOOLEAN:
 			return new PrimitiveHandler[Boolean](typeId, doubleQuoated);
 		case ID.TYPE_BYTE:
@@ -152,5 +148,3 @@ public abstract class CSVAttributeHandler {
 		}
 	}
 }
-
-

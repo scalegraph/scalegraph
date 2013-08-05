@@ -19,6 +19,7 @@
 #include <org/scalegraph/io/FileReader.h>
 
 #include <org/scalegraph/util/MemoryChunkData.h>
+#include <org/scalegraph/io/impl/CSVReader__ReaderBuffer.h>
 
 #include <org/scalegraph/io/impl/CSVHelper.h>
 
@@ -291,11 +292,15 @@ restart:
 	return buf->raw();
 }
 
-x10_long CSVReaderParseChunk(MemoryChunk<x10_byte> data, MemoryChunk<x10_byte*> elemBuf, int numElems, int stride) {
+x10_long CSVReaderParseChunk(CSVReader__ReaderBuffer* th, MemoryChunk<x10_byte> data) {
 	CSVParser p;
-	x10_byte* ptr = data->pointer();
-	x10_byte* end = ptr + data->size();
-	x10_byte** out = elemBuf->pointer();
+
+	int stride = th->FMGL(stride);
+	int numElems = th->FMGL(numElems);
+	x10_byte* start = data->pointer();
+	x10_byte* ptr = start;
+	x10_byte* end = start + data->size();
+	x10_byte** out = th->FMGL(elemPtrs);
 
 	if(numElems == 0) {
 		x10aux::throwException(x10::lang::IllegalArgumentException::_make(String::Lit(
@@ -307,8 +312,9 @@ x10_long CSVReaderParseChunk(MemoryChunk<x10_byte> data, MemoryChunk<x10_byte*> 
 	}
 
 	// initialize
-	memset(out, 0x00, sizeof(x10_byte*)*elemBuf->size());
+	memset(out, 0x00, sizeof(x10_byte*)*(stride*numElems));
 
+	int numOutLines = stride;
 	for(int i = 0; i < stride; ++i) {
 		for(int e = 0; e < numElems; ++e) {
 			p.nextElement(ptr, end);
@@ -330,10 +336,13 @@ x10_long CSVReaderParseChunk(MemoryChunk<x10_byte> data, MemoryChunk<x10_byte*> 
 			p.nextElement(ptr, end); ptr = p.next;
 		}
 		if(ptr == end) {
-			// TODO: output size;
+			numOutLines = i + 1;
 			break;
 		}
 	}
+
+	th->FMGL(lines) = numOutLines;
+	return ptr - start;
 }
 
 template <typename T> T strtot(const char* str, char **endptr);
@@ -402,9 +411,8 @@ template <> x10_char strtot<x10_char>(const char* str, char **endptr) {
 }
 
 template <typename T>
-void CSVParseElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<T>* outBuf) {
-	int lines = elemPtrs->size();
-	x10_byte** ptrs = elemPtrs->pointer();
+void CSVParseElements(x10_byte** elemPtrs, int lines, GrowableMemory<T>* outBuf) {
+	x10_byte** ptrs = elemPtrs;
 	T tmp[H_CHUNK_SIZE];
 
 	for(int i = 0; i < lines; ++i) {
@@ -427,9 +435,8 @@ void CSVParseElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<T>* outBuf
 	outBuf->add(mc);
 }
 
-void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SString>* outBuf, bool doubleQuoated) {
-	int lines = elemPtrs->size();
-	x10_byte** ptrs = elemPtrs->pointer();
+void CSVParseStringElements(x10_byte** elemPtrs, int lines, GrowableMemory<SString>* outBuf, bool doubleQuoated) {
+	x10_byte** ptrs = elemPtrs;
 	SString tmp[H_CHUNK_SIZE];
 
 	for(int i = 0; i < lines; ++i) {
@@ -476,17 +483,18 @@ void CSVParseStringElements(MemoryChunk<x10_byte*> elemPtrs, GrowableMemory<SStr
 }
 
 // explisit instantiation
-template void CSVParseElements<x10_boolean>(MemoryChunk<x10_byte*>, GrowableMemory<x10_boolean>*);
-template void CSVParseElements<x10_byte>(MemoryChunk<x10_byte*>, GrowableMemory<x10_byte>*);
-template void CSVParseElements<x10_ubyte>(MemoryChunk<x10_byte*>, GrowableMemory<x10_ubyte>*);
-template void CSVParseElements<x10_short>(MemoryChunk<x10_byte*>, GrowableMemory<x10_short>*);
-template void CSVParseElements<x10_ushort>(MemoryChunk<x10_byte*>, GrowableMemory<x10_ushort>*);
-template void CSVParseElements<x10_int>(MemoryChunk<x10_byte*>, GrowableMemory<x10_int>*);
-template void CSVParseElements<x10_uint>(MemoryChunk<x10_byte*>, GrowableMemory<x10_uint>*);
-template void CSVParseElements<x10_long>(MemoryChunk<x10_byte*>, GrowableMemory<x10_long>*);
-template void CSVParseElements<x10_ulong>(MemoryChunk<x10_byte*>, GrowableMemory<x10_ulong>*);
-template void CSVParseElements<x10_float>(MemoryChunk<x10_byte*>, GrowableMemory<x10_float>*);
-template void CSVParseElements<x10_char>(MemoryChunk<x10_byte*>, GrowableMemory<x10_char>*);
+template void CSVParseElements<x10_boolean>(x10_byte**, int, GrowableMemory<x10_boolean>*);
+template void CSVParseElements<x10_byte>(x10_byte**, int, GrowableMemory<x10_byte>*);
+template void CSVParseElements<x10_ubyte>(x10_byte**, int, GrowableMemory<x10_ubyte>*);
+template void CSVParseElements<x10_short>(x10_byte**, int, GrowableMemory<x10_short>*);
+template void CSVParseElements<x10_ushort>(x10_byte**, int, GrowableMemory<x10_ushort>*);
+template void CSVParseElements<x10_int>(x10_byte**, int, GrowableMemory<x10_int>*);
+template void CSVParseElements<x10_uint>(x10_byte**, int, GrowableMemory<x10_uint>*);
+template void CSVParseElements<x10_long>(x10_byte**, int, GrowableMemory<x10_long>*);
+template void CSVParseElements<x10_ulong>(x10_byte**, int, GrowableMemory<x10_ulong>*);
+template void CSVParseElements<x10_float>(x10_byte**, int, GrowableMemory<x10_float>*);
+template void CSVParseElements<x10_double>(x10_byte**, int, GrowableMemory<x10_double>*);
+template void CSVParseElements<x10_char>(x10_byte**, int, GrowableMemory<x10_char>*);
 
 
 } } } } // namespace org { namespace scalegraph { namespace io { namespace impl {

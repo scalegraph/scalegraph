@@ -62,25 +62,29 @@ public class CSVReader {
 	}
 	
 	private static class ReaderBuffer {
-		public val attHandler :Array[CSVAttributeHandler];
-		public val buffer :Array[Any];
-		public val elemPtrs :MemoryChunk[MemoryPointer[Byte]];
+		public val attHandler :Array[CSVAttributeHandler](1);
+		public val buffer :Array[Any](1);
+		public transient val elemPtrs :MemoryPointer[MemoryPointer[Byte]];
 		public val chunkSize :GrowableMemory[Long];
 		public val stride :Long;
 		public val numElems :Int;
 		public var lines :Int;
 		
-		public def this(attHandler :Array[CSVAttributeHandler]) {
+		public def this(attHandler :Array[CSVAttributeHandler](1)) {
 			this.attHandler = attHandler;
 			this.numElems = attHandler.size;
 			this.stride = CSVAttributeHandler.H_CHUNK_SIZE;
 			this.buffer = new Array[Any](numElems,
 					(i :Int) => attHandler(i).createBlockGrowableMemory());
-			this.elemPtrs = new MemoryChunk[MemoryPointer[Byte]](stride * numElems);
+			this.elemPtrs = allocatePtrBuffer(stride * numElems);
 			this.chunkSize = new GrowableMemory[Long]();
 		}
+		
+		@Native("c++", "x10aux::alloc<x10_byte*>(sizeof(x10_byte*)*(#length))")
+		private static native def allocatePtrBuffer(length :Long) :MemoryPointer[MemoryPointer[Byte]];
 
-		public native def nativeParseChunk(data :MemoryChunk[Byte]) :Long;
+		@Native("c++", "org::scalegraph::io::impl::CSVReaderParseChunk(#this, #data)")
+		private native def nativeParseChunk(data :MemoryChunk[Byte]) :Long;
 		
 		public def parse(data :MemoryChunk[Byte]) {
 			val data_size = data.size();
@@ -90,7 +94,7 @@ public class CSVReader {
 				data_off += nativeParseChunk(data.subpart(data_off, data.size() - data_off));
 				totalLines += lines;
 				for(e in 0..(numElems-1)) {
-					attHandler(e).parseElements(elemPtrs.subpart(e*stride, lines), buffer(e));
+					attHandler(e).parseElements(elemPtrs + e*stride, lines, buffer(e));
 				}
 			}
 			// store the number of lines for merging all data later
@@ -107,7 +111,7 @@ public class CSVReader {
 	 * H_CHUNK: Each P_CHUNK is split into H_CHUNK. Attribute handlers can process H_CHUNK at once.
 	 */
 	
-	public static def read(team :Team, path :SString, columnDef :Array[Int], includeHeader :Boolean) {
+	public static def read(team :Team, path :SString, columnDef :Array[Int](1), includeHeader :Boolean) {
 		//
 		val nthreads = Runtime.NTHREADS;
 		val numColumns = columnDef.size;
@@ -157,7 +161,7 @@ public class CSVReader {
 		}
 
 		// broadcast attribute handlers
-		val bufferPLH = PlaceLocalHandle.makeFlat[Array[ReaderBuffer]](team.placeGroup(),
+		val bufferPLH = PlaceLocalHandle.makeFlat[Array[ReaderBuffer](1)](team.placeGroup(),
 				() => new Array[ReaderBuffer](nthreads, (i:Int) => new ReaderBuffer(attHandler)));
 		
 		val splitter = includeDQ ? new DoubleQuoatedCSVSplitter() : new LineBreakSplitter();

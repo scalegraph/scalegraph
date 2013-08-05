@@ -37,11 +37,12 @@ public abstract class FileNameProvider implements Iterable[SString] {
 	
 	// End of FileNameProvider definition //
 	
-	private class PathIterator implements Iterator[SString] {
+	private static class PathIterator implements Iterator[SString] {
+		private val th :FileNameProvider;
 		private var index :Int;
-		public def this() { index = 0; }
-		public def hasNext() = new File(fileName(index).toString()).exists();
-		public def next() = fileName(index++);
+		public def this(th :FileNameProvider) { index = 0; this.th = th; }
+		public def hasNext() = new File(th.fileName(index).toString()).exists();
+		public def next() = th.fileName(index++);
 	}
 
 	private static class SingleFileNameProvider extends FileNameProvider {
@@ -56,9 +57,11 @@ public abstract class FileNameProvider implements Iterable[SString] {
 		public def openRead(index :Int) = new FileReader(path);
 		public def openWrite(index :Int) = new FileWriter(path, FileMode.Create);
 		
-		public def iterator() = new PathIterator() {
+		private static class SinglePathIterator extends PathIterator {
+			public def this(th :FileNameProvider) { super(th); }
 			public def hasNext() = (index == 0);
-		};
+		}
+		public def iterator() = new SinglePathIterator(this);
 	}
 
 	private static class NumberScatteredFileNameProvider extends FileNameProvider {
@@ -77,7 +80,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 		}
 		public def openRead(index :Int) = new FileReader(fileName(index));
 		public def openWrite(index :Int) = new FileWriter(fileName(index), FileMode.Create);
-		public def iterator() = new PathIterator();
+		public def iterator() = new PathIterator(this);
 		
 	}
 
@@ -98,7 +101,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 		}
 		public def openRead(index :Int) = new FileReader(fileName(index));
 		public def openWrite(index :Int) = new FileWriter(fileName(index), FileMode.Create);
-		public def iterator() = new PathIterator();
+		public def iterator() = new PathIterator(this);
 		
 	}
 	

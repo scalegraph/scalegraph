@@ -75,9 +75,9 @@ void NativeFile::_constructor (org::scalegraph::util::SString name, int  fileMod
 	default:
 		x10aux::throwException(IllegalArgumentException::_make(String::Lit("FileMode is out of range.")));
 	}
-	FMGL(fd) = ::open(name->c_str(), flags, 0666);
+	FMGL(fd) = ::open((char*)name->c_str(), flags, 0666);
 	if (FMGL(fd) == -1)
-		x10aux::throwException(FileNotFoundException::_make(name));
+		x10aux::throwException(FileNotFoundException::_make(name->toString()));
 }
 
 void NativeFile::close() {
