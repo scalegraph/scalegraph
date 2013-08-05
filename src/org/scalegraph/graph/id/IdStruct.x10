@@ -43,6 +43,10 @@ public struct IdStruct {
 		this.numberOfLocalVertexes = numberOfLocalVertexes;
 		this.numberOfGlobalVertexes = numberOfGlobalVertexes;
 	}
+	
+	public def isCSR() = outerOrInner;
+	
+	public def isCSC() = !outerOrInner;
 
 	/** Returns <i>numberOfLocalVertexes</i>. */
 	public def numberOfLocalVertexes() = numberOfLocalVertexes;

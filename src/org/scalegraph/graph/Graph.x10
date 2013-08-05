@@ -609,6 +609,7 @@ import org.scalegraph.blas.SparseMatrix;
 			for([i] in places) {
 				roleMap(i) = team_.role(places(i))(0);
 			}
+			/*
 			for(p in team.placeGroup()) {
 				if(here == p) {
 					Console.OUT.println(here);
@@ -618,6 +619,7 @@ import org.scalegraph.blas.SparseMatrix;
 				}
 				team.barrier(team.role()(0));
 			}
+			*/
 			val rmask = (1L << ids.lgr) - 1;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
 			val att_ = att.values()().raw();
@@ -687,6 +689,7 @@ import org.scalegraph.blas.SparseMatrix;
 					}
 				}
 			});
+			/*
 			for(p in team.placeGroup()) {
 				if(here == p) {
 					Console.OUT.println(here);
@@ -703,9 +706,11 @@ import org.scalegraph.blas.SparseMatrix;
 				}
 				team.barrier(team.role()(0));
 			}
+			*/
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
+			/*
 			for(p in team.placeGroup()) {
 				if(here == p) {
 					Console.OUT.println(here);
@@ -715,6 +720,7 @@ import org.scalegraph.blas.SparseMatrix;
 				}
 				team.barrier(team.role()(0));
 			}
+			*/
 			return new Tuple2[IdStruct, SparseMatrix[T]](ids, new SparseMatrix(recvSrcV, recvDstV, recvValues, ids));
 		});
 	}

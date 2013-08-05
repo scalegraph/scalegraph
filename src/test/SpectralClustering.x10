@@ -2,62 +2,89 @@ package test;
 
 import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
-import x10.util.Random;
 import x10.util.Team;
 
 import org.scalegraph.arpack.ARPACK;
-import org.scalegraph.blas.*;
-import org.scalegraph.util.*;
-import org.scalegraph.util.tuple.*;
+import org.scalegraph.blas.BLAS;
+import org.scalegraph.blas.DistDiagonalMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.util.*;
+import org.scalegraph.util.random.*;
+import org.scalegraph.util.tuple.*;
 
 
 @NativeCPPInclude("mpi.h")
 public class SpectralClustering {
 	
 	public static def main(args:Array[String](1)) {
-		val fileList = new Array[String](1, args(0));
-		val numCluster = Int.parse(args(1));
-		val maxitr = Int.parse(args(2));
-		val threshold = Double.parse(args(3));
 		val team = Team.WORLD;
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					1.0
-			);
-		};
-		
-		val graphData = DistributedReader.read(team,fileList,inputFormat);
-		val edgeList = graphData.get1();
-		val weight = graphData.get2();
-		val g = Graph.make(team, edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("weight", weight.raw(team.placeGroup()));
+		val scale = Int.parse(args(0));         // scale of RMAT graph
+		val edgeFactor = Int.parse(args(1));    // edge factor of RMAT graph
+		val numCluster = Int.parse(args(2));    // number of clusters
+		val tolerance = Double.parse(args(3));  // tolerance of ARPACK
+		val maxitr = Int.parse(args(4));        // max number of iteration in k-means
+		val threshold = Double.parse(args(5));  // threshold for convergence test in k-means
 		
 		val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
 		val C = team.size() / R;
 		val RC = R * C;
 		val dist = Dist2D.make2D(team, R, C);
 		
-		val W = g.createDistSparseMatrix[Double](dist, "weight", false, false);
+		val sw = new MyStopWatch();
+		
+		Console.OUT.println(dist);
+		Console.OUT.println("Graph generation ...");
+		
+		sw.start("graph generation");
+		val rnd = new Random(2, 3);
+		val edgelist = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd, team);
+		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val weight = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));
+
+		val g = Graph.make(team, edgelist);
+		g.setEdgeAttribute("edgevalue", weight);
+		Console.OUT.println("vertices = " + g.numberOfVertices());
+		Console.OUT.println("edges    = " + g.numberOfEdges());
+		
+		sw.next("create matrix");
+		
+		val W = g.createDistSparseMatrix[Double](dist, "edgevalue", false, false);
+		//printIdStruct(W.ids());
+		//printSparseMatrix(team, W);
 		val N = W.ids().numberOfLocalVertexes2N();
 		val D = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](N, (Long) => 1.0));
-		BLAS.mult[Double](1.0, W, false, D, 0.0, D);
+		BLAS.mult[Double](1.0, W, true, D, 0.0, D);
 		team.placeGroup().broadcastFlat(() => {
 			val vec_ = D();
 			Parallel.iter(vec_.range(), (tid :Long, r :LongRange) => {
 				for(i in r) vec_(i) = 1.0 / vec_(i);
 			});
 		});
-		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, false, 0.0, W);
+		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, true, 0.0, W);
+		
+		sw.next("calc eigenvectors");
 		
 		val params = new ARPACK.Params();
 		params.nev = numCluster;
+		params.tol = tolerance;
+		params.rvec = 1;
+		params.fit();
 		val V = calcEigenVectors(team, W, params);
+		
+		sw.next("k-means");
+		
 		val result = kmeans(team, V, numCluster, maxitr, threshold);
+		
+		sw.next("output");
+		
+		DistributedReader.write("outvec-%d.txt", team, result);
+		
+		sw.end();
+		sw.print();
 	}
 	
 	
@@ -66,7 +93,7 @@ public class SpectralClustering {
 	 */
 	static def calcEigenVectors(team : Team, A : DistSparseMatrix[Double], params : ARPACK.Params) : DistMemoryChunk[Double] {
 		
-		assert(team.equals(Team.WORLD));
+		assert(team.equals(Team.WORLD));  // current limitation
 		
 		val nloc_ = A.ids().numberOfLocalVertexes2N();
 		val n_ = nloc_ * team.size();
@@ -129,19 +156,8 @@ public class SpectralClustering {
 						resid, ncv, u, ldu, iparam, ipntr,
 						workd, workl, lworkl, info);
 				
-				if(role == 0 && info < 0) {
-					switch(info){
-					default:
-						Console.OUT.println("ARPACK: pdsaupd: unknown return value: " + info);
-					}
-				} else if(role == 0 && info > 0) {
-					switch(info){
-					case 1:
-						Console.OUT.println("ARPACK: pdsaupd: reached to max iteration: " + iter);
-						break;
-					default:
-						Console.OUT.println("ARPACK: pdsaupd: unknown return value: " + info);
-					}
+				if(role == 0 && info != 0) {
+					ARPACK.printError("pdsaupd", info);
 				}
 				
 				if(ido == -1 || ido == 1) {
@@ -149,7 +165,7 @@ public class SpectralClustering {
 					val x_ = new MemoryChunk[Double](workd.raw(), ipntr(0) - 1, nloc);
 					val y_ = new MemoryChunk[Double](workd.raw(), ipntr(1) - 1, nloc);
 					MemoryChunk.copy[Double](x_, 0L, x(), 0L, nloc);
-					BLAS.mult_[Double](1.0, A, false, x, 0.0, y);
+					BLAS.mult_[Double](1.0, A, true, x, 0.0, y);
 					MemoryChunk.copy[Double](y(), 0L, y_, 0L, nloc);
 					
 				} else if(ido == 2) {
@@ -165,7 +181,7 @@ public class SpectralClustering {
 				}
 			}
 			
-			if(role == 0) Console.OUT.println("iterations = " + iparam(2));
+			if(role == 0) Console.OUT.println("ARPACK: iterations = " + iparam(2));
 			if(role == 0) Console.OUT.println("converged Ritz values = " + iparam(4));
 			
 			if(iparam(4) < nev){
@@ -178,10 +194,10 @@ public class SpectralClustering {
 					ncv, u, ldu, iparam, ipntr, workd,
 					workl, lworkl, info);
 			
-			if(role == 0 && info < 0){
-				Console.OUT.println("ARPACK: pdseupd: bad termination: " + info);
+			if(role == 0){
+				ARPACK.printError("pdseupd", info);
+				Console.OUT.println(d);
 			}
-			if(role == 0) Console.OUT.println(d);
 			
 			val result = new MemoryChunk[Double](v.size);
 			Parallel.iter(
@@ -211,6 +227,7 @@ public class SpectralClustering {
 		val count = new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](k));
 		
 		team2.placeGroup().broadcastFlat(() => {
+			val nloc = dmc().size() / k;
 			val mc = dmc();
 			val lassign = assign();
 			val lcurC = curC();
@@ -218,9 +235,10 @@ public class SpectralClustering {
 			val lcount = count();
 			
 			// create initial centroids
-			val r = new Random();
+			// if(team.role()(0) == 0) Console.OUT.println("create initial centroids");
+			val r = new x10.util.Random();
 			for(j in 0..(k-1)) {
-				val i = r.nextLong();
+				val i = r.nextLong(nloc);
 				for(l in 0..(k-1)) {
 					lnextC(j * k + l) = mc(i * k + l);
 				}
@@ -230,6 +248,7 @@ public class SpectralClustering {
 			for(itr in 1..maxitr) {
 				
 				// reduce centroids
+				// if(team.role()(0) == 0) Console.OUT.println("reduce centroids");
 				team2.allreduce(lnextC, lnextC, Team.ADD);
 				team2.allreduce(lcount, lcount, Team.ADD);
 				
@@ -240,6 +259,7 @@ public class SpectralClustering {
 				}
 				
 				// check convergence
+				// if(team.role()(0) == 0) Console.OUT.println("check convergence");
 				if(itr >= 2) {
 					var converge:Boolean = true;
 					for(j in 0..(k-1)) {
@@ -254,11 +274,13 @@ public class SpectralClustering {
 						}
 					}
 					if(converge) {
+						if(team.role()(0) == 0) Console.OUT.println("k-means: iterations = " + itr);
 						break;
 					}
 				}
 				
 				// move lnextC to lcurC, clear lnextC and lcount
+				// if(team.role()(0) == 0) Console.OUT.println("move lnextC to lcurC, clear lnextC and lcount");
 				for(j in 0..(k-1)) {
 					for(l in 0..(k-1)) {
 						lcurC(j * k + l) = lnextC(j * k + l);
@@ -268,7 +290,8 @@ public class SpectralClustering {
 				}
 				
 				// assign vertices to the nearest cluster
-				for(i in mc.range()) {
+				// if(team.role()(0) == 0) Console.OUT.println("assign vertices to the nearest cluster");
+				for(i in 0..(nloc-1)) {
 					var best:Int = -1;
 					var bestNorm2:Double = Double.MAX_VALUE;
 					for(j in 0..(k-1)) {
@@ -292,5 +315,62 @@ public class SpectralClustering {
 		});
 		
 		return assign;
+	}
+	
+	static def printSparseMatrix(team:Team, A:DistSparseMatrix[Double]) : void {
+		for(p in team.placeGroup()) at(p) {
+			val offsets = A().offsets;
+			val vertexes = A().vertexes;
+			val values = A().values;
+			Console.OUT.println("****** SparseMatrix(" + team.role()(0) + ") ******");
+			Console.OUT.println(offsets);
+			Console.OUT.println(vertexes);
+			Console.OUT.println(values);
+			Console.OUT.println("*****************************");
+		}
+	}
+	
+	static def printIdStruct(ids:org.scalegraph.graph.id.IdStruct) : void {
+		Console.OUT.println("[" + ids.lgl + ", " + ids.lgc + ", " + ids.lgr + "]");
+	}
+}
+
+
+class MyStopWatch {
+	
+	class Record {
+		val label : String;
+		var time : Long;
+		
+		def this(label : String, time : Long) {
+			this.label = label;
+			this.time =  time;
+		}
+	}
+	
+	val list : x10.util.ArrayList[Record] = new x10.util.ArrayList[Record]();
+	var maxLength : Int = 0;
+	
+	def start(label : String) {
+		list.add(new Record(label, x10.util.Timer.milliTime()));
+		maxLength = Math.max(label.length(), maxLength);
+		Console.OUT.println("*** " + label + " ***");
+	}
+	
+	def next(label : String) {
+		end();
+		start(label);
+	}
+	
+	def end() {
+		val rec = list.getLast();
+		rec.time = x10.util.Timer.milliTime() - rec.time;
+	}
+	
+	def print() {
+		for(rec in list) {
+			val numTab = (maxLength / 8 + 1) - (rec.label.length() / 8);
+			Console.OUT.printf("%s%s%.3f sec\n", rec.label, new String(new Array[Char](numTab, '\t')), rec.time / 1000.0);
+		}
 	}
 }

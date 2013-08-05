@@ -28,7 +28,7 @@ public class BLASTest {
 		Console.OUT.println("Graph generation ...");
 		
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 2, 0.45, 0.15, 0.15, rnd, team);
+		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
 		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));
@@ -37,8 +37,8 @@ public class BLASTest {
 		g.setEdgeAttribute("edgevalue", weight);
 
 		Console.OUT.println("Sparse matrix construction ...");
-		// undirected and inner
-		val A = g.createDistSparseMatrix[Double](dist, "edgevalue", false, false);
+		// undirected and outer (A is CSR)
+		val A = g.createDistSparseMatrix[Double](dist, "edgevalue", false, true);
 		val N = A.ids().numberOfLocalVertexes2N();
 		printIdStruct(A.ids());
 		printSparseMatrix(team, A);
@@ -66,6 +66,8 @@ public class BLASTest {
 		Console.OUT.println("A <- D^(-1/2) * A");
 		BLAS.mult[Double](1.0, DistDiagonalMatrix(V), A, false, 0.0, A);
 		
+		// printSparseMatrix(team, A);
+		
 		// V <- (I - Adj) %*% rbind(rep(1, times=N))
 		team.placeGroup().broadcastFlat(() => {
 			val vec_ = V();
@@ -75,7 +77,7 @@ public class BLASTest {
 		});
 
 		Console.OUT.println("V <- (I - Adj) * rbind(rep(1, times=N))");
-		BLAS.mult[Double](-1.0, A, false, V, 1.0, V);
+		BLAS.mult[Double](-1.0, A, false , V, 1.0, V);
 
 		Console.OUT.println("Writing output ...");
 		//DistributedReader.write("outvec-%d.txt", team, V);
