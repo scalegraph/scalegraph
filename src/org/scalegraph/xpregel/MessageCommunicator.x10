@@ -375,6 +375,14 @@ final class MessageCommunicator[M] { M haszero } {
 		return [ r0, r1, r2, r3 ];
 	}
 	
+	
+	/* Name form
+	 * UC : UniCast message
+	 * BC : BroadCast message
+	 * xxC : buffer for Compute phase
+	 * xxS : send buffer
+	 * xxR : receive buffer
+	 */
 	def exchangeMessages(UCEnable :Boolean, BCEnable :Boolean) :void {
 		//returns 2^(ceilLog2(numberOfLocalVertexes))
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
@@ -387,50 +395,10 @@ final class MessageCommunicator[M] { M haszero } {
 		mUCREnabled = UCEnable;
 		mBCREnabled = BCEnable;
 		
-		if(UCEnable) {
-			if(mUCSCount.size() == 0L) {
-				// this place has no message to send but it must prepare for receiving messages
-				mUCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
-				mUCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
-			}
-			
-			//send synchronously
-			mTeam.alltoall(mUCSCount, recvCount);
-			
-			//receive
-			recvOffset(0) = 0;
-			for(i in recvCount.range()) {
-				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
-			}
-			
-			val recvSize = recvOffset(numPlaces);
-
-			val UCRIdsTmp = new MemoryChunk[Long](recvSize);
-			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIdsTmp, recvOffset, recvCount);
-			mUCSIds.del();
-
-			val UCRMessagesTmp = new MemoryChunk[M](recvSize);
-			mTeam.alltoallv(mUCSMessages, mUCSOffset, mUCSCount, UCRMessagesTmp, recvOffset, recvCount);
-			mUCSMessages.del();
-			
-			mUCSCount.del();
-			mUCSOffset.del();
-
-			val UCRIds = new MemoryChunk[Long](recvSize);
-			mUCRMessages = new MemoryChunk[M](recvSize);
-			
-			Parallel.sort(mIds.lgl, UCRIdsTmp, UCRMessagesTmp, UCRIds, mUCRMessages);
-
-			UCRMessagesTmp.del();
-			UCRIdsTmp.del();
-			
-			val numLocalVertexes = mIds.numberOfLocalVertexes();
-			mUCROffset = new MemoryChunk[Long](numLocalVertexes+1);
-			Parallel.makeOffset(UCRIds, mUCROffset);
-			UCRIds.del();
-		}
-		
 		if(BCEnable) {
+			//broadcast enable!
+			
+			//who modifies m value?
 			if(mBCSCount.size() == 0L) {
 				// this place has no message to send but it must prepare for receiving messages
 				mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces, false);
@@ -463,9 +431,68 @@ final class MessageCommunicator[M] { M haszero } {
 			assert recvOffset(numPlaces) as Long ==
 				mBCROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
 		}
+		/* Name form
+		 * UC : UniCast message
+		 * BC : BroadCast message
+		 * xxC : buffer for Compute phase
+		 * xxS : send buffer
+		 * xxR : receive buffer
+		 */
+		if(UCEnable) {
+			//unicast enable!
+			if(mUCSCount.size() == 0L) {
+				// this place has no message to send but it must prepare for receiving messages
+				mUCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
+				mUCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
+			}
+			
+			//send synchronously
+			//what is exchanged?
+			mTeam.alltoall(mUCSCount, recvCount);
+			
+			//receive
+			recvOffset(0) = 0;
+			for(i in recvCount.range()) {
+				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
+			}
+			
+			val recvSize = recvOffset(numPlaces);
+			//=unicast receiver ids temp?
+			val UCRIdsTmp = new MemoryChunk[Long](recvSize);
+			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIdsTmp, recvOffset, recvCount);
+			//unicast sender ids?
+			mUCSIds.del();
+
+			val UCRMessagesTmp = new MemoryChunk[M](recvSize);
+			mTeam.alltoallv(mUCSMessages, mUCSOffset, mUCSCount, UCRMessagesTmp, recvOffset, recvCount);
+			mUCSMessages.del();
+			
+			mUCSCount.del();
+			mUCSOffset.del();
+
+			val UCRIds = new MemoryChunk[Long](recvSize);
+			mUCRMessages = new MemoryChunk[M](recvSize);
+			
+			Parallel.sort(mIds.lgl, UCRIdsTmp, UCRMessagesTmp, UCRIds, mUCRMessages);
+
+			UCRMessagesTmp.del();
+			UCRIdsTmp.del();
+			
+			val numLocalVertexes = mIds.numberOfLocalVertexes();
+			mUCROffset = new MemoryChunk[Long](numLocalVertexes+1);
+			Parallel.makeOffset(UCRIds, mUCROffset);
+			UCRIds.del();
+		}
 
 		recvCount.del();
 		recvOffset.del();
 	}
+	/* Name form
+	 * UC : UniCast message
+	 * BC : BroadCast message
+	 * xxC : buffer for Compute phase
+	 * xxS : send buffer
+	 * xxR : receive buffer
+	 */
 }
 
