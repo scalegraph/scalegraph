@@ -37,9 +37,11 @@ public final class BLASTest {
 		g.setEdgeAttribute("edgevalue", weight);
 
 		Console.OUT.println("Sparse matrix construction ...");
-		// undirected and inner
-		val A = g.createDistSparseMatrix[Double](dist, "edgevalue", false, false);
+		// undirected and outer (A is CSR)
+		val A = g.createDistSparseMatrix[Double](dist, "edgevalue", false, true);
 		val N = A.ids().numberOfLocalVertexes2N();
+		printIdStruct(A.ids());
+		printSparseMatrix(team, A);
 
 		Console.OUT.println("Simplify ...");
 		// A.simplify(true, true, (r :MemoryChunk[Double]) => MathAppend.sum(r));
@@ -64,6 +66,8 @@ public final class BLASTest {
 		Console.OUT.println("A <- D^(-1/2) * A");
 		BLAS.mult[Double](1.0, DistDiagonalMatrix(V), A, false, 0.0, A);
 		
+		// printSparseMatrix(team, A);
+		
 		// V <- (I - Adj) %*% rbind(rep(1, times=N))
 		team.placeGroup().broadcastFlat(() => {
 			val vec_ = V();
@@ -73,11 +77,29 @@ public final class BLASTest {
 		});
 
 		Console.OUT.println("V <- (I - Adj) * rbind(rep(1, times=N))");
-		BLAS.mult[Double](-1.0, A, false, V, 1.0, V);
+		BLAS.mult[Double](-1.0, A, false , V, 1.0, V);
 
 		Console.OUT.println("Writing output ...");
 		//DistributedReader.write("outvec-%d.txt", team, V);
 
 		Console.OUT.println("Finished !!!");
+	}
+	
+	
+	static def printSparseMatrix(team:Team, A:DistSparseMatrix[Double]) : void {
+		for(p in team.placeGroup()) at(p) {
+			val offsets = A().offsets;
+			val vertexes = A().vertexes;
+			val values = A().values;
+			Console.OUT.println("****** SparseMatrix(" + team.role()(0) + ") ******");
+			Console.OUT.println(offsets);
+			Console.OUT.println(vertexes);
+			Console.OUT.println(values);
+			Console.OUT.println("*****************************");
+		}
+	}
+	
+	static def printIdStruct(ids:org.scalegraph.graph.id.IdStruct) : void {
+		Console.OUT.println("[" + ids.lgl + ", " + ids.lgc + ", " + ids.lgr + "]");
 	}
 }
