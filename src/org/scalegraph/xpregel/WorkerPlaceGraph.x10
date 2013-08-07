@@ -272,6 +272,8 @@ final class WorkerPlaceGraph[V,E] {
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
+				
+				
 				if(aggregator != null) {
 					intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
 				}
@@ -281,8 +283,38 @@ final class WorkerPlaceGraph[V,E] {
 			
 			// gather statistics
 			for(th in 0..(numThreads-1)) {
+				//first message process is here 
 				ectx.sqweezeMessage(vctxs(th));
 			}
+
+			//directionOptimization
+			if(0L < ectx.mBCSInputCount && ectx.mBCSInputCount < (numLocalVertexes/100)){
+				//TODO:numLocalVertexes/100 is totemo tekitou
+				val BCbmp=ectx.mBCCHasMessage;
+				var numConvertedMessage : Long = 0L;
+				Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+					val vc = vctxs(tid);
+					for (dosrcid in r){
+						if(BCbmp(dosrcid)){	//optimze dekiru (raw totte jimae mask)
+							// srcid==dosrcid na message arune!!!!
+							// convert to unicast message
+							vc.mSrcid = dosrcid;	//...
+							val OEsId = vc.outEdgesId();
+							val tempmes=ectx.mBCCMessages(dosrcid);
+							for(eI in OEsId){
+								vc.sendMessage(eI, tempmes);
+							}
+							numConvertedMessage++; //nantoka shiyou
+						}
+					}
+					ectx.mBCCHasMessage.clear(false);
+					//mBCCMessages ha clear shinakute yosage
+				});
+				assert(numConvertedMessage == ectx.mBCSInputCount);
+				//TODO: clear broadcast message (ectx.mBCCHasMessage,mBCCMessages) dake?
+				ectx.mBCSInputCount=0L;
+			}
+			//-----
 			
 			// update out edges
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
@@ -295,6 +327,8 @@ final class WorkerPlaceGraph[V,E] {
 			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
 
+			//"gather statistics" was here(modoshita)
+			
 			//
 			val terminate = gatherInformation(mTeam, ectx, statistics, combiner);
 

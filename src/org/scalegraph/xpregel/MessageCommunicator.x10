@@ -114,7 +114,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val start = mUCROffset(srcid);
 			val length = mUCROffset(srcid + 1) - start;
 			return mUCRMessages.subpart(start, length);
-		}
+		}// why else if? -> haitateki ni natteru
 		else if(mBCREnabled) {
 			// broadcast messages
 			val bmp = mBCRHasMessage;
@@ -147,7 +147,8 @@ final class MessageCommunicator[M] { M haszero } {
 	
 	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) { M haszero, A haszero } {
 		mNumActiveVertexes += ctx.mNumActiveVertexes; ctx.mNumActiveVertexes = 0L;
-		mBCSInputCount += ctx.mBCSInputCount; ctx.mBCSInputCount = 0L;
+		mBCSInputCount += ctx.mBCSInputCount;
+		ctx.mBCSInputCount = 0L;
 	}
 	
 	private def preProcessUnicastMessages(combine : (MemoryChunk[M]) => M) {
@@ -366,8 +367,8 @@ final class MessageCommunicator[M] { M haszero } {
 		resetSRBuffer();
 
 		val r0 = mNumActiveVertexes;
-		val [ r1, r2 ] = preProcessUnicastMessages(combine);
 		val r3 = preProcessBroadcastMessages(combine);
+		val [ r1, r2 ] = preProcessUnicastMessages(combine);
 
 		mBCSInputCount = 0L;
 		mNumActiveVertexes = 0L;
@@ -375,30 +376,16 @@ final class MessageCommunicator[M] { M haszero } {
 		return [ r0, r1, r2, r3 ];
 	}
 	
-	
-	/* Name form
-	 * UC : UniCast message
-	 * BC : BroadCast message
-	 * xxC : buffer for Compute phase
-	 * xxS : send buffer
-	 * xxR : receive buffer
-	 */
 	def exchangeMessages(UCEnable :Boolean, BCEnable :Boolean) :void {
-		//returns 2^(ceilLog2(numberOfLocalVertexes))
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
-		//receive box
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
 		
-		//is send message available
 		mUCREnabled = UCEnable;
 		mBCREnabled = BCEnable;
 		
 		if(BCEnable) {
-			//broadcast enable!
-			
-			//who modifies m value?
 			if(mBCSCount.size() == 0L) {
 				// this place has no message to send but it must prepare for receiving messages
 				mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces, false);
@@ -431,36 +418,24 @@ final class MessageCommunicator[M] { M haszero } {
 			assert recvOffset(numPlaces) as Long ==
 				mBCROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
 		}
-		/* Name form
-		 * UC : UniCast message
-		 * BC : BroadCast message
-		 * xxC : buffer for Compute phase
-		 * xxS : send buffer
-		 * xxR : receive buffer
-		 */
+		
 		if(UCEnable) {
-			//unicast enable!
 			if(mUCSCount.size() == 0L) {
 				// this place has no message to send but it must prepare for receiving messages
 				mUCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
 				mUCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
 			}
 			
-			//send synchronously
-			//what is exchanged?
 			mTeam.alltoall(mUCSCount, recvCount);
 			
-			//receive
 			recvOffset(0) = 0;
 			for(i in recvCount.range()) {
 				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
 			}
 			
 			val recvSize = recvOffset(numPlaces);
-			//=unicast receiver ids temp?
 			val UCRIdsTmp = new MemoryChunk[Long](recvSize);
 			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIdsTmp, recvOffset, recvCount);
-			//unicast sender ids?
 			mUCSIds.del();
 
 			val UCRMessagesTmp = new MemoryChunk[M](recvSize);
@@ -487,12 +462,5 @@ final class MessageCommunicator[M] { M haszero } {
 		recvCount.del();
 		recvOffset.del();
 	}
-	/* Name form
-	 * UC : UniCast message
-	 * BC : BroadCast message
-	 * xxC : buffer for Compute phase
-	 * xxS : send buffer
-	 * xxR : receive buffer
-	 */
 }
 
