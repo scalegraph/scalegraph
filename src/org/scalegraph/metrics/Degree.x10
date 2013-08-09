@@ -18,13 +18,18 @@ import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.DistScatterGather;
 import org.scalegraph.util.Parallel;
 import x10.util.Team;
+import org.scalegraph.blas.DistSparseMatrix;
 
+/**
+ * Calculate degree distribution. This class is intended for interal use only.
+ */
 public final class Degree {
 	
-	private static def degreeDistribution(g :Graph, directed :Boolean, outerOrInner :Boolean) {
-		val team = g.team();
-		val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
-		val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
+    // No need to create instance
+    private def this(){}
+    
+	public static def degreeDistribution[T](columnDistGraph: DistSparseMatrix[T]) {
+	    val team = columnDistGraph.dist().allTeam();
 		val result = new DistGrowableMemory[Long](team.placeGroup());
 		
 		team.placeGroup().broadcastFlat(() => {
@@ -50,11 +55,7 @@ public final class Degree {
 					requests(offsets(degree % teamSize)++) = degree;
 				}
 			});
-			
-			// delete graph
-			columnDistGraph.del();
-			distColumn.del();
-			
+
 			val recv = scatterGather.scatter(requests);
 			result().setSize(columnDistGraph.ids().numberOfLocalVertexes());
 			val result_ = result().raw();
@@ -79,8 +80,4 @@ public final class Degree {
 		
 		return result;
 	}
-
-	public static def getInDegree(g :Graph) = degreeDistribution(g, true, false);
-	public static def getOutDegree(g :Graph) = degreeDistribution(g, true, true);
-	public static def getInOutDegree(g :Graph) = degreeDistribution(g, false, false);
 }
