@@ -406,7 +406,8 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
 
     }
     
-    private static def run(g: Graph,
+    // Suppose to be called by API wrapper
+    public static def run(g: Graph,
                           directed: Boolean,
                           weightAttrName: String,
                           bcAttrName: String,
