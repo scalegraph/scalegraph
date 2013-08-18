@@ -19,7 +19,7 @@ import org.scalegraph.util.DistGrowableMemory;
 
 
 /**
- * Calculate the degree distribution of the graph
+ * Calculate the degree distribution of a graph
  */
 final public class DegreeDistribution {
     
