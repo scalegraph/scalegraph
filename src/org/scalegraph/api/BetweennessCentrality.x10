@@ -19,12 +19,12 @@ import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.metrics.DistBetweennessCentralityWeighted;
 
 /**
- * An API class for computing vertex betweenness centrality for large-scale graphs.
+ * An API class for computing the vertex betweenness centrality of a graph.
  * The implementation is based on Brandes's alogorthm[1] and Edmonds' algorithm[2].
  * The linear-scaling technique[3] is also available for improving the estimation result.
  * 
  * <br><br>
- * Reference:
+ * References:
  * <br>[1] Brandes, Ulrik. "A faster algorithm for betweenness centrality*." Journal of Mathematical Sociology 25.2 (2001): 163-177.
  * <br>[2] Edmonds, Nick, Torsten Hoefler, and Andrew Lumsdaine. "A space-efficient parallel algorithm for computing betweenness centrality in distributed memory." High Performance Computing (HiPC), 2010 International Conference on. IEEE, 2010.
  * <br>[3] Geisberger, Robert, Peter Sanders, and Dominik Schultes. "Better approximation of betweenness centrality." Proceedings of the 10th Workshop on Algorithm Engineering and Experimentation (ALENEX08). To appear. 2008.
