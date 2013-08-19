@@ -22,7 +22,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class StronglyConnectedComponent {
+public class StronglyConnectedComponentImpl {
 
 	private static struct SCCVertex {
 		val leaderId:Long; 
