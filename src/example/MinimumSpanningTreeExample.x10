@@ -48,6 +48,6 @@ public class MinimumSpanningTreeExample {
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
 		val result = MinimumSpanningTree.run(g);
-		DistributedReader.write("out-%d", team, result.first, result.second);
+		// DistributedReader.write("out-%d", team, result.first, result.second);
 	}
 }

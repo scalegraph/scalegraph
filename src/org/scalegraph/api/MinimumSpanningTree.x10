@@ -28,42 +28,50 @@ import org.scalegraph.util.DistMemoryChunk;
  */
 final public class MinimumSpanningTree {
    
+    /** The name of a graph attribute that store the edge weight, default is "weight". */
+    public var weightAttrName: String = "weight";
+    
     /** Find minimum spanning tree of a graph
-     * @param g The graph object.
+     * @param g The graph object
      * 
-     * @return Pair[DistMemoryChunk[Long], DistMemoryChunk[Long]] where the first are the sources and the second are the corresponding target of the edges in the MST
+     * @return A graph object, a spanning tree or spanning forest of the given graph.
      */
-    public def execute(g: Graph):  Pair[DistMemoryChunk[long], DistMemoryChunk[Long]]{
-        return run(g);
+    public def execute(g: Graph):  Graph {
+        return run(this, g);
     }
     
     /** Find minimum spanning tree of a graph
      * @param matrix distributed sparse matrix object, the matrix must represent an undirected graph and its distribution is one-dimensional column distribution.
      * 
-     * @return Pair[DistMemoryChunk[Long], DistMemoryChunk[Long]] where the first are the sources and the second are the corresponding target of the edges in the MST
+     * @return A graph object, a spanning tree or spanning forest of the given graph.
      */
-    public def execute(matrix :DistSparseMatrix[Double]):  Pair[DistMemoryChunk[long], DistMemoryChunk[Long]]{
+    public def execute(matrix :DistSparseMatrix[Double]): Graph {
         return run(matrix);
     }
     
     /** Find minimum spanning tree of a graph
-     * @param g The graph object.
+     * @param g The graph object
      * 
-     * @return Pair[DistMemoryChunk[Long], DistMemoryChunk[Long]] where the first are the sources and the second are the corresponding target of the edges in the MST
+     * @return A graph object, a spanning tree or spanning forest of the given graph.
      */
-    public static def run(g :Graph): Pair[DistMemoryChunk[long], DistMemoryChunk[Long]] {
+    public static def run(g :Graph): Graph {
+       
+        return  new MinimumSpanningTree().execute(g);
+    }
+    
+    private static def run(inst: MinimumSpanningTree, g :Graph): Graph {
         val team = g.team();
         val dist = Dist2D.make2D(team, 1, team.size());
-        val csr = g.createDistSparseMatrix[Double](dist, "weight", false, true);
+        val csr = g.createDistSparseMatrix[Double](dist, inst.weightAttrName, false, true);
         return run(csr);
     }
     
     /** Find minimum spanning tree of a graph
      * @param matrix distributed sparse matrix object, the matrix must represent an undirected graph and its distribution is one-dimensional column distribution.
      * 
-     * @return Pair[DistMemoryChunk[Long], DistMemoryChunk[Long]] where the first are the sources and the second are the corresponding target of the edges in the MST
+     * @return A graph object, a spanning tree or spanning forest of the given graph.
      */
-    public static def run(matrix :DistSparseMatrix[Double]): Pair[DistMemoryChunk[long], DistMemoryChunk[Long]]{
+    public static def run(matrix :DistSparseMatrix[Double]): Graph {
         return MinimumSpanningTreeImpl.run(matrix);
     }
 }
