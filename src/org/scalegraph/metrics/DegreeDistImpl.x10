@@ -23,7 +23,7 @@ import org.scalegraph.blas.DistSparseMatrix;
 /**
  * Calculate degree distribution. This class is intended for interal use only.
  */
-public final class Degree {
+public final class DegreeDistImpl {
 	
     // No need to create instance
     private def this(){}

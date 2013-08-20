@@ -61,9 +61,19 @@ public final class DegreeDistributionExample {
         val g = new Graph(team, Graph.VertexType.Long, false);
         g.addEdges(edgeList.raw(team.placeGroup()));
         
-        val indegResult = DegreeDistribution.run(g, DegreeDistribution.IN_DEGREE);
-        val outdegResult = DegreeDistribution.run(g, DegreeDistribution.OUT_DEGREE);
-        val inOutdegResult = DegreeDistribution.run(g, DegreeDistribution.INOUT_DEGREE);
+        val degreeDist = new DegreeDistribution();
+        
+        // In-degree calculation
+        degreeDist.mode = DegreeDistribution.IN_DEGREE;
+        val indegResult = degreeDist.execute(g);
+        
+        // Out-degree calculation
+        degreeDist.mode = DegreeDistribution.OUT_DEGREE;
+        val outdegResult = degreeDist.execute(g);
+        
+        // In- and out-degree calculation
+        degreeDist.mode = DegreeDistribution.INOUT_DEGREE;
+        val inOutdegResult = degreeDist.execute(g);
 
         DistributedReader.write("out/indeg-%d", team, indegResult.raw(team.placeGroup()));
         DistributedReader.write("out/outdeg-%d", team, outdegResult.raw(team.placeGroup()));
