@@ -28,6 +28,23 @@ import org.scalegraph.util.DistMemoryChunk;
  */
 final public class MinimumSpanningTree {
    
+    /** Find minimum spanning tree of a graph
+     * @param g The graph object.
+     * 
+     * @return Pair[DistMemoryChunk[Long], DistMemoryChunk[Long]] where the first are the sources and the second are the corresponding target of the edges in the MST
+     */
+    public def execute(g: Graph):  Pair[DistMemoryChunk[long], DistMemoryChunk[Long]]{
+        return run(g);
+    }
+    
+    /** Find minimum spanning tree of a graph
+     * @param matrix distributed sparse matrix object, the matrix must represent an undirected graph and its distribution is one-dimensional column distribution.
+     * 
+     * @return Pair[DistMemoryChunk[Long], DistMemoryChunk[Long]] where the first are the sources and the second are the corresponding target of the edges in the MST
+     */
+    public def execute(matrix :DistSparseMatrix[Double]):  Pair[DistMemoryChunk[long], DistMemoryChunk[Long]]{
+        return run(matrix);
+    }
     
     /** Find minimum spanning tree of a graph
      * @param g The graph object.
@@ -42,7 +59,7 @@ final public class MinimumSpanningTree {
     }
     
     /** Find minimum spanning tree of a graph
-     * @param matrix distributed sparse matrix object, the matrix must represent an undirected graph.
+     * @param matrix distributed sparse matrix object, the matrix must represent an undirected graph and its distribution is one-dimensional column distribution.
      * 
      * @return Pair[DistMemoryChunk[Long], DistMemoryChunk[Long]] where the first are the sources and the second are the corresponding target of the edges in the MST
      */
