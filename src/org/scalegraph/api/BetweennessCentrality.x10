@@ -13,7 +13,6 @@ package org.scalegraph.api;
 
 import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.DistSparseMatrix;
-import org.scalegraph.metrics.Degree;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.metrics.DistBetweennessCentralityWeighted;
@@ -31,42 +30,41 @@ import org.scalegraph.metrics.DistBetweennessCentralityWeighted;
  */
 public class BetweennessCentrality {
     
-    /** Weighted graph flag, default is false (i.e. unweighted graph). */
+    /** The weighted graph flag, default is false (i.e. unweighted graph). */
     public var weighted: Boolean = false;
     
-    /** Graph directness, default is directed */
+    /** Graph directness, default is directed. */
     public var directed: Boolean = true;
     
-    /** Source must be either Long, LongRange or Array[Long] */
+    /** Source must be either Long, LongRange or Array[Long]. */
     public var source: Any = null;
     
-    /** The name of graph attribute to store the result, default is "bc"*/
+    /** The name of a graph attribute to store the result, default is "bc". */
     public var resultAttrName: String = "bc";
     
-    /** The name of graph attribute that store the edge weight, default is "wegiht" */
+    /** The name of a graph attribute that store the edge weight, default is "wegiht". */
     public var weightAttrName: String = "weight";
     
-    /** Delta value for delta-stepping algorithm in computing betweeness centrality for weighted graphs,
+    /** The delta value for delta-stepping algorithm in computing betweeness centrality for weighted graphs,
      * default is 1.
      */
     public var delta: Int = 1;
     
-    /** Normalization flag, default is false. This flag is applicable only for exact betweenness centrlaity calculation. 
+    /** Normalization flag, default is false. This flag is applicable only for exact betweenness centrlaity calculation, 
+     * <br/>
      * The normalization factor is (N-1)*(N-2) and 2*(N-1)(N-2), respectively, where N is the total number of vertices in the graph.
      * The default value is false.
      */
     public var normalize: Boolean = false;
     
-    /** Linear-scaling method for alleviate the bias in estimation, default is false. */
+    /** Linear-scaling method for alleviating the bias in estimation, default is false. */
     public var linearScale: Boolean = false;
     
-    /** Computing exact betweenness centrality, default is true. If this flag is set, source variable will be ignored */
+    /** Computing exact vertex betweenness centrality, default is true. If this flag is set, source variable will be ignored */
     public var exactBc: Boolean = true;
     
-    /**
-     * Calculate vertex betweenness centrality for the given graph with default paramerters:
-     * weighted = false, directed = true, source="<i>all vertices</i>", normalize = false, linear scaling = false.
-     * The result will be stored as a graph attribute named "bc".
+    /**Calculate the vertex betweenness centrality with default paramerters:
+     * weighted = false, directed = true, source="all vertices", normalize = false, linear scaling = false. The result will be stored as a graph attribute named "bc".
      * 
      * @param g The graph object
      */
@@ -75,7 +73,7 @@ public class BetweennessCentrality {
     }
     
     /**
-     * Calculate vertex betweenness centrality for the given graph.
+     * Calculate the vertex betweenness centrality.
      * 
      * @param g The graph object
      */
