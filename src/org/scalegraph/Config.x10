@@ -15,6 +15,9 @@ import x10.util.Team;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 
+/** Provides the default data distribution, which includes world team and 1D/2D distribution.
+ * Config is used by ScaleGraph API.
+ */
 public class Config {
 	private static val instance :Cell[Config] = new Cell[Config](null);
 	
@@ -36,6 +39,14 @@ public class Config {
 		});
 	}
 	
+	/**
+	 * Returns the instance of Config class.
+	 * This method is the part of the singleton pattern.
+	 * Only one instance of Config class can exit.<br>
+	 * IMPORTANT: The first call of this method is NOT thread-safe.
+	 * It is better to call this method at the begining of the program 
+	 * in order to ensure that the instance is created.
+	 */
 	public static def get() {
 		val ret = instance();
 		if(ret == null) {
@@ -51,11 +62,19 @@ public class Config {
 		return ret;
 	}
 	
+	/**
+	 * Creates an instance of Config object.
+	 * If the instance is already exists, this method will throw exception.
+	 */
 	public static def init(worldTeam :Team, distForXPregel :Dist2D, distForBLAS :Dist2D) {
 		canInitConfig(true);
 		broadcast(new Config(false, worldTeam, distForXPregel, distForBLAS));
 	}
 	
+	/**
+	 * Release the recources of Config object.
+	 * After this method is called, you can call init() method to create fresh Config instance.
+	 */
 	public static def del() {
 		val ret = instance();
 		if(ret != null) {
@@ -85,10 +104,18 @@ public class Config {
 		}
 	}
 	
+	/** Returns thw world team */
 	public def worldTeam() = world;
+	
+	/** Returns the distribution for XPregel, which is the 1D partitioning distribution. */
 	public def distXPregel() = distXPregel;
+	
+	/** Returns the distribution for BLAS, which is the 2D partitioning distribution. */
 	public def distBLAS() = distBLAS;
 	
+	/** Returns the 2D partitioning distribution */
 	public def dist2d() = distBLAS;
+	
+	/** Returns the 1D partitioning distribution */ 
 	public def dist1d() = distXPregel;
 }
