@@ -46,7 +46,7 @@ final public class DegreeDistribution {
      * 		<li>For out-degree caluclation, the matrix must represent directed graph and must be distributed by columns.</li> 
      * 		<li>For in- and out-degree calculation the matrix must represent undirected graph.</li>
      * </ul>
-     * @return DistGrowableMemoryChunk[Long] which the local index (i.e. MemoryChunk index) maps to degree d, where d = team.size() x local_index + team.role()(0).<br/>
+     * @return DistGrowableMemoryChunk[Long], the local index of which (i.e. MemoryChunk index) maps to degree d, where d = team.size() x local_index + team.role()(0).<br/>
      * For example let the team size equal to 8, the local index of the MemoryChunk is 4, and the MemoryChunk is on the machine that has the role number equal to 3, 
      * so the local memory pointed by this local index will store the number of the vertices that has the degree eqaul to 35.
      * 
@@ -61,7 +61,7 @@ final public class DegreeDistribution {
     /** Run the calculation of degree distribution.
      * @param g The graph object.
      * 
-     * @return DistGrowableMemoryChunk[Long] which the local index (i.e. MemoryChunk index) maps to degree d, where d = team.size() x local_index + team.role()(0).<br/>
+     * @return DistGrowableMemoryChunk[Long], the local index of which (i.e. MemoryChunk index) maps to degree d, where d = team.size() x local_index + team.role()(0).<br/>
      * For example let the team size equal to 8, the local index of the MemoryChunk is 4, and the MemoryChunk is on the machine that has the role number equal to 3, 
      * so the local memory pointed by this local index will store the number of the vertices that has the degree eqaul to 35. 
      */
@@ -76,7 +76,7 @@ final public class DegreeDistribution {
      * 		<li>For out-degree caluclation, the matrix must represent directed graph and must be distributed by columns.</li> 
      * 		<li>For in- and out-degree calculation the matrix must represent undirected graph.</li>
      * </ul>
-     * @return DistGrowableMemoryChunk[Long] which the local index (i.e. MemoryChunk index) maps to degree d, where d = team.size() x local_index + team.role()(0).<br/>
+     * @return DistGrowableMemoryChunk[Long], the local index of which (i.e. MemoryChunk index) maps to degree d, where d = team.size() x local_index + team.role()(0).<br/>
      * For example let the team size equal to 8, the local index of the MemoryChunk is 4, and the MemoryChunk is on the machine that has the role number equal to 3, 
      * so the local memory pointed by this local index will store the number of the vertices that has the degree eqaul to 35.
      * 
