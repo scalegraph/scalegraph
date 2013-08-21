@@ -9,13 +9,10 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-#ifndef __ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_NATIVE_H
-#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_NATIVE_H
+#ifndef __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H
+#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H
 
 #include <x10rt.h>
-#include <x10/lang/Any.h>
-#include <x10/lang/String.h>
-#include <x10/lang/UnsupportedOperationException.h>
 
 namespace org { namespace scalegraph { namespace util {
 
@@ -77,38 +74,15 @@ public:
 		return THIS(allocMem, allocMem, numElements);
 	}
 
-	void del() {
-		if(FMGL(head) != FMGL(pointer)) {
-			x10aux::throwException(
-					x10::lang::UnsupportedOperationException::_make(
-					x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
-		}
-		x10aux::dealloc(FMGL(head));
-		FMGL(head) = NULL;
-		FMGL(pointer) = NULL;
-		FMGL(size) = 0;
-	}
+	void del();
 
-	x10::lang::String* typeName() { return x10aux::type_name((*this)); }
-	x10::lang::String* toString() {
-		return x10::lang::String::Steal(x10aux::alloc_printf(
-				"MemoryChunk.Data (pointer=%p, size=%ld)", FMGL(pointer), FMGL(size)));
-	}
+	x10::lang::String* typeName();
+	x10::lang::String* toString();
 	x10_int hashCode() { return (x10_int)(size_t)FMGL(pointer); }
-	x10_boolean equals(x10::lang::Any* other) {
-		if(!x10aux::instanceof<THIS >(other)) return false;
-		return equals(x10aux::class_cast<THIS >(other));
-	}
-	x10_boolean equals(THIS other) {
-		return (FMGL(pointer) == other->FMGL(pointer)) && (FMGL(size) == other->FMGL(size));
-	}
-	x10_boolean _struct_equals(x10::lang::Any* other) {
-		if(!x10aux::instanceof<THIS >(other)) return false;
-		return equals(x10aux::class_cast<THIS >(other));
-	}
-	x10_boolean _struct_equals(THIS other) {
-		return (FMGL(pointer) == other->FMGL(pointer)) && (FMGL(size) == other->FMGL(size));
-	}
+	x10_boolean equals(x10::lang::Any* other);
+	x10_boolean equals(THIS other);
+	x10_boolean _struct_equals(x10::lang::Any* other);
+	x10_boolean _struct_equals(THIS other);
 };
 
 // base case for struct and interface types
@@ -148,7 +122,7 @@ public:
 	static void copy(MCData_Impl<T> src, x10_long srcIndex,
 			MCData_Impl<T> dst, x10_long dstIndex, x10_long numElems)
 	{
-		memcpy(dst.FMGL(pointer) + dstIndex, src.FMGL(pointer) + srcIndex, numElems * sizeof(T));
+		memmove(dst.FMGL(pointer) + dstIndex, src.FMGL(pointer) + srcIndex, numElems * sizeof(T));
 	}
 
 	static void _serialize(MCData_Impl<T> this_, x10aux::serialization_buffer& buf) {
@@ -254,6 +228,63 @@ public:
 		return allocMem;
 	}
 };
+} } } // namespace org { namespace scalegraph { namespace util {
+
+#endif // __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H
+
+#ifndef ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
+#include <x10/lang/Any.h>
+#include <x10/lang/String.h>
+#include <x10/lang/UnsupportedOperationException.h>
+
+#ifndef ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_IMPLEMENTATION
+#define ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_IMPLEMENTATION
+
+namespace org { namespace scalegraph { namespace util {
+
+// MCData_Base //
+
+template<class THIS, typename ELEM> void MCData_Base<THIS, ELEM>::del() {
+	if(FMGL(head) != FMGL(pointer)) {
+		x10aux::throwException(
+				x10::lang::UnsupportedOperationException::_make(
+				x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
+	}
+	x10aux::dealloc(FMGL(head));
+	FMGL(head) = NULL;
+	FMGL(pointer) = NULL;
+	FMGL(size) = 0;
+}
+
+template<class THIS, typename ELEM> x10::lang::String* MCData_Base<THIS, ELEM>::typeName() {
+	return x10aux::type_name((*this));
+}
+
+template<class THIS, typename ELEM> x10::lang::String* MCData_Base<THIS, ELEM>::toString() {
+	return x10::lang::String::Steal(x10aux::alloc_printf(
+			"MemoryChunk.Data (pointer=%p, size=%ld)", FMGL(pointer), FMGL(size)));
+}
+
+template<class THIS, typename ELEM> x10_boolean MCData_Base<THIS, ELEM>::equals(x10::lang::Any* other) {
+	if(!x10aux::instanceof<THIS >(other)) return false;
+	return equals(x10aux::class_cast<THIS >(other));
+}
+
+template<class THIS, typename ELEM> x10_boolean MCData_Base<THIS, ELEM>::equals(THIS other) {
+	return (FMGL(pointer) == other->FMGL(pointer)) && (FMGL(size) == other->FMGL(size));
+}
+
+template<class THIS, typename ELEM> x10_boolean MCData_Base<THIS, ELEM>::_struct_equals(x10::lang::Any* other) {
+	if(!x10aux::instanceof<THIS >(other)) return false;
+	return equals(x10aux::class_cast<THIS >(other));
+}
+
+template<class THIS, typename ELEM> x10_boolean MCData_Base<THIS, ELEM>::_struct_equals(THIS other) {
+	return (FMGL(pointer) == other->FMGL(pointer)) && (FMGL(size) == other->FMGL(size));
+}
+
+//
 
 template<class THIS, typename ELEM> x10aux::RuntimeType MCData_Base<THIS, ELEM>::rtt;
 
@@ -272,5 +303,8 @@ template<class THIS, typename ELEM>void MCData_Base<THIS, ELEM>::_initRTT() {
     rtt.initStageTwo(baseName, x10aux::RuntimeType::struct_kind, 2, parents, 1, params, variances);
 }
 
-} } }
-#endif // __ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_NATIVE_H
+} } } // namespace org { namespace scalegraph { namespace util {
+
+#endif // ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_IMPLEMENTATION
+#endif // ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
+

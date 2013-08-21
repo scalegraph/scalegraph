@@ -16,21 +16,20 @@
 package org.scalegraph.fileread; 
 
 import x10.util.ArrayList;
-import x10.lang.Exception;
 import x10.io.File;
-import x10.io.Reader;
-import x10.io.FileReader;
-import x10.io.BufferedReader;
 import x10.compiler.Inline;
 import x10.util.Team;
-
-import org.scalegraph.util.DistGrowableMemory;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.graph.Attribute;
 import x10.io.FileWriter;
+
+import org.scalegraph.graph.Attribute;
+import org.scalegraph.io.FileReader;
+import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.SString;
+import org.scalegraph.util.tuple.Tuple2;
+import org.scalegraph.util.tuple.Tuple3;
  
 public final class DistributedReader {
 	
@@ -46,8 +45,8 @@ public final class DistributedReader {
 		}
 		
 		public def open() {
-			val reader = new BufferedReader(new FileReader(new File(path)));
-			DistributedReader.ReaderSkip(reader, start);
+			val reader = new FileReader(new File(path));
+			reader.skip(start);
 			return reader;
 		}
 		
@@ -64,97 +63,89 @@ public final class DistributedReader {
 		}
 	}
     
-    static def ReaderSkip(reader :Reader, var length :Long) {
-        while(length > 0) {
-            reader.skip(Math.min(0x40000000L, length) as Int);
-            length -= 0x40000000;
-        }
-    }
- 
- 	public static def read[T](
- 		team : Team,
- 		fileList : Array[String],
- 		inputFormat : (String) => Tuple3[Long, Long, T]) {
- 		
- 		val places = team.places();
- 		val teamSize = team.size();
-		val splits = new ArrayList[InputSplit]();
-		val edgelist = new DistGrowableMemory[Long](team.placeGroup());
-		val weight = new DistGrowableMemory[T](team.placeGroup());
-		
-		var all_size: Long= 0;
-		for(path in fileList.values()) {
-			val file = new File(path);
-			all_size += file.size();
-		}
-		val chunk_size = all_size / (teamSize as Long);
-		
-		//majide seek ga hoshii, nannde kon na koto shinaito ikenainda
-		//sonnakoto sinakute iindayo!!
+    public static def read[T](
+    		team : Team,
+    		fileList : Array[String],
+    		inputFormat : (SString) => Tuple3[Long, Long, T]) {
+    	
+    	val places = team.places();
+    	val teamSize = team.size();
+    	val splits = new ArrayList[InputSplit]();
+    	val edgelist = new DistGrowableMemory[Long](team.placeGroup());
+    	val weight = new DistGrowableMemory[T](team.placeGroup());
+    	val chunks_per_place = Runtime.NTHREADS;
+    	
+    	var all_size: Long= 0;
+    	for(path in fileList.values()) {
+    		val file = new File(path);
+    		all_size += file.size();
+    	}
+    	val chunk_size = all_size / (teamSize * chunks_per_place as Long);
+    	
+    	for(path in fileList.values()) {
+    		val file = new File(path);
+    		val reader = new FileReader(file);
+    		val size :Long = file.size();
+    		var start :Long = 0L;
+    		if(size == 0L) continue;
+    		while(true) {
+    			val remain = size - start;
+    			if(remain < chunk_size * 3 / 2) {
+    				splits.add(new InputSplit(path, start, size));
+    				break;
+    			}
+    			reader.skip(chunk_size);
+    			reader.fastReadLine();
+    			val next = reader.currentOffset();
+    			splits.add(new InputSplit(path, start, next));
+    			start = next;
+    		}
+    		reader.close();
+    	}
+    	
+    	Console.OUT.println("chunks_per_place = " + chunks_per_place + ", splits.size() = " + splits.size());
+    	
+    	val splits_per_place = (splits.size()+teamSize-1) / teamSize;
+    	team.placeGroup().broadcastFlat(() => {
+    		val role = team.role()(0);
+    		val splits_begin = Math.min(role * splits_per_place, splits.size());
+    		val splits_end = Math.min((role + 1) * splits_per_place, splits.size());
+    		
+    		finish for(s in splits_begin..(splits_end-1)) {
+    			val split = splits(s);
+    			async {
+    				Console.OUT.println(here.id + " => (" + s + ", " + split.getStart() + ", " + split.getEnd() + ")");
+    				Console.OUT.flush();
+    				val reader = split.open();
+    				val edgelist_ = new GrowableMemory[Long]();
+    				val weight_ = new GrowableMemory[T]();
 
-		for(path in fileList.values()) {
-			val file = new File(path);
-			val reader = new BufferedReader(new FileReader(file));
-			val size :Long = file.size();
-			var start :Long = 0L;
-			if(size == 0L) continue;
-			while(true) {
-				val remain = size - start;
-				if(remain < chunk_size * 3 / 2) {
-					splits.add(new InputSplit(path, start, size));
-					break;
-				}
-				ReaderSkip(reader, chunk_size);
-				reader.readLine();
-				val next = reader.getFilePointer();
-				splits.add(new InputSplit(path, start, next));
-				start = next;
-			}
-			reader.close();
-		}
-		
-		finish for(i in 0..(splits.size()-1)) {
-			val split = splits(i);
-			at(places(i % teamSize)) async {
-				val reader = split.open();
-				val edgelist_ = edgelist();
-				val weight_ = weight();
-				val linelist = new ArrayList[String]();
-				try {
-					while(split.getEnd() != reader.getFilePointer()) {
-						val line = reader.readLine();
-						linelist.add(line);
-					}
-					
-					// for debug
-					//team.barrier(team.role());
-					//if(team.role() == 0) Console.OUT.println("finish reading lines");
-					
-					val numEdges = linelist.size();
-					edgelist_.setSize(numEdges*2);
-					weight_.setSize(numEdges);
-					
-					Parallel.iter(0..((linelist.size()-1) as Long), (tid :Long, r :LongRange) => {
-						for(i in r) {
-							val line = linelist(i as Int); linelist(i as Int) = null;
-							val elt = inputFormat(line);
-							edgelist_(i*2+0) = elt.get1();
-							edgelist_(i*2+1) = elt.get2();
-							weight_(i) = elt.get3();
-						}
-					});
-				} catch(eof: x10.io.EOFException) {
-					Console.OUT.println("Done!"); 
-					// Console.OUT.println(m); 
-				} catch(ioe: x10.io.IOException) {
-					Console.ERR.println(ioe);
-				}
-				reader.close();
-			}
-		}
-		
-		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[T]](edgelist, weight);
-	}
+    				try {
+    					while(split.getEnd() != reader.currentOffset()) {
+    						val line = reader.fastReadLine();
+    						val elt = inputFormat(line);
+    						edgelist_.add(elt.val1);
+    						edgelist_.add(elt.val2);
+    						weight_.add(elt.val3);
+    					}
+    				} catch(eof: x10.io.EOFException) {
+    					Console.OUT.println("Done!"); 
+    					// Console.OUT.println(m); 
+    				} catch(ioe: x10.io.IOException) {
+    					Console.ERR.println(ioe);
+    				}
+    				reader.close();
+    				
+    				atomic {
+    					edgelist().add(edgelist_.raw());
+    					weight().add(weight_.raw());
+    				}
+    			}
+    		}
+    	});
+    	
+    	return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[T]](edgelist, weight);
+    }
  	
  	public static def write(
  			filenamefmt : String,

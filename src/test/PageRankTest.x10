@@ -19,14 +19,14 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.harness.sx10Test;
 
-public final class PageRank extends sx10Test {
+public final class PageRankTest extends sx10Test {
     
-    public static def main(args:Array[String](1)) {
-        val t = new PageRank();
-        t.execute();
+    public static def main(args :Array[String](1)) {
+        val t = new PageRankTest();
+        t.execute(args);
     }
     
-    public def run(): Boolean {
+    public def run(args :Array[String](1)): Boolean {
         val arg = new Array[String](1);
         arg(0) = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
         entry(arg);
@@ -34,7 +34,7 @@ public final class PageRank extends sx10Test {
         return true;
     }
 	
-	public def entry(args:Array[String]) {
+	public def entry(args :Array[String]) {
 		val team = Team.WORLD;
 		val inputFormat = (s:String) => {
 			val elements = s.split(",");
@@ -52,10 +52,10 @@ public final class PageRank extends sx10Test {
 		val edgeList = graphData.get1();
 		val weigh = graphData.get2();
 		
-		val g = Graph.make(team, edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue", weigh.raw(team.placeGroup()));		
+		val g = Graph.make(edgeList.raw(team.placeGroup()));
+		g.setEdgeAttribute[Double]("weight", weigh.raw(team.placeGroup()));		
 		
-		val result = org.scalegraph.api.PageRank.run(g, "edgevalue");
+		val result = org.scalegraph.api.PageRank.run(g);
 		
 		DistributedReader.write("pagerank-%d", team, result);
 	}

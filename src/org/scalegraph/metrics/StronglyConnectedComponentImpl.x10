@@ -9,12 +9,11 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package test;
+package org.scalegraph.metrics;
 
 import x10.util.Team;
 import x10.compiler.Native;
 
-//import org.scalegraph.concurrent.Dist2D;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
@@ -23,7 +22,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class StronglyConnectedComponent2 {
+public class StronglyConnectedComponentImpl {
 
 	private static struct SCCVertex {
 		val leaderId:Long; 

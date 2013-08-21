@@ -316,7 +316,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         // TODO: clear all reference
     }
 
-    private static def run(g: Graph, directed: Boolean, attrName: String, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
+    /* Should be used by designated API */
+    public static def run(g: Graph, directed: Boolean, attrName: String, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
         val team = g.team();
         val places = team.placeGroup();
         // Represent graph as CSR
@@ -326,14 +327,20 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 true);        
         // Create local state for BC on each place in team
         val transBufferSize = (1 << 10);
+        
+        // Workaround for init sources for exteral API
+        val numSource_ = isExactBc ? -1L: numSource;
+        val sources_ = isExactBc ? null: sources;
+        val sourceRange_ = isExactBc ? 0..(g.numberOfVertices() - 1): sourceRange;
+        
         val localState = PlaceLocalHandle.make[LocalState](places, 
                 () => { 
                     return (new LocalState(csr,
                             transBufferSize,
                             g.numberOfVertices(),
-                            numSource,
-                            sources,
-                            sourceRange,
+                            numSource_,
+                            sources_,
+                            sourceRange_,
                             normalize,
                             linearScale));
                 });
@@ -371,18 +378,19 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 r(i) = localState()._score(i);
             return r;
         });
-        g.setVertexAttribute[Double](attrName, result);
-        //TODO: Remove this line for release
-        // bc.write("dat");
-        // This is workaround for creating vertex attribute for graph,
-        // This problem should be fixed by vertex translator or graph class
-        val vertexIds = new DistMemoryChunk[Long](places, () => {
-            val id = new MemoryChunk[Long](localState()._score.length());
-            for (i in 0..(id.size() -1))
-                id(i) = bc.LocSrcToOrg(i);
-            return id;
-        });
-        g.setVertexAttribute[Long]("name", vertexIds);
+        // g.setVertexAttribute[Double](attrName, result);
+        // //TODO: Remove this line for release
+        // // bc.write("dat");
+        // // This is workaround for creating vertex attribute for graph,
+        // // This problem should be fixed by vertex translator or graph class
+        // val vertexIds = new DistMemoryChunk[Long](places, () => {
+        //     val id = new MemoryChunk[Long](localState()._score.length());
+        //     for (i in 0..(id.size() -1))
+        //         id(i) = bc.LocSrcToOrg(i);
+        //     return id;
+        // });
+        // g.setVertexAttribute[Long]("name", vertexIds);
+        return result;
     }
     
     private def start() {

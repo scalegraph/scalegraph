@@ -15,16 +15,18 @@
 #include <stdio.h>
 #include <string.h>
 #include <vector>
-#include <new>
+
+#include <gc_allocator.h>
+#include <fbio_fmt.h>
+
+// TODO: ifdef NODEF e.t.c
 
 #include <x10rt.h>
 #include <x10/io/FileNotFoundException.h>
 #include <x10/io/IOException.h>
 
-#include "org/scalegraph/io/NativeFile.h"
-#include "org/scalegraph/util/MemoryChunk.h"
-
-#include "org/scalegraph/io/fbio/fbio_fmt.h"
+#include <org/scalegraph/io/NativeFile.h>
+#include <org/scalegraph/util/MemoryChunk.h>
 
 namespace org { namespace scalegraph { namespace io { namespace fbio {
 
@@ -33,6 +35,7 @@ using namespace ::x10::lang;
 using ::x10::io::IOException;
 using ::org::scalegraph::io::NativeFile;
 using ::org::scalegraph::util::MemoryChunk;
+using ::scalegraph::gc_std;
 
 typedef FBIO_Header NativeHeader;
 
@@ -45,13 +48,16 @@ typedef FBIO_Chunk NativeChunk;
 
 struct NativeBlock {
 	int64_t offset;
+	// x10_long does not contain pointers.
 	std::vector<x10_long> chunks;
 };
 
 class NativeHeaders {
 public:
 	NativeHeader header;
-	std::vector<NativeAttribute> attributes;
+	// NativeAtrribue contains pointers.
+	gc_std<NativeAttribute>::vector attributes;
+	// NativeBlock does not contain pointers.
 	std::vector<NativeBlock> blocks;
 	// User Defined Header
 	x10::lang::Any* udh;
