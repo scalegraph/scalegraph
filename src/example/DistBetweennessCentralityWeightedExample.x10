@@ -59,7 +59,7 @@ public class DistBetweennessCentralityWeightedExample {
         val edgeList = rawData.get1();
         val weightList = rawData.get2();
         
-        val g = new Graph(team, Graph.VertexType.Long, false);
+        val g = new Graph(team, Graph.VertexType.Long, true);
         g.addEdges(edgeList.raw(team.placeGroup()));
         g.setEdgeAttribute[Double]("weight", weightList.raw(team.placeGroup()));
         Console.OUT.println("Start BC");
@@ -68,11 +68,11 @@ public class DistBetweennessCentralityWeightedExample {
         val bc = new BetweennessCentrality();
         bc.directed = true;
         bc.weighted = true;
-        bc.source = 1;
-        bc.execute(g);
+        bc.source = 1L;
+        val score = bc.execute(g);
 
         val attrVertexId = g.getVertexAttribute[Long]("name");
-        val attrBc = g.getVertexAttribute[Double]("bc");
-        DistributedReader.write("output-%d.txt", team, attrVertexId, attrBc);
+        // val attrBc = g.getVertexAttribute[Double]("bc");
+        DistributedReader.write("output-%d.txt", team, attrVertexId, score);
     }
 }

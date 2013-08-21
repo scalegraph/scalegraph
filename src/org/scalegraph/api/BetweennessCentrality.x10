@@ -67,22 +67,29 @@ public class BetweennessCentrality {
      * weighted = false, directed = true, source="all vertices", normalize = false, linear scaling = false. The result will be stored as a graph attribute named "bc".
      * 
      * @param g The graph object
+     * @return DistMemoryChunk[Double], the local index of which (i.e. MemoryChunk index) maps to the vertex id v, where v = team.size() x local_index + team.role()(0).<br/>
+     * For example let the team size equal to 8, the local index of the MemoryChunk is 4, and the MemoryChunk is on the machine that has the role number equal to 3, 
+     * so the local memory pointed by this local index will store the betweenness centrality of the vertex id 35.
      */
     public static def run(g: Graph) {
-        new BetweennessCentrality().execute(g);
+        return new BetweennessCentrality().execute(g);
     }
     
     /**
      * Calculate the vertex betweenness centrality.
      * 
      * @param g The graph object
+     * @return DistMemoryChunk[Double], the local index of which (i.e. MemoryChunk index) maps to the vertex id v, where v = team.size() x local_index + team.role()(0).<br/>
+     * For example let the team size equal to 8, the local index of the MemoryChunk is 4, and the MemoryChunk is on the machine that has the role number equal to 3, 
+     * so the local memory pointed by this local index will store the betweenness centrality of the vertex id 35.
      */
     public def execute(g: Graph) {
         if (weighted) {
             // Weighted
+            return executeWeightedBc(this, g);
         } else {
             // Unweighted
-            executeUnweightedBc(this, g);
+            return executeUnweightedBc(this, g);
         }
     }
     
@@ -92,13 +99,13 @@ public class BetweennessCentrality {
         val dummy = 0..(1L);
 
         if (inst.exactBc == true){
-            DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
-            DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Array[Long]) {
-            DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof LongRange) {
-            DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
         } else {
             throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
         }
@@ -110,13 +117,13 @@ public class BetweennessCentrality {
         val dummy = 0..(1L);
 
         if (inst.exactBc == true){ 
-            DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
-            DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.resultAttrName, inst.delta, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.resultAttrName, inst.delta, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Array[Long]) {
-            DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof LongRange) {
-            DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
         } else {
             throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
         }
