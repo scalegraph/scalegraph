@@ -287,16 +287,24 @@ final class WorkerPlaceGraph[V,E] {
 				ectx.sqweezeMessage(vctxs(th));
 			}
 
-			//directionOptimization
-			if(0L < ectx.mBCSInputCount && ectx.mBCSInputCount < (numLocalVertexes/100)){
-				//TODO:numLocalVertexes/100 is totemo tekitou
+			// update out edges
+			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
+			
+			
+			//-----directionOptimization
+			//investigate sum of all place BC num
+			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
+			if(0L < numAllBCSCount  && numAllBCSCount  < (numLocalVertexes/100)){
+				//TODO:numLocalVertexes/100 is very tekitou
+				//Console.OUT.println("direcion optimization!");
 				val BCbmp=ectx.mBCCHasMessage;
-				var numConvertedMessage : Long = 0L;
+				var numConvertedMessage : Long = 0L;//assert you
 				Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
 					val vc = vctxs(tid);
 					for (dosrcid in r){
-						if(BCbmp(dosrcid)){	//optimze dekiru (raw totte jimae mask)
-							// srcid==dosrcid na message arune!!!!
+						if(BCbmp(dosrcid)){	//optimze (raw totte jimae mask)
+							// srcid==dosrcid na message
+							
 							// convert to unicast message
 							vc.mSrcid = dosrcid;	//...
 							val OEsId = vc.outEdgesId();
@@ -304,20 +312,18 @@ final class WorkerPlaceGraph[V,E] {
 							for(eI in OEsId){
 								vc.sendMessage(eI, tempmes);
 							}
-							numConvertedMessage++; //nantoka shiyou
+							//numConvertedMessage++; //nantoka shiyou
 						}
 					}
 					ectx.mBCCHasMessage.clear(false);
-					//mBCCMessages ha clear shinakute yosage
+					//mBCCMessages ha clear shinakute ii ?
 				});
-				assert(numConvertedMessage == ectx.mBCSInputCount);
-				//TODO: clear broadcast message (ectx.mBCCHasMessage,mBCCMessages) dake?
+				//assert(numConvertedMessage == ectx.mBCSInputCount);
 				ectx.mBCSInputCount=0L;
+			}else{
+				//Console.OUT.println("no direcion optimization!");
 			}
 			//-----
-			
-			// update out edges
-			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
 			
 			// aggregate
 			val aggVal = (aggregator != null)
