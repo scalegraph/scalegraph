@@ -567,28 +567,39 @@ void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const char* fmt, ...) {
 	}
 }
 
-void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const MemoryChunk<x10_byte>& fmt, ...) {
-	va_list ap;
+void StringBuilderFmtAdd_(GrowableMemory<x10_byte>* th, const MemoryChunk<x10_byte>& fmt, va_list ap) {
+	va_list ap2;
+	va_copy(ap2,ap);
 	C_STR_BEGIN(fmt);
 
 	int size = th->size();
 	int capacity = th->capacity();
 	int space = capacity - size;
 	char* ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
-	va_start(ap, fmt);
+//	va_start(ap, fmt);
 	int reqsize = vsnprintf(ptr + size, space, start, ap);
-	va_end(ap);
+//	va_end(ap);
 	th->grow(size + reqsize + 1);
 	th->setSize(size + reqsize);
 	if(reqsize >= space) {
 		// insufficient buffer
 		ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
-		va_start(ap, fmt);
-		int ret = vsnprintf(ptr + size, reqsize + 1, start, ap);
-		va_end(ap);
+	//	va_start(ap, fmt);
+		int ret = vsnprintf(ptr + size, reqsize + 1, start, ap2);
+	//	va_end(ap);
 	    (void) ret;
 	    assert (ret == reqsize);
 	}
+/*	char test[5];
+	va_start(ap,fmt);
+	vsnprintf(test,5,"e%do",ap);
+	va_end(ap);
+	ptr[0]=test[0];
+	ptr[1]=test[1];
+	ptr[2]=test[2];
+	ptr[3]=test[3];*/
+//	int i;
+//	for(i=0;i<9;i++) ptr[i]=start[i];
 
 	C_STR_END;
 }

@@ -42,6 +42,8 @@ public class ID {
 	public static val NAME_SRC_ID		: String = "src";
 	public static val NAME_DST_ID		: String = "dst";
 
+	public static def attTypeId(typeId :Int) = typeId << 8;
+	public static def attTypeId(typeId :Int, flags :Int) = (typeId << 8) | flags;
 	
 	public static def typeId(dmc :Any) :Int {
 		if(dmc instanceof DistMemoryChunk[Boolean])

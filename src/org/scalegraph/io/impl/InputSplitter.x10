@@ -22,7 +22,7 @@ import x10.io.IOException;
 
 public abstract class InputSplitter {
 	
-	public static T_CHUNK_SIZE = 1*1024*1024;
+	public static T_CHUNK_SIZE = 1*1024;
 	
 	/**
 	 * Returns the position of the next line start from the specified offset.

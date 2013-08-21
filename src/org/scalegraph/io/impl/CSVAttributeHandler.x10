@@ -54,6 +54,8 @@ public class CSVAttributeHandler {
 	private abstract static class BaseHandler[T] extends CSVAttributeHandler {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
 
+		public def isSkip() :Boolean = false;
+		
 		public def createBlockGrowableMemory() = new GrowableMemory[T]();
 		
 		public def mergeResult(team :Team, nthreads :Int, getBuffer :(tid :Int) => Any) :Any {

@@ -126,7 +126,6 @@ public class CSVReader {
 		{
 			val reader = new FileReader(fman.fileName(0));
 			val headerLine = reader.fastReadLine();
-			
 			if(includeHeader) {
 				val header = NativeCSVHeader.make(headerLine);
 				if(columnDef.size > header.size()) {
@@ -153,6 +152,7 @@ public class CSVReader {
 				for([i] in attHandler) {
 					val typeId = columnDef(i);
 					columnNames(i) = SString.format("column-%d" as SString, i);
+		//			columnNames(i) = "column-"+i;
 					attHandler(i) = CSVAttributeHandler.create(typeId, includeDQ);
 				}
 			}
@@ -184,12 +184,12 @@ public class CSVReader {
 			if(!attHandler(e).isSkip()) {
 				attributes(attrIndex) = attHandler(e).mergeResult(team, nthreads,
 						(tid :Int) => bufferPLH()(tid).buffer(e));
+		//		attHandler(e).print(team,attributes(attrIndex));
 				attrNames(attrIndex) = columnNames(e).toString();
-				attrIds(attrIndex) = attHandler(e).typeId();
+				attrIds(attrIndex) = ID.attTypeId(attHandler(e).typeId());
 				++attrIndex;
 			}
 		}
-
 		return new NamedDistData(attrNames, attrIds, attributes, null);
 	}
 }

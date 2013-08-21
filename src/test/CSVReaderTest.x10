@@ -9,6 +9,7 @@ public class CSVReaderTest {
 		val colTypes = [ID.TYPE_LONG as Int, ID.TYPE_LONG, ID.TYPE_NONE, ID.TYPE_DOUBLE];
 		val nd = CSVReader.read(team, args(0), colTypes, false);
 		
+		//Console.OUT.println(InputSplitter.T_CHUNK_SIZE);
 		// print result
 		Console.OUT.println(nd.name());
 	}
