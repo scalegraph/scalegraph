@@ -124,7 +124,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val end = mInEdgesOffset(srcid + 1);
 			val length = end - start;
 			
-			buffer.setSize(length);
+			buffer.setSize(0);
 			for(i in 0..(length-1)) {
 				val dst = mInEdgesVertex(start + i);
 				
@@ -133,10 +133,7 @@ final class MessageCommunicator[M] { M haszero } {
 					val wordMask = Bitmap.mask(dst) - 1;
 					val mesOffset = offset(wordOffset) +
 						MathAppend.popcount(bmp.word(wordOffset) & wordMask);
-					buffer(i) = mes(mesOffset);
-				}
-				else {
-					// TODO !!!!
+					buffer.add(mes(mesOffset));
 				}
 			}
 			
