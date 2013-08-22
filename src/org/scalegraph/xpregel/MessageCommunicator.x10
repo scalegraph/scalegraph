@@ -282,6 +282,7 @@ final class MessageCommunicator[M] { M haszero } {
 			mIds.numberOfLocalVertexes2N(), Bitmap.BitsPerWord as Long);
 	
 	private def createInEdgesMask() {
+		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numVertexesBC = numLocalVertexesBC() * mTeam.size();
 		val tmpMask = new Bitmap(numVertexesBC, false);
 		if(mInEdgesMask == null) mInEdgesMask = new Bitmap(numVertexesBC);
@@ -291,13 +292,13 @@ final class MessageCommunicator[M] { M haszero } {
 		});
 		
 		// unpack bitmap if it is needed
-		if(mIds.numberOfLocalVertexes2N() < Bitmap.BitsPerWord) {
+		if(numLocalVertexes2N < Bitmap.BitsPerWord) {
 			val raw = tmpMask.raw();
-			val lgl = mIds.lgl;
-			val mask = (1L << lgl) - 1;
+			val numBits = numLocalVertexes2N as Int;
+			val mask = (1L << numBits) - 1;
 			for (var p :Int = mTeam.size()-1; p >= 0; --p) {
-				val shift = (lgl * p) % Bitmap.BitsPerWord;
-				raw(p) = (raw(Bitmap.offset(lgl * p)) >> shift) & mask;
+				val shift = (numBits * p) % Bitmap.BitsPerWord;
+				raw(p) = (raw(Bitmap.offset(numBits * p)) >> shift) & mask;
 			}
 		}
 		
@@ -328,9 +329,13 @@ final class MessageCommunicator[M] { M haszero } {
 			for(i in placeHasMessage.range()) {
 				placeHasMessage(i) = rawHasMessage(i) & placeInEdgeMask(i);
 				placeNumMessage += MathAppend.popcount(placeHasMessage(i));
-				rawHasMessage(i) = 0UL; // clear bitmap
 			}
 			mBCSCount(p) = placeNumMessage;
+		});
+		
+		Parallel.iter(mBCCHasMessage.raw().range(), (tid :Long, r :LongRange) => {
+			val rawHasMessage = mBCCHasMessage.raw();
+			for(i in r) rawHasMessage(i) = 0UL; // clear bitmap
 		});
 		
 		mBCSOffset(0) = 0;
@@ -435,6 +440,7 @@ final class MessageCommunicator[M] { M haszero } {
 		}
 		
 		if(BCEnabled) {
+			val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 			val numLocalVertexesBC = numLocalVertexesBC();
 			
 			mTeam.alltoall(mBCSCount, recvCount);
@@ -455,13 +461,13 @@ final class MessageCommunicator[M] { M haszero } {
 			mBCSMask.del();
 			
 			// pack mBCRHasMessage if it is needed
-			if(mIds.numberOfLocalVertexes2N() < Bitmap.BitsPerWord) {
-				val dst = new Bitmap(mIds.numberOfLocalVertexes2N(), false);
+			if(numLocalVertexes2N < Bitmap.BitsPerWord) {
+				val dst = new Bitmap(mIds.numberOfGlobalVertexes2N(), false);
 				val raw = dst.raw();
-				val lgl = mIds.lgl;
+				val numBits = numLocalVertexes2N as Int;
 				for(p in 0..(numPlaces-1)) {
-					val shift = (lgl * p) % Bitmap.BitsPerWord;
-					raw(Bitmap.offset(lgl * p)) |= mBCRHasMessage.word(p) << shift;
+					val shift = (numBits * p) % Bitmap.BitsPerWord;
+					raw(Bitmap.offset(numBits * p)) |= mBCRHasMessage.word(p) << shift;
 				}
 				mBCRHasMessage = dst;
 			}
@@ -472,7 +478,7 @@ final class MessageCommunicator[M] { M haszero } {
 					(v1:Long, v2:Long) => v1 + v2);
 			
 			assert recvOffset(numPlaces) as Long ==
-				mBCROffset(Bitmap.numWords(numLocalVertexesBC * numPlaces));
+				mBCROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
 		}
 
 		recvCount.del();

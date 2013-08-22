@@ -66,9 +66,12 @@ abstract public class sx10Test {
     	}
     }
     
-    public atomic static def flush() {
-    	val out = buffer.toString();
-    	buffer.clear();
+    public static def flush() {
+    	val out :String;
+    	atomic {
+	    	out = buffer.toString();
+	    	buffer.clear();
+    	}
     	if(here != Place.FIRST_PLACE) {
     		at(Place.FIRST_PLACE) {
     			x10.io.Console.ERR.print(out);

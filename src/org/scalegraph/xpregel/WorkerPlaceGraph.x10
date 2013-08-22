@@ -58,6 +58,7 @@ final class WorkerPlaceGraph[V,E] {
 	
 	var mLogLevel :Int;
 	var mLogPrinter :Printer;
+	var mEnableStatistics :Boolean = true;
 	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_c = team.role()(0);
@@ -194,7 +195,7 @@ final class WorkerPlaceGraph[V,E] {
 	private static val STT_MAX = 6;
 
 	private static def gatherInformation[M](team :Team2,
-			ectx :MessageCommunicator[M], stt :MemoryChunk[Long],
+			ectx :MessageCommunicator[M], stt :MemoryChunk[Long], enableStatistics :Boolean,
 			combiner :(messages:MemoryChunk[M]) => M) { M haszero } :Boolean
 	{
 		val recvStt = stt.subpart(STT_MAX, STT_MAX);
@@ -225,10 +226,14 @@ final class WorkerPlaceGraph[V,E] {
 		// merge messages and combine if combiner is provided
 		val [  numCombinedMessages, numTransferedVertexMessages ]
 				= ectx.process(combiner, recvStt(STT_RAW_MESSAGE) > 0, recvStt(STT_VERTEX_MESSAGE) > 0);
+		
+		stt(STT_COMBINED_MESSAGE) = numCombinedMessages;
+		stt(STT_VERTEX_TRANSFERED_MESSAGE) = numTransferedVertexMessages;
 
 		// aggregate statictics just for print information
 		// This communication can be omitted !
-		team.allreduce(stt.subpart(STT_PRE, STT_POST), recvStt.subpart(STT_PRE, STT_POST), Team.ADD);
+		if(enableStatistics)
+			team.allreduce(stt.subpart(STT_PRE, STT_POST), recvStt.subpart(STT_PRE, STT_POST), Team.ADD);
 		
 		return false;
 	}
@@ -314,14 +319,14 @@ final class WorkerPlaceGraph[V,E] {
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
 
 			//
-			val terminate = gatherInformation(mTeam, ectx, statistics, combiner);
+			val terminate = gatherInformation(mTeam, ectx, statistics, mEnableStatistics, combiner);
 
 			if(here.id() == 0 && mLogPrinter != null) {
 				mLogPrinter.println("STT_END_COUNT: " + recvStatistics(STT_END_COUNT));
 				mLogPrinter.println("STT_ACTIVE_VERTEX: " + recvStatistics(STT_ACTIVE_VERTEX));
 				mLogPrinter.println("STT_RAW_MESSAGE: " + recvStatistics(STT_RAW_MESSAGE));
 				mLogPrinter.println("STT_VERTEX_MESSAGE: " + recvStatistics(STT_VERTEX_MESSAGE));
-				if(terminate == false) {
+				if(mEnableStatistics && terminate == false) {
 					mLogPrinter.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
 					mLogPrinter.println("STT_VERTEX_TRANSFERED_MESSAGE: " + recvStatistics(STT_VERTEX_TRANSFERED_MESSAGE));
 				}

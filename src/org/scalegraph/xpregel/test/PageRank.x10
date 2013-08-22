@@ -119,7 +119,7 @@ public final class PageRank {
 	
 		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		
-		DistributedReader.write("pagerank-%d", team, pagerank);
+		DistributedReader.write("pagerank-%d", pagerank);
 		
 		Console.OUT.println("Finish application");
 	}

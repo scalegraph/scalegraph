@@ -25,14 +25,6 @@ final class PageRankTest extends sx10Test {
 	}
     
     public def run(args :Array[String](1)): Boolean {
-        val arg = new Array[String](1);
-        arg(0) = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
-        entry(arg);
-        
-        return true;
-    }
-	
-	public def entry(args :Array[String]) {
 		val team = Team.WORLD;
 		val inputFormat = (s:String) => {
 			val elements = s.split(",");
@@ -43,7 +35,7 @@ final class PageRankTest extends sx10Test {
 			);
 		};
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 	
@@ -56,5 +48,6 @@ final class PageRankTest extends sx10Test {
 		val result = org.scalegraph.api.PageRank.run(g);
 		
 		DistributedReader.write("pagerank-%d", team, result);
+		return true;
 	}
 }
