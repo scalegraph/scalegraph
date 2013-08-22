@@ -48,7 +48,7 @@ final class GraphTest extends sx10Test {
 		Console.OUT.println("Reading file: " + filelist(0) + " ...");
 		
 		val format = srcfile.endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
-		val rawdata = DistributedReader.read(team, filelist, format);
+		val rawdata = DistributedReader.read(filelist, format);
 		val edgelist = rawdata.get1();
 		val weight = rawdata.get2();
 		
@@ -222,7 +222,7 @@ final class GraphTest extends sx10Test {
 
 		val att_names = useTranslator ? g.getVertexAttribute[Long]("name") : null;
 		val att_pagerank = g.getVertexAttribute[Double]("degree");
-		DistributedReader.write("degree-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("degree-%d.txt", att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
@@ -279,7 +279,7 @@ final class GraphTest extends sx10Test {
 
 		val att_names = g.getVertexAttribute[Long]("name");
 		val att_pagerank = g.getVertexAttribute[Double]("distance");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("output-%d.txt", att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
@@ -344,7 +344,7 @@ final class GraphTest extends sx10Test {
 		print_attribute_list(g);
 		
 		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("output-%d.txt", att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}

@@ -47,7 +47,7 @@ final class TestDistributedReader extends sx10Test {
 	    val team = Team.WORLD;
 	    val format = args(0).endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
 	    var time: Long = System.currentTimeMillis();
-	    val rawData = DistributedReader.read(team, [args(0) as String], format);
+	    val rawData = DistributedReader.read([args(0) as String], format);
 	    time = System.currentTimeMillis() - time;
 	    Console.OUT.println("Load time: " + (time));
 	    Console.OUT.println("Complete!!!");

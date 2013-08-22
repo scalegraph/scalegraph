@@ -55,7 +55,7 @@ public class DistBetweennessCentralityUnweightedExample {
         fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(team, fileList, inputFormat);
+        val rawData = DistributedReader.read(fileList, inputFormat);
         
         // Create graph
         val edgeList = rawData.get1();
@@ -66,6 +66,6 @@ public class DistBetweennessCentralityUnweightedExample {
         val bc = BetweennessCentrality.run(g);
         val attrVertexId = g.getVertexAttribute[Long]("name");
         // val attrBc = g.getVertexAttribute[Double]("bc");
-        DistributedReader.write("output-%d.txt", team, attrVertexId, bc);
+        DistributedReader.write("output-%d.txt", attrVertexId, bc);
     }
 }

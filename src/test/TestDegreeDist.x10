@@ -56,7 +56,7 @@ final class TestDegreeDist extends sx10Test {
         fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(team, fileList, inputFormat);
+        val rawData = DistributedReader.read(fileList, inputFormat);
         
         // Create graph
         val edgeList = rawData.get1();
@@ -67,9 +67,9 @@ final class TestDegreeDist extends sx10Test {
         val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
         val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
 
-        DistributedReader.write("out/indeg-%d", team, indegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/outdeg-%d", team, outdegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/inoutdeg-%d", team, inOutdegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/indeg-%d", indegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/outdeg-%d", outdegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/inoutdeg-%d", inOutdegResult.raw(team.placeGroup()));
         
         return true;
     }

@@ -99,7 +99,7 @@ final class TestBinaryIO extends sx10Test {
 			fileList = new Array[String](1, readFileName);
 		}
 		
-		val tuple2 = DistributedReader.read(team, fileList, (line:String) => {
+		val tuple2 = DistributedReader.read(fileList, (line:String) => {
 			val list = line.split(" ");
 			Tuple3[Long, Long, Double](Long.parse(list(0)), Long.parse(list(1)), 1.0)
 		});

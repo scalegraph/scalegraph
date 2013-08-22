@@ -35,17 +35,17 @@ final class GeneratorTest extends sx10Test {
 	private static def rmat_test() {
 		val team = Team.WORLD;
 		val rnd = new Random(2,3);
-		val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd, team);
-		DistributedReader.write("rmat-%d", team, rmatEdges);
+		val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
+		DistributedReader.write("rmat-%d", rmatEdges);
 		Console.OUT.println("rmat: done");
 	}
 	
 	private static def erdos_test() {
 	    val team = Team.WORLD;
 	    val rnd = new Random(2,3);
-	    val rmatEdges = GraphGenerator.genRandomGraph(14, 16, rnd, team);
-	    //val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd, team);
-	    DistributedReader.write("erdos-%d", team, rmatEdges);
+	    val rmatEdges = GraphGenerator.genRandomGraph(14, 16, rnd);
+	    //val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
+	    DistributedReader.write("erdos-%d", rmatEdges);
 	    /*
 	     * val graph = new Graph(team, Graph.VertexType.Long, true);
 	     * graph.addEdges(rmatEdges);

@@ -34,7 +34,7 @@ public class MinimumSpanningTreeExample {
 			);
 		};
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 	

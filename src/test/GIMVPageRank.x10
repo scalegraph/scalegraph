@@ -147,7 +147,7 @@ final class GIMVPageRank extends sx10Test {
 
 		val att_names = g.getVertexAttribute[Long]("name");
 		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("output-%d.txt", att_names, att_pagerank);
 
 		Console.OUT.println("Complete!!!");
 	}

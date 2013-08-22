@@ -54,7 +54,7 @@ public final class DegreeDistributionExample {
         fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(team, fileList, inputFormat);
+        val rawData = DistributedReader.read(fileList, inputFormat);
         
         // Create graph
         val edgeList = rawData.get1();
@@ -75,8 +75,8 @@ public final class DegreeDistributionExample {
         degreeDist.mode = DegreeDistribution.INOUT_DEGREE;
         val inOutdegResult = degreeDist.execute(g);
 
-        DistributedReader.write("out/indeg-%d", team, indegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/outdeg-%d", team, outdegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/inoutdeg-%d", team, inOutdegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/indeg-%d", indegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/outdeg-%d", outdegResult.raw(team.placeGroup()));
+        DistributedReader.write("out/inoutdeg-%d", inOutdegResult.raw(team.placeGroup()));
     }
 }

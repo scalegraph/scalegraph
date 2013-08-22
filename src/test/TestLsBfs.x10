@@ -63,7 +63,7 @@ final class TestLsBfs extends sx10Test {
         val team = Team.WORLD;
         
         // Load data
-        val rawData = DistributedReader.read(team, inputFile, inputFormat);
+        val rawData = DistributedReader.read(inputFile, inputFormat);
         // Create graph
         val edgeList = rawData.get1();
         val weightList = rawData.get2();

@@ -75,7 +75,7 @@ final class HyperANF_Pregel extends sx10Test {
 		};
 		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
@@ -89,7 +89,7 @@ final class HyperANF_Pregel extends sx10Test {
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 
 		val csr = g.createDistSparseMatrix[Double](dist, "edgevalue", true, true);
-		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](team, csr);
+		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](csr);
 		
 		val start_time = System.currentTimeMillis();
 		
