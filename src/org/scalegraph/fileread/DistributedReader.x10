@@ -155,6 +155,14 @@ public final class DistributedReader {
 		
 		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[T]](edgelist, weight);
 	}
+ 	public static def write(
+ 			filenamefmt : String,
+ 			team : Team,
+ 			names : Attribute[Long],
+ 			values : Attribute[Double])
+ 	{
+ 		write(filenamefmt, team, names, values.values().raw(team.placeGroup()));
+ 	}
  	
  	public static def write(
  			filenamefmt : String,
