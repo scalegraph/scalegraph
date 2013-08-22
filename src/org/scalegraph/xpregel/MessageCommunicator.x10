@@ -59,6 +59,7 @@ final class MessageCommunicator[M] { M haszero } {
 	var mBCCHasMessage :Bitmap;
 	var mBCCMessages :MemoryChunk[M];
 	
+	var mUCSRawMessageCount :Long;
 	var mUCSCount :MemoryChunk[Int];
 	var mUCSOffset :MemoryChunk[Int];
 	var mUCSIds :MemoryChunk[Long];
@@ -124,7 +125,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val end = mInEdgesOffset(srcid + 1);
 			val length = end - start;
 			
-			buffer.setSize(length);
+			buffer.setSize(0);
 			for(i in 0..(length-1)) {
 				val dst = mInEdgesVertex(start + i);
 				
@@ -133,10 +134,7 @@ final class MessageCommunicator[M] { M haszero } {
 					val wordMask = Bitmap.mask(dst) - 1;
 					val mesOffset = offset(wordOffset) +
 						MathAppend.popcount(bmp.word(wordOffset) & wordMask);
-					buffer(i) = mes(mesOffset);
-				}
-				else {
-					// TODO !!!!
+					buffer.add(mes(mesOffset));
 				}
 			}
 			
@@ -150,15 +148,11 @@ final class MessageCommunicator[M] { M haszero } {
 		mBCSInputCount += ctx.mBCSInputCount; ctx.mBCSInputCount = 0L;
 	}
 	
-	private def preProcessUnicastMessages(combine : (MemoryChunk[M]) => M) {
+	private def processUnicastMessages(combine : (MemoryChunk[M]) => M) {
 		val numPlaces = mTeam.size();
 		val combineEnabled = (combine != null);
 		val nullMessage = Zero.get[M]();
-		
-		val numMessages = Algorithm.reduce(mUCCMessages.range(),
-				(i:Long) => mUCCMessages(i).messages.size()) as Int;
-		if(numMessages == 0)
-			return [ 0L as Long , 0L as Long ]; // short cut
+		val numMessages = mUCSRawMessageCount;
 		
 		mUCSCount = new MemoryChunk[Int](numPlaces);
 		mUCSOffset = new MemoryChunk[Int](numPlaces + 1);
@@ -185,7 +179,7 @@ final class MessageCommunicator[M] { M haszero } {
 			mesOffset(p + 1) = mesOffset(p) + mesCount(p);
 		}
 		
-		assert (numMessages == mesOffset(numPlaces));
+		assert (numMessages == mesOffset(numPlaces) as Long);
 
 		val mesTmp :MemoryChunk[M];
 		val idsTmp :MemoryChunk[Long];
@@ -281,7 +275,7 @@ final class MessageCommunicator[M] { M haszero } {
 			numCombinedMessages = numMessages;
 		}
 		
-		return [ numMessages as Long, numCombinedMessages as Long ];
+		return numCombinedMessages;
 	}
 	
 	private def createInEdgesMask() {
@@ -297,12 +291,10 @@ final class MessageCommunicator[M] { M haszero } {
 		tmpMask.del();
 	}
 	
-	private def preProcessBroadcastMessages(combine : (MemoryChunk[M]) => M) :Long {
+	private def processBroadcastMessages() :Long {
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
 		val nullMessage = Zero.get[M]();
-		
-		if(mBCSInputCount == 0L) return 0L;
 		
 		if(mInEdgesMask == null) createInEdgesMask();
 		
@@ -362,34 +354,37 @@ final class MessageCommunicator[M] { M haszero } {
 		if(mBCRMessages.size() > 0) mBCRMessages.del();
 	}
 	
-	def preProcess(combine : (MemoryChunk[M]) => M) {
+	def preProcess() {
 		resetSRBuffer();
 
-		val r0 = mNumActiveVertexes;
-		val [ r1, r2 ] = preProcessUnicastMessages(combine);
-		val r3 = preProcessBroadcastMessages(combine);
+		mUCSRawMessageCount = Algorithm.reduce(mUCCMessages.range(),
+				(i:Long) => mUCCMessages(i).messages.size());
+		
+		return [ mNumActiveVertexes, mUCSRawMessageCount, mBCSInputCount ];
+	}
+	
+	def process(combine : (MemoryChunk[M]) => M, UCEnabled :Boolean, BCEnabled :Boolean) {
+		
+		val numCombinedMessages = UCEnabled ? processUnicastMessages(combine) : 0L;
+		val numTransferedVertexMessages = BCEnabled ? processBroadcastMessages() : 0L;
 
+		mUCSRawMessageCount = 0L;
 		mBCSInputCount = 0L;
 		mNumActiveVertexes = 0L;
 		
-		return [ r0, r1, r2, r3 ];
+		return [ numCombinedMessages, numTransferedVertexMessages ];
 	}
 	
-	def exchangeMessages(UCEnable :Boolean, BCEnable :Boolean) :void {
+	def exchangeMessages(UCEnabled :Boolean, BCEnabled :Boolean) :void {
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
 
-		mUCREnabled = UCEnable;
-		mBCREnabled = BCEnable;
+		mUCREnabled = UCEnabled;
+		mBCREnabled = BCEnabled;
 		
-		if(UCEnable) {
-			if(mUCSCount.size() == 0L) {
-				// this place has no message to send but it must prepare for receiving messages
-				mUCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
-				mUCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
-			}
+		if(UCEnabled) {
 			
 			mTeam.alltoall(mUCSCount, recvCount);
 			
@@ -425,13 +420,7 @@ final class MessageCommunicator[M] { M haszero } {
 			UCRIds.del();
 		}
 		
-		if(BCEnable) {
-			if(mBCSCount.size() == 0L) {
-				// this place has no message to send but it must prepare for receiving messages
-				mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces, false);
-				mBCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
-				mBCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
-			}
+		if(BCEnabled) {
 			
 			mTeam.alltoall(mBCSCount, recvCount);
 			

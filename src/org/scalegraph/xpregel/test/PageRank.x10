@@ -13,6 +13,7 @@ package org.scalegraph.xpregel.test;
 
 import x10.util.Team;
 
+import org.scalegraph.Config;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Parallel;
@@ -33,8 +34,8 @@ public final class PageRank {
 		
 		val start_read_time = System.currentTimeMillis();
 		val rnd = new Random(2, 3);
-		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
-		val rawWeight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+		val rawWeight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
 
@@ -45,9 +46,9 @@ public final class PageRank {
 		val csr = g.createDistSparseMatrix[Double](dist, "edgevalue", true, true);
 		val xpregel = XPregelGraph.make[Double, Double](team, csr);
 		 */
-		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(dist, true, true);
+		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
 		val edgeWeight = g.createDistAttribute[Double](edgeIndexMatrix, false, "edgevalue");
-		val xpregel = new XPregelGraph[Double, Double](team, edgeIndexMatrix);
+		val xpregel = new XPregelGraph[Double, Double](edgeIndexMatrix);
 		team.placeGroup().broadcastFlat(() => { try {
 			Parallel.iter(xpregel.range(), (tid :Long, r :LongRange) => {
 				val edgeIndexMatrix_ = edgeIndexMatrix();
