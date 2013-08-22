@@ -160,12 +160,12 @@ public final class DistributedReader {
  			filenamefmt : String,
  			team : Team,
  			names : Attribute[Long],
- 			values : Attribute[Double])
+ 			values : DistMemoryChunk[Double])
  	{
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);
- 			val values_ = values.values()().raw();
+ 			val values_ = values();
  			val writer = new FileWriter(new File(filename));
 
  			if(names != null) {

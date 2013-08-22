@@ -25,17 +25,17 @@ import org.scalegraph.blas.GIMV;
 
 final class GraphTest extends sx10Test {
 	public static def main(args: Array[String](1)) {
-		new GraphTest().execute(args);
+		new GeneratorTest().execute(args);
 	}
 	
-	public static inputFormat_g1 = (s :SString)=> {
+	public static inputFormat_g1 = (s:String)=> {
 		val elements = s.split(",");
 		return Tuple3[Long, Long, Double](
 				Long.parse(elements(0)),
 				Long.parse(elements(1)),
 				Double.parse(elements(3)));
 	};
-	public static inpurFormat_g2 = (s :SString)=> {
+	public static inpurFormat_g2 = (s:String)=> {
 		val elements = s.split(",");
 		return Tuple3[Long, Long, Double](
 				Long.parse(elements(0)),
@@ -349,10 +349,10 @@ final class GraphTest extends sx10Test {
 		Console.OUT.println("Complete!!!");
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
-     //   val file = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
+    public def run(args: Array[String](1)): Boolean {
+        val file = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
         val parttition = "1x" + Place.MAX_PLACES;
-        ditributed_sssp_test(args(0), parttition);
+        ditributed_sssp_test(file, parttition);
         
         return true;
     }
