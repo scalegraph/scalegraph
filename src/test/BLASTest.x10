@@ -1,7 +1,18 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 package test;
 
 import x10.util.Team;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.MemoryChunk;
@@ -15,8 +26,12 @@ import org.scalegraph.blas.BLAS;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.blas.DistDiagonalMatrix;
 
-public final class BLASTest {
+final class BLASTest extends sx10Test {
 	public static def main(args: Array[String](1)) {
+		new BLASTest().execute(args);
+	}
+	
+	public def run(args: Array[String](1)): Boolean {
 		val team = Team.WORLD;
 		val scale = Int.parse(args(0));
 		
@@ -33,7 +48,7 @@ public final class BLASTest {
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));
 
-		val g = Graph.make(team, edgelist);
+		val g = Graph.make(edgelist);
 		g.setEdgeAttribute("edgevalue", weight);
 
 		Console.OUT.println("Sparse matrix construction ...");
@@ -83,6 +98,7 @@ public final class BLASTest {
 		//DistributedReader.write("outvec-%d.txt", team, V);
 
 		Console.OUT.println("Finished !!!");
+		return true;
 	}
 	
 	

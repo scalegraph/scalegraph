@@ -11,19 +11,24 @@
 
 package test;
 
+import x10.util.concurrent.AtomicLong;
+import x10.util.Team;
+
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.harness.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.LsBfsVisitor;
-import x10.util.Team;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.Bitmap2;
 import org.scalegraph.graph.id.OnedC;
-import x10.util.concurrent.AtomicLong;
 
-public final class TestLsBfs extends sx10Test {
+final class TestLsBfs extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new TestLsBfs().execute(args);
+	}
     
     val inputFile: Array[String] = new Array[String](1, (Int) => "/nfs/data0/testdata/RMAT_SCALE_8");
     
@@ -43,11 +48,6 @@ public final class TestLsBfs extends sx10Test {
         }
     }
     
-    public static def main(args: Array[String]) {
-        val t = new TestLsBfs();
-        t.execute();
-    }
-    
     public static val inputFormat = (s: String) => {
         val items = s.split(" ");
         return Tuple3[Long, Long, Double] (
@@ -57,8 +57,8 @@ public final class TestLsBfs extends sx10Test {
         );
     };
     
-    
-    public def run():x10.lang.Boolean {
+
+    public def run(args: Array[String](1)): Boolean {
         
         val team = Team.WORLD;
         

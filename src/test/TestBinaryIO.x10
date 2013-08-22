@@ -15,19 +15,20 @@ import x10.io.File;
 import x10.util.Team;
 import x10.util.Timer;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.*;
-
 import org.scalegraph.fileread.DistributedReader;
-
 import org.scalegraph.io.GraphHeader;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.fbio.FBIOSupport;
 import org.scalegraph.io.fbio.AttributeHandler;
-import org.scalegraph.harness.sx10Test;
 
-public final class TestBinaryIO extends sx10Test {
+final class TestBinaryIO extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new TestBinaryIO().execute(args);
+	}
 	
     public static def entry(args : Array[String](1)) {
         if(args(0).equals("read")) {
@@ -44,13 +45,8 @@ public final class TestBinaryIO extends sx10Test {
             throw new IllegalArgumentException();
         }
     }
-	public static def main(args : Array[String](1)) {
-	    val t = new TestBinaryIO();
-	    t.execute();
-	    // t.run();
-	}
-	
-	public def run(): Boolean {
+    
+    public def run(args :Array[String](1)): Boolean {
 	    Console.OUT.println("\nTest Reading");
 	    val p1 = ["read","/nfs/data1/ogata/scalegraph/kronecker", "4"];
 	    entry(p1);

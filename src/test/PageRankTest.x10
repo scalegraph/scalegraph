@@ -13,18 +13,16 @@ package test;
 
 import x10.util.Team;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.harness.sx10Test;
 
-public final class PageRankTest extends sx10Test {
-    
-    public static def main(args :Array[String](1)) {
-        val t = new PageRankTest();
-        t.execute(args);
-    }
+final class PageRankTest extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new PageRankTest().execute(args);
+	}
     
     public def run(args :Array[String](1)): Boolean {
         val arg = new Array[String](1);

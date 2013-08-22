@@ -32,6 +32,12 @@ final public class DegreeDistribution {
     /** The mode in which the degree of a vertex is determined, default is in-degree calculation. */
     public var mode: Int = 1;
     
+    public def this() { }
+    
+    public def this(mode :Int) {
+    	this.mode = mode;
+    }
+    
     /** Run the calculation of degree distribution.
      * @param g The graph object.
      */

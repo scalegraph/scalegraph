@@ -10,15 +10,27 @@
  */
 
 package test;
+
 import x10.util.Team;
+
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.harness.sx10Test;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.util.Dist2D;
 
-public final class GeneratorTest extends sx10Test {
+final class GeneratorTest extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new GeneratorTest().execute(args);
+	}
+	
+	public def run(args: Array[String](1)): Boolean {
+		rmat_test();
+		erdos_test();
+		random_test();
+		return true;
+	}
 	
 	private static def rmat_test() {
 		val team = Team.WORLD;
@@ -48,17 +60,5 @@ public final class GeneratorTest extends sx10Test {
 		for(i in 0..1000) {
 			Console.OUT.println(rnd.nextFloat());
 		}
-	}
-	
-	public static def main(args: Array[String](1)) {
-		val t = new GeneratorTest();
-		t.execute();
-	}
-	
-	public def run(): Boolean {
-	    rmat_test();
-	    erdos_test();
-	    random_test();
-	    return true;
 	}
 }

@@ -1,13 +1,28 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 package test;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.SString;
 
-public class SStringTest {
+final class SStringTest extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new SStringTest().execute(args);
+	}
+	
 	public static def print(ch :Char) {
 		Console.OUT.println(ch);
 	}
-	
-	public static def main(args: Array[String](1)) {
+
+	public def run(args :Array[String](1)): Boolean {
 		// X10 String literal to SString
 		val s1 :SString = "X10 String is very slow on C++ backend.";
 		Console.OUT.println(s1);
@@ -96,5 +111,6 @@ public class SStringTest {
 		Console.OUT.println(SString.format("arg1:%d, arg2:%f, arg3:%c, arg4:%f, arg5:%u, arg6:%c" as SString, 111, 111.11111, '1'.ord(), -0.111111, 1111111111, '0'.ord()));
 		
 		Console.OUT.println("complete !");
+		return true;
 	}
 }

@@ -15,6 +15,7 @@ import x10.util.Team;
 import x10.util.Timer;
 import x10.compiler.Native;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.random.Random;
@@ -25,7 +26,11 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class SCCDebug {
+final class SCCDebug extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new SCCDebug().execute(args);
+	}
+	
 	private static struct SCCVertex {
 		val leaderId:Long; 
 		val front:Boolean; 
@@ -90,8 +95,8 @@ public class SCCDebug {
 
 	    return g;
 	}
-	
-	public static def main(args:Array[String](1)) {
+
+	public def run(args :Array[String](1)): Boolean {
 		val team = Team.WORLD;	
 		// val inputFormat = (s:String) => {
 		// 	val elements = s.split(",");
@@ -318,5 +323,7 @@ public class SCCDebug {
 			
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");	
+		
+		return true;
 	}	
 }	

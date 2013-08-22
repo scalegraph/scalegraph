@@ -35,9 +35,8 @@ abstract public class sx10Test {
        reportResult(b);
     }
     
-    public static def printException(e :CheckedThrowable) {
-    	printException(e, 0);
-    }
+    private static def escapeString(str :String) =
+    	SString(str).replace("\n", linebreak).toString(); // 4 space
     
     private atomic static def printException(e :CheckedThrowable, nested :Int) {
     	var nested_prefix :String = "";
@@ -79,15 +78,27 @@ abstract public class sx10Test {
     	}
     }
     
-    public atomic static def print(str :String) {
-    	buffer.add(escapeString(str));
+    public static def printException(e :CheckedThrowable) {
+    	printException(e, 0);
     }
     
-    private static def escapeString(str :String) =
-    	SString(str).replace("\n", linebreak).toString(); // 4 space
+    public atomic static def print(obj :Any) {
+    	buffer.add(escapeString(obj.toString()));
+    	flush();
+    }
     
-    public atomic static def println(str :String) {
-    	buffer.add(escapeString(str));
+    public atomic static def println(obj :Any) {
+    	buffer.add(escapeString(obj.toString()));
+    	buffer.add(linebreak);
+    	flush();
+    }
+    
+    public atomic static def bufferedPrint(obj :Any) {
+    	buffer.add(escapeString(obj.toString()));
+    }
+    
+    public atomic static def bufferedPrintln(obj :Any) {
+    	buffer.add(escapeString(obj.toString()));
     	buffer.add(linebreak);
     }
 

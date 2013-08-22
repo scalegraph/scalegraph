@@ -29,6 +29,4 @@ public class Utils {
 			Console.OUT.flush();
 		}
 	}
-	
-	public static def 
 }

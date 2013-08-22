@@ -13,43 +13,33 @@ package test;
 
 import x10.util.Team;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.harness.sx10Test;
-import org.scalegraph.util.SString;
 
-public final class TestDistributedReader extends sx10Test {
-	public static inputFormat_g1 = (s :SString)=> {
-		val elements = s.split(',').iterator_();
-		val e1 = elements.next(); // 0
-		val e2 = elements.next(); // 1
-		elements.next(); // 2
-		val w = elements.next(); // 3
-		return Tuple3[Long, Long, Double](
-				Long.parse(e1.toString()),
-				Long.parse(e2.toString()),
-				Double.parse(w.toString()));
-		//return Tuple3[Long, Long, Double](0L, 0L, 0.0);
-	};
-	public static inpurFormat_g2 = (s :SString)=> {
-		val elements = s.split(',').iterator_();
-		val e1 = elements.next(); // 0
-		val e2 = elements.next(); // 1
-		val w = elements.next(); // 2
-		return Tuple3[Long, Long, Double](
-			Long.parse(e1.toString()),
-			Long.parse(e2.toString()),
-			Double.parse(w.toString()));
-	};
-	
+final class TestDistributedReader extends sx10Test {
 	public static def main(args: Array[String](1)) {
-		val t = new TestDistributedReader();
-		t.execute(args);
+		new TestDistributedReader().execute(args);
 	}
 	
+	public static inputFormat_g1 = (s:String)=> {
+		val elements = s.split(",");
+		return Tuple3[Long, Long, Double](
+				Long.parse(elements(0)),
+				Long.parse(elements(1)),
+				Double.parse(elements(3)));
+	};
+	public static inpurFormat_g2 = (s:String)=> {
+		val elements = s.split(",");
+		return Tuple3[Long, Long, Double](
+				Long.parse(elements(0)),
+				Long.parse(elements(1)),
+				Double.parse(elements(2)));
+	};
+
 	public def run(args: Array[String](1)): Boolean {
 	    //val args = ["/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20", ""];
-	    entry([args(0) as String]);
+	    entry(args);
 	    return true;
 	}
 	
@@ -57,7 +47,7 @@ public final class TestDistributedReader extends sx10Test {
 	    val team = Team.WORLD;
 	    val format = args(0).endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
 	    var time: Long = System.currentTimeMillis();
-	    val rawData = DistributedReader.read(team, args, format);
+	    val rawData = DistributedReader.read(team, [args(0) as String], format);
 	    time = System.currentTimeMillis() - time;
 	    Console.OUT.println("Load time: " + (time));
 	    Console.OUT.println("Complete!!!");

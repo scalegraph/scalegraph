@@ -9,6 +9,9 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 package org.scalegraph.io.impl;
+import x10.util.Team;
+import org.scalegraph.util.SString;
+import org.scalegraph.io.NamedDistData;
 
 public class CSVWriter {
 	/*hedder 1 line
@@ -18,10 +21,6 @@ public class CSVWriter {
 	 * file num = place num ( each place writes files)
 	 * */
 	public static def write(team :Team, path :SString, data :NamedDistData){//data: all data
-		
-	}
-	
-	write(){
 		val fman = FileNameProvider.createForRead(path);
 	}
 }

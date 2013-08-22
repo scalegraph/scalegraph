@@ -54,6 +54,8 @@ public final class PageRank {
 	 */
 	public var niter :Int = 30; // TODO: We need to use more large value.
 	
+	public def this() { }
+	
 	// The algorithm interface needs two execute methods.
 	// 1) Accept a Graph object.
 	// 2) Accept a sparse matrix.

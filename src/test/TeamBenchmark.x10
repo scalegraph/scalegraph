@@ -13,10 +13,14 @@ package test;
 
 import x10.util.Team;
 import x10.util.Timer;
-import org.scalegraph.harness.sx10Test;
-import org.scalegraph.util.Debug;
 
-public final class TeamBenchmark extends sx10Test {
+import org.scalegraph.harness.sx10Test;
+
+final class TeamBenchmark extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new TeamBenchmark().execute(args);
+	}
+	
     private static def message (str:String) : void {
         Console.OUT.println("" + Timer.milliTime() + ":tb: " + here + "(" + Runtime.workerId() + ")" + str);
         Console.OUT.flush();
@@ -330,14 +334,9 @@ public final class TeamBenchmark extends sx10Test {
         	} catch (e :CheckedThrowable) { printException(e); }
         }
     }
-    
-    public static def main(args:Array[String](1)) {
-        val t = new TeamBenchmark();
-        t.execute();
-    }
-    
-    public def run(): Boolean {
-        val args = ["1024", "10"];
+
+    public def run(args :Array[String](1)): Boolean {
+ //       val args = ["1024", "10"];
         entry(args);
         
         return true;

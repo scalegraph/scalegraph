@@ -11,14 +11,17 @@
 
 package test;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.id.Twod;
 import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.OnedR;
-import org.scalegraph.harness.sx10Test;
 
-public final class IdConverterTest extends sx10Test {
+final class IdConverterTest extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new IdConverterTest().execute(args);
+	}
 	
 	public static def refVtoS(ids :IdStruct, rr :Long) {
 		val lgr = ids.lgr;
@@ -117,13 +120,8 @@ public final class IdConverterTest extends sx10Test {
 			assert (s2 == s0);
 		}
 	}
-	
-    public static def main(args: Array[String]) {
-    	val t = new IdConverterTest();
-    	t.execute();
-    }
-    
-    public def run(): Boolean {
+
+	public def run(args: Array[String](1)): Boolean {
         twodTest();
         onedCTest();
         onedRTest();
