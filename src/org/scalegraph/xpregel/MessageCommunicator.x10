@@ -59,6 +59,7 @@ final class MessageCommunicator[M] { M haszero } {
 	var mBCCHasMessage :Bitmap;
 	var mBCCMessages :MemoryChunk[M];
 	
+	var mUCSRawMessageCount :Long;
 	var mUCSCount :MemoryChunk[Int];
 	var mUCSOffset :MemoryChunk[Int];
 	var mUCSIds :MemoryChunk[Long];
@@ -124,7 +125,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val end = mInEdgesOffset(srcid + 1);
 			val length = end - start;
 			
-			buffer.setSize(length);
+			buffer.setSize(0);
 			for(i in 0..(length-1)) {
 				val dst = mInEdgesVertex(start + i);
 				
@@ -133,10 +134,7 @@ final class MessageCommunicator[M] { M haszero } {
 					val wordMask = Bitmap.mask(dst) - 1;
 					val mesOffset = offset(wordOffset) +
 						MathAppend.popcount(bmp.word(wordOffset) & wordMask);
-					buffer(i) = mes(mesOffset);
-				}
-				else {
-					// TODO !!!!
+					buffer.add(mes(mesOffset));
 				}
 			}
 			
@@ -150,15 +148,11 @@ final class MessageCommunicator[M] { M haszero } {
 		mBCSInputCount += ctx.mBCSInputCount; ctx.mBCSInputCount = 0L;
 	}
 	
-	private def preProcessUnicastMessages(combine : (MemoryChunk[M]) => M) {
+	private def processUnicastMessages(combine : (MemoryChunk[M]) => M) {
 		val numPlaces = mTeam.size();
 		val combineEnabled = (combine != null);
 		val nullMessage = Zero.get[M]();
-		
-		val numMessages = Algorithm.reduce(mUCCMessages.range(),
-				(i:Long) => mUCCMessages(i).messages.size()) as Int;
-		if(numMessages == 0)
-			return [ 0L as Long , 0L as Long ]; // short cut
+		val numMessages = mUCSRawMessageCount;
 		
 		mUCSCount = new MemoryChunk[Int](numPlaces);
 		mUCSOffset = new MemoryChunk[Int](numPlaces + 1);
@@ -185,7 +179,7 @@ final class MessageCommunicator[M] { M haszero } {
 			mesOffset(p + 1) = mesOffset(p) + mesCount(p);
 		}
 		
-		assert (numMessages == mesOffset(numPlaces));
+		assert (numMessages == mesOffset(numPlaces) as Long);
 
 		val mesTmp :MemoryChunk[M];
 		val idsTmp :MemoryChunk[Long];
@@ -281,38 +275,52 @@ final class MessageCommunicator[M] { M haszero } {
 			numCombinedMessages = numMessages;
 		}
 		
-		return [ numMessages as Long, numCombinedMessages as Long ];
+		return numCombinedMessages;
 	}
 	
+	private def numLocalVertexesBC() = Math.max(
+			mIds.numberOfLocalVertexes2N(), Bitmap.BitsPerWord as Long);
+	
 	private def createInEdgesMask() {
-		val numVertexes2N = mIds.numberOfGlobalVertexes2N();
-		val tmpMask = new Bitmap(numVertexes2N, false);
-		if(mInEdgesMask == null) mInEdgesMask = new Bitmap(numVertexes2N);
+		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
+		val numVertexesBC = numLocalVertexesBC() * mTeam.size();
+		val tmpMask = new Bitmap(numVertexesBC, false);
+		if(mInEdgesMask == null) mInEdgesMask = new Bitmap(numVertexesBC);
 		
 		Parallel.iter(mInEdgesVertex.range(), (tid :Long, r :LongRange) => {
 			for(i in r) tmpMask.atomicSet(mInEdgesVertex(i));
 		});
 		
+		// unpack bitmap if it is needed
+		if(numLocalVertexes2N < Bitmap.BitsPerWord) {
+			val raw = tmpMask.raw();
+			val numBits = numLocalVertexes2N as Int;
+			val mask = (1L << numBits) - 1;
+			for (var p :Int = mTeam.size()-1; p >= 0; --p) {
+				val shift = (numBits * p) % Bitmap.BitsPerWord;
+				raw(p) = (raw(Bitmap.offset(numBits * p)) >> shift) & mask;
+			}
+		}
+		
 		mTeam.alltoall(tmpMask.raw(), mInEdgesMask.raw());
 		tmpMask.del();
 	}
 	
-	private def preProcessBroadcastMessages(combine : (MemoryChunk[M]) => M) :Long {
-		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
+	private def processBroadcastMessages() :Long {
+		val numLocalVertexesBC = numLocalVertexesBC();
+		val numVertexesBC = numLocalVertexesBC * mTeam.size();
 		val numPlaces = mTeam.size();
 		val nullMessage = Zero.get[M]();
 		
-		if(mBCSInputCount == 0L) return 0L;
-		
 		if(mInEdgesMask == null) createInEdgesMask();
 		
-		mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces);
+		mBCSMask = new Bitmap(numVertexesBC);
 		mBCSCount = new MemoryChunk[Int](numPlaces);
 		mBCSOffset = new MemoryChunk[Int](numPlaces + 1);
 		
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
-			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
-			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
+			val startWordOffset = Math.max(Bitmap.offset(numLocalVertexesBC * p), p);
+			val lengthInWords = Bitmap.numWords(numLocalVertexesBC);
 			val placeHasMessage = mBCSMask.raw().subpart(startWordOffset, lengthInWords);
 			val placeInEdgeMask = mInEdgesMask.raw().subpart(startWordOffset, lengthInWords);
 			val rawHasMessage = mBCCHasMessage.raw();
@@ -321,9 +329,13 @@ final class MessageCommunicator[M] { M haszero } {
 			for(i in placeHasMessage.range()) {
 				placeHasMessage(i) = rawHasMessage(i) & placeInEdgeMask(i);
 				placeNumMessage += MathAppend.popcount(placeHasMessage(i));
-				rawHasMessage(i) = 0UL; // clear bitmap
 			}
 			mBCSCount(p) = placeNumMessage;
+		});
+		
+		Parallel.iter(mBCCHasMessage.raw().range(), (tid :Long, r :LongRange) => {
+			val rawHasMessage = mBCCHasMessage.raw();
+			for(i in r) rawHasMessage(i) = 0UL; // clear bitmap
 		});
 		
 		mBCSOffset(0) = 0;
@@ -334,8 +346,8 @@ final class MessageCommunicator[M] { M haszero } {
 		mBCSMessages = new MemoryChunk[M](mBCSOffset(numPlaces));
 
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
-			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
-			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
+			val startWordOffset = Math.max(Bitmap.offset(numLocalVertexesBC * p), p);
+			val lengthInWords = Bitmap.numWords(numLocalVertexesBC);
 			val placeHasMessage = new Bitmap(mBCSMask.raw().subpart(startWordOffset, lengthInWords));
 			
 			val start = mBCSOffset(p);
@@ -362,34 +374,36 @@ final class MessageCommunicator[M] { M haszero } {
 		if(mBCRMessages.size() > 0) mBCRMessages.del();
 	}
 	
-	def preProcess(combine : (MemoryChunk[M]) => M) {
+	def preProcess() {
 		resetSRBuffer();
 
-		val r0 = mNumActiveVertexes;
-		val [ r1, r2 ] = preProcessUnicastMessages(combine);
-		val r3 = preProcessBroadcastMessages(combine);
+		mUCSRawMessageCount = Algorithm.reduce(mUCCMessages.range(),
+				(i:Long) => mUCCMessages(i).messages.size());
+		
+		return [ mNumActiveVertexes, mUCSRawMessageCount, mBCSInputCount ];
+	}
+	
+	def process(combine : (MemoryChunk[M]) => M, UCEnabled :Boolean, BCEnabled :Boolean) {
+		
+		val numCombinedMessages = UCEnabled ? processUnicastMessages(combine) : 0L;
+		val numTransferedVertexMessages = BCEnabled ? processBroadcastMessages() : 0L;
 
+		mUCSRawMessageCount = 0L;
 		mBCSInputCount = 0L;
 		mNumActiveVertexes = 0L;
 		
-		return [ r0, r1, r2, r3 ];
+		return [ numCombinedMessages, numTransferedVertexMessages ];
 	}
 	
-	def exchangeMessages(UCEnable :Boolean, BCEnable :Boolean) :void {
-		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
+	def exchangeMessages(UCEnabled :Boolean, BCEnabled :Boolean) :void {
 		val numPlaces = mTeam.size();
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
 
-		mUCREnabled = UCEnable;
-		mBCREnabled = BCEnable;
+		mUCREnabled = UCEnabled;
+		mBCREnabled = BCEnabled;
 		
-		if(UCEnable) {
-			if(mUCSCount.size() == 0L) {
-				// this place has no message to send but it must prepare for receiving messages
-				mUCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
-				mUCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
-			}
+		if(UCEnabled) {
 			
 			mTeam.alltoall(mUCSCount, recvCount);
 			
@@ -425,13 +439,9 @@ final class MessageCommunicator[M] { M haszero } {
 			UCRIds.del();
 		}
 		
-		if(BCEnable) {
-			if(mBCSCount.size() == 0L) {
-				// this place has no message to send but it must prepare for receiving messages
-				mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces, false);
-				mBCSCount = new MemoryChunk[Int](numPlaces, (i:Long) => 0);
-				mBCSOffset = new MemoryChunk[Int](numPlaces + 1, (i:Long) => 0);
-			}
+		if(BCEnabled) {
+			val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
+			val numLocalVertexesBC = numLocalVertexesBC();
 			
 			mTeam.alltoall(mBCSCount, recvCount);
 			
@@ -446,9 +456,21 @@ final class MessageCommunicator[M] { M haszero } {
 			mTeam.alltoallv(mBCSMessages, mBCSOffset, mBCSCount, mBCRMessages, recvOffset, recvCount);
 			mBCSMessages.del();
 
-			mBCRHasMessage = new Bitmap(numLocalVertexes2N * numPlaces);
+			mBCRHasMessage = new Bitmap(numLocalVertexesBC * numPlaces);
 			mTeam.alltoall(mBCSMask.raw(), mBCRHasMessage.raw());
 			mBCSMask.del();
+			
+			// pack mBCRHasMessage if it is needed
+			if(numLocalVertexes2N < Bitmap.BitsPerWord) {
+				val dst = new Bitmap(mIds.numberOfGlobalVertexes2N(), false);
+				val raw = dst.raw();
+				val numBits = numLocalVertexes2N as Int;
+				for(p in 0..(numPlaces-1)) {
+					val shift = (numBits * p) % Bitmap.BitsPerWord;
+					raw(Bitmap.offset(numBits * p)) |= mBCRHasMessage.word(p) << shift;
+				}
+				mBCRHasMessage = dst;
+			}
 			
 			mBCROffset = new MemoryChunk[Long](Bitmap.numWords(mBCRHasMessage.size()) + 1);
 			Parallel.scan(mBCRHasMessage.raw().range(), mBCROffset, 0L,

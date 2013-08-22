@@ -43,7 +43,7 @@ final class BLASTest extends sx10Test {
 		Console.OUT.println("Graph generation ...");
 		
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
+		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
 		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));
@@ -68,7 +68,7 @@ final class BLASTest extends sx10Test {
 		Console.OUT.println("V <- A * rbind(rep(1, times=N))");
 		BLAS.mult[Double](1.0, A, false, V, 0.0, V);
 		
-		DistributedReader.write("outvec-%d.txt", team, V);
+		DistributedReader.write("outvec-%d.txt", V);
 		
 		// A <- D^(-1/2) %*% A
 		team.placeGroup().broadcastFlat(() => {

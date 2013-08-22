@@ -58,6 +58,7 @@ final class WorkerPlaceGraph[V,E] {
 	
 	var mLogLevel :Int;
 	var mLogPrinter :Printer;
+	var mEnableStatistics :Boolean = true;
 	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_c = team.role()(0);
@@ -101,7 +102,7 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
 		
-		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
@@ -115,7 +116,8 @@ final class WorkerPlaceGraph[V,E] {
 			}
 		});
 		
-		mesComm.preProcess(null);
+		mesComm.preProcess();
+		mesComm.process(null, true, false);
 		mesComm.exchangeMessages(true, false);
 
 		mInEdge.offsets = mesComm.mUCROffset;
@@ -131,7 +133,7 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
 		
-		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
@@ -145,8 +147,9 @@ final class WorkerPlaceGraph[V,E] {
 				}
 			}
 		});
-		
-		mesComm.preProcess(null);
+
+		mesComm.preProcess();
+		mesComm.process(null, true, false);
 		mesComm.exchangeMessages(true, false);
 		
 		val numEdges = mesComm.mUCRMessages.size();
@@ -181,47 +184,67 @@ final class WorkerPlaceGraph[V,E] {
 	
 	private static val STT_END_COUNT = 0;
 	private static val STT_ACTIVE_VERTEX = 1;
-	private static val STT_COMBINED_MESSAGE = 2;
+	private static val STT_RAW_MESSAGE = 2;
 	private static val STT_VERTEX_MESSAGE = 3;
-	private static val STT_MAX = 4;
+	private static val STT_PRE = 4;
+	
+	private static val STT_COMBINED_MESSAGE = 4;
+	private static val STT_VERTEX_TRANSFERED_MESSAGE = 5;
+	private static val STT_POST = 2;
+	
+	private static val STT_MAX = 6;
 
 	private static def gatherInformation[M](team :Team2,
-			ectx :MessageCommunicator[M], statistics :MemoryChunk[Long],
+			ectx :MessageCommunicator[M], stt :MemoryChunk[Long], enableStatistics :Boolean,
 			combiner :(messages:MemoryChunk[M]) => M) { M haszero } :Boolean
 	{
-		// if end is satisfied, we skip message processing.
-		if(statistics(STT_END_COUNT) == 0L) {
-			// merge messages and combine if combiner is provided
-			val [ numActive, numRawMessages, numCombinedMessages, numVertexMessages ]
-					= ectx.preProcess(combiner);
-			
-			statistics(STT_ACTIVE_VERTEX) = numActive;
-			statistics(STT_COMBINED_MESSAGE) = numCombinedMessages;
-			statistics(STT_VERTEX_MESSAGE) = numVertexMessages;
-		}
-		else { // end is satisfied
-			statistics(STT_ACTIVE_VERTEX) = 0L;
-			statistics(STT_COMBINED_MESSAGE) = 0L;
-			statistics(STT_VERTEX_MESSAGE) = 0L;
-		}
+		val recvStt = stt.subpart(STT_MAX, STT_MAX);
 		
-		// check termination
-		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
-		team.allreduce(statistics.subpart(0, STT_MAX), recvStatistics, Team.ADD);
+		// compute the number of messages to determin communication strategy
+		val [ numActive, numRawMessages, numVertexMessages ] = ectx.preProcess();
 		
-		if(recvStatistics(STT_END_COUNT) > 0) {
+		stt(STT_ACTIVE_VERTEX) = numActive;
+		stt(STT_RAW_MESSAGE) = numRawMessages;
+		stt(STT_VERTEX_MESSAGE) = numVertexMessages;
+		
+		// aggregate statistics to determin communication strategy
+		team.allreduce(stt.subpart(0, STT_PRE), recvStt.subpart(0, STT_PRE), Team.ADD);
+
+		if(recvStt(STT_END_COUNT) > 0) {
 			// terminate
 			return true;
 		}
+		
 		// if there are no active vertex nor messages, we terminate computation.
-		if(recvStatistics(STT_ACTIVE_VERTEX) == 0L &&
-			recvStatistics(STT_COMBINED_MESSAGE) == 0L &&
-			recvStatistics(STT_VERTEX_MESSAGE) == 0L)
+		if(recvStt(STT_ACTIVE_VERTEX) == 0L &&
+				recvStt(STT_RAW_MESSAGE) == 0L &&
+				recvStt(STT_VERTEX_MESSAGE) == 0L)
 		{
 			return true;
 		}
 		
+		// merge messages and combine if combiner is provided
+		val [  numCombinedMessages, numTransferedVertexMessages ]
+				= ectx.process(combiner, recvStt(STT_RAW_MESSAGE) > 0, recvStt(STT_VERTEX_MESSAGE) > 0);
+		
+		stt(STT_COMBINED_MESSAGE) = numCombinedMessages;
+		stt(STT_VERTEX_TRANSFERED_MESSAGE) = numTransferedVertexMessages;
+
+		// aggregate statictics just for print information
+		// This communication can be omitted !
+		if(enableStatistics)
+			team.allreduce(stt.subpart(STT_PRE, STT_POST), recvStt.subpart(STT_PRE, STT_POST), Team.ADD);
+		
 		return false;
+	}
+			
+	static def foreachVertexes(numLocalVertexes :Long, task :(Long, LongRange) => void) {
+		// Split the range of bitmat words to ensure the processing thread-safe.
+		Parallel.iter(0..(Bitmap.numWords(numLocalVertexes)-1), (tid :Long, r_word :LongRange) => {
+			val r = new LongRange(r_word.min * Bitmap.BitsPerWord,
+					Math.min(numLocalVertexes, (r_word.max+1) * Bitmap.BitsPerWord) - 1);
+			task(tid, r);
+		});
 	}
 	
 	public def run[M, A](
@@ -255,7 +278,7 @@ final class WorkerPlaceGraph[V,E] {
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
 			
-			Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 				val vc = vctxs(tid);
 				val ep = vc.mEdgeProvider;
 				val mesTempBuffer :GrowableMemory[M] = new GrowableMemory[M]();
@@ -296,13 +319,17 @@ final class WorkerPlaceGraph[V,E] {
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
 
 			//
-			val terminate = gatherInformation(mTeam, ectx, statistics, combiner);
+			val terminate = gatherInformation(mTeam, ectx, statistics, mEnableStatistics, combiner);
 
 			if(here.id() == 0 && mLogPrinter != null) {
 				mLogPrinter.println("STT_END_COUNT: " + recvStatistics(STT_END_COUNT));
 				mLogPrinter.println("STT_ACTIVE_VERTEX: " + recvStatistics(STT_ACTIVE_VERTEX));
-				mLogPrinter.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
+				mLogPrinter.println("STT_RAW_MESSAGE: " + recvStatistics(STT_RAW_MESSAGE));
 				mLogPrinter.println("STT_VERTEX_MESSAGE: " + recvStatistics(STT_VERTEX_MESSAGE));
+				if(mEnableStatistics && terminate == false) {
+					mLogPrinter.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
+					mLogPrinter.println("STT_VERTEX_TRANSFERED_MESSAGE: " + recvStatistics(STT_VERTEX_TRANSFERED_MESSAGE));
+				}
 			}
 			
 			if(terminate) {
