@@ -101,7 +101,7 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
 		
-		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
@@ -132,7 +132,7 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
 		
-		Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
@@ -232,6 +232,15 @@ final class WorkerPlaceGraph[V,E] {
 		
 		return false;
 	}
+			
+	static def foreachVertexes(numLocalVertexes :Long, task :(Long, LongRange) => void) {
+		// Split the range of bitmat words to ensure the processing thread-safe.
+		Parallel.iter(0..(Bitmap.numWords(numLocalVertexes)-1), (tid :Long, r_word :LongRange) => {
+			val r = new LongRange(r_word.min * Bitmap.BitsPerWord,
+					Math.min(numLocalVertexes, (r_word.max+1) * Bitmap.BitsPerWord) - 1);
+			task(tid, r);
+		});
+	}
 	
 	public def run[M, A](
 			compute :(VertexContext[V,E,M,A], MemoryChunk[M]) => void,
@@ -264,7 +273,7 @@ final class WorkerPlaceGraph[V,E] {
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
 			
-			Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 				val vc = vctxs(tid);
 				val ep = vc.mEdgeProvider;
 				val mesTempBuffer :GrowableMemory[M] = new GrowableMemory[M]();
@@ -310,8 +319,12 @@ final class WorkerPlaceGraph[V,E] {
 			if(here.id() == 0 && mLogPrinter != null) {
 				mLogPrinter.println("STT_END_COUNT: " + recvStatistics(STT_END_COUNT));
 				mLogPrinter.println("STT_ACTIVE_VERTEX: " + recvStatistics(STT_ACTIVE_VERTEX));
-				mLogPrinter.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
+				mLogPrinter.println("STT_RAW_MESSAGE: " + recvStatistics(STT_RAW_MESSAGE));
 				mLogPrinter.println("STT_VERTEX_MESSAGE: " + recvStatistics(STT_VERTEX_MESSAGE));
+				if(terminate == false) {
+					mLogPrinter.println("STT_COMBINED_MESSAGE: " + recvStatistics(STT_COMBINED_MESSAGE));
+					mLogPrinter.println("STT_VERTEX_TRANSFERED_MESSAGE: " + recvStatistics(STT_VERTEX_TRANSFERED_MESSAGE));
+				}
 			}
 			
 			if(terminate) {

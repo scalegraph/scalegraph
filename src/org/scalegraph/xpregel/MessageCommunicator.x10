@@ -278,33 +278,48 @@ final class MessageCommunicator[M] { M haszero } {
 		return numCombinedMessages;
 	}
 	
+	private def numLocalVertexesBC() = Math.max(
+			mIds.numberOfLocalVertexes2N(), Bitmap.BitsPerWord as Long);
+	
 	private def createInEdgesMask() {
-		val numVertexes2N = mIds.numberOfGlobalVertexes2N();
-		val tmpMask = new Bitmap(numVertexes2N, false);
-		if(mInEdgesMask == null) mInEdgesMask = new Bitmap(numVertexes2N);
+		val numVertexesBC = numLocalVertexesBC() * mTeam.size();
+		val tmpMask = new Bitmap(numVertexesBC, false);
+		if(mInEdgesMask == null) mInEdgesMask = new Bitmap(numVertexesBC);
 		
 		Parallel.iter(mInEdgesVertex.range(), (tid :Long, r :LongRange) => {
 			for(i in r) tmpMask.atomicSet(mInEdgesVertex(i));
 		});
+		
+		// unpack bitmap if it is needed
+		if(mIds.numberOfLocalVertexes2N() < Bitmap.BitsPerWord) {
+			val raw = tmpMask.raw();
+			val lgl = mIds.lgl;
+			val mask = (1L << lgl) - 1;
+			for (var p :Int = mTeam.size()-1; p >= 0; --p) {
+				val shift = (lgl * p) % Bitmap.BitsPerWord;
+				raw(p) = (raw(Bitmap.offset(lgl * p)) >> shift) & mask;
+			}
+		}
 		
 		mTeam.alltoall(tmpMask.raw(), mInEdgesMask.raw());
 		tmpMask.del();
 	}
 	
 	private def processBroadcastMessages() :Long {
-		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
+		val numLocalVertexesBC = numLocalVertexesBC();
+		val numVertexesBC = numLocalVertexesBC * mTeam.size();
 		val numPlaces = mTeam.size();
 		val nullMessage = Zero.get[M]();
 		
 		if(mInEdgesMask == null) createInEdgesMask();
 		
-		mBCSMask = new Bitmap(numLocalVertexes2N * numPlaces);
+		mBCSMask = new Bitmap(numVertexesBC);
 		mBCSCount = new MemoryChunk[Int](numPlaces);
 		mBCSOffset = new MemoryChunk[Int](numPlaces + 1);
 		
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
-			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
-			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
+			val startWordOffset = Math.max(Bitmap.offset(numLocalVertexesBC * p), p);
+			val lengthInWords = Bitmap.numWords(numLocalVertexesBC);
 			val placeHasMessage = mBCSMask.raw().subpart(startWordOffset, lengthInWords);
 			val placeInEdgeMask = mInEdgesMask.raw().subpart(startWordOffset, lengthInWords);
 			val rawHasMessage = mBCCHasMessage.raw();
@@ -326,8 +341,8 @@ final class MessageCommunicator[M] { M haszero } {
 		mBCSMessages = new MemoryChunk[M](mBCSOffset(numPlaces));
 
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
-			val startWordOffset = Bitmap.offset(numLocalVertexes2N * p);
-			val lengthInWords = Bitmap.numWords(numLocalVertexes2N);
+			val startWordOffset = Math.max(Bitmap.offset(numLocalVertexesBC * p), p);
+			val lengthInWords = Bitmap.numWords(numLocalVertexesBC);
 			val placeHasMessage = new Bitmap(mBCSMask.raw().subpart(startWordOffset, lengthInWords));
 			
 			val start = mBCSOffset(p);
@@ -376,7 +391,6 @@ final class MessageCommunicator[M] { M haszero } {
 	}
 	
 	def exchangeMessages(UCEnabled :Boolean, BCEnabled :Boolean) :void {
-		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numPlaces = mTeam.size();
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
@@ -421,6 +435,7 @@ final class MessageCommunicator[M] { M haszero } {
 		}
 		
 		if(BCEnabled) {
+			val numLocalVertexesBC = numLocalVertexesBC();
 			
 			mTeam.alltoall(mBCSCount, recvCount);
 			
@@ -435,9 +450,21 @@ final class MessageCommunicator[M] { M haszero } {
 			mTeam.alltoallv(mBCSMessages, mBCSOffset, mBCSCount, mBCRMessages, recvOffset, recvCount);
 			mBCSMessages.del();
 
-			mBCRHasMessage = new Bitmap(numLocalVertexes2N * numPlaces);
+			mBCRHasMessage = new Bitmap(numLocalVertexesBC * numPlaces);
 			mTeam.alltoall(mBCSMask.raw(), mBCRHasMessage.raw());
 			mBCSMask.del();
+			
+			// pack mBCRHasMessage if it is needed
+			if(mIds.numberOfLocalVertexes2N() < Bitmap.BitsPerWord) {
+				val dst = new Bitmap(mIds.numberOfLocalVertexes2N(), false);
+				val raw = dst.raw();
+				val lgl = mIds.lgl;
+				for(p in 0..(numPlaces-1)) {
+					val shift = (lgl * p) % Bitmap.BitsPerWord;
+					raw(Bitmap.offset(lgl * p)) |= mBCRHasMessage.word(p) << shift;
+				}
+				mBCRHasMessage = dst;
+			}
 			
 			mBCROffset = new MemoryChunk[Long](Bitmap.numWords(mBCRHasMessage.size()) + 1);
 			Parallel.scan(mBCRHasMessage.raw().range(), mBCROffset, 0L,
@@ -445,7 +472,7 @@ final class MessageCommunicator[M] { M haszero } {
 					(v1:Long, v2:Long) => v1 + v2);
 			
 			assert recvOffset(numPlaces) as Long ==
-				mBCROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
+				mBCROffset(Bitmap.numWords(numLocalVertexesBC * numPlaces));
 		}
 
 		recvCount.del();
