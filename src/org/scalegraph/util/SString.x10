@@ -16,9 +16,10 @@ import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.NativeCPPOutputFile;
 
-@NativeCPPInclude("StringHelper.h")
 @NativeCPPOutputFile("SString__TokenIterator.h")
-@NativeCPPCompilationUnit("StringHelper.cc")
+@NativeCPPInclude("StringHelper.h")
+@NativeCPPOutputFile("StringHelperImpl.h")
+@NativeCPPCompilationUnit("StringHelperImpl.cc")
 
 public final struct SString {
 	
@@ -116,12 +117,12 @@ public final struct SString {
 	public def indexOf(ch: Char) = indexOf(ch, 0);
 	
 	@Native("c++", "org::scalegraph::util::StringIndexOf_((#this).FMGL(content), #ch, #idx)")
-	public native def indexOf(ch: Char, idx: Int): Int;
+	public native def indexOf(ch: Char, idx: Int) :Int;
 	
 	public def indexOf(str: SString) = indexOf(str, 0);
 
 	@Native("c++", "org::scalegraph::util::StringIndexOf_((#this).FMGL(content), (#str).FMGL(content), #idx)")
-	public native def indexOf(str: SString, idx: Int): Int;
+	public native def indexOf(str: SString, idx: Int) :Int;
 	
 	public def lastIndexOf(ch: Char) = lastIndexOf(ch, 0);
 
@@ -282,4 +283,6 @@ public final struct SString {
 	
 	@Native("c++", "org::scalegraph::util::StringFormat_((#fmt)->FMGL(content),#o1,#o2,#o3,#o4,#o5,#o6)")
 	public static native def format[T1,T2,T3,T4,T5,T6](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4, o5 :T5, o6 :T6) :SString;
+
+	private def _helper(sh :StringHelperImpl) { }
 }
