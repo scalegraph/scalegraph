@@ -290,11 +290,11 @@ final class WorkerPlaceGraph[V,E] {
 			// update out edges
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
 			
-			
+			/*
 			//-----directionOptimization
 			//investigate sum of all place BC num
 			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
-			if(0L < numAllBCSCount  && numAllBCSCount  < (numLocalVertexes/100)){
+			if(0L < numAllBCSCount  && numAllBCSCount  < (numLocalVertexes/2)){
 				//TODO:numLocalVertexes/100 is very tekitou
 				//Console.OUT.println("direcion optimization!");
 				val BCbmp=ectx.mBCCHasMessage;
@@ -324,6 +324,7 @@ final class WorkerPlaceGraph[V,E] {
 				//Console.OUT.println("no direcion optimization!");
 			}
 			//-----
+			*/
 			
 			// aggregate
 			val aggVal = (aggregator != null)
