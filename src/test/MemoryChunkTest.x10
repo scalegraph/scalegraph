@@ -1,8 +1,22 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 package test;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.MemoryChunk;
 
-public final class MemoryChunkTest {
+final class MemoryChunkTest extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new MemoryChunkTest().execute(args);
+	}
 	
 	static struct SampleStruct {
 		val a:Int;
@@ -24,8 +38,8 @@ public final class MemoryChunkTest {
 		public def print() { Console.OUT.println(""); }
 		public def toString() = "a = " + a + ", b = " + b;
 	}
-	
-    public static def main(args: Array[String]) {
+
+	public def run(args: Array[String](1)): Boolean {
     	val mc1 = new MemoryChunk[SampleStruct](10, (i :Long) => SampleStruct(i as Int, i));
     	val mc2 = new MemoryChunk[SampleClass](10);
     //	val mc2 = new MemoryChunk[SampleClass](10, (Long)=>new SampleClass());
@@ -37,5 +51,6 @@ public final class MemoryChunkTest {
     		Console.OUT.println("mc2\n" + mc2);
     		Console.OUT.println("mc3\n" + mc3);
     	}
+    	return true;
     }
 }

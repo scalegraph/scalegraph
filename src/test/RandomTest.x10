@@ -11,17 +11,15 @@
 
 package test;
 
-import org.scalegraph.util.random.Random;
 import org.scalegraph.harness.sx10Test;
+import org.scalegraph.util.random.Random;
 
-public class RandomTest extends sx10Test {
-
+class RandomTest extends sx10Test {
 	public static def main(args: Array[String](1)) {
-		val t = new RandomTest();
-		t.execute();
+		new RandomTest().execute(args);
 	}
 	
-	public def run(): Boolean {
+	public def run(args :Array[String](1)): Boolean {
 	    val t1 = new Random(1, 2);
 
 	    Console.OUT.println(t1.nextInt());

@@ -25,8 +25,12 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
+import x10.util.Pair;
+import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.graph.Graph.VertexType;
 
-public final class MinimumSpanningTree {
+public final class MinimumSpanningTreeImpl {
         
     public static final class VertexValue {
         var root: Long;
@@ -75,11 +79,9 @@ public final class MinimumSpanningTree {
         }
     }
 	
-	public static def run(g: Graph) {
-	    val team = g.team();
-	    val dist = Dist2D.make2D(team, 1, team.size());
-		val csr = g.createDistSparseMatrix[Double](dist, "weight", false, true);
-		val xpregel = XPregelGraph.make[VertexValue, Double](team, csr);
+	public static def run(csr: DistSparseMatrix[Double]): Graph {
+	    val team = csr.dist().allTeam();
+	    val xpregel = XPregelGraph.make[VertexValue, Double](team, csr);
 		
 		xpregel.updateInEdge();
 		
@@ -155,10 +157,12 @@ public final class MinimumSpanningTree {
 		                val m = messages(i);
 		                val from = m.srcRoot;
 		                
-		                if (selectedRoot == from && from > myRoot) {
+		                if (selectedRoot == from && from < myRoot) {
 		                    // waive selected edge, then do nothing
 		                } else {
 		                    // output selected edge
+		                    ctx.output(0, m.dst);
+		                    ctx.output(1, m.src);
 		                    // Console.OUT.printf("\t\tsel(%ld): (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), m.src, m.dst, m.srcRoot, m.dstRoot, m.w);
 		                }
 		            }
@@ -279,6 +283,28 @@ public final class MinimumSpanningTree {
 		    ++loop;
 		} while (numCom()() > 0);
 
-		Console.OUT.println("Finish application");
+		val outSrc = xpregel.stealOutput[Long](0);
+		val outDst = xpregel.stealOutput[Long](1);
+		
+		// Create Graph with selected edges
+		
+		val edgesList = new DistMemoryChunk[Long](team.placeGroup(), () => {
+		    val localSrc = outSrc();
+		    val localDst = outDst();
+		    val numEdges = localSrc.size();
+		    var index: Long = 0;
+		    val m = new MemoryChunk[Long](numEdges * 2);
+		    for (i in 0..(numEdges - 1)) {
+		        m(index++) = localSrc(i);
+		        m(index++) = localDst(i);
+		    }
+		    
+		    return m;
+		});
+		
+		val resultGraph = new Graph(team, VertexType.Long, false);
+		resultGraph.addEdges(edgesList);
+		
+		return resultGraph;
 	}
 }

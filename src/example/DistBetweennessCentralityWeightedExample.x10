@@ -30,6 +30,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.metrics.DistBetweennessCentralityWeighted;
+import org.scalegraph.api.BetweennessCentrality;
 
 public class DistBetweennessCentralityWeightedExample {
     
@@ -52,24 +53,26 @@ public class DistBetweennessCentralityWeightedExample {
         fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(team, fileList, inputFormat);
+        val rawData = DistributedReader.read(fileList, inputFormat);
         
         // Create graph
         val edgeList = rawData.get1();
         val weightList = rawData.get2();
         
-        val g = new Graph(team, Graph.VertexType.Long, false);
+        val g = new Graph(team, Graph.VertexType.Long, true);
         g.addEdges(edgeList.raw(team.placeGroup()));
         g.setEdgeAttribute[Double]("weight", weightList.raw(team.placeGroup()));
         Console.OUT.println("Start BC");
-        DistBetweennessCentralityWeighted.calculate(g,
-                                              true,
-                                              "weight",
-                                              "bc",
-                                              1,
-                                              false);
+        
+        // Create API instnace, since we would like to specify parameters
+        val bc = new BetweennessCentrality();
+        bc.directed = true;
+        bc.weighted = true;
+        bc.source = 1L;
+        val score = bc.execute(g);
+
         val attrVertexId = g.getVertexAttribute[Long]("name");
-        val attrBc = g.getVertexAttribute[Double]("bc");
-        DistributedReader.write("output-%d.txt", team, attrVertexId, attrBc);
+        // val attrBc = g.getVertexAttribute[Double]("bc");
+        DistributedReader.write("output-%d.txt", attrVertexId, score);
     }
 }

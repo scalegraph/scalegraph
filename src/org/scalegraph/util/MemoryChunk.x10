@@ -78,7 +78,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		}
 	}
 	
-	private def this(data :MemoryChunkData[T]) {
+	def this(data :MemoryChunkData[T]) {
 		this.data = data;
 	}
 	
@@ -288,6 +288,12 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		data(index) = value;
 		return value;
 	}
+	
+	public @Inline def setUnchecked(index :Int, value :T) { data(index) = value; }
+	public @Inline def setUnchecked(index :Long, value :T) { data(index) = value; }
+
+	public @Inline def getUnchecked(index :Int) = data(index);
+	public @Inline def getUnchecked(index :Long) = data(index);
 
 	/** Sets new value to indexed place
 	 * @param index The index where you want to set the value to.

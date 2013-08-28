@@ -41,7 +41,7 @@ public class LsBfsVisitorExample {
         fileList(0) = args(0);
         
         // Load
-        val rawData = DistributedReader.read(team, fileList, inputFormat);
+        val rawData = DistributedReader.read(fileList, inputFormat);
 
         // Create graph
         val edgeList = rawData.get1();

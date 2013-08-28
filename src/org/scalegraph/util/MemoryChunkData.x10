@@ -20,9 +20,10 @@ import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit;
 
 import x10.util.IndexedMemoryChunk;
+import x10.compiler.NativeCPPOutputFile;
 
-@NativeCPPInclude("MemoryChunkData.h")
-@NativeCPPInclude("MemoryChunkData__Pointer.h")
+@NativeCPPOutputFile("MemoryChunkData.h")
+@NativeCPPOutputFile("MemoryChunkData__Pointer.h")
 @NativeCPPCompilationUnit("MemoryChunkData.cc")
 
 

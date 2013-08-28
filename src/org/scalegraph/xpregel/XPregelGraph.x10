@@ -16,11 +16,12 @@ import x10.io.Printer;
 import x10.compiler.Inline;
 import x10.compiler.Ifndef;
 
+import org.scalegraph.Config;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.tuple.Tuple2;
-
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
 
@@ -41,8 +42,9 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
 	
-	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long])
+	public def this(edgeIndexMatrix :DistSparseMatrix[Long])
 	{
+		val team = Config.get().worldTeam();
 		mTeam = new Team2(team);
 		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),
 				() => new WorkerPlaceGraph[V,E](team, edgeIndexMatrix));
@@ -54,14 +56,16 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 		mWorkers = workers;
 	}
 	
-	public static def make[V, E](team :Team, graph :DistSparseMatrix[E]) {V haszero, E haszero} {
+	public static def make[V, E](graph :DistSparseMatrix[E]) {V haszero, E haszero} {
+		val team = Config.get().worldTeam();
 		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
 			(team.placeGroup(), () => new WorkerPlaceGraph[V, E](team, graph.ids())));
 		g.setGraphAndEdgeValue(graph);
 		return g;
 	}
 	
-	public static def make[V, E](team :Team, graph :DistSparseMatrix[E], iv :V) {V haszero, E haszero} {
+	public static def make[V, E](graph :DistSparseMatrix[E], iv :V) {V haszero, E haszero} {
+		val team = Config.get().worldTeam();
 		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
 		(team.placeGroup(), () => new WorkerPlaceGraph[V, E](team, graph.ids())));
 		g.setGraphAndEdgeValue(graph);

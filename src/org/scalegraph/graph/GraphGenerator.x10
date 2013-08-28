@@ -12,6 +12,8 @@
 package org.scalegraph.graph;
 
 import x10.util.Team;
+
+import org.scalegraph.Config;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
@@ -23,44 +25,45 @@ import org.scalegraph.util.Parallel;
 public final class GraphGenerator {
 
 	/** Generates a 2D-grid graph of Rows rows and Cols columns. */
-	public static def genGrid(rows :Long, columns :Long, team :Team)
+	public static def genGrid(rows :Long, columns :Long)
 	: DistMemoryChunk[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a graph with star topology. Node id 0 is in the center and then links to all other nodes.  */
-	public static def genStar(scale :Int, team :Team)
+	public static def genStar(scale :Int)
 	: DistMemoryChunk[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a circle graph where every node creates out-links to NodeOutDeg forward nodes.  */
-	public static def genCircle(scale :Int, nodeOutDeg :Int, team :Team)
+	public static def genCircle(scale :Int, nodeOutDeg :Int)
 	: DistMemoryChunk[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a complete graph on Nodes nodes. Graph has no self-loops.  */
-	public static def genFull(fanout :Int, levels :Int, childPointsToParent :Boolean, team :Team)
+	public static def genFull(fanout :Int, levels :Int, childPointsToParent :Boolean)
 	: DistMemoryChunk[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a tree graph of Levels levels with every parent having Fanout children.  */
-	public static def genTree(scale :Int, team :Team)
+	public static def genTree(scale :Int)
 	: DistMemoryChunk[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 	
 	/** Generates an Erdos-Renyi random graph. */
-	public static def genRandomGraph(scale :Int, edgefactor :Int, rnd :Random, team :Team)
+	public static def genRandomGraph(scale :Int, edgefactor :Int, rnd :Random)
 	: DistMemoryChunk[Long]
 	{
+		val team = Config.get().worldTeam();
 		val numVertices = 1L << scale;
 		val numEdges = edgefactor * numVertices;
 		val numLocalEdges = numEdges / team.size();
@@ -89,9 +92,10 @@ public final class GraphGenerator {
 		return edgeMemory;
 	}
 	
-	public static def genRandomEdgeValue(scale :Int, edgefactor :Int, rnd :Random, team :Team)
+	public static def genRandomEdgeValue(scale :Int, edgefactor :Int, rnd :Random)
 	: DistMemoryChunk[Double]
 	{
+		val team = Config.get().worldTeam();
 		val numVertices = 1L << scale;
 		val numEdges = edgefactor * numVertices;
 		val numLocalEdges = numEdges / team.size();
@@ -121,11 +125,12 @@ public final class GraphGenerator {
 	
 	/** Generates a R-MAT graph using recursive descent into a 2x2 matrix [A,B; C, 1-(A+B+C)]. */
 	public static def genRMAT(scale :Int, edgefactor :Int,
-			A :Double, B :Double, C :Double, rnd :Random, team :Team)
+			A :Double, B :Double, C :Double, rnd :Random)
 	: DistMemoryChunk[Long]
 	{
 		if(A+B+C >= 1.0f) throw new IllegalArgumentException("A+B+C >= 1.0: Invalid probabilities");
-		
+
+		val team = Config.get().worldTeam();
 		val numVertices = 1L << scale;
 		val numEdges = edgefactor * numVertices;
 		val numLocalEdges = numEdges / team.size();
