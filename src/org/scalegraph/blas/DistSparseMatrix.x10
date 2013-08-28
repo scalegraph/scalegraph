@@ -101,7 +101,7 @@ public final struct DistSparseMatrix[T] {
 			//			2. move lator region data
 			
 			if(ids.outerOrInner) {
-				for(i in 1L..(m.offsets.size()-2)) {
+				for(i in 0L..(m.offsets.size()-2)) {
 					val off = cachedOffset;
 					val next = m.offsets(i+1);
 					var prev :Long = -1L;
@@ -128,7 +128,7 @@ public final struct DistSparseMatrix[T] {
 				}
 			}
 			else {
-				for(i in 1L..(m.offsets.size()-2)) {
+				for(i in 0L..(m.offsets.size()-2)) {
 					val off = cachedOffset;
 					val next = m.offsets(i+1);
 					var prev :Long = -1L;

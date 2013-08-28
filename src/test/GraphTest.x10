@@ -13,9 +13,9 @@ package test;
 
 import x10.util.Team;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
@@ -23,7 +23,10 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.GIMV;
 
-public class GraphTest extends sx10Test {
+final class GraphTest extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new GeneratorTest().execute(args);
+	}
 	
 	public static inputFormat_g1 = (s:String)=> {
 		val elements = s.split(",");
@@ -45,7 +48,7 @@ public class GraphTest extends sx10Test {
 		Console.OUT.println("Reading file: " + filelist(0) + " ...");
 		
 		val format = srcfile.endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
-		val rawdata = DistributedReader.read(team, filelist, format);
+		val rawdata = DistributedReader.read(filelist, format);
 		val edgelist = rawdata.get1();
 		val weight = rawdata.get2();
 		
@@ -219,7 +222,7 @@ public class GraphTest extends sx10Test {
 
 		val att_names = useTranslator ? g.getVertexAttribute[Long]("name") : null;
 		val att_pagerank = g.getVertexAttribute[Double]("degree");
-		DistributedReader.write("degree-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("degree-%d.txt", att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
@@ -276,7 +279,7 @@ public class GraphTest extends sx10Test {
 
 		val att_names = g.getVertexAttribute[Long]("name");
 		val att_pagerank = g.getVertexAttribute[Double]("distance");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("output-%d.txt", att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
@@ -341,17 +344,12 @@ public class GraphTest extends sx10Test {
 		print_attribute_list(g);
 		
 		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("output-%d.txt", att_names, att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
 	
-    public static def main(args: Array[String](1)) {
-        val t = new GraphTest();
-        t.execute();
-    }
-    
-    public def run(): Boolean {
+    public def run(args: Array[String](1)): Boolean {
         val file = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
         val parttition = "1x" + Place.MAX_PLACES;
         ditributed_sssp_test(file, parttition);

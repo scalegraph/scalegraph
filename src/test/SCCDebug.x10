@@ -15,6 +15,8 @@ import x10.util.Team;
 import x10.util.Timer;
 import x10.compiler.Native;
 
+import org.scalegraph.harness.sx10Test;
+import org.scalegraph.Config;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.random.Random;
@@ -25,7 +27,11 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class SCCDebug {
+final class SCCDebug extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new SCCDebug().execute(args);
+	}
+	
 	private static struct SCCVertex {
 		val leaderId:Long; 
 		val front:Boolean; 
@@ -75,8 +81,8 @@ public class SCCDebug {
 
 	    Console.OUT.println("Generating edge list ...");
 	    val rnd = new Random(2, 3);
-	    val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
-	    val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+	    val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+	    val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 
 	    Console.OUT.println("Creating graph object ...");
 
@@ -91,8 +97,8 @@ public class SCCDebug {
 
 	    return g;
 	}
-	
-	public static def main(args:Array[String](1)) {
+
+	public def run(args :Array[String](1)): Boolean {
 		val team = Team.WORLD;	
 		// val inputFormat = (s:String) => {
 		// 	val elements = s.split(",");
@@ -120,8 +126,8 @@ public class SCCDebug {
 		val g = generate_graph(scale, team, true);
 		
 //		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = XPregelGraph.make[SCCVertex, Long](team,
-				g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true));
+		val xpregel = XPregelGraph.make[SCCVertex, Long](
+				g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true));
 //		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
 		val start_time = System.currentTimeMillis();
 		xpregel.updateInEdge();
@@ -296,5 +302,7 @@ public class SCCDebug {
 			
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");	
+		
+		return true;
 	}	
 }	

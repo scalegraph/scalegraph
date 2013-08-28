@@ -22,7 +22,6 @@ import x10.compiler.Inline;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.DistScatterGather;
 import org.scalegraph.util.HashMap;
-import org.scalegraph.util.Debug;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;

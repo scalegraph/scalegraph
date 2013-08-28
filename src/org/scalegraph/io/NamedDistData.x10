@@ -16,6 +16,7 @@ import x10.util.ArrayList;
 import org.scalegraph.util.DistMemoryChunk;
 import x10.util.NoSuchElementException;
 import org.scalegraph.util.tuple.Tuple2;
+import org.scalegraph.util.SString;
 
 public class NamedDistData {
 	val name :Array[String](1);
@@ -32,16 +33,43 @@ public class NamedDistData {
 		return typeId;
 	}
 	
-	public def this(name_ :Array[String](1), data_ :Array[Any](1), header_ :Any) {
-		this(name_, createTypeId(data_), data_, header_);
+	private static def createName(data :Array[Any](1)) {
+		val name = new Array[String](data.size);
+		for([i] in data) {
+			name(i) = String.format("column-%d", [i as Any]);
+		}
+		return name;
+	}
+
+	public def this(data_ :Array[Any](1)) {
+		this(null, null, data_, null);
 	}
 	
-	public def this(name_ :Array[String](1), typeId_ :Array[Int](1), data_ :Array[Any](1), header_ :Any) {
+	public def this(name_ :Array[String](1), data_ :Array[Any](1)) {
+		this(name_, null, data_, null);
+	}
+	
+	public def this(name_ :Array[String](1), data_ :Array[Any](1), header_ :Any) {
+		this(name_, null, data_, header_);
+	}
+	
+	public def this(var name_ :Array[String](1), var typeId_ :Array[Int](1), data_ :Array[Any](1), header_ :Any) {
+		if(data_ == null) {
+			throw new IllegalArgumentException("data may not be null");
+		}
+		if(name_ == null) {
+			name_ = createName(data_);
+		}
+		if(typeId_ == null) {
+			typeId_ = createTypeId(data_);
+		}
+		
 		this.name = name_;
 		this.typeId = typeId_;
 		this.data = data_;
 		this.header = header_;
 		this.datatype =
+			(header_ == null) ? ID.HEADER_NONE :
 			(header_ instanceof GraphHeader) ? ID.HEADER_GRAPH :
 			(header_ instanceof MatrixHeader) ? ID.HEADER_MATRIX :
 			(header_ instanceof VectorHeader) ? ID.HEADER_VECTOR :
@@ -54,6 +82,25 @@ public class NamedDistData {
 			if(!ID.checkType(data(i), typeId(i)))
 				throw new IllegalArgumentException("Type ID is not match to the actual data type.");
 		}
+	}
+	
+	private def nameToIndex(name_ :SString) {
+		for([i] in name) {
+			if(name_.equals(name(i))) {
+				return i;
+			}
+		}
+		throw new IllegalArgumentException("Specified name does not exist");
+	}
+	
+	public def get[T](name_ :SString) = get[T](nameToIndex(name_));
+	
+	public def get[T](index :Int) {
+		val data_ = data(index);
+		if(data_ instanceof DistMemoryChunk[T]) {
+			return data_ as DistMemoryChunk[T];
+		}
+		throw new IllegalArgumentException("Type not match: " + data_.typeName());
 	}
 
 	public def size() = name.size;

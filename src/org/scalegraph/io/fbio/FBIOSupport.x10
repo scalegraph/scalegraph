@@ -229,7 +229,6 @@ class ScatteredFileManager extends FileManager {
 //////////////////////////////////////////////////////////////
 
 @NativeCPPInclude("NativeSupport.h")
-@NativeCPPOutputFile("fbio_fmt.h")
 @NativeCPPCompilationUnit("NativeSupport.cc") 
 public class FBIOSupport {
 

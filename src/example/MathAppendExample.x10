@@ -10,13 +10,14 @@
  */
 
 package example;
-import org.scalegraph.util.*;
-import org.scalegraph.util.Debug;
+
 import x10.util.Random;
+
+import org.scalegraph.util.*;
 
 public class MathAppendExample {
 	private static def message (str:String) : void {
-		Debug.println("IdConvEx: ", str);
+		Console.OUT.println("IdConvEx: " + str);
 	}
 	
 	static def testCeilLog2() {
