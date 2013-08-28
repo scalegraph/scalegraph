@@ -313,16 +313,16 @@ final class WorkerPlaceGraph[V,E] {
 			// update out edges
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
 			
-			/*
+			
 			//-----directionOptimization
 			//investigate sum of all place BC num
 			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
-			if(0L < numAllBCSCount  && numAllBCSCount  < (numLocalVertexes/2)){
-				//TODO:numLocalVertexes/100 is very tekitou
-				//Console.OUT.println("direcion optimization!");
+			if(0L < numAllBCSCount  && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/2)){
+				//TODO:numLocalVertexes/100 is too tekitou
+				atomic{Console.OUT.println("DO!:"+numAllBCSCount);}
 				val BCbmp=ectx.mBCCHasMessage;
-				var numConvertedMessage : Long = 0L;//assert you
-				Parallel.iter(0..(numLocalVertexes-1), (tid :Long, r :LongRange) => {
+				//var numConvertedMessage : Long = 0L;//assert you
+				foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 					val vc = vctxs(tid);
 					for (dosrcid in r){
 						if(BCbmp(dosrcid)){	//optimze (raw totte jimae mask)
@@ -332,6 +332,7 @@ final class WorkerPlaceGraph[V,E] {
 							vc.mSrcid = dosrcid;	//...
 							val OEsId = vc.outEdgesId();
 							val tempmes=ectx.mBCCMessages(dosrcid);
+							atomic{Console.OUT.println("\ttempmes="+tempmes+", outEdgesIdNum="+OEsId.size());}
 							for(eI in OEsId){
 								vc.sendMessage(eI, tempmes);
 							}
@@ -344,10 +345,10 @@ final class WorkerPlaceGraph[V,E] {
 				//assert(numConvertedMessage == ectx.mBCSInputCount);
 				ectx.mBCSInputCount=0L;
 			}else{
-				//Console.OUT.println("no direcion optimization!");
+				atomic{Console.OUT.println("no DO:"+numAllBCSCount);}
 			}
 			//-----
-			*/
+			
 			
 			// aggregate
 			val aggVal = (aggregator != null)
