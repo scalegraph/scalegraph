@@ -16,19 +16,20 @@ import x10.io.EOFException;
 
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
-// import org.scalegraph.util.SString;
+import org.scalegraph.util.SString;
 
-public class FileReader {
-	private val nf: NativeFile;
+public final class FileReader {
+	private static val BUFFER_SIZE = 128*1024L;
+	private transient val nf: NativeFile;
 	private val buffer: GrowableMemory[Byte];
 	private var offset: Long;
 	private var length: Long;
 	private var fileOffset: Long;
 	
-	public def this(file: File) {
-		nf = new NativeFile(file.getPath(), FileMode.Open, FileAccess.Read);
+	public def this(path: SString) {
+		nf = new NativeFile(path, FileMode.Open, FileAccess.Read);
 		buffer = new GrowableMemory[Byte]();
-		buffer.setSize(128*1024L);
+		buffer.setSize(BUFFER_SIZE);
 		offset = length = 0L;
 		fileOffset = 0L;
 	}
@@ -42,7 +43,7 @@ public class FileReader {
 	public def skip(n: Long):void {
 		fileOffset += n;
 		val buffered = length - offset;
-		if(buffered >= n) {
+		if(buffered >= n && offset + n >= 0) {
 			offset += n;
 		}
 		else {
@@ -109,36 +110,87 @@ public class FileReader {
 		return fileOffset;
 	}
 	
-	private def internalReadLine(): GrowableMemory[Byte] {
-		val b = new GrowableMemory[Byte]();
+	private def replaceBuffer(new_size :Long) {
+		val buffered = length - offset;
+		val new_mem = new MemoryChunk[Byte](new_size);
+		val old_mem = buffer.raw();
+		MemoryChunk.copy(old_mem, offset, new_mem, 0L, buffered);
+		buffer.setMemory(new_mem);
+		offset = 0;
+		length = buffered;
+	}
+	
+	private def shrinkBuffer() {
+		val buffered = length - offset;
+		if(buffered <= buffer.size()/2) {
+			replaceBuffer(buffer.size()/2);
+		}
+	}
+	
+	private def growBuffer(request :Long) {
+		val buffered = length - offset;
+		if(request > buffer.size()) {
+			replaceBuffer(request);
+		}
+	}
+	
+	private def internalReadLine(): MemoryChunk[Byte] {
+		{
+			val buffered = length - offset;
+			val quater = buffer.size()/4;
+			if(quater >= BUFFER_SIZE && buffered <= quater)
+				shrinkBuffer();
+		}
+		var cur :Long = 0;
 		var cr :Boolean = false;
 		while(true) {
 			val data = buffer.raw();
-			for(i in offset..(length-1)) {
+			for(i in (offset+cur)..(length-1)) {
 				val ch = data(i) as Char;
 				if(ch == '\r') cr = true;
 				else if(ch == '\n') {
-					b.add(data.subpart(offset, i - offset));
-					b.setSize(b.size() - (cr ? 2 : 1));
-					offset = i + 1;
-					return b;
+					val cur_offset = offset;
+					val next_offset = i + 1;
+					val line_length = i - cur_offset - (cr ? 1 : 0);
+					fileOffset += next_offset - cur_offset;
+					offset = next_offset;
+					return data.subpart(cur_offset, line_length);
 				}
 			}
-			b.add(data.subpart(offset, length - offset));
-			offset = length = 0L;
+			cur = length - offset;
+
+			if(cur < buffer.size()) {
+				MemoryChunk.copy(data, offset, data, 0L, cur);
+				offset = 0;
+				length = cur;
+			}
+			else {
+				growBuffer(buffer.size()*2);
+			}
+			// offset == 0 here
 			if(fillBuffer() <= 0L) {
-				if(b.size() == 0L) throw new EOFException();
-				return b;
+				val line_length = length;
+				fileOffset += length;
+				length = 0L;
+				if(line_length == 0L) {
+					throw new EOFException();
+				}
+				// Ensure that the end position is accessible.
+				if(line_length == buffer.size()) {
+					growBuffer(buffer.size()*2);
+				}
+				return data.subpart(0L, line_length);
 			}
 		}
 	}
-	/*
-	public def readLine(): SString {
-		val b = internalReadLine();
-		val lineSize = b.size();
-		b.setSize(lineSize + 1);
-		b(lineSize) = 0Y; // null terminate
-		return new SString(b.data().subpart(0, lineSize));
+
+	public def readLine() {
+		val str = internalReadLine();
+		val ret = new MemoryChunk[Byte](str.size()+1);
+		MemoryChunk.copy(str, 0L, ret, 0L, str.size());
+		ret(str.size()) = 0Y;
+		return SString(ret.subpart(0, str.size()));
 	}
-	 */
+	
+	public def fastReadLine() = SString(internalReadLine());
 }

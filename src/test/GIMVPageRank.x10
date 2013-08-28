@@ -14,6 +14,7 @@ package test;
 import x10.util.Team;
 import x10.util.Timer;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Dist2D;
@@ -26,9 +27,21 @@ import org.scalegraph.blas.GIMV;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.Attribute;
 import org.scalegraph.graph.GraphGenerator;
-import org.scalegraph.harness.sx10Test;
 
-public final class GIMVPageRank extends sx10Test {
+final class GIMVPageRank extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new GIMVPageRank().execute(args);
+	}
+
+	public def run(args: Array[String](1)): Boolean {
+		val par = [8 , 14, 18];
+		
+		for (i in 0..(par.size - 1)) {
+			entry(par(i));
+		}
+		
+		return true;
+	}
 
 	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
 
@@ -114,21 +127,6 @@ public final class GIMVPageRank extends sx10Test {
 
 		return vector;
 	}
-	
-	public static def main(args: Array[String](1)) {
-	    val t = new GIMVPageRank();
-	    t.execute();
-	}
-	
-	public def run(): Boolean {
-	    val par = [8 , 14, 18];
-	    
-	    for (i in 0..(par.size - 1)) {
-	        entry(par(i));
-	    }
-	    
-	    return true;
-	}
 
 	public def entry(scale: Int) {
 		val team = Team.WORLD;
@@ -149,7 +147,7 @@ public final class GIMVPageRank extends sx10Test {
 
 		val att_names = g.getVertexAttribute[Long]("name");
 		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("output-%d.txt", att_names, att_pagerank);
 
 		Console.OUT.println("Complete!!!");
 	}

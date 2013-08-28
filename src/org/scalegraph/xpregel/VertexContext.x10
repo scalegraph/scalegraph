@@ -18,6 +18,8 @@ import org.scalegraph.util.Bitmap;
 
 /**
  * Provides XPregel framework service for compute kernels. <br>
+ * This object is available only in the compute kernel.
+ * All public methods are thread-safe. <br>
  * The vertex id is processed in the mangled format,
  * we call <i>dst id format</i>, for optimization. You can get
  * the real vertex id with realId() method.
@@ -225,8 +227,16 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 */
 	public def isHalted() = mWorker.mVertexActive(mSrcid);
 	
+	/**
+	 * This is equivalent to the call output(0, value).
+	 */
 	public def output[T](value :T) { output(0, value); }
 	
+	/**
+	 * Output the value with the specified slot.
+	 * @param index The slot which the value will be sent to.
+	 * @param value The output value.
+	 */
 	public def output[T](index :Int, value :T) {
 		// TODO: ensure the value type is same
 		assert (index < WorkerPlaceGraph.MAX_OUTPUT_NUMBER);

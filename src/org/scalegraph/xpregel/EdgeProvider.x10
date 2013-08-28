@@ -15,7 +15,6 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.util.Parallel;
 
 class EdgeProvider [E]/* {E haszero} */{
 	// srcid, offset
@@ -58,7 +57,7 @@ class EdgeProvider [E]/* {E haszero} */{
 		
 		val outOffset = outEdge.offsets;
 		
-		Parallel.iter(0..(numVertexes-1), (tid :Long, r :LongRange) => {
+		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
 			var diffIndex :Long = 0L;
 			var numEdges :Long = 0L;
@@ -86,7 +85,8 @@ class EdgeProvider [E]/* {E haszero} */{
 		val newVertex = new MemoryChunk[Long](newNumEdges);
 		val newValue = new MemoryChunk[E](newNumEdges);
 		newOffset(0) = 0L;
-		Parallel.iter(0..(numVertexes-1), (tid :Long, r :LongRange) => {
+		
+		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
 			var diffIndex :Long = 0;
 			var offset :Long = offsetPerThread(tid);

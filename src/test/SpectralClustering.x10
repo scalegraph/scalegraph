@@ -1,9 +1,20 @@
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 package test;
 
 import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
 import x10.util.Team;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.arpack.ARPACK;
 import org.scalegraph.blas.BLAS;
 import org.scalegraph.blas.DistDiagonalMatrix;
@@ -17,9 +28,12 @@ import org.scalegraph.util.tuple.*;
 
 
 @NativeCPPInclude("mpi.h")
-public class SpectralClustering {
-	
-	public static def main(args:Array[String](1)) {
+final class SpectralClustering extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new SpectralClustering().execute(args);
+	}
+
+	public def run(args :Array[String](1)): Boolean {
 		val team = Team.WORLD;
 		val scale = Int.parse(args(0));         // scale of RMAT graph
 		val edgeFactor = Int.parse(args(1));    // edge factor of RMAT graph
@@ -40,12 +54,12 @@ public class SpectralClustering {
 		
 		sw.start("graph generation");
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd, team);
-		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val edgelist = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
+		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
 				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));
 
-		val g = Graph.make(team, edgelist);
+		val g = Graph.make(edgelist);
 		g.setEdgeAttribute("edgevalue", weight);
 		Console.OUT.println("vertices = " + g.numberOfVertices());
 		Console.OUT.println("edges    = " + g.numberOfEdges());
@@ -81,10 +95,12 @@ public class SpectralClustering {
 		
 		sw.next("output");
 		
-		DistributedReader.write("outvec-%d.txt", team, result);
+		DistributedReader.write("outvec-%d.txt", result);
 		
 		sw.end();
 		sw.print();
+		
+		return true;
 	}
 	
 	

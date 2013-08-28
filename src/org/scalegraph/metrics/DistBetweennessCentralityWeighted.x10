@@ -406,7 +406,8 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
 
     }
     
-    private static def run(g: Graph,
+    // Suppose to be called by API wrapper
+    public static def run(g: Graph,
                           directed: Boolean,
                           weightAttrName: String,
                           bcAttrName: String,
@@ -470,17 +471,18 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                 r(i) = localState().score(i);
             return r;
         });
-        g.setVertexAttribute[Double](bcAttrName, result);
-        //TODO: Remove this line for release
-        // This is workaround for creating vertex attribute for graph,
-        // This problem should be fixed by vertex translator or graph class
-        val vertexIds = new DistMemoryChunk[Long](places, () => {
-            val id = new MemoryChunk[Long](localState().score.length());
-            for (i in 0..(id.size() -1))
-                id(i) = bc.LocSrcToOrg(i);
-            return id;
-        });
-        g.setVertexAttribute[Long]("name", vertexIds);
+        // g.setVertexAttribute[Double](bcAttrName, result);
+        // //TODO: Remove this line for release
+        // // This is workaround for creating vertex attribute for graph,
+        // // This problem should be fixed by vertex translator or graph class
+        // val vertexIds = new DistMemoryChunk[Long](places, () => {
+        //     val id = new MemoryChunk[Long](localState().score.length());
+        //     for (i in 0..(id.size() -1))
+        //         id(i) = bc.LocSrcToOrg(i);
+        //     return id;
+        // });
+        // g.setVertexAttribute[Long]("name", vertexIds);
+        return result;
     }
     
     private def start() {

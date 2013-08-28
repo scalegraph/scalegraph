@@ -29,6 +29,9 @@ import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.api.BetweennessCentrality;
+import org.scalegraph.graph.Graph.VertexType;
+import org.scalegraph.graph.Attribute;
 
 
 public class DistBetweennessCentralityUnweightedExample {
@@ -52,16 +55,17 @@ public class DistBetweennessCentralityUnweightedExample {
         fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(team, fileList, inputFormat);
+        val rawData = DistributedReader.read(fileList, inputFormat);
         
         // Create graph
         val edgeList = rawData.get1();
-        val g = new Graph(team, Graph.VertexType.Long, false);
+        val g = new Graph(team, Graph.VertexType.Long, true);
         g.addEdges(edgeList.raw(team.placeGroup()));
         
-        DistBetweennessCentrality.calculate(g, true, "bc", false);
+        // DistBetweennessCentrality.calculate(g, true, "bc", false);
+        val bc = BetweennessCentrality.run(g);
         val attrVertexId = g.getVertexAttribute[Long]("name");
-        val attrBc = g.getVertexAttribute[Double]("bc");
-        DistributedReader.write("output-%d.txt", team, attrVertexId, attrBc);
+        // val attrBc = g.getVertexAttribute[Double]("bc");
+        DistributedReader.write("output-%d.txt", attrVertexId, bc);
     }
 }

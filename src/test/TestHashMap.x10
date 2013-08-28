@@ -16,25 +16,25 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
+
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.StopWatch;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.HashMap;
-import org.scalegraph.harness.sx10Test;
 
-public final class TestHashMap extends sx10Test {
-    val n : Int;
-    val ne : Int;
+final class TestHashMap extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new TestHashMap().execute(args);
+	}
+	
+    var n : Int;
+    var ne : Int;
 
     static nTest = 1;
 
     val test = false;
-
-    def this(n : Int, m : Int) {
-    	this.n = (n > 0) ? n :  2000000;
-    	this.ne = (m > 0) ?  m : 400000;
-    }
 
     def benchParPut() {
         Console.OUT.printf("%d, %d\n", n, ne);
@@ -256,18 +256,9 @@ public final class TestHashMap extends sx10Test {
         }
     }
 
-    public static def main(args:Array[String](1)) {
-        // val n = (args.size > 0) ? Int.parse(args(0)) : -1;
-        // val m = (args.size > 0) ? Int.parse(args(1)) : -1;
-        // Charuawt: pass default
-        val n = -1;
-        val m = -1;
-
-        val test = new TestHashMap(n, m);
-        test.execute();
-    }
-    
-    public def run(): Boolean {
+    public def run(args: Array[String](1)): Boolean {
+    	n = (args.size > 0) ? Int.parse(args(0)) : -1;
+    	ne = (args.size > 0) ? Int.parse(args(1)) : -1;
         
         benchSeqPut();
         benchParPut();

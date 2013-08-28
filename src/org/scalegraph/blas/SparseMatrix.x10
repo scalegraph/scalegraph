@@ -85,7 +85,7 @@ public final struct SparseMatrix[T] {
 		
 		Parallel.makeOffset(origin, offsets_);
 
-		Parallel.iter(1L..(offsetLength-1), (tid :Long, r :LongRange) => {
+		Parallel.iter(0L..(offsetLength-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
 				val off = offsets_(i);
 				val len = offsets_(i+1) - off;

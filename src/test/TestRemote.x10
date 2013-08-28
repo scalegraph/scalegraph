@@ -16,16 +16,16 @@ import x10.array.PlaceGroup;
 import x10.util.Timer;
 import x10.util.Random;
 import x10.util.Pair;
+
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Remote;
-import org.scalegraph.harness.sx10Test;
 
 public final class TestRemote extends sx10Test {
-    static val test = true;
-    def this() {
-
-    }
+	public static def main(args: Array[String](1)) {
+		new GeneratorTest().execute(args);
+	}
 
     def createData(pg : PlaceGroup, size : Long) {
         val dst = new DistMemoryChunk[Long](pg, ()=>(new MemoryChunk[Long](size)));
@@ -94,16 +94,13 @@ public final class TestRemote extends sx10Test {
             return vertices;
         })();
 
-        if (test) {
+        finish for (p in pg) at(p) async {
 
-            finish for (p in pg) at(p) async {
-
-                val v1_local = v1();
-                val v2_local = v2();
-                assert(v1_local.size() == v2_local.size());
-                for (i in v1_local.range()) {
-                    assert(v1_local(i) == v2_local(i));
-                }
+            val v1_local = v1();
+            val v2_local = v2();
+            assert(v1_local.size() == v2_local.size());
+            for (i in v1_local.range()) {
+                assert(v1_local(i) == v2_local(i));
             }
         }
     }
@@ -157,12 +154,7 @@ public final class TestRemote extends sx10Test {
         }
     }
 
-    public static def main(args: Array[String]) {
-        val test = new TestRemote();
-        test.execute();
-    }
-    
-    public def run(): Boolean {
+    public def run(args: Array[String](1)): Boolean {
         // val size = Int.parse(args(0));
         val size = 1 << 15;
 

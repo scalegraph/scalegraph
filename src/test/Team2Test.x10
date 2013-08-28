@@ -15,10 +15,15 @@ import x10.util.Team;
 import x10.util.Timer;
 import x10.util.StringBuilder;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 
-public final class Team2Test {
+final class Team2Test extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new Team2Test().execute(args);
+	}
+	
 	private static val mesBuf = PlaceLocalHandle.make[StringBuilder](Team.WORLD.placeGroup(), ()=> new StringBuilder());
 	private static def message (str:String) : void {
 		//Console.OUT.println("TIME:" + Timer.milliTime() + ": " + here + "(" + Runtime.workerId() + ")" + str);
@@ -103,8 +108,8 @@ public final class Team2Test {
 			}
 		}
 	}
-	
-	public static def main(args:Array[String](1)) : void {
+
+	public def run(args :Array[String](1)): Boolean {
 		
 		message("Test Start!");
 		
@@ -118,5 +123,7 @@ public final class Team2Test {
 		finish for(p in Place.places()) at(p) {
 			Console.OUT.println(p + "\n" + mesBuf().toString());
 		}
+		
+		return true;
 	}
 }

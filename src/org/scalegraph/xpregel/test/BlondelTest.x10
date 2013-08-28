@@ -42,7 +42,7 @@ public final class BlondelTest {
 		val weigh = graphData.get2();
 		
 		val start_init_graph = System.currentTimeMillis();
-		val g = Graph.make(team, edgeList.raw(team.placeGroup()));
+		val g = Graph.make(edgeList.raw(team.placeGroup()));
 		g.setEdgeAttribute[Double]("edgevalue", weigh.raw(team.placeGroup()));		
 		val csr = g.createDistSparseMatrix[Double](
 				Dist2D.make2D(team, 1, team.size()), "edgevalue", true, true);

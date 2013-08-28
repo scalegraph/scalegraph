@@ -19,7 +19,7 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
-import org.scalegraph.metrics.MinimumSpanningTree;
+import org.scalegraph.api.MinimumSpanningTree;
 
 public class MinimumSpanningTreeExample {
 	
@@ -34,7 +34,7 @@ public class MinimumSpanningTreeExample {
 			);
 		};
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 	
@@ -47,6 +47,7 @@ public class MinimumSpanningTreeExample {
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
-		MinimumSpanningTree.run(g);
+		val result = MinimumSpanningTree.run(g);
+		// DistributedReader.write("out-%d", team, result.first, result.second);
 	}
 }

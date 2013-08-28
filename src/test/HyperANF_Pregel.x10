@@ -14,19 +14,21 @@ package test;
 
 import x10.util.Team;
 
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
-
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
-
-
 import org.scalegraph.util.random.Random;
 
 
-public final class HyperANF_Pregel {
+final class HyperANF_Pregel extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new HyperANF_Pregel().execute(args);
+	}
+	
 	public static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
 		var Z:Double = 0.0;
 		val M:Double = counter.size();
@@ -59,8 +61,8 @@ public final class HyperANF_Pregel {
 	}
 	
 	
-	
-	public static def main(args:Array[String](1)) {
+
+	public def run(args: Array[String](1)): Boolean {
 		val team = Team.WORLD;	
 		val dist = Dist2D.make2D(team, 1, team.size());
 		val inputFormat = (s:String) => {
@@ -73,7 +75,7 @@ public final class HyperANF_Pregel {
 		};
 		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
@@ -87,7 +89,7 @@ public final class HyperANF_Pregel {
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 
 		val csr = g.createDistSparseMatrix[Double](dist, "edgevalue", true, true);
-		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](team, csr);
+		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](csr);
 		
 		val start_time = System.currentTimeMillis();
 		
@@ -151,7 +153,8 @@ public final class HyperANF_Pregel {
 		val end_time = System.currentTimeMillis();
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));
-		Console.OUT.println("Finish application");	
+		Console.OUT.println("Finish application");
+		return true;
 	}
 }
 
