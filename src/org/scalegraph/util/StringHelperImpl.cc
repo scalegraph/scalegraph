@@ -487,10 +487,9 @@ static inline void VFormatAdd_(GrowableMemory<x10_byte>* th, const char* fmt, va
 	va_copy(ap, ap_orig);
 	int reqsize = vsnprintf(ptr + size, space, fmt, ap);
 	va_end(ap);
-	th->grow(size + reqsize + 1);
-	th->setSize(size + reqsize);
 	if(reqsize >= space) {
 		// insufficient buffer
+		th->grow(size + reqsize + 1);
 		ptr = (char*)th->backingStore().FMGL(data).FMGL(pointer);
 		va_copy(ap, ap_orig);
 		int ret = vsnprintf(ptr + size, reqsize + 1, fmt, ap);
@@ -498,6 +497,7 @@ static inline void VFormatAdd_(GrowableMemory<x10_byte>* th, const char* fmt, va
 	    (void) ret;
 	    assert (ret == reqsize);
 	}
+	th->setSize(size + reqsize);
 }
 
 static inline void FormatAdd_(GrowableMemory<x10_byte>* th, const char* fmt, ...) {

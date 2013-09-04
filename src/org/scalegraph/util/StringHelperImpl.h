@@ -151,21 +151,22 @@ template <typename T> SStringBuilder StringBuilderAdd_(SStringBuilder th, const 
 template <typename T> SStringBuilder StringBuilderAdd_(SStringBuilder th, T* x) {
 	GrowableMemory<x10_byte>* buf = th->FMGL(buffer);
 	x10::lang::Reference* tmp = reinterpret_cast<x10::lang::Reference*>(x);
+	const char* x_str = tmp->toString()->c_str();
 
 	int size = buf->size();
 	int capacity = buf->capacity();
 	int space = capacity - size;
 	char* ptr = (char*)buf->backingStore().FMGL(data).FMGL(pointer);
-	int reqsize = snprintf(ptr + size, space, tmp->toString()->c_str());
-	buf->grow(size + reqsize + 1);
-	buf->setSize(size + reqsize);
+	int reqsize = snprintf(ptr + size, space, x_str);
 	if(reqsize >= space) {
 		// insufficient buffer
+		buf->grow(size + reqsize + 1);
 		ptr = (char*)buf->backingStore().FMGL(data).FMGL(pointer);
-		int ret = snprintf(ptr + size, reqsize + 1, tmp->toString()->c_str());
+		int ret = snprintf(ptr + size, reqsize + 1, x_str);
 		(void) ret;
 		assert (ret == reqsize);
 	}
+	buf->setSize(size + reqsize);
 
 	return th;
 }

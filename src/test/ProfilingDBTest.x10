@@ -51,6 +51,8 @@ public class ProfilingDBTest extends sx10Test {
 			sb.add(proc_fmt, proc_avg(i), proc_min(i), proc_max(i), proc_stddev(i));
 			sb.add(time_fmt, cpu_time(i), proc_time(i), real_time(i), (names(i) as SString).c_str());
 		}
+		
+		print(sb);
 	}
 	
 	public def run(args: Array[String](1)): Boolean {

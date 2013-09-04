@@ -53,6 +53,32 @@ final class XPregelPageRank extends sx10Test {
 		});
 	}
 	
+	def pagerank_naive(xpregel :XPregelGraph[Double, Double]) {
+		
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+			val value :Double;
+			if(ctx.superstep() == 0)
+				value = 1.0 / ctx.numberOfVertices();
+			else
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+
+			ctx.aggregate(Math.abs(value - ctx.value()));
+			ctx.setValue(value);
+			
+			val next = value / ctx.outEdgesId().size();
+			val outEdges = ctx.outEdgesId();
+			for(i in outEdges.range())
+				ctx.sendMessage(outEdges(i), next);
+		},
+		(values :MemoryChunk[Double]) => MathAppend.sum(values),
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+			}
+			return aggVal < 0.0001;
+		});
+	}
+	
 	def inputTest(args:Array[String](1)) {
 		val team = Team.WORLD;
 		val dist = Dist2D.make2D(team, 1, team.size());
@@ -122,9 +148,10 @@ final class XPregelPageRank extends sx10Test {
 	}
 
 	public def run(args: Array[String](1)): Boolean {
+		val scale = Int.parse(args(0));
+		val mode = (args.size >= 2) ? Int.parse(args(1)) : 0;
 		val team = Team.WORLD;
 		val dist = Dist2D.make2D(team, 1, team.size());
-		val scale = Int.parse(args(0));
 		
 		val start_read_time = System.currentTimeMillis();
 		val rnd = new Random(2, 3);
@@ -155,7 +182,9 @@ final class XPregelPageRank extends sx10Test {
 		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 
-		pagerank_opt(xpregel);
+		if(mode == 0) pagerank_opt(xpregel);
+		else if(mode == 1) pagerank_naive(xpregel);
+		else pagerank_naive(xpregel);
 
 		val end_time = System.currentTimeMillis();
 		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");

@@ -19,7 +19,7 @@ public struct ProfilingDB {
 	public static val REAL_TIME_TOTAL = 10;
 	public static val RES_COUNT = 11;
 	
-	private static class DB {
+	public static class DB {
 		public static val FREQ = 1000000000 as Double;
 		
 		val numFrames :Int;
@@ -46,8 +46,8 @@ public struct ProfilingDB {
 			numThreads = Runtime.NTHREADS;
 			numPoints = new MemoryChunk[Int](numPoints_.size, (i:Long) => numPoints_(i as Int));
 			frameOffsets = initOffset(numPoints);
-			totalPoints = frameOffsets(numFrames);
-			width = (totalPoints + 7) & ~7;
+			totalPoints = Algorithm.reduce(0L..(numPoints_.size-1L), (i :Long) => numPoints_(i as Int));
+			width = (frameOffsets(numFrames) + 7) & ~7;
 			
 			val buffer = new MemoryChunk[Long](width * numThreads + totalPoints*4, 64, true);
 			step = buffer.subpart(0, width * numThreads);
@@ -68,7 +68,7 @@ public struct ProfilingDB {
 		}
 		
 		def get(frame :Int, tid :Long)
-			= step.subpart(tid * width + frameOffsets(frame), numPoints(frame));
+			= step.subpart(tid * width + frameOffsets(frame), numPoints(frame) + 1);
 		
 		private def resbuf(idx :Int) = result.subpart(idx * totalPoints, totalPoints);
 		
