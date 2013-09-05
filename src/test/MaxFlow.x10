@@ -139,7 +139,7 @@ public class MaxFlow {
 		};
 		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
@@ -154,7 +154,7 @@ public class MaxFlow {
 		
 		
 		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[MFVertex, MFEdge ](team, csr);
+		val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
 		val edgeValue = g.constructDistAttribute[Long](csr, false, "edgevalue");
 		xpregel.initEdgeValue[Long](edgeValue, (value : Long) => {
 			val edge = new MFEdge(value);
