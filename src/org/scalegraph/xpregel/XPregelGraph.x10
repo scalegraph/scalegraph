@@ -170,6 +170,13 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 	 */
 	public def iterator() = new VertexIterator[V, E](mWorkers());
 	
+	/** Returns local edge data */
+	public def edgeOffsets() = mWorkers().mOutEdge.offsets;
+	/** Returns local edge data */
+	public def edgeIds() = mWorkers().mOutEdge.vertexes;
+	/** Returns local edge data */
+	public def edgeValues() = mWorkers().mOutEdge.value;
+	
 	/** Detatch the index-th ouput and return it as a DistMemoryChunk.
 	 */
 	public def stealOutput[T](index :Int) :DistMemoryChunk[T] {
