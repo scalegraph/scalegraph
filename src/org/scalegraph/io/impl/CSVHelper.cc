@@ -209,6 +209,21 @@ NativeCSVHeader* readCSVHeader(SString headerLine) {
 			headerLine.FMGL(content).pointer(), headerLine.size());
 }
 
+x10_long LineNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
+{
+	x10_byte* start = data->pointer();
+	x10_byte* end = start + data->size();
+	x10_byte* ptr = start + offset;
+	for( ; ; ++ptr) {
+		if(ptr == end) {
+			return end - start;
+		}
+		if(ch == '\n') {
+			return ptr + 1 - start;
+		}
+	}
+}
+
 x10_long DQCSVNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
 {
 	x10_byte* start = data->pointer();

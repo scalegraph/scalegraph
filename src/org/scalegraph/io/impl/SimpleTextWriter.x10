@@ -8,7 +8,7 @@
  *
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-package org.scalegraph.io;
+package org.scalegraph.io.impl;
 
-public class SimpleTextReader {
+public class SimpleTextWriter {
 }

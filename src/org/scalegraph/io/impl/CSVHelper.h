@@ -56,6 +56,8 @@ struct NativeCSVHeader {
 
 NativeCSVHeader* readCSVHeader(SString headerLine);
 
+x10_long LineNextBreak(MemoryChunk<x10_byte> data, x10_long offset);
+
 x10_long DQCSVNextBreak(MemoryChunk<x10_byte> data, x10_long offset);
 MemoryChunk<x10_byte> DQCSVNextBreak(FileReader* reader);
 

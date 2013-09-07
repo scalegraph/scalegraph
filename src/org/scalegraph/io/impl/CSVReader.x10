@@ -180,10 +180,15 @@ public class CSVReader {
 		val attrNames = new Array[String](enabledColumns);
 		val attrIds = new Array[Int](enabledColumns);
 		var attrIndex :Int = 0;
+	//	finish for(e in 0..(numColumns-1)) {
 		for(e in 0..(numColumns-1)) {
 			if(!attHandler(e).isSkip()) {
-				attributes(attrIndex) = attHandler(e).mergeResult(team, nthreads,
+				val attrIndex_ = attrIndex;
+			//	async
+					attributes(attrIndex_) = attHandler(e).mergeResult(team, nthreads,
+						(tid :Int) => bufferPLH()(tid).chunkSize.raw(),
 						(tid :Int) => bufferPLH()(tid).buffer(e));
+					
 		//		attHandler(e).print(team,attributes(attrIndex));
 				attrNames(attrIndex) = columnNames(e).toString();
 				attrIds(attrIndex) = ID.attTypeId(attHandler(e).typeId());
