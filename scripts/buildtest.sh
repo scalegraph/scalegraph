@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SC_HOME=$(cd $(dirname $0);cd ..;pwd)
+SC_HOME=$(cd $(dirname $0); cd ..; pwd)
 SRC_PATH=$SC_HOME/src
 INC_PATH=$SC_HOME/include
 LIB_PATH=$SC_HOME/lib

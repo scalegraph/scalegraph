@@ -11,12 +11,12 @@
 
 package org.scalegraph.graph;
 
-import org.scalegraph.util.DistGrowableMemory;
+import org.scalegraph.util.DistMemoryChunk;
 
 /** An attribute for the graph.
  */
 public final class Attribute[T] (typeId :Int) {T haszero} {
-	private values :DistGrowableMemory[T];
+	private values :DistMemoryChunk[T];
 	
 	private static def internalGetTypeId[T](t :T) {
 		if(t instanceof Byte)
@@ -45,7 +45,7 @@ public final class Attribute[T] (typeId :Int) {T haszero} {
 	
 	/** Creates an attribute with backing storage.
 	 */
-	public def this(values__ :DistGrowableMemory[T]) { 
+	public def this(values__ :DistMemoryChunk[T]) { 
 		property(internalGetTypeId(Zero.get[T]()));
 		values = values__;
 	}
