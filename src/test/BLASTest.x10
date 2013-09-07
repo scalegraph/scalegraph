@@ -46,7 +46,7 @@ final class BLASTest extends sx10Test {
 		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
 		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](edgelist().size()/2, (Long) => 1.0));
+				() => new MemoryChunk[Double](edgelist.src().size(), (Long) => 1.0));
 
 		val g = Graph.make(edgelist);
 		g.setEdgeAttribute("edgevalue", weight);

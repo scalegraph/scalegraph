@@ -10,15 +10,16 @@
  */
 package org.scalegraph.io.impl;
 
-import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.util.GrowableMemory;
-import org.scalegraph.util.SString;
-import org.scalegraph.io.FileReader;
-
 import x10.util.Team;
 import x10.util.concurrent.Monitor; 
 import x10.io.File;
 import x10.io.IOException;
+
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.util.SString;
+import org.scalegraph.io.FileReader;
+import org.scalegraph.harness.sx10Test;
 
 public abstract class InputSplitter {
 	
@@ -58,8 +59,7 @@ public abstract class InputSplitter {
 		public def size() = end - start;
 		
 		public def open() {
-			Console.OUT.println(here.id + " => (" + start + ", " + end + ")");
-			Console.OUT.flush();
+			sx10Test.println(here.id + " => (" + start + ", " + end + ")");
 			val reader = new FileReader(path);
 			reader.skip(start);
 			return reader;

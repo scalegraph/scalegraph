@@ -139,33 +139,33 @@ import org.scalegraph.util.SString;
 		}
 	}
 	
-	public static def make(srcs :DistMemoryChunk[Long], dsts :DistMemoryChunk[Long]) {
+	public static def make(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
-		g.addEdges(srcs, dsts);
+		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def make(srcs :DistMemoryChunk[Double], dsts :DistMemoryChunk[Double]) {
+	public static def make(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,false);
-		g.addEdges(srcs, dsts);
+		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def makeWithTranslator(srcs :DistMemoryChunk[Long], dsts :DistMemoryChunk[Long]) {
+	public static def makeWithTranslator(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,true);
-		g.addEdges(srcs, dsts);
+		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def makeWithTranslator(srcs :DistMemoryChunk[Double], dsts :DistMemoryChunk[Double]) {
+	public static def makeWithTranslator(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,true);
-		g.addEdges(srcs, dsts);
+		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def makeWithTranslator(srcs :DistMemoryChunk[SString], dsts :DistMemoryChunk[SString]) {
+	public static def makeWithTranslator(edges :EdgeList[SString]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
-		g.addEdges(srcs, dsts);
+		g.addEdges(edges);
 		return g;
 	}
 	
@@ -268,31 +268,31 @@ import org.scalegraph.util.SString;
 	/** Set/Add edges to this instance.
 	 * @param edges The distributed memory that contains edges.
 	 */
-	public def addEdges(srcs :DistMemoryChunk[Long], dsts :DistMemoryChunk[Long]) {
+	public def addEdges(edges :EdgeList[Long]) {
 		if(vertexType != VertexType.Long)
 			throw new IllegalOperationException("Vertex type does not match. "
 					+ vertexTypeString() + " type is expected but the input is Long");
-		genericAddEdges(srcs, dsts);
+		genericAddEdges(edges.src, edges.dst);
 	}
 	
 	/** Set/Add edges to this instance.
 	 * @param edges The distributed memory that contains edges.
 	 */
-	public def addEdges(srcs :DistMemoryChunk[Double], dsts :DistMemoryChunk[Double]) {
+	public def addEdges(edges :EdgeList[Double]) {
 		if(vertexType != VertexType.Double)
 			throw new IllegalOperationException("Vertex type does not match. "
 					+ vertexTypeString() + " type is expected but the input is Long");
-		genericAddEdges(srcs, dsts);
+		genericAddEdges(edges.src, edges.dst);
 	}
 	
 	/** Set/Add edges to this instance.
 	 * @param edges The distributed memory that contains edges.
 	 */
-	public def addEdges(srcs :DistMemoryChunk[SString], dsts :DistMemoryChunk[SString]) {
+	public def addEdges(edges :EdgeList[SString]) {
 		if(vertexType != VertexType.String)
 			throw new IllegalOperationException("Vertex type does not match. "
 					+ vertexTypeString() + " type is expected but the input is Long");
-		genericAddEdges(srcs, dsts);
+		genericAddEdges(edges.src, edges.dst);
 	}
 
 	/* Translates vertex IDs. When you are using translator and you want to add vertex attributes with [ID, value] pair,
