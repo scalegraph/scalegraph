@@ -44,7 +44,8 @@ public final class SSSP {
 
 		// release graph data
 		g.del();
-		edgeList.del();
+		edgeList.src.del();
+		edgeList.dst.del();
 		weigh.del();
 
 		val xpregel = XPregelGraph.make[Double, Double](csr);

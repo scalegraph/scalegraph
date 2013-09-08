@@ -56,10 +56,7 @@ final class TestDegreeDist extends sx10Test {
         val team = Team.WORLD;
         
         // Load data
-        val rawData = SimpleText.read(args(0), inputFormat);
-        
-        // Create graph
-        val g = Graph.make(rawData);
+        val g = Graph.make(SimpleText.read(args(0), inputFormat));
         
         val indegResult = new DegreeDistribution(DegreeDistribution.IN_DEGREE).execute(g);
         val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);

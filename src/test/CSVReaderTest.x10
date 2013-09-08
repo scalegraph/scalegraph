@@ -14,7 +14,8 @@ import x10.util.Team;
 
 import org.scalegraph.harness.sx10Test;
 import org.scalegraph.io.ID;
-import org.scalegraph.io.impl.CSVReader;
+import org.scalegraph.io.CSV;
+import org.scalegraph.id.Type;
 
 final class CSVReaderTest extends sx10Test {
 	public static def main(args: Array[String](1)) {
@@ -23,8 +24,8 @@ final class CSVReaderTest extends sx10Test {
 	
 	public def run(args: Array[String](1)): Boolean {
 		val team = Team.WORLD;
-		val colTypes = [ID.TYPE_LONG as Int, ID.TYPE_LONG, ID.TYPE_NONE, ID.TYPE_DOUBLE];
-		val nd = CSVReader.read(team, args(0), colTypes, false);
+		val colTypes = [Type.Long as Int, Type.Long, Type.None, Type.Double];
+		val nd = CSV.read(args(0), colTypes, false);
 		
 		//Console.OUT.println(InputSplitter.T_CHUNK_SIZE);
 		// print result

@@ -20,6 +20,9 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;
@@ -51,16 +54,9 @@ public class DistBetweennessCentralityUnweightedExample {
             return;
         }
         val team = Team.WORLD;
-        val fileList = new Array[String](1);
-        fileList(0) = args(0); 
-        
+
         // Load data
-        val rawData = DistributedReader.read(fileList, inputFormat);
-        
-        // Create graph
-        val edgeList = rawData.get1();
-        val g = new Graph(team, Graph.VertexType.Long, true);
-        g.addEdges(edgeList.raw(team.placeGroup()));
+        val g = Graph.make(SimpleText.read(args(0), inputFormat), true);
         
         // DistBetweennessCentrality.calculate(g, true, "bc", false);
         val bc = BetweennessCentrality.run(g);

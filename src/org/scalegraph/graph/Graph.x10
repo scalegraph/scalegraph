@@ -80,10 +80,9 @@ import org.scalegraph.id.Type;
 	private static def createVertexTranslator[T](team :Team) {T haszero}
 	{
 		val vertexNames = DistMemoryChunk[T](team.placeGroup(), ()=>new MemoryChunk[T]());
-		val vertexNameAtt = new Attribute(vertexNames);
 		val vertexTranslator = PlaceLocalHandle.makeFlat[VertexTranslatorBase](
 				team.placeGroup(), ()=>new VertexTranslator.HashTranslator[T](team, vertexNames));
-		return Tuple2[Any, VT_PLH](vertexNameAtt, vertexTranslator);
+		return Tuple2[Any, VT_PLH](vertexNames, vertexTranslator);
 	}
 	
 	private static def createConverter(team :Team, create :() => VertexTranslatorBase) {
@@ -218,15 +217,15 @@ import org.scalegraph.id.Type;
 	}
 	
 	private def getOrCreateAttribute[T](vertexOrEdge :boolean, name :String,
-			throwAlreadyExist :boolean) {T haszero} :Attribute[T]
+			throwAlreadyExist :boolean) {T haszero} :DistMemoryChunk[T]
 	{
 		val attributes = vertexOrEdge ? vertexAttributes : edgeAttributes;
 		val att = attributes.getOrElse(name, null);
 		if(att != null) {
 			if(throwAlreadyExist) throw new IllegalOperationException("key already exists");
-			return att as Attribute[T];
+			return att as DistMemoryChunk[T];
 		}
-		val newAtt = new Attribute(new DistMemoryChunk[T](team.placeGroup(), ()=>new MemoryChunk[T]()));
+		val newAtt = new DistMemoryChunk[T](team.placeGroup(), ()=>new MemoryChunk[T]());
 		attributes.put(name, newAtt);
 		return newAtt;
 	}
@@ -234,20 +233,20 @@ import org.scalegraph.id.Type;
 	private def setAttribute[T](vertexOrEdge :boolean, name :String, attType :Int, attValues :DistMemoryChunk[T]) {T haszero}
 	{
 		val attributes = vertexOrEdge ? vertexAttributes : edgeAttributes;
-		attributes.put(name, new Attribute(attValues));
+		attributes.put(name, attValues);
 	}
 	
 	/** Returns the vertex attribute.
 	 * @param name The name of the attribute.
 	 */
 	public def getVertexAttribute[T](name :String) {T haszero} =
-		vertexAttributes.getOrThrow(name) as Attribute[T];
+		vertexAttributes.getOrThrow(name) as DistMemoryChunk[T];
 		
 	/** Returns the edge attribute.
 	 * @param name The name of the attribute.
 	 */
 	public def getEdgeAttribute[T](name :String) {T haszero} =
-		edgeAttributes.getOrThrow(name) as Attribute[T];
+		edgeAttributes.getOrThrow(name) as DistMemoryChunk[T];
 	
 	private static def innerAddEdges(team_ :Team, maxVertexID :Long,
 			ref :GlobalRef[Graph],
@@ -381,7 +380,7 @@ import org.scalegraph.id.Type;
 					put(dstRole as Int, dstIdx, values_(index));
 				});
 				
-				att.values()() = att_;
+				att() = att_;
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();
@@ -401,7 +400,7 @@ import org.scalegraph.id.Type;
 			if(numEdges != values().size())
 				throw new IllegalArgumentException("The number of attribute values is not match the number of edges");
 		});
-		edgeAttributes.put(name, new Attribute(values));
+		edgeAttributes.put(name, values);
 	}
 	
 	/** Set edge attribute values with edge indexes.
@@ -474,7 +473,7 @@ import org.scalegraph.id.Type;
 			}
 		});
 
-		vertexAttributes.put(name, new Attribute(values));
+		vertexAttributes.put(name, values);
 	}
 	
 	/** Set vertex attribute values with vertex IDs.
@@ -513,7 +512,7 @@ import org.scalegraph.id.Type;
 	public def setVertexAttribute[T](name :String, sparseMatrix :DistSparseMatrix[Long],
 			values :DistMemoryChunk[T], z :Int) {T haszero}
 	{
-		val attValues = getOrCreateAttribute[T](true, name, false).values();
+		val attValues = getOrCreateAttribute[T](true, name, false);
 		val team_ = team;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
@@ -689,7 +688,7 @@ import org.scalegraph.id.Type;
 			*/
 			val rmask = (1L << ids.lgr) - 1;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
-			val att_ = att.values()();
+			val att_ = att();
 
 			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
@@ -910,7 +909,7 @@ import org.scalegraph.id.Type;
 					val localsize = 1L << edgeIndexMatrix.ids().lgl;
 					
 					val distAtt = new MemoryChunk[T](localsize);
-					Remote.get(team_, att.values()(), distAtt, distAtt.range(),
+					Remote.get(team_, att(), distAtt, distAtt.range(),
 							(i :Long, get:(Long, Int, Long)=>void) => {
 						val rr = i * sizeOfDist + roleInDist;
 						val dstRole = rr & (sizeOfGraph - 1);
@@ -924,7 +923,7 @@ import org.scalegraph.id.Type;
 					val rankMask = (1L << shift) - 1;
 					val edgeIndexes = edgeIndexMatrix().values;
 					val distAtt = new MemoryChunk[T](edgeIndexes.size());
-					Remote.get(team_, att.values()(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
+					Remote.get(team_, att(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
 						val index = edgeIndexes(i);
 						get(i, (index & rankMask) as Int, index >> shift);
 					});
@@ -970,24 +969,24 @@ import org.scalegraph.id.Type;
 				dstList_.del();
 				
 				for(att in attlist) {
-					if(att instanceof Attribute[Byte])
-						(att as Attribute[Byte]).values().del();
-					else if(att instanceof Attribute[Short])
-						(att as Attribute[Short]).values().del();
-					else if(att instanceof Attribute[Int])
-						(att as Attribute[Int]).values().del();
-					else if(att instanceof Attribute[Long])
-						(att as Attribute[Long]).values().del();
-					else if(att instanceof Attribute[Float])
-						(att as Attribute[Float]).values().del();
-					else if(att instanceof Attribute[Double])
-						(att as Attribute[Double]).values().del();
-					else if(att instanceof Attribute[Char])
-						(att as Attribute[Char]).values().del();
-					else if(att instanceof Attribute[String])
-						(att as Attribute[String]).values().del();
-					else if(att instanceof Attribute[Boolean])
-						(att as Attribute[Boolean]).values().del();
+					if(att instanceof DistMemoryChunk[Byte])
+						(att as DistMemoryChunk[Byte]).del();
+					else if(att instanceof DistMemoryChunk[Short])
+						(att as DistMemoryChunk[Short]).del();
+					else if(att instanceof DistMemoryChunk[Int])
+						(att as DistMemoryChunk[Int]).del();
+					else if(att instanceof DistMemoryChunk[Long])
+						(att as DistMemoryChunk[Long]).del();
+					else if(att instanceof DistMemoryChunk[Float])
+						(att as DistMemoryChunk[Float]).del();
+					else if(att instanceof DistMemoryChunk[Double])
+						(att as DistMemoryChunk[Double]).del();
+					else if(att instanceof DistMemoryChunk[Char])
+						(att as DistMemoryChunk[Char]).del();
+					else if(att instanceof DistMemoryChunk[String])
+						(att as DistMemoryChunk[String]).del();
+					else if(att instanceof DistMemoryChunk[Boolean])
+						(att as DistMemoryChunk[Boolean]).del();
 					else
 						throw new UnsupportedOperationException("Type: " + att.typeName());
 				}
