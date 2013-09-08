@@ -89,7 +89,8 @@ public abstract class FileNameProvider implements Iterable[SString] {
 			super(path);
 		}
 		public def isScattered() = true;
-		public def fileName(index :Int) = SString.format("%s/part-%05d" as SString, path, index);
+	//	public def fileName(index :Int) = SString.format("%s/part-x" as SString, path.c_str());
+		public def fileName(index :Int) = SString.format("%s/part-%05d" as SString, path.c_str(), index);
 		public def mkdir() {
 			(new File(path.toString())).mkdirs();
 		}
