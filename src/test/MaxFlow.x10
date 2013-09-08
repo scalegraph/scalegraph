@@ -141,14 +141,14 @@ public class MaxFlow {
 		
 		val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 		val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
-		val edgeValue = g.createDistAttribute[Long](csr, false, "weight");
+		val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
 		
 		team.placeGroup().broadcastFlat(() => {
 			val src = edgeValue();
 			val dst = xpregel.edgeValues();
 			Parallel.iter(dst.range(), (tid :Long, r :LongRange) => {
 				for(i in r)
-					dst(i).capacity = src(i);
+					dst(i).capacity = src(i) as Long;
 			});
 		});
 

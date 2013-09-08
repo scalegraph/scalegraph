@@ -178,7 +178,7 @@ public class CSVReader {
 		// merge result
 		val attributes = new Array[Any](enabledColumns);
 		val attrNames = new Array[String](enabledColumns);
-		val attrIds = new Array[Int](enabledColumns);
+		val typeIds = new Array[Int](enabledColumns);
 		var attrIndex :Int = 0;
 	//	finish for(e in 0..(numColumns-1)) {
 		for(e in 0..(numColumns-1)) {
@@ -195,10 +195,10 @@ public class CSVReader {
 						: SString.format("column-%d" as SString, e).toString();
 				attrNames(attrIndex) = name;
 				
-				attrIds(attrIndex) = Type.attTypeId(attHandler(e).typeId());
+				typeIds(attrIndex) = attHandler(e).typeId();
 				++attrIndex;
 			}
 		}
-		return new NamedDistData(attrNames, attrIds, attributes, null);
+		return new NamedDistData(attrNames, typeIds, attributes, null);
 	}
 }

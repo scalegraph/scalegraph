@@ -27,29 +27,30 @@ final class GeneratorTest extends sx10Test {
 	}
 	
 	public def run(args: Array[String](1)): Boolean {
-		rmat_test();
-		erdos_test();
-		random_test();
+		for(s in 14..22) {
+			rmat_test(s);
+			erdos_test(s);
+		}
+	//	random_test();
 		return true;
 	}
 	
-	private static def rmat_test() {
-		val team = Team.WORLD;
+	private static def rmat_test(scale :Int) {
 		val rnd = new Random(2,3);
-		val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
-		CSV.write("rmat-%d",
-				new NamedDistData(["source" as String, "target"], [rmatEdges.src as Any, rmatEdges.dst]));
+		val edges = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+		val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+		CSV.write("rmat-scale" + scale + "-%d",
+				new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]));
 		//DistributedReader.write("rmat-%d", rmatEdges);
-		Console.OUT.println("rmat: done");
+		Console.OUT.println("rmat-scale" + scale + ": done");
 	}
 	
-	private static def erdos_test() {
-	    val team = Team.WORLD;
+	private static def erdos_test(scale :Int) {
 	    val rnd = new Random(2,3);
-	    val rmatEdges = GraphGenerator.genRandomGraph(14, 16, rnd);
-	    //val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
-	    CSV.write("erdos-%d",
-	    		new NamedDistData(["source" as String, "target"], [rmatEdges.src as Any, rmatEdges.dst]));
+	    val edges = GraphGenerator.genRandomGraph(scale, 16, rnd);
+	    val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+	    CSV.write("erdos-scale" + scale + "-%d",
+	    		new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]));
 	    //DistributedReader.write("erdos-%d", rmatEdges);
 	    /*
 	     * val graph = new Graph(team, Graph.VertexType.Long, true);
@@ -57,7 +58,7 @@ final class GeneratorTest extends sx10Test {
 	     * val dist = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
 	     * val matrix = graph.constructDistSparseMatrix(dist, true, true);
 	     */
-	    Console.OUT.println("erdos: done");
+	    Console.OUT.println("erdos-scale" + scale + ": done");
 	}
 	
 	private static def random_test() {
