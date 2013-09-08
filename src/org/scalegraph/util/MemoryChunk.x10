@@ -182,6 +182,10 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		sb.add("]");
 		return sb.toString();
 	}
+
+	public def elemtoString( num :Long){
+		return data(num).toString();
+	}
 	
 	// for java
 	def raw() = data;
