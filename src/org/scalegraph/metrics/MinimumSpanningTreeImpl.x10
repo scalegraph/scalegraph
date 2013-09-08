@@ -81,7 +81,7 @@ public final class MinimumSpanningTreeImpl {
 	
 	public static def run(csr: DistSparseMatrix[Double]): Graph {
 	    val team = csr.dist().allTeam();
-	    val xpregel = XPregelGraph.make[VertexValue, Double](team, csr);
+	    val xpregel = XPregelGraph.make[VertexValue, Double](csr);
 		
 		xpregel.updateInEdge();
 		

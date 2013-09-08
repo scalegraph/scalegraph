@@ -47,7 +47,7 @@ final class PageRankTest extends sx10Test {
 		
 		val result = org.scalegraph.api.PageRank.run(g);
 		
-		DistributedReader.write("pagerank-%d", team, result);
+		DistributedReader.write("pagerank-%d", result);
 		return true;
 	}
 }

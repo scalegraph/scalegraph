@@ -47,8 +47,8 @@ final class GIMVPageRank extends sx10Test {
 
 		Console.OUT.println("Generating edge list ...");
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
-		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 
 		Console.OUT.println("Creating graph object ...");
 

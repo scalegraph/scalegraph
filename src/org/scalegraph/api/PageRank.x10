@@ -88,7 +88,7 @@ public final class PageRank {
 		val niter = param.niter;
 		
 		// compute PageRank
-		val xpgraph = XPregelGraph.make[Double, Double](team, matrix);
+		val xpgraph = XPregelGraph.make[Double, Double](matrix);
 		xpgraph.updateInEdge();
 		
 		xpgraph.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {

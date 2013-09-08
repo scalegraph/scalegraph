@@ -43,7 +43,7 @@ public class TestEdgeModify {
 		//-----read data
 		Console.OUT.println("read data");
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" [ms]");
 
@@ -63,7 +63,7 @@ public class TestEdgeModify {
 		//-----init xpregel
 		Console.OUT.println("init xpregal");
 		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[Long, Long](team, csr);
+		val xpregel = new XPregelGraph[Long, Long](csr);
 		
 		val start_time = System.currentTimeMillis();
 		

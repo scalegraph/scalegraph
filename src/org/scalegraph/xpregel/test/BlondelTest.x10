@@ -34,7 +34,7 @@ public final class BlondelTest {
 			);
 		};
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val graphData = DistributedReader.read(args,inputFormat);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
@@ -52,7 +52,7 @@ public final class BlondelTest {
 		edgeList.del();
 		weigh.del();
 
-		val xpregel = XPregelGraph.make[Double, Double](team, csr);
+		val xpregel = XPregelGraph.make[Double, Double](csr);
 		
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");

@@ -31,8 +31,8 @@ public final class SSSP {
 		
 		val start_read_time = System.currentTimeMillis();
 		val rnd = new Random(2, 3);
-		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
-		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd );
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
 
@@ -47,7 +47,7 @@ public final class SSSP {
 		edgeList.del();
 		weigh.del();
 
-		val xpregel = XPregelGraph.make[Double, Double](team, csr);
+		val xpregel = XPregelGraph.make[Double, Double](csr);
 		
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + " ms");
