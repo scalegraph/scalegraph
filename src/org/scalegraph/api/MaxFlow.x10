@@ -39,6 +39,7 @@ import org.scalegraph.util.Algorithm;
 // output 
 
 final public class MaxFlow {
+//<<<<<<< HEAD
 	public var team :Team = Config.get().worldTeam();
 	/** The name of the attribute used to give edge weights for the calculation of weighted PageRank.
 	 * Default: "weight"
@@ -52,10 +53,23 @@ final public class MaxFlow {
 	public var sinkVertexId:Long = 1;
 	
 	
+//=======
+    
+    /**
+     * A class storing the result from MaxFlow
+     */
+    public static struct Result (maxiMumFlow: Long){
+       protected def this(mf: Long) {
+           property(mf);
+       }
+    }
+    
+//>>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
     /** Calculate the maximum flow between two vertices
      * @param g The graph object
      * @return A long integer, the value of the maximum flow
      */
+//<<<<<<< HEAD
     /*public def execute(g :Graph): Long  = {
          throw new UnsupportedOperationException();
     }*/
@@ -269,7 +283,6 @@ final public class MaxFlow {
     						val vval = ctx.value();
     						vval.setHeight(ctx.superstep());
     						ctx.setValue(vval);
-
     						for(i in ctx.inEdgesId().range()) 
     							ctx.sendMessage(ctx.inEdgesId()(i) , true);
     						//					for(i in ctx.outEdgesId().range())
@@ -521,21 +534,32 @@ final public class MaxFlow {
     	
     	
     }
-	
+
+/*    =======
+    	public def execute(g :Graph): Result {
+    	throw new UnsupportedOperationException();
+    	>>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936*/
+
    
-    public def execute(matrix :DistSparseMatrix[Long]): Long {
+// <<<<<<< HEAD
+    // public def execute(matrix :DistSparseMatrix[Long]): Result {
+// =======
+    public def execute(matrix :DistSparseMatrix[Double]): Result {
+// >>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
         throw new UnsupportedOperationException();
     	//return execute(this, matrix);
     }
     
-    public def execute(g :Graph):Long {
+    public def execute(g :Graph):Result {
     	// Since graph object has its own team, we shold use graph's one.
     	this.team = g.team();	
     	val matrix = g.createDistSparseMatrix[Long](
     			Config.get().distXPregel(), weights, true, true);
-    	return execute(this,g,  matrix);
+//    	return execute(this,g,  matrix);
+    	throw new UnsupportedOperationException();
     }
-
+/*
+<<<<<<< HEAD
     public static def run(matrix :DistSparseMatrix[Long]): Long {
     	throw new UnsupportedOperationException();
     	//return new MaxFlow().execute(matrix);	
@@ -547,12 +571,33 @@ final public class MaxFlow {
     	// throw new UnsupportedOperationException();
     }
     
+=======
+     * */
+    public static def run(g :Graph): Result {
+        throw new UnsupportedOperationException();
+    }
     
-    // Interface between API and Impl
+    public static def run(matrix :DistSparseMatrix[Double]): Result {
+        throw new UnsupportedOperationException();
+    }
+    
+    private static def execute(inst: DegreeDistribution, g :Graph): Result {
+        throw new UnsupportedOperationException();
+    }
     /*
+>>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
+    
+    
     @Inline
+<<<<<<< HEAD
     private static def run(matrix :DistSparseMatrix[Double]): Long {
     	
+=======
+    private static def run(matrix :DistSparseMatrix[Long]): Result {
+>>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
         throw new UnsupportedOperationException();
     }*/
+    
+
+    // Interface between API and Impl
 }
