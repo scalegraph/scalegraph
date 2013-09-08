@@ -19,7 +19,8 @@ import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MathAppend;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 
 final class XPregelBfs extends sx10Test {
 	public static def main(args: Array[String](1)) {
@@ -174,7 +175,7 @@ final class XPregelBfs extends sx10Test {
 			ctx.output(ctx.value());
 		});
 		val pred = xpregel.stealOutput[Long]();
-		DistributedReader.write("pred-%d", pred);
+		CSV.write("pred-%d", new NamedDistData(["bfs pred" as String], [pred as Any]));
 		
 		Console.OUT.println("Finish application");
 		return true;

@@ -20,11 +20,12 @@ import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 
 final class XPregelPageRank extends sx10Test {
 	public static def main(args: Array[String](1)) {
@@ -116,7 +117,8 @@ final class XPregelPageRank extends sx10Test {
 
 		// release graph data
 		g.del();
-		edgeList.del();
+		edgeList.src.del();
+		edgeList.dst.del();
 		rawWeight.del();
 		
 		xpregel.setLogPrinter(Console.OUT, 0);
@@ -142,7 +144,7 @@ final class XPregelPageRank extends sx10Test {
 		
 		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		
-		DistributedReader.write("pagerank-%d", pagerank);
+		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [pagerank as Any]));
 		
 		Console.OUT.println("Finish application");
 	}
@@ -168,7 +170,8 @@ final class XPregelPageRank extends sx10Test {
 		
 		// release graph data
 		g.del();
-		edgeList.del();
+		edgeList.src.del();
+		edgeList.dst.del();
 		rawWeight.del();
 		
 		xpregel.setLogPrinter(Console.OUT, 0);
@@ -195,7 +198,7 @@ final class XPregelPageRank extends sx10Test {
 		
 		val pagerank = xpregel.stealOutput[Double]();
 		
-		DistributedReader.write("pagerank-%d", pagerank);
+		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [pagerank as Any]));
 		
 		Console.OUT.println("Finish application");
 		

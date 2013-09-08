@@ -17,6 +17,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import x10.util.NoSuchElementException;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.SString;
+import org.scalegraph.id.Type;
 
 public class NamedDistData {
 	val name :Array[String](1);
@@ -28,7 +29,7 @@ public class NamedDistData {
 	private static def createTypeId(data :Array[Any](1)) {
 		val typeId = new Array[Int](data.size);
 		for([i] in data) {
-			typeId(i) = ID.typeId(data(i));
+			typeId(i) = Type.typeId(data(i));
 		}
 		return typeId;
 	}
@@ -79,12 +80,12 @@ public class NamedDistData {
 		if(name.size != typeId.size || name.size != data.size)
 			throw new IllegalArgumentException("Check the array length!");
 		for([i] in name) {
-			if(!ID.checkType(data(i), typeId(i)))
+			if(!Type.checkType(data(i), typeId(i)))
 				throw new IllegalArgumentException("Type ID is not match to the actual data type.");
 		}
 	}
 	
-	private def nameToIndex(name_ :SString) {
+	public def nameToIndex(name_ :SString) {
 		for([i] in name) {
 			if(name_.equals(name(i))) {
 				return i;

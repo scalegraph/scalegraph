@@ -284,5 +284,5 @@ public final struct SString {
 	@Native("c++", "org::scalegraph::util::StringFormat_((#fmt)->FMGL(content),#o1,#o2,#o3,#o4,#o5,#o6)")
 	public static native def format[T1,T2,T3,T4,T5,T6](fmt :SString, o1 :T1, o2 :T2, o3 :T3, o4 :T4, o5 :T5, o6 :T6) :SString;
 
-	private def _helper(sh :StringHelperImpl) { }
+	private def _helper(sh :StringHelperImpl, sb :SStringBuilder) { }
 }

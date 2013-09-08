@@ -17,8 +17,9 @@ import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.util.Dist2D;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 
 final class GeneratorTest extends sx10Test {
 	public static def main(args: Array[String](1)) {
@@ -26,33 +27,38 @@ final class GeneratorTest extends sx10Test {
 	}
 	
 	public def run(args: Array[String](1)): Boolean {
-		rmat_test();
-		erdos_test();
-		random_test();
+		for(s in 14..22) {
+			rmat_test(s);
+			erdos_test(s);
+		}
+	//	random_test();
 		return true;
 	}
 	
-	private static def rmat_test() {
-		val team = Team.WORLD;
+	private static def rmat_test(scale :Int) {
 		val rnd = new Random(2,3);
-		val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
-		DistributedReader.write("rmat-%d", rmatEdges);
-		Console.OUT.println("rmat: done");
+		val edges = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+		val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+		CSV.write("rmat-scale" + scale + "-%d",
+				new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]));
+		//DistributedReader.write("rmat-%d", rmatEdges);
+		Console.OUT.println("rmat-scale" + scale + ": done");
 	}
 	
-	private static def erdos_test() {
-	    val team = Team.WORLD;
+	private static def erdos_test(scale :Int) {
 	    val rnd = new Random(2,3);
-	    val rmatEdges = GraphGenerator.genRandomGraph(14, 16, rnd);
-	    //val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
-	    DistributedReader.write("erdos-%d", rmatEdges);
+	    val edges = GraphGenerator.genRandomGraph(scale, 16, rnd);
+	    val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+	    CSV.write("erdos-scale" + scale + "-%d",
+	    		new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]));
+	    //DistributedReader.write("erdos-%d", rmatEdges);
 	    /*
 	     * val graph = new Graph(team, Graph.VertexType.Long, true);
 	     * graph.addEdges(rmatEdges);
 	     * val dist = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
 	     * val matrix = graph.constructDistSparseMatrix(dist, true, true);
 	     */
-	    Console.OUT.println("erdos: done");
+	    Console.OUT.println("erdos-scale" + scale + ": done");
 	}
 	
 	private static def random_test() {

@@ -10,14 +10,6 @@
  */
 package org.scalegraph.io.impl;
 
-import org.scalegraph.util.SString;
-import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.util.MemoryPointer;
-import org.scalegraph.util.GrowableMemory;
-import org.scalegraph.io.FileReader;
-import org.scalegraph.io.ID;
-import org.scalegraph.io.NamedDistData;
-
 import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.NativeCPPOutputFile;
 import x10.compiler.NativeCPPInclude;
@@ -26,6 +18,15 @@ import x10.compiler.Native;
 import x10.io.File;
 import x10.io.IOException;
 import x10.util.Team;
+
+import org.scalegraph.util.SString;
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.MemoryPointer;
+import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.io.FileReader;
+import org.scalegraph.io.ID;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.id.Type;
 
 @NativeCPPCompilationUnit("CSVHelper.cc") 
 public class CSVReader {
@@ -111,11 +112,12 @@ public class CSVReader {
 	 * H_CHUNK: Each P_CHUNK is split into H_CHUNK. Attribute handlers can process H_CHUNK at once.
 	 */
 	
-	public static def read(team :Team, path :SString, columnDef :Array[Int](1), includeHeader :Boolean) {
+	public static def read(team :Team, path :SString, columnDef :Array[Int](1),
+			columnNames :Array[String](1), includeHeader :Boolean) {
 		//
 		val nthreads = Runtime.NTHREADS;
 		val numColumns = columnDef.size;
-		val columnNames = new Array[SString](numColumns);
+		var columnNamesInHeader :Array[SString] = null;
 		val attHandler = new Array[CSVAttributeHandler](columnDef.size);
 
 		val fman = FileNameProvider.createForRead(path);
@@ -135,12 +137,13 @@ public class CSVReader {
 				}
 				dataOffset = reader.currentOffset();
 				
+				columnNamesInHeader = new Array[SString](numColumns);
 				for([i] in attHandler) {
 					val att = header.attribute(i);
 					val typeId = att.includeType() 
-							? ID.typeId(att.attTypeName().toString())
+							? Type.typeId(att.attTypeName().toString())
 							: columnDef(i);
-					columnNames(i) = att.name();
+					columnNamesInHeader(i) = att.name();
 					attHandler(i) = CSVAttributeHandler.create(typeId, att.doubleQuoated());
 					if(att.doubleQuoated()) includeDQ = true;
 				}
@@ -150,10 +153,7 @@ public class CSVReader {
 			else {
 				includeDQ = (headerLine.trim().bytes()(0) as Char == '"');
 				for([i] in attHandler) {
-					val typeId = columnDef(i);
-					columnNames(i) = SString.format("column-%d" as SString, i);
-		//			columnNames(i) = "column-"+i;
-					attHandler(i) = CSVAttributeHandler.create(typeId, includeDQ);
+					attHandler(i) = CSVAttributeHandler.create(columnDef(i), includeDQ);
 				}
 			}
 			
@@ -178,18 +178,27 @@ public class CSVReader {
 		// merge result
 		val attributes = new Array[Any](enabledColumns);
 		val attrNames = new Array[String](enabledColumns);
-		val attrIds = new Array[Int](enabledColumns);
+		val typeIds = new Array[Int](enabledColumns);
 		var attrIndex :Int = 0;
+	//	finish for(e in 0..(numColumns-1)) {
 		for(e in 0..(numColumns-1)) {
 			if(!attHandler(e).isSkip()) {
-				attributes(attrIndex) = attHandler(e).mergeResult(team, nthreads,
+				val attrIndex_ = attrIndex;
+			//	async
+					attributes(attrIndex_) = attHandler(e).mergeResult(team, nthreads,
+						(tid :Int) => bufferPLH()(tid).chunkSize.raw(),
 						(tid :Int) => bufferPLH()(tid).buffer(e));
+					
 		//		attHandler(e).print(team,attributes(attrIndex));
-				attrNames(attrIndex) = columnNames(e).toString();
-				attrIds(attrIndex) = ID.attTypeId(attHandler(e).typeId());
+				val name = (columnNamesInHeader != null) ? columnNamesInHeader(e).toString()
+						: (columnNames != null) ? columnNames(attrIndex)
+						: SString.format("column-%d" as SString, e).toString();
+				attrNames(attrIndex) = name;
+				
+				typeIds(attrIndex) = attHandler(e).typeId();
 				++attrIndex;
 			}
 		}
-		return new NamedDistData(attrNames, attrIds, attributes, null);
+		return new NamedDistData(attrNames, typeIds, attributes, null);
 	}
 }

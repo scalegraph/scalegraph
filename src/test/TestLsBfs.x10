@@ -15,6 +15,7 @@ import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
 
 import org.scalegraph.harness.sx10Test;
+import org.scalegraph.io.SimpleText;
 import org.scalegraph.harness.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.LsBfsVisitor;
@@ -29,8 +30,6 @@ final class TestLsBfs extends sx10Test {
 	public static def main(args: Array[String](1)) {
 		new TestLsBfs().execute(args);
 	}
-    
-    val inputFile: Array[String] = new Array[String](1, (Int) => "/nfs/data0/testdata/RMAT_SCALE_8");
     
     public static class LocalState {
         val localVertices: Long;
@@ -62,14 +61,9 @@ final class TestLsBfs extends sx10Test {
         
         val team = Team.WORLD;
         
-        // Load data
-        val rawData = DistributedReader.read(inputFile, inputFormat);
-        // Create graph
-        val edgeList = rawData.get1();
-        val weightList = rawData.get2();
-        
-        val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.raw(team.placeGroup()));
+        // Load data, Create graph
+        val g = Graph.make(SimpleText.read(
+        		"/nfs/data0/testdata/RMAT_SCALE_8", inputFormat));
         
         // Create dist sparse matrix
         val csr = g.createDistEdgeIndexMatrix(

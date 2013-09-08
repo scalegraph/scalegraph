@@ -13,19 +13,19 @@ package org.scalegraph.io.impl;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.io.FileReader;
 
+import x10.compiler.NativeCPPCompilationUnit;
+import x10.compiler.NativeCPPInclude;
+import x10.compiler.Native;
+
+@NativeCPPInclude("CSVHelper.h")
+@NativeCPPCompilationUnit("CSVHelper.cc") 
 public class LineBreakSplitter extends InputSplitter {
+
+	@Native("c++", "org::scalegraph::io::impl::LineNextBreak(#data, #offset)")
+	public static native def nativeNextBreak(data :MemoryChunk[Byte], offset :Long) :Long;
 	
-	public def nextBreak(data :MemoryChunk[Byte], offset :Long) :Long {
-		var cr :Boolean = false;
-		for(i in offset..(data.size()-1)) {
-			val ch = data(i) as Char;
-			if(ch == '\r') cr = true;
-			else if(ch == '\n') {
-				return i + 1;
-			}
-		}
-		return data.size();
-	}
+	public def nextBreak(data :MemoryChunk[Byte], offset :Long)
+		= nativeNextBreak(data, offset);
 	
 	public def nextBreak(reader :FileReader) = reader.fastReadLine().raw();
 	

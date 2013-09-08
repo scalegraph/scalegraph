@@ -1,16 +1,16 @@
 package test;
 
 import x10.util.Team;
-
 import x10.compiler.Native;
+
+import org.scalegraph.Config;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.id.Type;
+import org.scalegraph.io.CSV;
 import org.scalegraph.graph.Graph;
-
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
-
 import org.scalegraph.util.Algorithm;
 
 struct AdjVertex {
@@ -72,11 +72,8 @@ struct InitMessage {
 	}
 }
 
-struct MFEdge {
-	val capacity:Long;
-	def this (cap:Long) {
-		this.capacity = cap;
-	}
+class MFEdge {
+	var capacity:Long;
 }
 
 struct MFVertex {
@@ -128,40 +125,33 @@ struct MFVertex {
 public class MaxFlow {
 	
 	public static def main(args:Array[String](1)) {
-		val team = Team.WORLD;	
-		val inputFormat = (s:String) => {
-			val elements = s.split(" ");
-			return new Tuple3[Long,Long,Long](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					Long.parse(elements(2))
-			);
-		};
+		val team = Config.get().worldTeam();
 		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(args,inputFormat);
+		val g = Graph.make(CSV.read(args(0), 
+				[Type.Long as Int, Type.Long, Type.None, Type.Double],
+				["source", "target", "weight"]));
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Long]("edgevalue",weigh.raw(team.placeGroup()));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
 		
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 		val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
-		val edgeValue = g.constructDistAttribute[Long](csr, false, "edgevalue");
-		xpregel.initEdgeValue[Long](edgeValue, (value : Long) => {
-			val edge = new MFEdge(value);
-			return edge;
+		val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
+		
+		team.placeGroup().broadcastFlat(() => {
+			val src = edgeValue();
+			val dst = xpregel.edgeValues();
+			Parallel.iter(dst.range(), (tid :Long, r :LongRange) => {
+				for(i in r)
+					dst(i).capacity = src(i) as Long;
+			});
 		});
 
-		
 		val start_time = System.currentTimeMillis();
 		
 		xpregel.updateInEdge();
