@@ -117,7 +117,7 @@ public class CSVReader {
 		//
 		val nthreads = Runtime.NTHREADS;
 		val numColumns = columnDef.size;
-		var columnNamesInHeader :Array[SString] = null;
+		var columnNamesInHeader :Array[SString](1) = null;
 		val attHandler = new Array[CSVAttributeHandler](columnDef.size);
 
 		val fman = FileNameProvider.createForRead(path);

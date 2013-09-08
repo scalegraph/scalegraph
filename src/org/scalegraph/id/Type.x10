@@ -15,6 +15,7 @@ import x10.compiler.NativeCPPInclude;
 import x10.compiler.Native;
 
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.SString;
 
 @NativeCPPInclude("TypeHelper.h")
 @NativeCPPOutputFile("TypeHelper.h")
@@ -138,5 +139,38 @@ public final class Type {
 			return Type.String;
 		else
 			throw new Exception("invalid data type");
+	}
+	
+	public static def typeNameStr(typeId :Int) :SString {
+		switch(typeId) {
+		case Type.Boolean:
+			return "Boolean";
+		case Type.Byte:
+			return "Byte";
+		case Type.Short:
+			return "Short";
+		case Type.Int:
+			return "Int";
+		case Type.Long:
+			return "Long";
+		case Type.Float:
+			return "Float";
+		case Type.Double:
+			return "Double";
+		case Type.UByte:
+			return "UByte";
+		case Type.UShort:
+			return "UShort";
+		case Type.UInt:
+			return "UInt";
+		case Type.ULong:
+			return "ULong";
+		case Type.Char:
+			return "Char";
+		case Type.String:
+			return "String";
+		default:
+			throw new Exception("invalid type id : " + typeId);
+		}
 	}
 }

@@ -33,9 +33,7 @@ import org.scalegraph.io.NativeFile;
 import org.scalegraph.io.FileMode;
 import org.scalegraph.io.FileAccess;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.io.GraphHeader;
-import org.scalegraph.io.MatrixHeader;
-import org.scalegraph.io.VectorHeader;
+import org.scalegraph.id.Type;
 
 @NativeCPPInclude("CSVHelper.h")
 @NativeCPPCompilationUnit("CSVHelper.cc") 
@@ -46,51 +44,12 @@ public class CSVWriter {
 	 * path :directory (make a directory  (hogenameprovider
 	 * file num = place num ( each place writes files)
 	 * */
-	
-
-	
-
-
-	public static def makeTypeStr( typeId :Int){
-		val id = (typeId>=256) ? typeId/256 : typeId;
-		switch(id) {
-		case ID.TYPE_BOOLEAN:
-			return "Boolean";
-		case ID.TYPE_BYTE:
-			return "Byte";
-		case ID.TYPE_SHORT:
-			return "Short";
-		case ID.TYPE_INT:
-			return "Int";
-		case ID.TYPE_LONG:
-			return "Long";
-		case ID.TYPE_FLOAT:
-			return "Float";
-		case ID.TYPE_DOUBLE:
-			return "Double";
-		case ID.TYPE_UBYTE:
-			return "UByte";
-		case ID.TYPE_USHORT:
-			return "UShort";
-		case ID.TYPE_UINT:
-			return "UInt";
-		case ID.TYPE_ULONG:
-			return "ULong";
-		case ID.TYPE_CHAR:
-			return "Char";
-		case ID.TYPE_STRING:
-			return "String";
-		default:
-			throw new Exception("invalid type id : " + id);
-		}
-	}
 
 	public static def writeSafe(team :Team, path :SString, data :NamedDistData){//data: all data
 
 		val fman = FileNameProvider.createForWrite(path,true);
-		if(fman.isScattered() ){
-			fman.mkdir();
-		}
+		// create directory if it is not exists.
+		fman.mkdir();
 
 		var count :Int =0;
 		finish for ( i in Place.places()){
@@ -113,9 +72,8 @@ public class CSVWriter {
 		val nthreads = 2;//Runtime.NTHREADS?
 
 		val fman = FileNameProvider.createForWrite(path,true);
-		if(fman.isScattered() ){
-			fman.mkdir();
-		}
+		// create directory if it is not exists.
+		fman.mkdir();
 
 		var count :Int =0;
 		finish for ( i in Place.places()){
@@ -130,55 +88,55 @@ public class CSVWriter {
 
 	public static def dmcElemToString(dmcAny :Any, i :Long, typeId:Int) :String{
 		val id = (typeId>=256) ? typeId/256 : typeId;
-		if( id==ID.TYPE_BOOLEAN ){
+		if( id==Type.Boolean ){
 			val dmc = dmcAny as DistMemoryChunk[Boolean];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_BYTE ){
+		}else if( id==Type.Byte ){
 			val dmc = dmcAny as DistMemoryChunk[Byte];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_SHORT ){
+		}else if( id==Type.Short ){
 			val dmc = dmcAny as DistMemoryChunk[Short];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_INT ){
+		}else if( id==Type.Int ){
 			val dmc = dmcAny as DistMemoryChunk[Int];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_LONG ){
+		}else if( id==Type.Long ){
 			val dmc = dmcAny as DistMemoryChunk[Long];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_FLOAT ){
+		}else if( id==Type.Float ){
 			val dmc = dmcAny as DistMemoryChunk[Float];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_DOUBLE ){
+		}else if( id==Type.Double ){
 			val dmc = dmcAny as DistMemoryChunk[Double];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_UBYTE ){
+		}else if( id==Type.UByte ){
 			val dmc = dmcAny as DistMemoryChunk[UByte];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_USHORT ){
+		}else if( id==Type.UShort ){
 			val dmc = dmcAny as DistMemoryChunk[UShort];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_UINT ){
+		}else if( id==Type.UInt ){
 			val dmc = dmcAny as DistMemoryChunk[UInt];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_ULONG ){
+		}else if( id==Type.ULong ){
 			val dmc = dmcAny as DistMemoryChunk[ULong];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_CHAR ){
+		}else if( id==Type.Char ){
 			val dmc = dmcAny as DistMemoryChunk[Char];
 			val mc = dmc();
 			return mc.elemtoString(i);
-		}else if( id==ID.TYPE_STRING ){
+		}else if( id==Type.String ){
 			val dmc = dmcAny as DistMemoryChunk[String];
 			val mc = dmc();
 			return mc.elemtoString(i);
@@ -191,55 +149,55 @@ public class CSVWriter {
 		
 		val typeId = data.typeId()(0);
 		val id = (typeId>=256) ? typeId/256 : typeId;
-		if( id==ID.TYPE_BOOLEAN ){
+		if( id==Type.Boolean ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Boolean];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_BYTE ){
+		}else if( id==Type.Byte ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Byte];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_SHORT ){
+		}else if( id==Type.Short ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Short];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_INT ){
+		}else if( id==Type.Int ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Int];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_LONG ){
+		}else if( id==Type.Long ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Long];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_FLOAT ){
+		}else if( id==Type.Float ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Float];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_DOUBLE ){
+		}else if( id==Type.Double ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Double];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_UBYTE ){
+		}else if( id==Type.UByte ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[UByte];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_USHORT ){
+		}else if( id==Type.UShort ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[UShort];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_UINT ){
+		}else if( id==Type.UInt ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[UInt];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_ULONG ){
+		}else if( id==Type.ULong ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[ULong];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_CHAR ){
+		}else if( id==Type.Char ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[Char];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
-		}else if( id==ID.TYPE_STRING ){
+		}else if( id==Type.String ){
 			val tmpdmc = data.data()(0) as DistMemoryChunk[String];
 			val tmpmc = tmpdmc();
 			return tmpmc.size();
@@ -261,7 +219,7 @@ public class CSVWriter {
 		if (header){
 			var headerStr :String = "";
 			for ( i in 0..(colSize-1) ) {
-				headerStr += "\"" + data.name()(i) + " <" + makeTypeStr(data.typeId()(i) ) + ">\"" + ( i != colSize-1 ?  " " : "\n");
+				headerStr += "\"" + data.name()(i) + " <" + Type.typeNameStr(data.typeId()(i)) + ">\"" + ( i != colSize-1 ?  " " : "\n");
 			}
 			P.print( headerStr);
 		}
@@ -308,7 +266,7 @@ public class CSVWriter {
 		val colSize = data.typeId().size;
 		if (header){
 			for ( i in 0..(colSize-1) ) {
-				headerStr += "\"" + data.name()(i) + " <" + makeTypeStr(data.typeId()(i) ) + ">\"" + ( i != colSize-1 ?  " " : "\n");
+				headerStr += "\"" + data.name()(i) + " <" + Type.typeNameStr(data.typeId()(i) ) + ">\"" + ( i != colSize-1 ?  " " : "\n");
 			}
 			P.print( headerStr);
 		}
