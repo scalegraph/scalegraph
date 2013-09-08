@@ -215,9 +215,11 @@ final class GIMVGraphTest extends sx10Test {
 		g.setVertexAttribute("degree", csr, vector);
 		print_attribute_list(g);
 
-		val att_names = useTranslator ? g.getVertexAttribute[Long]("name") : null;
 		val att_pagerank = g.getVertexAttribute[Double]("degree");
-		DistributedReader.write("degree-%d.txt", att_names, att_pagerank);
+		if(useTranslator)
+			DistributedReader.write("degree-%d.txt", g.getVertexAttribute[Long]("name"), att_pagerank);
+		else
+			DistributedReader.write("degree-%d.txt", att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}
