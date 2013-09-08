@@ -10,14 +10,6 @@
  */
 package org.scalegraph.io.impl;
 
-import org.scalegraph.util.SString;
-import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.util.MemoryPointer;
-import org.scalegraph.util.GrowableMemory;
-import org.scalegraph.io.FileReader;
-import org.scalegraph.io.ID;
-import org.scalegraph.io.NamedDistData;
-
 import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.NativeCPPOutputFile;
 import x10.compiler.NativeCPPInclude;
@@ -26,6 +18,14 @@ import x10.compiler.Native;
 import x10.io.File;
 import x10.io.IOException;
 import x10.util.Team;
+
+import org.scalegraph.util.SString;
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.MemoryPointer;
+import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.io.FileReader;
+import org.scalegraph.io.ID;
+import org.scalegraph.io.NamedDistData;
 import org.scalegraph.id.Type;
 
 @NativeCPPCompilationUnit("CSVHelper.cc") 

@@ -163,7 +163,7 @@ public final class DistributedReader {
  			values : Attribute[Double])
  	{
  		val team = Config.get().worldTeam();
- 		write(filenamefmt, names, values.values().raw(team.placeGroup()));
+ 		write(filenamefmt, names, values.values());
  	}
  	
  	public static def write(
@@ -179,7 +179,7 @@ public final class DistributedReader {
  			val writer = new FileWriter(new File(filename));
 
  			if(names != null) {
-	 			val names_ = names.values()().raw();
+	 			val names_ = names.values()();
 	 			for(i in values_.range()) {
 	 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
 	 			}
