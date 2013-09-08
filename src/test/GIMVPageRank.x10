@@ -21,11 +21,9 @@ import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.GIMV;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.Attribute;
 import org.scalegraph.graph.GraphGenerator;
 
 final class GIMVPageRank extends sx10Test {

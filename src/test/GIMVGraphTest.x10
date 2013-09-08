@@ -14,6 +14,8 @@ package test;
 import x10.util.Team;
 
 import org.scalegraph.harness.sx10Test;
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.util.Dist2D;

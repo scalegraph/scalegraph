@@ -29,7 +29,6 @@ import org.scalegraph.Config;
 
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.graph.Attribute;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.DistMemoryChunk;
@@ -157,18 +156,10 @@ public final class DistributedReader {
 		
 		return Tuple2[DistGrowableMemory[Long], DistGrowableMemory[T]](edgelist, weight);
 	}
- 	public static def write(
- 			filenamefmt : String,
- 			names : Attribute[Long],
- 			values : Attribute[Double])
- 	{
- 		val team = Config.get().worldTeam();
- 		write(filenamefmt, names, values.values());
- 	}
  	
  	public static def write(
  			filenamefmt : String,
- 			names : Attribute[Long],
+ 			names : DistMemoryChunk[Long],
  			values : DistMemoryChunk[Double])
  	{
  		val team = Config.get().worldTeam();
@@ -178,17 +169,9 @@ public final class DistributedReader {
  			val values_ = values();
  			val writer = new FileWriter(new File(filename));
 
- 			if(names != null) {
-	 			val names_ = names.values()();
-	 			for(i in values_.range()) {
-	 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
-	 			}
- 			}
- 			else {
- 				val size = team.size();
- 				for(i in values_.range()) {
- 					writer.write(String.format("%d,%f\n", [i * size + role, values_(i)]).bytes());
- 				}
+ 			val names_ = names();
+ 			for(i in values_.range()) {
+ 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
  			}
  			
  			writer.close();
@@ -207,7 +190,7 @@ public final class DistributedReader {
  			val writer = new FileWriter(new File(filename));
 			val size = team.size();
 			for(i in values_.range()) {
-				writer.write(((i * size + role).toString() + "," + values_(i).toString() + "\n").bytes());
+				writer.write(String.format("%d,%f\n", [i * size + role, values_(i)]).bytes());
 			}
  			writer.close();
  		});
