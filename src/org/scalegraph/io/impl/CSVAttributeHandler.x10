@@ -23,6 +23,7 @@ import x10.compiler.Native;
 import x10.util.Team;
 import org.scalegraph.io.ID;
 import org.scalegraph.util.SString;
+import org.scalegraph.id.Type;
 
 
 @NativeCPPInclude("CSVHelper.h")
@@ -152,33 +153,33 @@ public class CSVAttributeHandler {
 	
 	public static def create(typeId :Int, doubleQuoated :Boolean) :CSVAttributeHandler {
 		switch(typeId) {
-		case ID.TYPE_NONE:
+		case Type.None:
 			return new CSVAttributeHandler(typeId, doubleQuoated);
-		case ID.TYPE_BOOLEAN:
+		case Type.Boolean:
 			return new PrimitiveHandler[Boolean](typeId, doubleQuoated);
-		case ID.TYPE_BYTE:
+		case Type.Byte:
 			return new PrimitiveHandler[Byte](typeId, doubleQuoated);
-		case ID.TYPE_SHORT:
+		case Type.Short:
 			return new PrimitiveHandler[Short](typeId, doubleQuoated);
-		case ID.TYPE_INT:
+		case Type.Int:
 			return new PrimitiveHandler[Int](typeId, doubleQuoated);
-		case ID.TYPE_LONG:
+		case Type.Long:
 			return new PrimitiveHandler[Long](typeId, doubleQuoated);
-		case ID.TYPE_FLOAT:
+		case Type.Float:
 			return new PrimitiveHandler[Float](typeId, doubleQuoated);
-		case ID.TYPE_DOUBLE:
+		case Type.Double:
 			return new PrimitiveHandler[Double](typeId, doubleQuoated);
-		case ID.TYPE_UBYTE:
+		case Type.UByte:
 			return new PrimitiveHandler[UByte](typeId, doubleQuoated);
-		case ID.TYPE_USHORT:
+		case Type.UShort:
 			return new PrimitiveHandler[UShort](typeId, doubleQuoated);
-		case ID.TYPE_UINT:
+		case Type.UInt:
 			return new PrimitiveHandler[UInt](typeId, doubleQuoated);
-		case ID.TYPE_ULONG:
+		case Type.ULong:
 			return new PrimitiveHandler[ULong](typeId, doubleQuoated);
-		case ID.TYPE_CHAR:
+		case Type.Char:
 			return new PrimitiveHandler[Char](typeId, doubleQuoated);
-		case ID.TYPE_STRING:
+		case Type.String:
 			return new StringHandler(typeId, doubleQuoated);
 		default:
 			throw new IllegalArgumentException("invalid data type");

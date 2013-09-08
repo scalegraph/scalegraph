@@ -17,10 +17,15 @@ import org.scalegraph.util.SString;
 
 /** Provides CSV File IO routines. All methods are executed in parallel and distributed. */
 public final class CSV {
-	
+
 	/** Read a CSV File */
 	public static def read(path :SString, columnDef :Array[Int](1), includeHeader :Boolean) {
-		return CSVReader.read(Config.get().worldTeam(), path, columnDef, includeHeader);
+		return CSVReader.read(Config.get().worldTeam(), path, columnDef, null, includeHeader);
+	}
+	
+	/** Read a CSV File */
+	public static def read(path :SString, columnDef :Array[Int](1), columnNames :Array[String](1)) {
+		return CSVReader.read(Config.get().worldTeam(), path, columnDef, columnNames, false);
 	}
 	
 	/** Write data as a CSV File */

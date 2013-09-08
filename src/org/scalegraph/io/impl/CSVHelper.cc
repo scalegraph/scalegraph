@@ -218,7 +218,7 @@ x10_long LineNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
 		if(ptr == end) {
 			return end - start;
 		}
-		if(ch == '\n') {
+		if(*ptr == '\n') {
 			return ptr + 1 - start;
 		}
 	}

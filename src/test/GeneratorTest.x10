@@ -17,8 +17,9 @@ import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.util.Dist2D;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 
 final class GeneratorTest extends sx10Test {
 	public static def main(args: Array[String](1)) {
@@ -36,7 +37,9 @@ final class GeneratorTest extends sx10Test {
 		val team = Team.WORLD;
 		val rnd = new Random(2,3);
 		val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
-		DistributedReader.write("rmat-%d", rmatEdges);
+		CSV.write("rmat-%d",
+				new NamedDistData(["source" as String, "target"], [rmatEdges.src as Any, rmatEdges.dst]));
+		//DistributedReader.write("rmat-%d", rmatEdges);
 		Console.OUT.println("rmat: done");
 	}
 	
@@ -45,7 +48,9 @@ final class GeneratorTest extends sx10Test {
 	    val rnd = new Random(2,3);
 	    val rmatEdges = GraphGenerator.genRandomGraph(14, 16, rnd);
 	    //val rmatEdges = GraphGenerator.genRMAT(14, 16, 0.45, 0.15, 0.15, rnd);
-	    DistributedReader.write("erdos-%d", rmatEdges);
+	    CSV.write("erdos-%d",
+	    		new NamedDistData(["source" as String, "target"], [rmatEdges.src as Any, rmatEdges.dst]));
+	    //DistributedReader.write("erdos-%d", rmatEdges);
 	    /*
 	     * val graph = new Graph(team, Graph.VertexType.Long, true);
 	     * graph.addEdges(rmatEdges);

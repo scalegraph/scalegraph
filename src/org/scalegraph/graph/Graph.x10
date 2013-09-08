@@ -36,6 +36,9 @@ import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.SString;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.io.ID;
+import org.scalegraph.id.Type;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving this instance to another place is not worth.
  */
@@ -59,9 +62,9 @@ import org.scalegraph.util.SString;
 	/** Vertex ID type.
 	 */
 	public static class VertexType {
-		public static val Long = Attribute.ID.Long;
-		public static val Double = Attribute.ID.Double;
-		public static val String = Attribute.ID.String;
+		public static val Long = Type.Long;
+		public static val Double = Type.Double;
+		public static val String = Type.String;
 	}
 
 	/** Returns the number of vertices or the maximum ID number if translation is not used.
@@ -139,6 +142,51 @@ import org.scalegraph.util.SString;
 		}
 	}
 	
+	public static def make(edgeData :NamedDistData) 
+		= make(edgeData, null, false);
+	
+	public static def make(edgeData :NamedDistData, renumbering :Boolean) 
+		= make(edgeData, null, renumbering);
+	
+	public static def make(edgeData :NamedDistData, vertexData :NamedDistData, renumbering :Boolean) {
+		val srcIdx = edgeData.nameToIndex(ID.NAME_SOURCE);
+		val dstIdx = edgeData.nameToIndex(ID.NAME_TARGET);
+		val vertexType = edgeData.typeId()(srcIdx);
+		assert(vertexType == edgeData.typeId()(dstIdx));
+		val g = new Graph(Config.get().worldTeam(), vertexType, renumbering);
+		val src = edgeData.data()(srcIdx);
+		val dst = edgeData.data()(dstIdx);
+		switch(vertexType) {
+		case Type.Long:
+			g.addEdges(EdgeList[Long](src as DistMemoryChunk[Long], dst as DistMemoryChunk[Long]));
+			break;
+		case Type.Double:
+			g.addEdges(EdgeList[Double](src as DistMemoryChunk[Double], dst as DistMemoryChunk[Double]));
+			break;
+		case Type.String:
+			g.addEdges(EdgeList[SString](src as DistMemoryChunk[SString], dst as DistMemoryChunk[SString]));
+			break;
+		default:
+			throw new IllegalOperationException("Not supported edge type");
+		}
+		for([i] in edgeData.data()) {
+			if(i == srcIdx || i == dstIdx) continue;
+			val proxy = AttributeProxy.make(edgeData.typeId()(i));
+			val name = edgeData.name()(i);
+			val data = edgeData.data()(i);
+			proxy.setEdgeAttribute(g, name, data);
+		}
+		if(vertexData != null) {
+			for([i] in vertexData.data()) {
+				val proxy = AttributeProxy.make(vertexData.typeId()(i));
+				val name = vertexData.name()(i);
+				val data = vertexData.data()(i);
+				proxy.setVertexAttribute(g, name, data);
+			}
+		}
+		return g;
+	}
+	
 	public static def make(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
 		g.addEdges(edges);
@@ -183,7 +231,7 @@ import org.scalegraph.util.SString;
 		return newAtt;
 	}
 			
-	private def setAttribute[T](vertexOrEdge :boolean, name :String, attValues :DistMemoryChunk[T]) {T haszero}
+	private def setAttribute[T](vertexOrEdge :boolean, name :String, attType :Int, attValues :DistMemoryChunk[T]) {T haszero}
 	{
 		val attributes = vertexOrEdge ? vertexAttributes : edgeAttributes;
 		attributes.put(name, new Attribute(attValues));

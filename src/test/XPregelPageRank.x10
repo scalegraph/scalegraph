@@ -116,7 +116,8 @@ final class XPregelPageRank extends sx10Test {
 
 		// release graph data
 		g.del();
-		edgeList.del();
+		edgeList.src.del();
+		edgeList.dst.del();
 		rawWeight.del();
 		
 		xpregel.setLogPrinter(Console.OUT, 0);

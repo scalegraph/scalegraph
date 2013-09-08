@@ -14,6 +14,9 @@ package test;
 import x10.util.Team;
 
 import org.scalegraph.harness.sx10Test;
+import org.scalegraph.id.Type;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
@@ -25,29 +28,16 @@ final class PageRankTest extends sx10Test {
 	}
     
     public def run(args :Array[String](1)): Boolean {
-		val team = Team.WORLD;
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				1.0
-			);
-		};
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(args,inputFormat);
+		val g = Graph.make(CSV.read(args(0), 
+				[Type.Long as Int, Type.Long, Type.None, Type.Double],
+				["source", "target", "weight"]));
 		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-	
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		
-		val g = Graph.make(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("weight", weigh.raw(team.placeGroup()));		
+		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");	
 		
 		val result = org.scalegraph.api.PageRank.run(g);
 		
-		DistributedReader.write("pagerank-%d", result);
+		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [result as Any]));
 		return true;
 	}
 }

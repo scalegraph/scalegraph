@@ -12,7 +12,6 @@
 package test;
 
 import org.scalegraph.harness.sx10Test;
-import org.scalegraph.graph.VertexTranslator;
 
 final class TestVertexTranslator extends sx10Test {
 	public static def main(args: Array[String](1)) {

@@ -20,6 +20,7 @@ import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.SString;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.GIMV;
 
@@ -28,35 +29,27 @@ final class GIMVGraphTest extends sx10Test {
 		new GIMVGraphTest().execute(args);
 	}
 	
-	public static inputFormat_g1 = (s:String)=> {
-		val elements = s.split(",");
-		return Tuple3[Long, Long, Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				Double.parse(elements(3)));
+	public static inputFormat_g1 = (s :SString)=> {
+		val elements = s.split(",").iterator_();
+		val v0 = elements.next().toLong();
+		val v1 = elements.next().toLong();
+		elements.next();
+		val wgt = elements.next().toDouble();
+		return Tuple3[Long, Long, Double](v0, v1, wgt);
 	};
-	public static inpurFormat_g2 = (s:String)=> {
-		val elements = s.split(",");
-		return Tuple3[Long, Long, Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				Double.parse(elements(2)));
+	public static inpurFormat_g2 = (s :SString)=> {
+		val elements = s.split(",").iterator_();
+		val v0 = elements.next().toLong();
+		val v1 = elements.next().toLong();
+		val wgt = elements.next().toDouble();
+		return Tuple3[Long, Long, Double](v0, v1, wgt);
 	};
 	
 	public static def read_graph(srcfile :String, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
-		val filelist = new Array[String](1); filelist(0) = srcfile;
-		Console.OUT.println("Reading file: " + filelist(0) + " ...");
+		Console.OUT.println("Reading file: " + srcfile + " ...");
 		
 		val format = srcfile.endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
-		val rawdata = DistributedReader.read(filelist, format);
-		val edgelist = rawdata.get1();
-		val weight = rawdata.get2();
-		
-		Console.OUT.println("Creating graph object ...");
-		
-		val g = new Graph(team, Graph.VertexType.Long, useTranslator);
-		g.addEdges(edgelist.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("weight", weight.raw(team.placeGroup()));
+		val g = Graph.make(SimpleText.read[Double](srcfile, format));
 		
 		// chech results
 		Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());

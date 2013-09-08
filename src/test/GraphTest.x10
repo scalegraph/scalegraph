@@ -10,9 +10,9 @@
  */
 package test;
 
-import org.scalegraph.Config;
 import org.scalegraph.harness.sx10Test;
-import org.scalegraph.io.ID;
+import org.scalegraph.Config;
+import org.scalegraph.id.Type;
 import org.scalegraph.io.CSV;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.XPregelGraph;
@@ -23,10 +23,9 @@ public class GraphTest extends sx10Test {
 	}
 	
 	public def run(args: Array[String](1)): Boolean {
-		val fmt = [ID.TYPE_LONG as Int, ID.TYPE_LONG, ID.TYPE_NONE, ID.TYPE_DOUBLE];
-		val rawData = CSV.read(args(0), fmt, false);
-		val graph = Graph.makeWithTranslator(rawData.get[Long](0), rawData.get[Long](1));
-		graph.setEdgeAttribute("weight", rawData.get[Double](2));
+		val graph = Graph.make(CSV.read(args(0), 
+					[Type.Long as Int, Type.Long, Type.None, Type.Double],
+					["source", "target", "weight"]));
 		val matrix = graph.createDistSparseMatrix[Double](Config.get().dist1d(), "weight", true, true);
 		val xpregel = XPregelGraph.make[Long,Double](matrix);
 		
