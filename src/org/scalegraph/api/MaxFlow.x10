@@ -34,12 +34,7 @@ import org.scalegraph.util.Algorithm;
  * Calculate the maximum flow between two vertices
  */
 
-//TODO
-// initialization of edge
-// output 
-
 final public class MaxFlow {
-//<<<<<<< HEAD
 	public var team :Team = Config.get().worldTeam();
 	/** The name of the attribute used to give edge weights for the calculation of weighted PageRank.
 	 * Default: "weight"
@@ -53,7 +48,6 @@ final public class MaxFlow {
 	public var sinkVertexId:Long = 1;
 	
 	
-//=======
     
     /**
      * A class storing the result from MaxFlow
@@ -64,15 +58,10 @@ final public class MaxFlow {
        }
     }
     
-//>>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
     /** Calculate the maximum flow between two vertices
      * @param g The graph object
      * @return A long integer, the value of the maximum flow
-     */
-//<<<<<<< HEAD
-    /*public def execute(g :Graph): Long  = {
-         throw new UnsupportedOperationException();
-    }*/
+     */    
 
 	static struct AdjVertex {
 		val vertexId:Long;
@@ -132,14 +121,6 @@ final public class MaxFlow {
 			capacity = cap;
 		}
 	}
-	/*
-	static struct MFEdge {
-		val capacity:Long;
-		def this (cap:Long) {
-			this.capacity = cap;
-		}
-	}
-	 */
 
 	static struct MFVertex {
 		val adjVertex:MemoryChunk[AdjVertex];
@@ -199,10 +180,21 @@ final public class MaxFlow {
     	// compute MaxFlow
     	val xpregel = new XPregelGraph[MFVertex, MFEdge](team,  matrix);
     	val edgeValue = g.createDistAttribute[Long](matrix, false, "edgevalue");
-    	xpregel.initEdgeValue[Long](edgeValue, (value : Long) => {
+    	/*xpregel.initEdgeValue[Long](edgeValue, (value : Long) => {
     		val edge = new MFEdge(value);
     		return edge;
+    	});*/
+    	team.placeGroup().broadcastFlat(() => {
+    		val src = edgeValue();
+    		val dst = xpregel.edgeValues();
+    		Parallel.iter(dst.range(), (tid :Long, r :LongRange) => {
+    			for(i in r)
+    				dst(i).capacity = src(i) as Long;
+    		});
     	});
+
+    	
+    	
     	xpregel.updateInEdge();
     	
     	xpregel.iterate[InitMessage , Long](
@@ -535,19 +527,10 @@ final public class MaxFlow {
     	
     }
 
-/*    =======
-    	public def execute(g :Graph): Result {
-    	throw new UnsupportedOperationException();
-    	>>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936*/
 
    
-// <<<<<<< HEAD
-    // public def execute(matrix :DistSparseMatrix[Long]): Result {
-// =======
     public def execute(matrix :DistSparseMatrix[Double]): Result {
-// >>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
         throw new UnsupportedOperationException();
-    	//return execute(this, matrix);
     }
     
     public def execute(g :Graph):Result {
@@ -558,21 +541,6 @@ final public class MaxFlow {
 //    	return execute(this,g,  matrix);
     	throw new UnsupportedOperationException();
     }
-/*
-<<<<<<< HEAD
-    public static def run(matrix :DistSparseMatrix[Long]): Long {
-    	throw new UnsupportedOperationException();
-    	//return new MaxFlow().execute(matrix);	
-    }
-    
-
-    public static def run(g :Graph): Long {
-    	return new MaxFlow().execute(g);
-    	// throw new UnsupportedOperationException();
-    }
-    
-=======
-     * */
     public static def run(g :Graph): Result {
         throw new UnsupportedOperationException();
     }
@@ -584,19 +552,6 @@ final public class MaxFlow {
     private static def execute(inst: DegreeDistribution, g :Graph): Result {
         throw new UnsupportedOperationException();
     }
-    /*
->>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
-    
-    
-    @Inline
-<<<<<<< HEAD
-    private static def run(matrix :DistSparseMatrix[Double]): Long {
-    	
-=======
-    private static def run(matrix :DistSparseMatrix[Long]): Result {
->>>>>>> e8a1ffaf30d46ebd9670e7bb35a3bcaa6f2f5936
-        throw new UnsupportedOperationException();
-    }*/
     
 
     // Interface between API and Impl
