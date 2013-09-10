@@ -16,59 +16,61 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
-import org.scalegraph.util.LongIndexedMemoryChunk;
+
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 
-class Sort {
-    static val debug = false;
-    private static @Inline def debugln (str:String) : void {
+final class TestSort extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new TestSort().execute(args);
+	}
+	
+	static val debug = false;
+	private static @Inline def debugln (str:String) : void {
 		if (debug) {
 			Console.OUT.println("" + Timer.milliTime() + ":Hash: " + here + "(" + Runtime.workerId() + ")" + str);
 			Console.OUT.flush();
 		}
 	}
 
-    public static def sort[T](a:MemoryChunk[T], cmp:(T,T)=>Int) {
-    	finish qsort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1, 0L, (a.size()-1), cmp);
-    }
+	public static def sort[T](a:MemoryChunk[T], cmp:(T,T)=>Int) {
+		finish qsort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1, 0L, (a.size()-1), cmp);
+	}
 
-    public static def sort[T](a:MemoryChunk[T], proc : Int, cmp:(T,T)=>Int) {
-    	finish qsort[T](a, proc, 0L, (a.size()-1), cmp);
-    }
+	public static def sort[T](a:MemoryChunk[T], proc : Int, cmp:(T,T)=>Int) {
+		finish qsort[T](a, proc, 0L, (a.size()-1), cmp);
+	}
 
-    static @Inline def qsort[T](a:MemoryChunk[T], proc: Int, lo:Long, hi:Long, cmp:(T,T)=>Int) {
-    	if (hi <= lo) return;
-    	var l:Long = lo;
-    	var h:Long = hi;
-    	val pivot = a((l+h)/2); // If we use k(hi), sorting an almost sorted array results stack overflow !!
-    	while (true) {
-    		while (cmp(a(l), pivot)<0) ++l;
-    		while (cmp(pivot, a(h))<0) --h;
-    		if (l >= h) break;
-    		exch(a, l++, h--);
-    	}
-    	if(l == h) { ++l; --h; }
-    	val ll = l;
-    	val hh = h;
-    	if (proc > 0) {
-    		async qsort[T](a, proc - 1, lo, hh, cmp);
-    		qsort[T](a, proc - 1, ll, hi, cmp);
-    	} else {
-    		qsort[T](a, proc - 1, lo, hh, cmp);
-    		qsort[T](a, proc - 1, ll, hi, cmp);
-    	}
-    }
-    private static @Inline def exch[T](a:MemoryChunk[T], i:Long, j:Long):void {
-    	val temp = a(i);
-    	a(i) = a(j);
-    	a(j) = temp;
-    }
-
-}
-
-public class TestSort {
+	static @Inline def qsort[T](a:MemoryChunk[T], proc: Int, lo:Long, hi:Long, cmp:(T,T)=>Int) {
+		if (hi <= lo) return;
+		var l:Long = lo;
+		var h:Long = hi;
+		val pivot = a((l+h)/2); // If we use k(hi), sorting an almost sorted array results stack overflow !!
+		while (true) {
+			while (cmp(a(l), pivot)<0) ++l;
+			while (cmp(pivot, a(h))<0) --h;
+			if (l >= h) break;
+			exch(a, l++, h--);
+		}
+		if(l == h) { ++l; --h; }
+		val ll = l;
+		val hh = h;
+		if (proc > 0) {
+			async qsort[T](a, proc - 1, lo, hh, cmp);
+			qsort[T](a, proc - 1, ll, hi, cmp);
+		} else {
+			qsort[T](a, proc - 1, lo, hh, cmp);
+			qsort[T](a, proc - 1, ll, hi, cmp);
+		}
+	}
+	private static @Inline def exch[T](a:MemoryChunk[T], i:Long, j:Long):void {
+		val temp = a(i);
+		a(i) = a(j);
+		a(j) = temp;
+	}
+	
     private static def print(str:String) {
         Console.OUT.println(str);
         Console.OUT.flush();
@@ -89,7 +91,7 @@ public class TestSort {
             }
             {
                 val start = Timer.nanoTime();
-                Sort.sort(a2, m, (v1 : Int, v2 : Int)=>(v1.compareTo(v2)));
+                sort(a2, m, (v1 : Int, v2 : Int)=>(v1.compareTo(v2)));
                 seq += (Timer.nanoTime() - start) / (1000. * 1000. * 1000.);
             }
             {
@@ -110,10 +112,14 @@ public class TestSort {
         Console.OUT.printf("par = %f\n", par / 10);
     }
 
-    public static def main(args:Array[String](1)) {
-        val n = Int.parse(args(0));
-        val m = Int.parse(args(1));
+    public def run(args: Array[String](1)): Boolean {
+        // val n = Int.parse(args(0));
+        // val m = Int.parse(args(1));
 
+        val n = 1 << 16;
+        val m = n;
         runtest(n, m);
+        
+        return true;
     }
 }

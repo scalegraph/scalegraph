@@ -11,21 +11,25 @@
 
 package test;
 
+import x10.util.concurrent.AtomicLong;
+import x10.util.Team;
+
+import org.scalegraph.harness.sx10Test;
+import org.scalegraph.io.SimpleText;
 import org.scalegraph.harness.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.LsBfsVisitor;
-import x10.util.Team;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.util.Dist2D;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.Bitmap2;
 import org.scalegraph.graph.id.OnedC;
-import x10.util.concurrent.AtomicLong;
 
-public class TestLsBfs extends sx10Test {
-    
-    val inputFile: Array[String] = new Array[String](1, (Int) => "/nfs/data0/testdata/RMAT_SCALE_8");
+final class TestLsBfs extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new TestLsBfs().execute(args);
+	}
     
     public static class LocalState {
         val localVertices: Long;
@@ -33,7 +37,7 @@ public class TestLsBfs extends sx10Test {
         val vtoS: OnedC.VtoS;
         val vertexCount: AtomicLong;
         val edgeCount:AtomicLong;
-        def this(csr: DistSparseMatrix) {
+        def this(csr: DistSparseMatrix[Long]) {
             val ids = csr.ids();
             localVertices = ids.numberOfLocalVertexes();
             visited = new Bitmap2(localVertices);
@@ -41,11 +45,6 @@ public class TestLsBfs extends sx10Test {
             vertexCount = new AtomicLong(0);
             edgeCount = new AtomicLong(0);
         }
-    }
-    
-    public static def main(args: Array[String]) {
-        val t = new TestLsBfs();
-        t.execute();
     }
     
     public static val inputFormat = (s: String) => {
@@ -57,22 +56,17 @@ public class TestLsBfs extends sx10Test {
         );
     };
     
-    
-    public def run():x10.lang.Boolean {
+
+    public def run(args: Array[String](1)): Boolean {
         
         val team = Team.WORLD;
         
-        // Load data
-        val rawData = DistributedReader.read(team, inputFile, inputFormat);
-        // Create graph
-        val edgeList = rawData.get1();
-        val weightList = rawData.get2();
-        
-        val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.raw(team.placeGroup()));
+        // Load data, Create graph
+        val g = Graph.make(SimpleText.read(
+        		"/nfs/data0/testdata/RMAT_SCALE_8", inputFormat));
         
         // Create dist sparse matrix
-        val csr = g.constructDistSparseMatrix(
+        val csr = g.createDistEdgeIndexMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                                               true,
                                               true);

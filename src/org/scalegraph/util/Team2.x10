@@ -16,92 +16,106 @@ import x10.compiler.Inline;
 import x10.compiler.Ifdef;
 import x10.compiler.Ifndef;
 
+import x10.util.IndexedMemoryChunk;
+
 import x10.util.Team;
 import org.scalegraph.util.MemoryPointer;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
 
 // TODO: range check
 
 /** Team2 provides the collectives for MemoryChunk. Currently Team2 only support lowest level collectives.
  */
-public struct Team2 {
+public final struct Team2 {
 	
 	public val base :Team;
 	
 	public def this(baseTeam : Team) {
 		base = baseTeam;
 	}
-	
+
+	public @Inline def role() = base.role()(0);
 	public @Inline def size() = base.size();
 	public @Inline def places() = base.places();
 	public @Inline def placeGroup() = base.placeGroup();
 	
+	public def barrier (role:Int) : void {
+		base.barrier(role);
+	}
+	
 	/* native methods */
 	
-	private static def nativeScatter[T] (id:Int, role:Int, root:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count :Int) : void {
+	private static def nativeScatter[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count :Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_scatter(id, role, root, src, dst, sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_scatter(id, role, root, src->pointer(), dst->pointer(), sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeScatterv[T] (id:Int, role:Int, root:Int, src:MemoryPointer[T], src_offs:MemoryPointer[Int], src_counts:MemoryPointer[Int], dst:MemoryPointer[T], dst_count:Int) : void {
+	private static def nativeScatterv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_scatterv(id, role, root, src, src_offs, src_counts, dst, dst_count, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_scatterv(id, role, root, src->pointer(), src_offs, src_counts->pointer(), dst->pointer(), dst_count, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeGather[T] (id:Int, role:Int, root:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count:Int) : void {
+	private static def nativeGather[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_gather(id, role, root, src, dst, sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_gather(id, role, root, src->pointer(), dst->pointer(), sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeGatherv[T] (id:Int, role:Int, root:Int, src:MemoryPointer[T], src_count:Int, dst:MemoryPointer[T], dst_offs:MemoryPointer[Int], dst_counts:MemoryPointer[Int]) : void {
+	private static def nativeGatherv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_count:Int, dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_gatherv(id, role, root, src, src_count, dst, dst_offs, dst_counts, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_gatherv(id, role, root, src->pointer(), src_count, dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		Runtime.decreaseParallelism(1); // for MPI transport
+	}
+	
+	private static def nativeReduce[T](id:Int, role:Int, root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int, op:Int) : void {
+		Runtime.increaseParallelism(); // for MPI transport
+		@Native("c++", "x10rt_reduce(id, role, root, src->pointer(), dst->pointer(), (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeBcast[T] (id:Int, role:Int, root:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count:Int) : void {
+	private static def nativeBcast[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_bcast(id, role, root, src, dst, sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_bcast(id, role, root, src->pointer(), dst->pointer(), sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeAllgather[T](id:Int, role:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count:Int) : void {
+	private static def nativeAllgather[T](id:Int, role:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_allgather(id, role, src, dst, sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_allgather(id, role, src->pointer(), dst->pointer(), sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeAllgatherv[T] (id:Int, role:Int, src:MemoryPointer[T], src_count:Int, dst:MemoryPointer[T], dst_offs:MemoryPointer[Int], dst_counts:MemoryPointer[Int]) : void {
+	private static def nativeAllgatherv[T] (id:Int, role:Int, src:MemoryChunk[T], src_count:Int, dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_allgatherv(id, role, src, src_count, dst, dst_offs, dst_counts, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_allgatherv(id, role, src->pointer(), src_count, dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeAlltoall[T](id:Int, role:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count:Int) : void {
+	private static def nativeAlltoall[T](id:Int, role:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_alltoall(id, role, src, dst, sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_alltoall(id, role, src->pointer(), dst->pointer(), sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeAlltoallv[T] (id:Int, role:Int, src:MemoryPointer[T], src_offs:MemoryPointer[Int], src_counts:MemoryPointer[Int], dst:MemoryPointer[T], dst_offs:MemoryPointer[Int], dst_counts:MemoryPointer[Int]) : void {
+	private static def nativeAlltoallv[T] (id:Int, role:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_alltoallv(id, role, src, src_offs, src_counts, dst, dst_offs, dst_counts, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_alltoallv(id, role, src->pointer(), src_offs->pointer(), src_counts->pointer(), dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
-	private static def nativeAllreduce[T](id:Int, role:Int, src:MemoryPointer[T], dst:MemoryPointer[T], count:Int, op:Int) : void {
+	private static def nativeAllreduce[T](id:Int, role:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int, op:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_allreduce(id, role, src, dst, (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_allreduce(id, role, src->pointer(), dst->pointer(), (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 	
 	/* basic API methods */
 	
 	@Ifndef("__CPP__")
-	private def wrapPointer[T](p :MemoryPointer[T]) = new Array[T](p.raw);
+	private def wrapPointer[T](p :MemoryChunkData[T]) = new Array[T](p.raw);
 
 	@Ifndef("__CPP__")
 	private def inflateOffsets(mc :MemoryChunk[Int], offset :Int) {
@@ -114,18 +128,18 @@ public struct Team2 {
 	private def wrapOffsets(mc :MemoryChunk[Int], offset :Int) {
 		if(offset > 0)
 			return inflateOffsets(mc, offset);
-		else if(mc.pointer().offset > 0)
+		else if(mc.raw().offset > 0)
 			return mc.toArray();
 		else
-			return wrapPointer(mc.pointer());
+			return wrapPointer(mc.raw());
 	}
 
 	@Ifndef("__CPP__")
 	private def wrapCounts(mc :MemoryChunk[Int]) {
-		if(mc.pointer().offset > 0)
+		if(mc.raw().offset > 0)
 			return mc.toArray();
 		else
-			return wrapPointer(mc.pointer());
+			return wrapPointer(mc.raw());
 	}
 	
 	/** This is equivalent to MPI_scatter
@@ -137,11 +151,11 @@ public struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeScatter[T](base.id(), role, root, src.pointer(), dst.pointer(), dst.size() as Int);
+			finish nativeScatter[T](base.id(), role, root, src, dst, dst.size() as Int);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.scatter(role, root, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, dst.size() as Int);
 		}
 	 }
@@ -152,14 +166,29 @@ public struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeScatterv[T](base.id(), role, root, src.pointer(), src_offs.pointer(), src_counts.pointer(), dst.pointer(), dst.size() as Int);
+			finish nativeScatterv[T](base.id(), role, root, src, src_offs, src_counts, dst, dst.size() as Int);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.scatterv(role, root, wrapPointer(srcp), wrapOffsets(src_offs, srcp.offset as Int), wrapCounts(src_counts), wrapPointer(dstp), dstp.offset as Int, dst.size() as Int);
 		}
 	 }
+	
+	/** This is equivalent to MPI_scatterv
+	 */
+	public def scatterv[T] (root:Int, src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : MemoryChunk[T] {
+		val role = base.role()(0);
+		val dst_size = new MemoryChunk[Int](1);
+		val src_offs = root == role ? new MemoryChunk[Int](src_counts.size() + 1) : MemoryChunk.getNull[Int]();
+		if(root == role){
+			countOffsets(src_counts, src_offs, 0);
+		}
+		scatter(root, src_counts, dst_size);
+		val dst = new MemoryChunk[T](dst_size(0));
+		scatterv(root, src, src_offs, src_counts, dst);
+		return dst;
+	}
 
 	/** This is equivalent to MPI_gather
 	 */
@@ -169,11 +198,11 @@ public struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeGather[T](base.id(), role, root, src.pointer(), dst.pointer(), src.size() as Int);
+			finish nativeGather[T](base.id(), role, root, src, dst, src.size() as Int);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.gather(role, root, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, src.size() as Int);
 		}
 	 }
@@ -182,14 +211,40 @@ public struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeGatherv[T](base.id(), role, root, src.pointer(), src.size() as Int, dst.pointer(), dst_offs.pointer(), dst_counts.pointer());
+			finish nativeGatherv[T](base.id(), role, root, src, src.size() as Int, dst, dst_offs, dst_counts);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.gatherv(role, root, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
+	
+	public def gatherv[T] (root:Int, src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
+		val role = base.role()(0);
+		val src_size = new MemoryChunk[Int](1);
+		src_size(0) = src.size() as Int;
+		
+		if(root == role){
+			val dst_counts = new MemoryChunk[Int](size());
+			gather(root, src_size, dst_counts);
+			var dst_size :Int = 0;
+			for(i in dst_counts.range()){
+				dst_size += dst_counts(i);
+			}
+			val dst = new MemoryChunk[T](dst_size);
+			val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+			countOffsets(dst_counts, dst_offs, 0);
+			gatherv(root, src, dst, dst_offs, dst_counts);
+			return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
+			
+		}
+		val nullInt = MemoryChunk.getNull[Int]();
+		val nullT = MemoryChunk.getNull[T]();
+		gather(root, src_size, nullInt);
+		gatherv(root, src, nullT, nullInt, nullInt);
+		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](nullT ,nullInt);		
+	}
 
 	public def bcast[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
 		val role = base.role()(0);
@@ -197,11 +252,11 @@ public struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeBcast[T](base.id(), role, root, src.pointer(), dst.pointer(), dst.size() as Int);
+			finish nativeBcast[T](base.id(), role, root, src, dst, dst.size() as Int);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.bcast(role, root, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, dst.size() as Int);
 		}
 	 }
@@ -212,11 +267,11 @@ public struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeAllgather[T](base.id(), role, src.pointer(), dst.pointer(), src.size() as Int);
+			finish nativeAllgather[T](base.id(), role, src, dst, src.size() as Int);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.allgather(role, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, src.size() as Int);
 		}
 	 }
@@ -225,14 +280,31 @@ public struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeAllgatherv[T](base.id(), role, src.pointer(), src.size() as Int, dst.pointer(), dst_offs.pointer(), dst_counts.pointer());
+			finish nativeAllgatherv[T](base.id(), role, src, src.size() as Int, dst, dst_offs, dst_counts);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.allgatherv(role, wrapPointer(srcp), srcp.offset as Int, src.size() as Int, wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
+	
+	public def allgatherv[T] (src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]]  {
+		val role = base.role()(0);
+		val src_size = new MemoryChunk[Int](1);
+		val dst_counts = new MemoryChunk[Int](size());
+		src_size(0) = src.size() as Int;
+		allgather(src_size, dst_counts);
+		var dst_size :Int = 0;
+		for(i in dst_counts.range()){
+			dst_size += dst_counts(i);
+		}
+		val dst = new MemoryChunk[T](dst_size);
+		val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+		countOffsets(dst_counts, dst_offs, 0);
+		allgatherv(src, dst, dst_offs, dst_counts);
+		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
+	}
 
 	public def alltoall[T](src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
 		val role = base.role()(0);
@@ -240,11 +312,11 @@ public struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeAlltoall[T](base.id(), role, src.pointer(), dst.pointer(), (src.size() / base.size()) as Int);
+			finish nativeAlltoall[T](base.id(), role, src, dst, (src.size() / base.size()) as Int);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.alltoall(role, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, (src.size() / base.size()) as Int);
 		}
 	 }
@@ -253,15 +325,32 @@ public struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeAlltoallv[T](base.id(), role, src.pointer(), src_offs.pointer(), src_counts.pointer(), dst.pointer(), dst_offs.pointer(), dst_counts.pointer());
+			finish nativeAlltoallv[T](base.id(), role, src, src_offs, src_counts, dst, dst_offs, dst_counts);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.alltoallv(role, wrapPointer(srcp), wrapOffsets(src_offs, srcp.offset as Int), wrapCounts(src_counts),
 					wrapPointer(dstp), wrapOffsets(dst_offs, dstp.offset as Int), wrapCounts(dst_counts));
 		}
 	 }
+	
+	public def alltoallv[T] (src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
+		val role = base.role()(0);
+		val src_offs = new MemoryChunk[Int](src_counts.size() + 1);
+		countOffsets(src_counts, src_offs, 0);
+		val dst_counts = new MemoryChunk[Int](size());
+		alltoall(src_counts, dst_counts);
+		var dst_size :Int = 0;
+		for(i in dst_counts.range()){
+			dst_size += dst_counts(i);
+		}
+		val dst = new MemoryChunk[T](dst_size);
+		val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+		countOffsets(dst_counts, dst_offs, 0);
+		alltoallv(src, src_offs, src_counts, dst, dst_offs, dst_counts);
+		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
+	}
 
 	public def allreduce[T](src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
 		val role = base.role()(0);
@@ -269,19 +358,44 @@ public struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeAllreduce[T](base.id(), role, src.pointer(), dst.pointer(), src.size() as Int, op);
+			finish nativeAllreduce[T](base.id(), role, src, dst, src.size() as Int, op);
 		}
 		@Ifndef("__CPP__") {
-			val srcp = src.pointer();
-			val dstp = dst.pointer();
+			val srcp = src.raw();
+			val dstp = dst.raw();
 			base.allreduce(role, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, src.size() as Int, op);
 		}
 	 }
 	
-	/** (Not implemented) 
-	 */
-	public def reduce[T](src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
-		// TODO:
+	public def allreduce[T](src:T, op:Int) : T {
+		val src_ = new MemoryChunk[T](1);
+		val dst = new MemoryChunk[T](1);
+		src_(0) = src;
+		allreduce(src_, dst, op);
+		return dst(0);
+	}
+	
+	public def reduce[T](root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
+		val role = base.role()(0);
+		if(role == root && src.size() != dst.size())
+			throw new IllegalArgumentException("src.size() != dst.size()");
+		
+		@Ifdef("__CPP__") {
+			finish nativeReduce[T](base.id(), role, root, src, dst, src.size() as Int, op);
+		}
+		@Ifndef("__CPP__") {
+			val srcp = src.raw();
+			val dstp = dst.raw();
+			base.reduce(role, root, wrapPointer(srcp), srcp.offset as Int, wrapPointer(dstp), dstp.offset as Int, src.size() as Int, op);
+		}
+	}
+	
+	public def reduce[T](root:Int, src:T, op:Int) : T {
+		val src_ = new MemoryChunk[T](1);
+		val dst = new MemoryChunk[T](1);
+		src_(0) = src;
+		reduce(root, src_, dst, op);
+		return dst(0);
 	}
 	
 	/* utility methods */
@@ -295,4 +409,15 @@ public struct Team2 {
 			offsets(i + 1) = offsets(i) + counts(i);
 		}
 	}
+	
+	public static def getCounts[T](offsets :MemoryChunk[T]) {T <: Arithmetic[T]} :MemoryChunk[T] {
+		if(offsets.size() == 0L)
+			throw new IllegalArgumentException();
+		val counts = new MemoryChunk[T](offsets.size()-1);
+		for(i in offsets.range()){
+			counts(i) = offsets(i + 1) - offsets(i);
+		}
+		return counts;
+	}
+	
 }

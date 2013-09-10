@@ -23,6 +23,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MemoryPointer;
 import org.scalegraph.io.ID;
 import org.scalegraph.io.NativeFile;
+import org.scalegraph.id.Type;
 
 public abstract class AttributeHandler {
 	
@@ -48,31 +49,31 @@ public abstract class AttributeHandler {
 		val isArray = (id_ & 0xFF) == 1;
 		val id = id_ >> 8;
 		switch(id) {
-		case ID.TYPE_BOOLEAN:
+		case Type.Boolean:
 			return new PrimitiveAttributeHandler[Boolean](team, id);
-		case ID.TYPE_BYTE:
+		case Type.Byte:
 			return new PrimitiveAttributeHandler[Byte](team, id);
-		case ID.TYPE_SHORT:
+		case Type.Short:
 			return new PrimitiveAttributeHandler[Short](team, id);
-		case ID.TYPE_INT:
+		case Type.Int:
 			return new PrimitiveAttributeHandler[Int](team, id);
-		case ID.TYPE_LONG:
+		case Type.Long:
 			return new PrimitiveAttributeHandler[Long](team, id);
-		case ID.TYPE_FLOAT:
+		case Type.Float:
 			return new PrimitiveAttributeHandler[Float](team, id);
-		case ID.TYPE_DOUBLE:
+		case Type.Double:
 			return new PrimitiveAttributeHandler[Double](team, id);
-		case ID.TYPE_UBYTE:
+		case Type.UByte:
 			return new PrimitiveAttributeHandler[UByte](team, id);
-		case ID.TYPE_USHORT:
+		case Type.UShort:
 			return new PrimitiveAttributeHandler[UShort](team, id);
-		case ID.TYPE_UINT:
+		case Type.UInt:
 			return new PrimitiveAttributeHandler[UInt](team, id);
-		case ID.TYPE_ULONG:
+		case Type.ULong:
 			return new PrimitiveAttributeHandler[ULong](team, id);
-		case ID.TYPE_CHAR:
+		case Type.Char:
 			return new PrimitiveAttributeHandler[Char](team, id);
-		case ID.TYPE_STRING:
+		case Type.String:
 			return new StringAttributeHandler(team, id);
 		default:
 			throw new Exception("invalid type id : " + id);
@@ -97,18 +98,18 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	private native def sizeofT() :Int;
 	public def numBytes(any : Any, offset : Long, num : Long) = (num * sizeofT());
 	
-	@Native("c++", "org::scalegraph::io::fbio::readPrimitives<TPMGL(T) >(#nf, #dst, #numElements, #numBytes)")
-	private native def nativeRead(nf :NativeFile, dst :MemoryPointer[T], numElements :Long, numBytes :Long) :void;
-	@Native("c++", "org::scalegraph::io::fbio::writePrimitives<TPMGL(T) >(#nf, #dst, #numElements, #numBytes)")
-	private native def nativeWrite(nf :NativeFile, dst :MemoryPointer[T], numElements :Long, numBytes :Long) :void;
+	@Native("c++", "org::scalegraph::io::fbio::readPrimitives<TPMGL(T) >(#nf, (#dst).pointer(), #numElements, #numBytes)")
+	private native def nativeRead(nf :NativeFile, dst :MemoryChunk[T], numElements :Long, numBytes :Long) :void;
+	@Native("c++", "org::scalegraph::io::fbio::writePrimitives<TPMGL(T) >(#nf, (#dst).pointer(), #numElements, #numBytes)")
+	private native def nativeWrite(nf :NativeFile, dst :MemoryChunk[T], numElements :Long, numBytes :Long) :void;
 	
 	public def read(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
 		val array_ = (array as DistMemoryChunk[T])().subpart(array_offset, numElements);
-		nativeRead(nf, array_.pointer(), numElements, numBytes);
+		nativeRead(nf, array_, numElements, numBytes);
 	}
 	public def write(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
 		val array_ = (array as DistMemoryChunk[T])().subpart(array_offset, numElements);
-		nativeWrite(nf, array_.pointer(), numElements, numBytes);
+		nativeWrite(nf, array_, numElements, numBytes);
 	}
 	
 	public def print(any : Any) {
@@ -142,18 +143,18 @@ class StringAttributeHandler extends AttributeHandler {
 		return sum;
 	}
 
-	@Native("c++", "org::scalegraph::io::fbio::readStrings(#nf, #dst, #numElements, #numBytes)")
-	private native def nativeRead(nf :NativeFile, dst :MemoryPointer[String], numElements :Long, numBytes :Long) :void;
-	@Native("c++", "org::scalegraph::io::fbio::writeStrings(#nf, #dst, #numElements, #numBytes)")
-	private native def nativeWrite(nf :NativeFile, dst :MemoryPointer[String], numElements :Long, numBytes :Long) :void;
+	@Native("c++", "org::scalegraph::io::fbio::readStrings(#nf, (#dst).pointer(), #numElements, #numBytes)")
+	private native def nativeRead(nf :NativeFile, dst :MemoryChunk[String], numElements :Long, numBytes :Long) :void;
+	@Native("c++", "org::scalegraph::io::fbio::writeStrings(#nf, (#dst).pointer(), #numElements, #numBytes)")
+	private native def nativeWrite(nf :NativeFile, dst :MemoryChunk[String], numElements :Long, numBytes :Long) :void;
 	
 	public def read(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
 		val array_ = (array as DistMemoryChunk[String])().subpart(array_offset, numElements);
-		nativeRead(nf, array_.pointer(), numElements, numBytes);
+		nativeRead(nf, array_, numElements, numBytes);
 	}
 	public def write(nf :NativeFile, array : Any, array_offset : Long, numElements :Long, numBytes :Long) {
 		val array_ = (array as DistMemoryChunk[String])().subpart(array_offset, numElements);
-		nativeWrite(nf, array_.pointer(), numElements, numBytes);
+		nativeWrite(nf, array_, numElements, numBytes);
 	}
 	
 	public def print(any : Any) {

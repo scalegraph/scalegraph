@@ -13,10 +13,14 @@ package org.scalegraph.graph.id;
 
 /**
  * ID Converter method collection for 1D row distributions.
+ * 
+ * V : Real Vertex ID
+ * S : Source form ID
+ * D : Destination form ID
  */
-public class OnedR {
+public final class OnedR {
 	/** Vertex ID to Source ID Converter */
-	public static struct VtoS {
+	public static final struct VtoS {
 		val lgr :Int;
 		val lgl :Int;
 		val rmask :Long;
@@ -31,7 +35,7 @@ public class OnedR {
 	}
 
 	/** Vertex ID to Destination ID Converter */
-	public static struct VtoD {
+	public static final struct VtoD {
 		val lgr :Int;
 		
 		public def this(ids :IdStruct) {
@@ -42,7 +46,7 @@ public class OnedR {
 	}
 
 	/** Source ID to Vertex ID Converter */
-	public static struct StoV {
+	public static final struct StoV {
 		val lgr :Int;
 		val lgl :Int;
 		val lmask :Long;
@@ -57,7 +61,7 @@ public class OnedR {
 	}
 
 	/** Source ID to Destination ID Converter */
-	public static struct StoD {
+	public static final struct StoD {
 		val lmask :Long;
 		
 		public def this(ids :IdStruct) {
@@ -69,7 +73,7 @@ public class OnedR {
 	}
 
 	/** Destination ID to Vertex ID Converter */
-	public static struct DtoV {
+	public static final struct DtoV {
 		val r :Int;
 		val lgr :Int;
 		
@@ -82,7 +86,7 @@ public class OnedR {
 	}
 
 	/** Destination ID to Source ID Converter */
-	public static struct DtoS {
+	public static final struct DtoS {
 		val rshifted :Long;
 		
 		public def this(ids :IdStruct, r :Int) {

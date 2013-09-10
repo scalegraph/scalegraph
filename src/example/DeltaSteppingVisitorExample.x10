@@ -13,15 +13,11 @@ package example;
 
 import x10.util.Team;
 
+import org.scalegraph.Config;
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.util.Dist2D;
-import org.scalegraph.util.Parallel;
-import org.scalegraph.graph.DistSparseMatrix;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.graph.SparseMatrix;
 import org.scalegraph.visitor.DeltaSteppingVisitor;
 
 public class DeltaSteppingVisitorExample {
@@ -40,30 +36,19 @@ public class DeltaSteppingVisitorExample {
             Console.OUT.println("Please enter file name");
             return;
         }
-        val team = Team.WORLD;
-        val fileList = new Array[String](1);
-        fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(team, fileList, inputFormat);
+        val g = Graph.make(SimpleText.read(args(0), inputFormat));
         
-        // Create graph
-        val edgeList = rawData.get1();
-        val weightList = rawData.get2();
-        
-        val g = new Graph(team, Graph.VertexType.Long, false);
-        val weightAttrName = "weight";
-        g.addEdges(edgeList.raw(team.placeGroup()));
-        g.setEdgeAttribute[Double](weightAttrName, weightList.raw(team.placeGroup()));
         Console.OUT.println("Start delta-stepping");
         
         // Create dist sparse matrix
-        val csr = g.constructDistSparseMatrix(
-                                              Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
+        val csr = g.createDistEdgeIndexMatrix(
+        											Config.get().distXPregel(),
                                               true,
                                               true);
         // Construct attribute
-        val weightAttr = g.constructDistAttribute[Double](csr, false, weightAttrName);
+        val weightAttr = g.createDistAttribute[Double](csr, false, "weight");
         // Run delta stepping
         val source = 0L;
         val delta = 1;

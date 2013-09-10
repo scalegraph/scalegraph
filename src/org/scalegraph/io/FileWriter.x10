@@ -16,13 +16,14 @@ import x10.io.IOException;
 
 // import org.scalegraph.util.SString;
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.SString;
 
 public class FileWriter {
-	private val nf: NativeFile;
+	private transient val nf: NativeFile;
 	private var fileOffset: Long;
 	
-	public def this(file: File, fileMode :Int) {
-		nf = new NativeFile(file.getPath(), fileMode, FileAccess.Write);
+	public def this(path: SString, fileMode :Int) {
+		nf = new NativeFile(path, fileMode, FileAccess.Write);
 		fileOffset = 0L;
 	}
 	
@@ -46,8 +47,7 @@ public class FileWriter {
 	}
 	
 	public def write(b: MemoryChunk[Byte]) {
-		if(nf.write(b) < b.size())
-			throw new IOException();
+		nf.write(b);
 	}
 	/*
 	public def write(str: SString) {

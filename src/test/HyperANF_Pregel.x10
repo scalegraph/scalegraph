@@ -11,22 +11,24 @@
 
 package test;
 
-
 import x10.util.Team;
 
+import org.scalegraph.harness.sx10Test;
+import org.scalegraph.Config;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.id.Type;
+import org.scalegraph.io.CSV;
 import org.scalegraph.graph.Graph;
-
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
-
-
 import org.scalegraph.util.random.Random;
 
-
-public class HyperANF_Pregel {
+final class HyperANF_Pregel extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new HyperANF_Pregel().execute(args);
+	}
+	
 	public static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
 		var Z:Double = 0.0;
 		val M:Double = counter.size();
@@ -58,38 +60,20 @@ public class HyperANF_Pregel {
 		
 	}
 	
-	
-	
-	public static def main(args:Array[String](1)) {
-		val team = Team.WORLD;	
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					1.0
-			);
-		};
+	public def run(args: Array[String](1)): Boolean {
 		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val g = Graph.make(CSV.read(args(0), 
+				[Type.Long as Int, Type.Long, Type.None, Type.Double],
+				["source", "target", "weight"]));
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
+		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](
+				g.createDistSparseMatrix[Double](Config.get().dist1d(), "weight", true, true));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
-
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](team, csr);
-		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
-		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
 		
 		val start_time = System.currentTimeMillis();
 		
@@ -107,8 +91,7 @@ public class HyperANF_Pregel {
 		else alpha = 0.7213 / (1.00+1.073/M);
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
-					
-					//			val counter = ctx.value() ;
+
 					var counterB:MemoryChunk[Byte];
 					if(ctx.superstep()==0) {
 						val counterA = new MemoryChunk[Byte](M);
@@ -133,6 +116,7 @@ public class HyperANF_Pregel {
 							}
 						}
 						counterB =counterA;
+
 					}
 
 					if (here.id == 0 && ctx.id() == 0L) {
@@ -152,9 +136,7 @@ public class HyperANF_Pregel {
 		val end_time = System.currentTimeMillis();
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));
-		Console.OUT.println("Finish application");	
+		Console.OUT.println("Finish application");
+		return true;
 	}
 }
-
-
-

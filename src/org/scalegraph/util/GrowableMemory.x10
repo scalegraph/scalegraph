@@ -18,7 +18,7 @@ import x10.compiler.Native;
 
 /** High performance growable memory. 
  */
-public class GrowableMemory[T] {
+public final class GrowableMemory[T] {
 	private var mc:MemoryChunk[T];
 	private var size:Long;
 	
@@ -141,6 +141,7 @@ public class GrowableMemory[T] {
 	 * @param reqCapacity The capacity you need at least.
 	 */
 	public def grow(var reqCapacity:Long):void {
+		if(reqCapacity < size) return ;
 		var newCapacity :Long = capacity();
 		if (newCapacity < 8) newCapacity = 8;
 		while (newCapacity < reqCapacity) newCapacity *= 2;

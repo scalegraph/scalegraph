@@ -23,16 +23,47 @@ import x10.io.FileReader;
 import x10.io.BufferedReader;
 import x10.compiler.Inline;
 import x10.util.Team;
+import x10.io.FileWriter;
+
+import org.scalegraph.Config;
 
 import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.graph.Attribute;
-import x10.io.FileWriter;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.DistMemoryChunk;
  
-public class DistributedReader {
+public final class DistributedReader {
+	
+	private static struct InputSplit {
+		private val path : String;
+		private val start : Long;
+		private val end : Long;
+		
+		public def this(path : String, start : Long, end : Long) {
+			this.path = path;
+			this.start = start;
+			this.end = end;
+		}
+		
+		public def open() {
+			val reader = new BufferedReader(new FileReader(new File(path)));
+			DistributedReader.ReaderSkip(reader, start);
+			return reader;
+		}
+		
+		public def getPath() : String {
+			return path;
+		}
+		
+		public def getStart() : Long{
+			return start;
+		}
+		
+		public def getEnd() : Long {
+			return end;
+		}
+	}
     
     static def ReaderSkip(reader :Reader, var length :Long) {
         while(length > 0) {
@@ -42,10 +73,10 @@ public class DistributedReader {
     }
  
  	public static def read[T](
- 		team : Team,
  		fileList : Array[String],
- 		inputFormat : (String) => Tuple3[Long, Long, T]) {
- 		
+ 		inputFormat : (String) => Tuple3[Long, Long, T])
+ 	{
+ 		val team = Config.get().worldTeam();
  		val places = team.places();
  		val teamSize = team.size();
 		val splits = new ArrayList[InputSplit]();
@@ -128,27 +159,19 @@ public class DistributedReader {
  	
  	public static def write(
  			filenamefmt : String,
- 			team : Team,
- 			names : Attribute[Long],
- 			values : Attribute[Double])
+ 			names : DistMemoryChunk[Long],
+ 			values : DistMemoryChunk[Double])
  	{
+ 		val team = Config.get().worldTeam();
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);
- 			val values_ = values.values()().raw();
+ 			val values_ = values();
  			val writer = new FileWriter(new File(filename));
 
- 			if(names != null) {
-	 			val names_ = names.values()().raw();
-	 			for(i in values_.range()) {
-	 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
-	 			}
- 			}
- 			else {
- 				val size = team.size();
- 				for(i in values_.range()) {
- 					writer.write(String.format("%d,%f\n", [i * size + role, values_(i)]).bytes());
- 				}
+ 			val names_ = names();
+ 			for(i in values_.range()) {
+ 				writer.write(String.format("%d,%f\n", [names_(i), values_(i)]).bytes());
  			}
  			
  			writer.close();
@@ -157,9 +180,9 @@ public class DistributedReader {
  	
  	public static def write[T](
  			filenamefmt : String,
- 			team : Team,
  			values : DistMemoryChunk[T])
  	{
+ 		val team = Config.get().worldTeam();
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);
@@ -167,7 +190,7 @@ public class DistributedReader {
  			val writer = new FileWriter(new File(filename));
 			val size = team.size();
 			for(i in values_.range()) {
-				writer.write(((i * size + role).toString() + "," + values_(i).toString() + "\n").bytes());
+				writer.write(String.format("%d,%f\n", [i * size + role, values_(i)]).bytes());
 			}
  			writer.close();
  		});
@@ -175,10 +198,10 @@ public class DistributedReader {
  	
  	public static def write[T](
  			filenamefmt : String,
- 			team : Team,
  			names : DistMemoryChunk[T],
  			values : DistMemoryChunk[T])
  	{
+ 		val team = Config.get().worldTeam();
  		team.placeGroup().broadcastFlat(() => {
  			val role = team.role()(0);
  			val filename = String.format(filenamefmt, [role as Any]);

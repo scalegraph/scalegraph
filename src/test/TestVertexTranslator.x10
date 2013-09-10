@@ -11,13 +11,14 @@
 
 package test;
 
-import org.scalegraph.graph.VertexTranslator;
+import org.scalegraph.harness.sx10Test;
 
-public class TestVertexTranslator {
-    private def run1() {
-    }
+final class TestVertexTranslator extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new TestVertexTranslator().execute(args);
+	}
 
-    public static def main(Array[String](1)) {
-
+	public def run(args: Array[String](1)): Boolean {
+        return true;
     }
 }

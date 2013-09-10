@@ -23,7 +23,7 @@ import org.scalegraph.util.MemoryChunk;
  * 3. Count up the number of elements for each destination and store the array that getCounts returns.
  * 4.
  */
-public struct ScatterGather {
+public final struct ScatterGather {
 
 	private nChunk : Long;
 	private maxThreads :Long;

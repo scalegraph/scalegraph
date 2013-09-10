@@ -11,34 +11,98 @@
 
 package org.scalegraph.harness;
 
-import x10.util.*;
+import x10.util.StringBuilder;
 import x10.io.Console;
+import org.scalegraph.util.SString;
 
 abstract public class sx10Test {
+	private static val buffer = new StringBuilder();
+	private static val linebreak = "\n    "; // 4 space
 
-    abstract public def run(): boolean;
+    abstract public def run(args: Array[String](1)) :boolean;
 
-    public def execute(): void = {
-        var b: boolean = false;
-        try {
-            finish b = this.run();
-        } catch (e: CheckedThrowable) {
-            printStackTrace(e);
+    public def execute(args: Array[String](1)) {
+    	x10.io.Console.ERR.print("  " + typeName() + ": |" + linebreak);
+       var b :boolean = false;
+       try {
+           finish b = this.run(args);
         }
-        reportResult(b);
+       catch (e :CheckedThrowable) {
+    	   printException(e);
+        }
+       buffer.add("\n");
+       flush();
+       reportResult(b);
     }
     
+    private static def escapeString(str :String) =
+    	SString(str).replace("\n", linebreak).toString(); // 4 space
+    
+    private atomic static def printException(e :CheckedThrowable, nested :Int) {
+    	var nested_prefix :String = "";
+    	for(n in 0..(nested-1)) nested_prefix += "| ";
 
-    private static def printStackTrace(e: CheckedThrowable) {
-            val errors = e.getStackTrace();
-            println("Error:");
-            println("    Message: " + " \"\\");
-            println("        " + e + " \\n\\");
-            for (i in 0..(errors.size-1)) {
-                println("            at " + errors(i) + " \\n\\");
-            }
-            println("        " + "\"");
-
+    	buffer.add(nested_prefix);
+    	buffer.add(escapeString(e.toString()));
+    	buffer.add(linebreak);
+    	
+    	val stackTrace = e.getStackTrace();
+    	for ([i] in stackTrace) {
+    		buffer.add(nested_prefix);
+    		buffer.add("        at ");
+    		buffer.add(escapeString(stackTrace(i)));
+    		buffer.add(linebreak);
+    	}
+    	
+    	if(e instanceof MultipleExceptions) {
+    		val me = e as MultipleExceptions;
+    		val excs = me.exceptions();
+    		buffer.add(nested_prefix);
+    		buffer.add("Caused by ");
+    		buffer.add(linebreak);
+    		for([i] in excs) {
+    			printException(excs(i), nested + 1);
+    		}
+    	}
+    }
+    
+    public static def flush() {
+    	val out :String;
+    	atomic {
+	    	out = buffer.toString();
+	    	buffer.clear();
+    	}
+    	if(here != Place.FIRST_PLACE) {
+    		at(Place.FIRST_PLACE) {
+    			x10.io.Console.ERR.print(out);
+    		}
+    	}
+    	else {
+    		x10.io.Console.ERR.print(out);
+    	}
+    }
+    
+    public static def printException(e :CheckedThrowable) {
+    	printException(e, 0);
+    }
+    
+    public static def print(obj :Any) {
+    	bufferedPrint(obj);
+    	flush();
+    }
+    
+    public static def println(obj :Any) {
+    	bufferedPrintln(obj);
+    	flush();
+    }
+    
+    public atomic static def bufferedPrint(obj :Any) {
+    	buffer.add(escapeString(obj.toString()));
+    }
+    
+    public atomic static def bufferedPrintln(obj :Any) {
+    	buffer.add(escapeString(obj.toString()));
+    	buffer.add(linebreak);
     }
 
     public static def success(): void = {
@@ -74,7 +138,5 @@ abstract public class sx10Test {
     public static def chk(b: boolean, s: String): void = {
         if (!b) throw new TestException(s);
     }
-
-    protected static def println(s:String) { x10.io.Console.ERR.println(s); }
 
 }

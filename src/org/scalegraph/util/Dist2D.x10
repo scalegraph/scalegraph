@@ -25,7 +25,7 @@ import org.scalegraph.graph.id.IdStruct;
  * In the most case, single 2d distributed plane is enough. The plane means a single R x C distribution.
  * This class supports the multiple 2d distributed plane. 
  */
-public struct Dist2D {
+public final struct Dist2D {
 	public static DISTRIBUTE_ROWS :Int = 1;
 	public static DISTRIBUTE_COLUMNS :Int = 2;
 	
@@ -67,6 +67,7 @@ public struct Dist2D {
     	for(c in 0..mapping.max(1)) {
     		for(r in 0..mapping.max(0)) {
     			val i = mapping.indexOf(r, c);
+    			//val i = mapping.indexOf(c, r);
 	    		orderedPlaces(r + c*R) = places(i);
 				for(j in 0..(cycles-1)) {
 	    			placeMap.put(places(i + RC*j), Point.make(r, c));
@@ -97,6 +98,14 @@ public struct Dist2D {
     		if(create_allteam_) {
     			val z = parentTeam.role()(0) / RC;
     			allTeam = parentTeam.split(parentTeam.role()(0), z, role);
+    			for(pp in parentTeam.placeGroup()) {
+    				if(here == pp) {
+    					Console.OUT.println(here);
+    					Console.OUT.println("allTeam = " + allTeam);
+    					Console.OUT.println("split(key=" + role + ",color=" + z + ")");
+    				}
+    				parentTeam.barrier(parentTeam.role()(0));
+    			}
     		}
     		else {
     			allTeam = parentTeam;
@@ -229,13 +238,12 @@ public struct Dist2D {
      * @param numberOfVertices: The max vertex id
      * @param outerOrInner Whether outer edge or inner edge (true: outer, false: inner)
      */
-    public def getIds(numberOfVertices :Long, outerOrInner :Boolean) {
+    public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, outerOrInner :Boolean) {
     	val R = R();
     	val C = C();
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))
     		throw new IllegalArgumentException();
     	val teamSize = allTeam().size();
-    	val numberOfLocalVertices = (numberOfVertices + teamSize - 1) / teamSize;
     	return new IdStruct(MathAppend.ceilLog2(R), MathAppend.ceilLog2(C),
     			MathAppend.ceilLog2(numberOfLocalVertices), outerOrInner, numberOfLocalVertices, numberOfVertices);
     }

@@ -13,7 +13,7 @@ package org.scalegraph.util;
 
 /** Distributed growable memory.
  */
-public struct DistGrowableMemory[T] {
+public final struct DistGrowableMemory[T] {
 	private val plh :PlaceLocalHandle[GrowableMemory[T]];
 	
 	/** Creates distributed growable memory with the size of each growable memory 0.

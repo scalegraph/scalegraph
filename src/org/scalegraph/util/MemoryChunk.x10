@@ -15,6 +15,7 @@ import x10.compiler.Inline;
 import x10.compiler.Ifdef;
 import x10.compiler.Ifndef;
 import x10.compiler.Native;
+import x10.compiler.NativeRep;
 
 import x10.util.IndexedMemoryChunk;
 
@@ -32,7 +33,7 @@ import x10.util.IndexedMemoryChunk;
  * <p>Limitations: Current memory chunk only support non-reference data. The supports for the class or any data structures which include class members are imcomplete.
  *  DO NOT USE MEMORYCHUNK TO STORE ANY DATA STRUCTURES THAT INCLUDE REFERENCES. </p>
  */
-public struct MemoryChunk[T] implements Iterable[T] {
+public final struct MemoryChunk[T] implements Iterable[T] {
 	val data :MemoryChunkData[T];
 	
 	/** The purpose of this class is to distribute continuous memory region into several memory chunks.
@@ -77,7 +78,7 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		}
 	}
 	
-	private def this(data :MemoryChunkData[T]) {
+	def this(data :MemoryChunkData[T]) {
 		this.data = data;
 	}
 	
@@ -181,10 +182,17 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		sb.add("]");
 		return sb.toString();
 	}
+
+	public def elemtoString( num :Long){
+		return data(num).toString();
+	}
+	
+	// for java
+	def raw() = data;
 	
 	/** Returens the internal pointer object.
 	 */
-	public def pointer() :MemoryPointer[T] = data.pointer();
+	public def pointer() :MemoryChunkData.Pointer[T] = data.pointer();
 
 	/** Returens the number of elements.
 	 */
@@ -284,6 +292,12 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		data(index) = value;
 		return value;
 	}
+	
+	public @Inline def setUnchecked(index :Int, value :T) { data(index) = value; }
+	public @Inline def setUnchecked(index :Long, value :T) { data(index) = value; }
+
+	public @Inline def getUnchecked(index :Int) = data(index);
+	public @Inline def getUnchecked(index :Long) = data(index);
 
 	/** Sets new value to indexed place
 	 * @param index The index where you want to set the value to.
@@ -355,12 +369,6 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		return data.atomicCAS(index, expect, value);
 	}
 	
-	@Native("java", "System.arraycopy((#src).raw.value, (#src).offset + #srcIndex, " +
-			"(#dst).raw.value, (#dst).offset + #dstIndex, #numElems)")
-	@Native("c++", "memcpy((#dst).FMGL(pointer) + #dstIndex, (#src).FMGL(pointer) + #srcIndex, #numElems * sizeof(#T))")
-	private static native def nativeCopy[T](src:MemoryChunkData[T], srcIndex:Long,
-			dst:MemoryChunkData[T], dstIndex:Long, numElems:Long):void;
-	
 	/** Copies the elements of the MemoryChunks
 	 * @param src The source data
 	 * @param srcIndex The offset from which the source data is copied
@@ -376,7 +384,7 @@ public struct MemoryChunk[T] implements Iterable[T] {
 			if(src.size() < srcIndex + numElems || dst.size() < dstIndex + numElems)
 				throw new ArrayIndexOutOfBoundsException("copy: out of range");
 		}
-		nativeCopy(src.data, srcIndex, dst.data, dstIndex, numElems);
+		MemoryChunkData.copy(src.data, srcIndex, dst.data, dstIndex, numElems);
 	}
 	
 	/** Creates and returns an empty memory chunk.

@@ -10,7 +10,7 @@
  */
 
 package org.scalegraph.util.tuple;
-public struct Tuple3 [T1,T2,T3] {
+public final struct Tuple3 [T1,T2,T3] {
     public val1: T1;
     public val2: T2;
     public val3: T3;

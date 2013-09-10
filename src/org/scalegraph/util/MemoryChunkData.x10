@@ -20,8 +20,10 @@ import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit;
 
 import x10.util.IndexedMemoryChunk;
+import x10.compiler.NativeCPPOutputFile;
 
-@NativeCPPInclude("MemoryChunkData.h")
+@NativeCPPOutputFile("MemoryChunkData.h")
+@NativeCPPOutputFile("MemoryChunkData__Pointer.h")
 @NativeCPPCompilationUnit("MemoryChunkData.cc")
 
 
@@ -29,7 +31,7 @@ import x10.util.IndexedMemoryChunk;
  * This structure is highly optimized for C++ backend.
  */
 @NativeRep("c++", "org::scalegraph::util::MCData_Impl<#T >", "org::scalegraph::util::MCData_Impl<#T >", null)
-struct MemoryChunkData[T] {
+final struct MemoryChunkData[T] {
 	public val raw :IndexedMemoryChunk[T];
 	public val offset :Long;
 	public val size :Long;
@@ -64,58 +66,64 @@ struct MemoryChunkData[T] {
 	@Native("c++", "(#this).del()")
 	public def del() :void { }
 	
+	@NativeRep("c++", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", null)
+	static struct Pointer[T] { }
+	
 	@Native("c++", "(#this).FMGL(pointer)")
-	public def pointer() :MemoryPointer[T] {
-		return MemoryPointer.make[T](raw, offset);
-	}
+	public native def pointer() :Pointer[T];
 
 	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#this).FMGL(head), (#this).FMGL(pointer) + (#offset), (#size))")
 	public def subpart(offset :Long, size :Long) :MemoryChunkData[T] =
 		new MemoryChunkData[T](raw, this.offset + offset, size);
 
-	@Native("c++", "(#this).FMGL(pointer)[#index]")
+	@Native("c++", "(#this)[#index]")
 	public @Inline operator this(index:int):T {
 		return raw(index + offset);
 	}
 
-	@Native("c++", "(#this).FMGL(pointer)[#index]")
+	@Native("c++", "(#this)[#index]")
 	public @Inline operator this(index:Long):T {
 		return raw(index + offset);
 	}
 	
-	@Native("c++", "(#this).FMGL(pointer)[#index] = #value")
+	@Native("c++", "(#this).set(#index, #value)")
 	public @Inline operator this(index:int)=(value:T):void {
 		raw(index + offset) = value;
 	}
 
-	@Native("c++", "(#this).FMGL(pointer)[#index] = #value")
+	@Native("c++", "(#this).set(#index, #value)")
 	public @Inline operator this(index:Long)=(value:T):void {
 		raw(index + offset) = value;
 	}
 	
-	@Native("c++", "__sync_fetch_and_add(&(#this).FMGL(pointer)[#index], #value)")
+	@Native("c++", "(#this).atomicAdd(#index, #value)")
 	public @Inline def atomicAdd(index:Long, value:T):T {
 		throw new UnsupportedOperationException ();
 	}
-	
-	@Native("c++", "__sync_fetch_and_or(&(#this).FMGL(pointer)[#index], #value)")
+
+	@Native("c++", "(#this).atomicOr(#index, #value)")
 	public @Inline def atomicOr(index:Long, value:T):T {
 		throw new UnsupportedOperationException ();
 	}
-	
-	@Native("c++", "__sync_fetch_and_and(&(#this).FMGL(pointer)[#index], #value)")
+
+	@Native("c++", "(#this).atomicAnd(#index, #value)")
 	public @Inline def atomicAnd(index:Long, value:T):T {
 		throw new UnsupportedOperationException ();
 	}
-	
-	@Native("c++", "__sync_fetch_and_xor(&(#this).FMGL(pointer)[#index], #value)")
+
+	@Native("c++", "(#this).atomicXor(#index, #value)")
 	public @Inline def atomicXor(index:Long, value:T):T {
 		throw new UnsupportedOperationException ();
 	}
-	
-	@Native("c++", "__sync_bool_compare_and_swap(&(#this).FMGL(pointer)[#index], #expect, #value)")
+
+	@Native("c++", "(#this).atomicCAS(#index, #expect, #value)")
 	public @Inline def atomicCAS(index:Long, expect:T, value:T):Boolean {
 		throw new UnsupportedOperationException ();
 	}
 	
+	@Native("java", "System.arraycopy((#src).raw.value, (#src).offset + #srcIndex, " +
+	"(#dst).raw.value, (#dst).offset + #dstIndex, #numElems)")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::copy(#src, #srcIndex, #dst, #dstIndex, #numElems)")
+	public static native def copy[T](src:MemoryChunkData[T], srcIndex:Long,
+			dst:MemoryChunkData[T], dstIndex:Long, numElems:Long):void;
 }

@@ -29,7 +29,7 @@ import org.scalegraph.util.MemoryChunk;
 @NativeCPPInclude("mrg_transitions.hpp")
 
 @NativeRep("c++", "mrg_state", "mrg_state", null)
-struct splittable_mrg {
+final struct splittable_mrg {
 	@Native("c++", "(#this).z1")
 	public val z1 :Int;
 	@Native("c++", "(#this).z2")

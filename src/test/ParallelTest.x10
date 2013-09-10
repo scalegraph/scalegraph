@@ -14,10 +14,16 @@ package test;
 import x10.util.ArrayUtils;
 import x10.util.Team;
 import x10.util.Random;
+
+import org.scalegraph.harness.sx10Test;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MemoryChunk;
 
-public final class ParallelTest {
+public final class ParallelTest extends sx10Test {
+	public static def main(args: Array[String](1)) {
+		new ParallelTest().execute(args);
+	}
+	
 	static def testscan(): void{
 		Console.OUT.println("Scan Test");
 		val n = 10L;
@@ -70,12 +76,17 @@ public final class ParallelTest {
 			Console.OUT.println("n: " + i + ", result: " + result);
 		}
 	}
-	public static def main(args:Array[String](1)) : void{
-		Console.OUT.println("Team.WORLD: " + Team.WORLD);
-		Console.OUT.println("members of Team(0): " + Team.WORLD.places());
-		
-		testscan();
-		testsort();
-		testpartition();
+	
+	public def run(args :Array[String](1)): Boolean {
+	    Console.OUT.println("Team.WORLD: " + Team.WORLD);
+	    Console.OUT.println("members of Team(0): " + Team.WORLD.places());
+	    
+	    testscan();
+	    testsort();
+	    testpartition();
+	    
+	    return true;
 	}
+
+
 }
