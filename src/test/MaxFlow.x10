@@ -134,11 +134,7 @@ public class MaxFlow {
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
-		val start_init_graph = System.currentTimeMillis();
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
-		
+
 		val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 		val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
 		val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
@@ -299,6 +295,8 @@ public class MaxFlow {
 		//�I�������́A�ŏI�I�ɂ͑S���̃Z�����~�܂�����ԂɂȂ�΂悢
 		(superstep :Int, aggVal :Long) => (superstep >= 1) );
 	
+		val flowNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
+		
 		var recursion:Int = 1;
 		while(recursion<=300) {
 			recursion++;
@@ -310,8 +308,11 @@ public class MaxFlow {
 				if(ctx.superstep()==0) {
 					ctx.setVertexShouldBeActive( ctx.value().excess!=0L );
 					
-					if(ctx.realId() == sinkVertexId) 
+					if(ctx.realId() == sinkVertexId) {
 						Console.OUT.println("                              CURRENT FLOW"  + ctx.value().excess);
+						if(flowNum.home==here)
+							flowNum()() = ctx.value().excess;
+					}
 					val goNext = ctx.value().isExcessNonZero;
 					{
 						val vval = ctx.value();
@@ -368,7 +369,6 @@ public class MaxFlow {
 							val m = ctx.value().adjVertex(i).myId;
 							val flow = Math.min(ctx.value().adjVertex(i).capacity, excess);
 //							Console.OUT.println("(id,pos,excess,height,EXCESS ,MyHeight, flow )"+ctx.id()+" "+i+" "+ctx.value().adjVertex(i).excess + " "+ctx.value().adjVertex(i).height+" "+excess + " "+ ctx.value().height + " " + flow);
-							
 							if(ctx.value().adjVertex(i).height<ctx.value().height) {
 								val mes = new FlowMessage(flow ,m);
 								excess -= flow;
@@ -492,8 +492,10 @@ public class MaxFlow {
 				(superstep :Int, aggVal :Long) => (superstep >= 2) );
 			}
 		}	
-
+		
 		val end_time = System.currentTimeMillis();
+		
+		Console.OUT.println(flowNum()());
 		
 		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		Console.OUT.println("Finish application");

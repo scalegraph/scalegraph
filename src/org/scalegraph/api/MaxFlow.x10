@@ -329,6 +329,8 @@ final public class MaxFlow {
     			(values :MemoryChunk[Long]) => MathAppend.sum(values),
     			(superstep :Int, aggVal :Long) => (superstep >= 1) );
 
+    	
+    	val flowNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
     	var recursion:Long = 1;
     	while(recursion<=recursionLimit) {
     		recursion++;
@@ -344,8 +346,11 @@ final public class MaxFlow {
 
     						if(ctx.realId() == sinkVertexId) {
     							Console.OUT.println("                              CURRENT FLOW"  + ctx.value().excess);
-    							if(recursionLimit==currentRecursion)
-    								ctx.output(ctx.value().excess);
+    							if(flowNum.home==here) {
+    								flowNum()() = ctx.value().excess;
+    							}
+//    							ctx.output(ctx.value().excess);
+    						
     						}
     						val goNext = ctx.value().isExcessNonZero;
     						{
@@ -518,8 +523,8 @@ final public class MaxFlow {
     		}
     	}	
     	
-    	val ret = xpregel.stealOutput[Long]();
-    	val result = new Result(ret(0));
+//    	val ret = xpregel.stealOutput[Long]();
+    	val result = new Result(flowNum()());
     	
     	return result;
     }
