@@ -37,7 +37,7 @@ final class PageRankTest extends sx10Test {
 		
 		val result = org.scalegraph.api.PageRank.run(g);
 		
-		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [result as Any]));
+		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [result as Any]),true);
 		return true;
 	}
 }
