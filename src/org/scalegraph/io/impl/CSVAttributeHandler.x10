@@ -117,7 +117,6 @@ public class CSVAttributeHandler {
 			chunk.buf = new GrowableMemory[T]();
 			val mcc = mc as MemoryChunk[T];
 			chunk.buf.add(mcc);
-			Console.OUT.println("basehandler");
 		}
 		
 		public def chunkMcElemToString(i :Long) :String = chunk.buf.raw()(i).toString();

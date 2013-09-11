@@ -29,8 +29,8 @@ public final class CSV {
 	}
 	
 	/** Write data as a CSV File */
-	public static def write(path :SString, data :NamedDistData) {
-		CSVWriter.write(Config.get().worldTeam(), path, data);
+	public static def write(path :SString, data :NamedDistData, setNumFlag :Boolean) {
+		CSVWriter.write(Config.get().worldTeam(), path, data,setNumFlag);
 	}
 	
 }

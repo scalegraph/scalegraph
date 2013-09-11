@@ -33,7 +33,7 @@ final class CSVReaderTest extends sx10Test {
 			// print result
 			Console.OUT.println(nd.name());
 		
-			CSV.write("csvwTest", nd);
+			CSV.write("csvwTest", nd, true);
 			//CSVWriter.writeSafe(team,"csvwTest",nd);
 			
 		}else if(mode==2){
@@ -42,7 +42,7 @@ final class CSVReaderTest extends sx10Test {
 			Console.OUT.println("twitest");
 			Console.OUT.println(nd.name());
 			
-			CSV.write("csvwTest", nd);
+			CSV.write("csvwTest", nd, true);
 			
 		}else if(mode==3){
 			val O  = new File("fileouttest");
