@@ -23,8 +23,6 @@ int pdseupd_(int *comm, int *rvec, char *howmny, int *select, double *d, double 
              int *nev, double *tol, double *resid, int *ncv, double *v,
              int *ldv, int *iparam, int *ipntr, double *workd, double *workl,
              int *lworkl, int *info);
-
-double pdlamch_(int *ictxt, char *cmach);
 }
 
 char which[5][3] = {"LA", "SA", "LM", "SM", "BE"};
