@@ -20,6 +20,8 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;
@@ -48,20 +50,10 @@ public class DistBetweennessCentralityWeightedExample {
             Console.OUT.println("Please enter file name");
             return;
         }
-        val team = Team.WORLD;
-        val fileList = new Array[String](1);
-        fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(fileList, inputFormat);
+        val g = Graph.make(SimpleText.read(args(0), inputFormat), true);
         
-        // Create graph
-        val edgeList = rawData.get1();
-        val weightList = rawData.get2();
-        
-        val g = new Graph(team, Graph.VertexType.Long, true);
-        g.addEdges(edgeList.raw(team.placeGroup()));
-        g.setEdgeAttribute[Double]("weight", weightList.raw(team.placeGroup()));
         Console.OUT.println("Start BC");
         
         // Create API instnace, since we would like to specify parameters

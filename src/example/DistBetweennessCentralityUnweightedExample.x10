@@ -34,7 +34,6 @@ import org.scalegraph.metrics.DistBetweennessCentrality;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.BetweennessCentrality;
 import org.scalegraph.graph.Graph.VertexType;
-import org.scalegraph.graph.Attribute;
 
 
 public class DistBetweennessCentralityUnweightedExample {

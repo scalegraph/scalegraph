@@ -14,6 +14,8 @@ package test;
 import x10.util.Team;
 
 import org.scalegraph.harness.sx10Test;
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.util.Dist2D;
@@ -213,9 +215,11 @@ final class GIMVGraphTest extends sx10Test {
 		g.setVertexAttribute("degree", csr, vector);
 		print_attribute_list(g);
 
-		val att_names = useTranslator ? g.getVertexAttribute[Long]("name") : null;
 		val att_pagerank = g.getVertexAttribute[Double]("degree");
-		DistributedReader.write("degree-%d.txt", att_names, att_pagerank);
+		if(useTranslator)
+			DistributedReader.write("degree-%d.txt", g.getVertexAttribute[Long]("name"), att_pagerank);
+		else
+			DistributedReader.write("degree-%d.txt", att_pagerank);
 		
 		Console.OUT.println("Complete!!!");
 	}

@@ -104,14 +104,14 @@ public abstract class InputSplitter {
 		
 		private def subtask() {
 			val data = frontBuffer.raw();
+			val size = data.size();
+			val t_chunk_size = (size + nthreads - 1) / nthreads;
 			var offset :Long = 0;
 			
 			// split S_CHUNK into T_CHUNK
 			finish for(tid in 0..(nthreads-1)) {
-				val start = offset;
-				val end = (tid == nthreads-1)
-					? data.size() // when this is the last chunk
-					: nextBreak(data, start + T_CHUNK_SIZE);
+				val start = Math.min(offset, size);
+				val end = nextBreak(data, Math.min(offset + t_chunk_size, size));
 				// We must call the parse closure even if the data length is zero
 				// so that the parse closure can count the number of chunks.
 				async parse(tid, data.subpart(start, end - start));

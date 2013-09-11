@@ -86,14 +86,13 @@ abstract public class sx10Test {
     	printException(e, 0);
     }
     
-    public atomic static def print(obj :Any) {
-    	buffer.add(escapeString(obj.toString()));
+    public static def print(obj :Any) {
+    	bufferedPrint(obj);
     	flush();
     }
     
-    public atomic static def println(obj :Any) {
-    	buffer.add(escapeString(obj.toString()));
-    	buffer.add(linebreak);
+    public static def println(obj :Any) {
+    	bufferedPrintln(obj);
     	flush();
     }
     
