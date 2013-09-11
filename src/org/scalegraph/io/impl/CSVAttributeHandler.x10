@@ -52,6 +52,13 @@ public class CSVAttributeHandler {
 	}
 	
 	// End of CSVAttributeHandler definition //
+	public var mc :Any;
+	public def setChunk(imc :Any){
+		mc=imc;
+	}
+	public def setChunk2():void{Console.OUT.println("(*o*)");};
+	
+	public def chunkMcElemToString(i :Long) :String = ":-(";
 	
 	private static class ChunkBuffer[T] {
 		public var buf :GrowableMemory[T];
@@ -104,6 +111,18 @@ public class CSVAttributeHandler {
 	
 	private static class BaseHandler[T] extends CSVAttributeHandler {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
+		
+		public def setChunk2(){
+			chunk = new ChunkBuffer[T]();
+			chunk.buf = new GrowableMemory[T]();
+			val mcc = mc as MemoryChunk[T];
+			chunk.buf.add(mcc);
+			Console.OUT.println("basehandler");
+		}
+		
+		public def chunkMcElemToString(i :Long) :String = chunk.buf.raw()(i).toString();
+
+		public var chunk :ChunkBuffer[T];
 
 		public def isSkip() :Boolean = false;
 		
