@@ -310,8 +310,10 @@ public class MaxFlow {
 					
 					if(ctx.realId() == sinkVertexId) {
 						Console.OUT.println("                              CURRENT FLOW"  + ctx.value().excess);
-						if(flowNum.home==here)
-							flowNum()() = ctx.value().excess;
+						val excess = ctx.value().excess;
+						at (flowNum.home) {
+							flowNum()() = excess;
+						}
 					}
 					val goNext = ctx.value().isExcessNonZero;
 					{

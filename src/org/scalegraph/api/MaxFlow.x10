@@ -50,9 +50,9 @@ final public class MaxFlow {
     /**
      * A class storing the result from MaxFlow
      */
-    public static struct Result (maxiMumFlow: Long){
-       protected def this(mf: Long) {
-           property(mf);
+    public static struct Result (maxiMumFlow: Long, flows:DistMemoryChunk[Long]){
+       protected def this(mf: Long, fl:DistMemoryChunk[Long]) {
+           property(mf, fl);
        }
     }
     
@@ -179,14 +179,6 @@ final public class MaxFlow {
     	val recursionLimit = param.recursionLimit;
     	
     	var currFlow:Long;
-    	// compute MaxFlow
-//    	val xpregel = new XPregelGraph[MFVertex, MFEdge](team,  matrix);
-//    	val edgeValue = g.createDistAttribute[Long](matrix, false, "edgevalue");
-    	/*xpregel.initEdgeValue[Long](edgeValue, (value : Long) => {
-    		val edge = new MFEdge(value);
-    		return edge;
-    	});*/
-    	
     	val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
     	val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
     	val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
@@ -200,7 +192,6 @@ final public class MaxFlow {
     		});
     	});
 
-    	
     	
     	
     	xpregel.updateInEdge();
@@ -523,9 +514,11 @@ final public class MaxFlow {
     		}
     	}	
     	
-//    	val ret = xpregel.stealOutput[Long]();
-    	val result = new Result(flowNum()());
-    	
+    	val output = xpregel.stealOutput[Long]();
+
+    	val flows = retrieveAttribute[Long](csr, output);
+    	val result = new Result(flowNum()(), flows);
+    
     	return result;
     }
 
