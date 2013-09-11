@@ -35,11 +35,9 @@ final public class SpectralClusteringImpl {
 	
 	public static def run(g : Graph, attrName : String, numCluster : Int,
 			tolerance : Double, maxitr : Int, threshold : Double): DistMemoryChunk[Int] {
-		val team = Config.get().worldTeam();
-		val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
-		val C = team.size() / R;
-		val RC = R * C;
-		val dist = Dist2D.make2D(team, R, C);
+		val config = Config.get();
+		val team = config.worldTeam();
+		val dist = config.dist2d();
 		
 		val sw = new MyStopWatch();
 		

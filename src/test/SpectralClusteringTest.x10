@@ -39,12 +39,9 @@ final class SpectralClusteringTest extends sx10Test {
 		val maxitr = Int.parse(args(4));        // max number of iteration in k-means
 		val threshold = Double.parse(args(5));  // threshold for convergence test in k-means
 		
-		val team = Config.get().worldTeam();
-		
-		val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
-		val C = team.size() / R;
-		val RC = R * C;
-		val dist = Dist2D.make2D(team, R, C);
+		val config = Config.get();
+		val team = config.worldTeam();
+		val dist = config.dist2d();
 		
 		val sw = new MyStopWatch();
 		
