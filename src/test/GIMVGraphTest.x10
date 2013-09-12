@@ -13,7 +13,7 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.io.SimpleText;
 import org.scalegraph.io.CSV;
 import org.scalegraph.util.tuple.*;
@@ -26,7 +26,7 @@ import org.scalegraph.util.SString;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.GIMV;
 
-final class GIMVGraphTest extends sx10Test {
+final class GIMVGraphTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new GIMVGraphTest().execute(args);
 	}

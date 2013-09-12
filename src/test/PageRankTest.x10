@@ -13,7 +13,7 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.id.Type;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
@@ -22,7 +22,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 
-final class PageRankTest extends sx10Test {
+final class PageRankTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new PageRankTest().execute(args);
 	}

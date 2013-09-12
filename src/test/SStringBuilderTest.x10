@@ -10,11 +10,11 @@
  */
 package test;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.SString;
 import org.scalegraph.util.SStringBuilder;
 
-public class SStringBuilderTest extends sx10Test {
+public class SStringBuilderTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new SStringBuilderTest().execute(args);
 	}

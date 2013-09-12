@@ -15,7 +15,7 @@ import x10.io.File;
 import x10.util.Team;
 import x10.util.Timer;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.*;
@@ -25,7 +25,7 @@ import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.fbio.FBIOSupport;
 import org.scalegraph.io.fbio.AttributeHandler;
 
-final class TestBinaryIO extends sx10Test {
+final class TestBinaryIO extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestBinaryIO().execute(args);
 	}

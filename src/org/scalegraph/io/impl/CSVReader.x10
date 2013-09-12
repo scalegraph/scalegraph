@@ -27,6 +27,7 @@ import org.scalegraph.io.FileReader;
 import org.scalegraph.io.ID;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.id.Type;
+import org.scalegraph.util.tuple.Tuple2;
 
 @NativeCPPCompilationUnit("CSVHelper.cc") 
 public class CSVReader {
@@ -69,7 +70,6 @@ public class CSVReader {
 		public val chunkSize :GrowableMemory[Long];
 		public val stride :Long;
 		public val numElems :Int;
-		public var lines :Int;
 		
 		public def this(attHandler :Array[CSVAttributeHandler](1)) {
 			this.attHandler = attHandler;
@@ -84,18 +84,20 @@ public class CSVReader {
 		@Native("c++", "x10aux::alloc<x10_byte*>(sizeof(x10_byte*)*(#length))")
 		private static native def allocatePtrBuffer(length :Long) :MemoryPointer[MemoryPointer[Byte]];
 
-		@Native("c++", "org::scalegraph::io::impl::CSVReaderParseChunk(#this, #data)")
-		private native def nativeParseChunk(data :MemoryChunk[Byte]) :Long;
+		@Native("c++", "org::scalegraph::io::impl::CSVReaderParseChunk(#data, (#this)->FMGL(stride), (#this)->FMGL(numElems), (#this)->FMGL(elemPtrs))")
+		private native def nativeParseChunk(data :MemoryChunk[Byte]) :Tuple2[Long, Long];
 		
 		public def parse(data :MemoryChunk[Byte]) {
 			val data_size = data.size();
 			var data_off :Long = 0;
 			var totalLines :Long = 0;
 			while(data_off < data_size) {
-				data_off += nativeParseChunk(data.subpart(data_off, data.size() - data_off));
+				val res = nativeParseChunk(data.subpart(data_off, data.size() - data_off));
+				data_off += res.val1;
+				val lines = res.val2;
 				totalLines += lines;
 				for(e in 0..(numElems-1)) {
-					attHandler(e).parseElements(elemPtrs + e*stride, lines, buffer(e));
+					attHandler(e).parseElements(elemPtrs + e*stride, lines as Int, buffer(e));
 				}
 			}
 			// store the number of lines for merging all data later

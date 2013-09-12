@@ -12,7 +12,7 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.Config;
 import org.scalegraph.util.ProfilingDB;
 import org.scalegraph.util.MemoryChunk;
@@ -20,7 +20,7 @@ import org.scalegraph.util.Parallel;
 import org.scalegraph.util.SStringBuilder;
 import org.scalegraph.util.SString;
 
-public class ProfilingDBTest extends sx10Test {
+public class ProfilingDBTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new ProfilingDBTest().execute(args);
 	}

@@ -13,7 +13,7 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.Config;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.random.Random;
@@ -27,7 +27,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 
-final class XPregelPageRank extends sx10Test {
+final class XPregelPageRank extends STest {
 	public static def main(args: Array[String](1)) {
 		new XPregelPageRank().execute(args);
 	}

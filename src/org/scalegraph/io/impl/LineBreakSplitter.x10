@@ -22,7 +22,7 @@ import x10.compiler.Native;
 public class LineBreakSplitter extends InputSplitter {
 
 	@Native("c++", "org::scalegraph::io::impl::LineNextBreak(#data, #offset)")
-	public static native def nativeNextBreak(data :MemoryChunk[Byte], offset :Long) :Long;
+	private static native def nativeNextBreak(data :MemoryChunk[Byte], offset :Long) :Long;
 	
 	public def nextBreak(data :MemoryChunk[Byte], offset :Long)
 		= nativeNextBreak(data, offset);

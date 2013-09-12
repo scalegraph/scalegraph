@@ -180,8 +180,8 @@ static inline int splitterBytesLength(x10_char ch) {
 	return UTF8CodeLength_(ch);
 }
 
-static inline int splitterBytesLength(MemoryChunk<x10_byte>& str) {
-	return str.size();
+static inline int splitterBytesLength(const SString& str) {
+	return str.FMGL(content).size();
 }
 
 static inline int StringIndexOf_(const MemoryChunk<x10_byte>& str, const SString& splitter, int from) {
