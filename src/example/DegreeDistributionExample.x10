@@ -71,8 +71,8 @@ public final class DegreeDistributionExample {
         degreeDist.mode = DegreeDistribution.INOUT_DEGREE;
         val inOutdegResult = degreeDist.execute(g);
 
-        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]));
-        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]));
-        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]));
+        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]),true);
+        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]),true);
+        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]),true);
     }
 }

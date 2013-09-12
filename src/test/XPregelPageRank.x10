@@ -144,7 +144,7 @@ final class XPregelPageRank extends sx10Test {
 		
 		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
 		
-		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [pagerank as Any]));
+		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [pagerank as Any]),true);
 		
 		Console.OUT.println("Finish application");
 	}
@@ -198,7 +198,7 @@ final class XPregelPageRank extends sx10Test {
 		
 		val pagerank = xpregel.stealOutput[Double]();
 		
-		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [pagerank as Any]));
+		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [pagerank as Any]),true);
 		
 		Console.OUT.println("Finish application");
 		

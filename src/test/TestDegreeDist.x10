@@ -62,9 +62,9 @@ final class TestDegreeDist extends sx10Test {
         val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
         val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
 
-        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]));
-        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]));
-        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]));
+        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]),true);
+        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]),true);
+        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]),true);
         
         return true;
     }

@@ -175,7 +175,7 @@ final class XPregelBfs extends sx10Test {
 			ctx.output(ctx.value());
 		});
 		val pred = xpregel.stealOutput[Long]();
-		CSV.write("pred-%d", new NamedDistData(["bfs pred" as String], [pred as Any]));
+		CSV.write("pred-%d", new NamedDistData(["bfs pred" as String], [pred as Any]),true);
 		
 		Console.OUT.println("Finish application");
 		return true;

@@ -40,7 +40,7 @@ final class GeneratorTest extends sx10Test {
 		val edges = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
 		val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 		CSV.write("rmat-scale" + scale + "-%d",
-				new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]));
+				new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]),true);
 		//DistributedReader.write("rmat-%d", rmatEdges);
 		Console.OUT.println("rmat-scale" + scale + ": done");
 	}
@@ -50,7 +50,7 @@ final class GeneratorTest extends sx10Test {
 	    val edges = GraphGenerator.genRandomGraph(scale, 16, rnd);
 	    val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 	    CSV.write("erdos-scale" + scale + "-%d",
-	    		new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]));
+	    		new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]),true);
 	    //DistributedReader.write("erdos-%d", rmatEdges);
 	    /*
 	     * val graph = new Graph(team, Graph.VertexType.Long, true);
