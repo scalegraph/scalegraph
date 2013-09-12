@@ -16,6 +16,15 @@ import x10.util.Ordered;
 import x10.compiler.Inline;
 
 // TODO: rename to Math2
+
+/**
+ * TODO : fix min[T](vec)
+ * 
+ * if you use min in aggregate , 
+ * when length of vec = 0 , program may stop.
+ * 
+ */
+
 public final class MathAppend {
 	
 	public static def abs[T](a :T) {T <: Arithmetic[T], T <: Ordered[T], T haszero} = a > Zero.get[T]() ? a : -a;

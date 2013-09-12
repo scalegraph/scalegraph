@@ -22,6 +22,7 @@ public class StronglyConnectedComponent {
 	
 
 	/* 
+	 * This is vertex value type.
 	 * leaderId :leader id (this id is ctx.id. not real id) of current group 
 	 *  (front,back) : can reach from leader only using (front , back) direction  
 	 *  minimId :

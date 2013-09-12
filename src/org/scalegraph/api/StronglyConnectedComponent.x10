@@ -14,7 +14,7 @@ import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.blas.DistSparseMatrix;
 
 /**
- * Calculates the Google PageRank.
+ * Calculates the Strongly Connected Component.
  * Details: TODO: write the algorithm description
  */
 public final class StronglyConnectedComponent {
@@ -60,6 +60,9 @@ public final class StronglyConnectedComponent {
 	}
 
 	/* 
+	 * SCCVertex
+	 * 
+	  * This is vertex value type.
 	 * leaderId :leader id (this id is ctx.id. not real id) of current group 
 	 *  (front,back) : can reach from leader only using (front , back) direction  
 	 *  minimId :
@@ -271,7 +274,6 @@ public final class StronglyConnectedComponent {
 						}
 
 						if(ctx.superstep()==2) {
-							//messageはそれぞれ一つしかこないので、0のはず
 							//							Console.OUT.println("    :ctx.realId() "+ctx.realId() );
 							//							Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
 							//					Console.OUT.println("     value" + ctx.value().leaderId);
