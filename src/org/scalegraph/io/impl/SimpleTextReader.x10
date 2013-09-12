@@ -31,20 +31,28 @@ public class SimpleTextReader {
 			this.parser = parser;
 		}
 		
+		private static val sharp = SString("#");
+		private static def isSkip(line :SString) {
+			return (line.size() == 0) || line.startsWith(sharp);
+		}
+		
 		public def parse(data :MemoryChunk[Byte]) {
 			val size = data.size();
 			var offset :Long = 0L;
 			var lines :Long = 0;
 			while(offset < size) {
 				val nextOffset = LineBreakSplitter.nativeNextBreak(data, offset);
+				val line = SString(data.subpart(offset, nextOffset - offset));
 				
-				val v = parser(SString(data.subpart(offset, nextOffset - offset)));
-				src.add(v.val1);
-				dst.add(v.val2);
-				wgt.add(v.val3);
+				if(isSkip(line) == false) {
+					val v = parser(line);
+					src.add(v.val1);
+					dst.add(v.val2);
+					wgt.add(v.val3);
+					++lines;
+				}
 				
 				offset = nextOffset;
-				++lines;
 			}
 			// store the number of lines for merging all data later
 			chunkSize.add(lines);
