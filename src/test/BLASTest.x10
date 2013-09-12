@@ -26,7 +26,7 @@ import org.scalegraph.blas.BLAS;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.blas.DistDiagonalMatrix;
 
-final class BLASTest extend STest {
+final class BLASTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new BLASTest().execute(args);
 	}
