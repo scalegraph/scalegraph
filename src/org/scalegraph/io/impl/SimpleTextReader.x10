@@ -12,12 +12,19 @@ package org.scalegraph.io.impl;
 
 import x10.util.Team;
 
+import x10.compiler.NativeCPPCompilationUnit;
+import x10.compiler.NativeCPPInclude;
+import x10.compiler.Native;
+
 import org.scalegraph.util.SString;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.io.NamedDistData;
+import org.scalegraph.util.tuple.Tuple2;
 
+@NativeCPPInclude("CSVHelper.h")
+@NativeCPPCompilationUnit("CSVHelper.cc") 
 public class SimpleTextReader {
 	
 	private static class ReaderBuffer[T] {
@@ -36,13 +43,16 @@ public class SimpleTextReader {
 			return (line.size() == 0) || line.startsWith(sharp);
 		}
 		
+		@Native("c++", "org::scalegraph::io::impl::LineEndAndNextBreak(#data, #offset)")
+		private native static def nativeNextBreak(data :MemoryChunk[Byte], offset :Long) :Tuple2[Long, Long];
+		
 		public def parse(data :MemoryChunk[Byte]) {
 			val size = data.size();
 			var offset :Long = 0L;
 			var lines :Long = 0;
 			while(offset < size) {
-				val nextOffset = LineBreakSplitter.nativeNextBreak(data, offset);
-				val line = SString(data.subpart(offset, nextOffset - offset));
+				val nextOffset = nativeNextBreak(data, offset);
+				val line = SString(data.subpart(offset, nextOffset.val1 - offset));
 				
 				if(isSkip(line) == false) {
 					val v = parser(line);
@@ -52,7 +62,7 @@ public class SimpleTextReader {
 					++lines;
 				}
 				
-				offset = nextOffset;
+				offset = nextOffset.val2;
 			}
 			// store the number of lines for merging all data later
 			chunkSize.add(lines);

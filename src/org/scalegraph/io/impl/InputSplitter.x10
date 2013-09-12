@@ -19,7 +19,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.SString;
 import org.scalegraph.io.FileReader;
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 
 public abstract class InputSplitter {
 	
@@ -59,7 +59,7 @@ public abstract class InputSplitter {
 		public def size() = end - start;
 		
 		public def open() {
-			sx10Test.println(here.id + " => (" + start + ", " + end + ")");
+			STest.println(here.id + " => (" + start + ", " + end + ")");
 			val reader = new FileReader(path);
 			reader.skip(start);
 			return reader;

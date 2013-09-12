@@ -14,7 +14,7 @@ import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.arpack.ARPACK;
 import org.scalegraph.blas.BLAS;
 import org.scalegraph.blas.DistDiagonalMatrix;
@@ -28,7 +28,7 @@ import org.scalegraph.util.tuple.*;
 
 
 @NativeCPPInclude("mpi.h")
-final class SpectralClustering extends sx10Test {
+final class SpectralClustering extends STest {
 	public static def main(args: Array[String](1)) {
 		new SpectralClustering().execute(args);
 	}

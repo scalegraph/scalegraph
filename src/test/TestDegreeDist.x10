@@ -15,7 +15,7 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.io.SimpleText;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
@@ -26,7 +26,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.DegreeDistribution;
 
-final class TestDegreeDist extends sx10Test {
+final class TestDegreeDist extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestDegreeDist().execute(args);
 	}

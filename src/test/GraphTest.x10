@@ -10,14 +10,14 @@
  */
 package test;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.Config;
 import org.scalegraph.id.Type;
 import org.scalegraph.io.CSV;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class GraphTest extends sx10Test {
+public class GraphTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new GraphTest().execute(args);
 	}

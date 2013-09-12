@@ -12,7 +12,7 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.MemoryChunk;
@@ -26,7 +26,7 @@ import org.scalegraph.blas.BLAS;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.blas.DistDiagonalMatrix;
 
-final class BLASTest extends sx10Test {
+final class BLASTest extend STest {
 	public static def main(args: Array[String](1)) {
 		new BLASTest().execute(args);
 	}

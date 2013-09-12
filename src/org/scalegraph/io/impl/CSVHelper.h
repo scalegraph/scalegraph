@@ -25,6 +25,9 @@
 #define ORG_SCALEGRAPH_IO_FILEREADER_H_NODEPS
 #include <org/scalegraph/io/FileReader.h>
 #undef ORG_SCALEGRAPH_IO_FILEREADER_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_TUPLE_TUPLE2_H_NODEPS
+#include <org/scalegraph/util/tuple/Tuple2.h>
+#undef ORG_SCALEGRAPH_UTIL_TUPLE_TUPLE2_H_NODEPS
 
 #include <vector>
 
@@ -33,10 +36,9 @@ namespace org { namespace scalegraph { namespace io { namespace impl {
 using ::org::scalegraph::util::MemoryChunk;
 using ::org::scalegraph::util::GrowableMemory;
 using ::org::scalegraph::util::SString;
+using ::org::scalegraph::util::tuple::Tuple2;
 using ::org::scalegraph::io::FileReader;
 using ::scalegraph::gc_std;
-
-class CSVReader__ReaderBuffer;
 
 enum { H_CHUNK_SIZE = 256 };
 
@@ -58,15 +60,18 @@ NativeCSVHeader* readCSVHeader(SString headerLine);
 
 x10_long LineNextBreak(MemoryChunk<x10_byte> data, x10_long offset);
 
+Tuple2<x10_long, x10_long> LineEndAndNextBreak(MemoryChunk<x10_byte> data, x10_long offset);
+
 x10_long DQCSVNextBreak(MemoryChunk<x10_byte> data, x10_long offset);
 MemoryChunk<x10_byte> DQCSVNextBreak(FileReader* reader);
 
-x10_long CSVReaderParseChunk(CSVReader__ReaderBuffer* th, MemoryChunk<x10_byte> data);
+Tuple2<x10_long, x10_long> CSVReaderParseChunk(MemoryChunk<x10_byte> data, int stride, int numElems, x10_byte** out);
 
 template <typename T>
 void CSVParseElements(x10_byte** elemPtrs, int lines, GrowableMemory<T>* outBuf);
 
 void CSVParseStringElements(x10_byte** elemPtrs, int lines, GrowableMemory<SString>* outBuf, bool doubleQuoated);
+
 
 } } } } // namespace org { namespace scalegraph { namespace io { namespace impl {
 
