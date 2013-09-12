@@ -516,7 +516,7 @@ final public class MaxFlow {
     	
     	val output = xpregel.stealOutput[Long]();
 
-    	val flows = retrieveAttribute[Long](csr, output);
+    	val flows = g.retrieveEdgeAttribute[Long](csr, output);
     	val result = new Result(flowNum()(), flows);
     
     	return result;
