@@ -56,10 +56,16 @@ public class CSVWriter {
 	//data: all data
 	public static def write(team :Team, path :SString, data :NamedDistData, setNumFlag :Boolean){
 		val nthreads = Runtime.NTHREADS-1;
+		if(nthreads<=0){
+			writeSafe(team,path,data,setNumFlag);
+			return;
+		}
 
 		val fman = FileNameProvider.createForWrite(path,true);
 		// create directory if it is not exists.
 		fman.mkdir();
+		
+		Console.OUT.println( data.get[Long](0)().size()   );
 		
 		val startLine = new Array[Long](team.size() );
 		var count :Int =0;
@@ -207,7 +213,7 @@ public class CSVWriter {
 	}
 
 	
-	public static def writeSafe(team :Team, path :SString, data :NamedDistData, setNumFlag :Boolean){//data: all data
+	public static def writeSafe(team :Team, path :SString, data :NamedDistData, setNumFlag :Boolean){
 
 		val fman = FileNameProvider.createForWrite(path,true);
 		// create directory if it is not exists.
