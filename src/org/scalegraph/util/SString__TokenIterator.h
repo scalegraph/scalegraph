@@ -181,7 +181,7 @@ static inline int splitterBytesLength(x10_char ch) {
 }
 
 static inline int splitterBytesLength(const SString& str) {
-	return str.FMGL(content).size();
+	return str.FMGL(content).FMGL(data).FMGL(size);
 }
 
 static inline int StringIndexOf_(const MemoryChunk<x10_byte>& str, const SString& splitter, int from) {
