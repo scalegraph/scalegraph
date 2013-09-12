@@ -58,19 +58,31 @@ public final class StronglyConnectedComponent {
 			property(cl, dmc1, dmc2);
 		}
 	}
-	
+
+	/* 
+	 * leaderId :leader id (this id is ctx.id. not real id) of current group 
+	 *  (front,back) : can reach from leader only using (front , back) direction  
+	 *  minimId :
+	 *  childCnt : if this node is leader id, chidCnt is the number of nodes in cluster that contain this node.
+	 * */
 	private static struct SCCVertex {
 		val leaderId:Long; 
 		val front:Boolean; 
 		val back:Boolean;
 		val minimId:Long;
-		def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long) {
+		val childCnt:Long;
+		def this (leader:Long, fro:Boolean, bac:Boolean, tmp:Long, child:Long) {
 			leaderId = leader; 
 			front = fro; 
 			back = bac;
 			minimId = tmp;
+			childCnt = child;
 		}
 	}
+	/* 
+	 * Following three structs/classes are using in three xpregel iterations respectively. 
+	 */
+	
 	private static struct MessageA {
 		val leaderId:Long;
 		val dir:Boolean;
@@ -78,11 +90,11 @@ public final class StronglyConnectedComponent {
 			leaderId = lead;
 			dir = d;	
 		}
-
+		
 		@Native("c++", "(#this)->FMGL(dir) = #v")
 		native def setDir(v :Boolean) :void;
 	}
-
+	
 	private static struct MessageB {
 		val front:Boolean;
 		val back:Boolean;
@@ -93,7 +105,7 @@ public final class StronglyConnectedComponent {
 			id = idNum;
 		}
 	}
-
+	
 	private static struct MessageC {
 		val leaderId:Long;
 		val minimId:Long;
@@ -102,6 +114,7 @@ public final class StronglyConnectedComponent {
 			leaderId = leader;
 		}
 	}
+	
 	
 	private static def execute(param :StronglyConnectedComponent, graph:Graph, matrix :DistSparseMatrix[Long]):Result {
 
@@ -116,44 +129,54 @@ public final class StronglyConnectedComponent {
 		
 		
 		xpregel.updateInEdge();
-		
-		// 0 :leader ,1:mynum of leader 
+
 		val initInfo = new SCCVertex(0L, false, false,-1L, 0L);
 		xpregel.initVertexValue(initInfo);
 		
-		//value : leaderId, front, back
 		var recursion:Int = 0;
-		
-		var numOfCluster:Long = 0;
+		var numOfCluster:Long = 0; 
 		while(recursion<niter) {
 			//			Console.OUT.println("recursion, maximalCluster" + recursion +" "+ numOfCluster);
 			recursion++;
-			//phaseA : BFS的に伝搬
+			/* phaseA : using BFSlike algorithm.
+			 * Start position of dfs is leader.
+			 * Initially, this id is 0 (ctx.id).
+			 * in superstep
+			 * 		0 : pre-process and send messages from leader
+			 * 		1~ : send messages like bfs.
+			 */
+			
 			val surviveNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
 			xpregel.iterate[MessageA, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageA, Long ], messages :MemoryChunk[MessageA] ) => {
 						ctx.aggregate(1);
 						if(ctx.superstep()==0) {
-							//隣接点がなければその頂点はすぐに終わらせる
+							/* If there is no edges connecting to this node, 
+							 * program force to end this node.
+							 * ( In "if(ctx.value().front && ctx.value().back)" this node is setted halted.  )
+							 */
 							if(ctx.outEdgesId().size()==0L && ctx.inEdgesId().size()==0L && ctx.id()!=0L) {
-								val newInfo = new SCCVertex(ctx.id(), true,true,-1L,0L);
+								val newInfo = new SCCVertex(ctx.id(), true,true,-1L,1L);
 								ctx.setValue(newInfo);
 							}
-							//phaseCで行った結果の反映
+							/*
+							 * Reflection of pahseC iteration.
+							 */
 							if(ctx.value().minimId!=-1L) {
 								val newInfo = new SCCVertex(ctx.value().minimId, ctx.value().front, ctx.value().back, -1L, 0L);
 								ctx.setValue(newInfo);
 							}
-							
-							//ここでfalseにされるのは、既に確定したか、同じleaderIdを持つ点が近傍に存在しないから
 							if(ctx.value().front && ctx.value().back)
 								ctx.setVertexShouldBeActive(false);
 							else 
 								ctx.setVertexShouldBeActive(true);
 							
 						}
+						//messages from current node.
 						val mesF = new MessageA(ctx.value().leaderId, false);
 						val mesT = new MessageA(ctx.value().leaderId, true);
+						
+						//sending message from leader.
 						if(ctx.superstep()==0 && ctx.id() == ctx.value().leaderId) {
 							for(i in ctx.outEdgesId().range()) 
 								ctx.sendMessage(ctx.outEdgesId()(i), mesF);
@@ -162,10 +185,11 @@ public final class StronglyConnectedComponent {
 							val newInfo = new SCCVertex(ctx.value().leaderId, true, true, -1L, 0L);
 							ctx.setValue(newInfo);
 						}
+						
+						// main process of bfs.
 						if(ctx.superstep()>0) {
 							if(ctx.value().front && ctx.value().back)
 								return;
-							//							Console.OUT.println(ctx.realId());
 							var existFront:Boolean = false;
 							var existBack:Boolean = false;
 							for(i in messages.range()) {
@@ -190,7 +214,6 @@ public final class StronglyConnectedComponent {
 							ctx.setValue(newInfo);
 						}
 						ctx.voteToHalt();
-						
 					},
 					(values :MemoryChunk[Long]) => MathAppend.sum(values),
 					(superstep :Int, aggVal :Long) => {
@@ -202,8 +225,14 @@ public final class StronglyConnectedComponent {
 			if(surviveNum()()==0L) break;
 
 			val cl: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
+			/*phase B
+			 * Send message to leader and send message from leader.
+			 * in superstep 
+			 * 		0 : all node: send to leader
+			 * 		1 : leader : recieve messages,  divide current group and send information of next group. 
+			 * 		2 : all node : recieve messages and set new information
+			 */
 			
-			//phaseB:Leaderに情報を伝搬/Leaderから情報を伝搬
 			xpregel.iterate[MessageB, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageB, Long ], messages :MemoryChunk[MessageB] ) => {
 						ctx.aggregate(0);
@@ -266,7 +295,16 @@ public final class StronglyConnectedComponent {
 					} );
 			numOfCluster += cl()();
 			
-			//PhaseC : 連結成分が異なるところを分けるための処理
+			/* phaseC
+			 * If new group is disconnected and has many cluster, 
+			 * only using phaseA and phaseB is unefficiently.
+			 * So, in this phase using BFSlike algorithm, partition group.
+			 * In end of this operation, new leaderId is minimal (ctx)Id of (weakly) connected component. 
+			 * in superstep
+			 * 		0~ : send message and set my value. todo this 
+			 */
+			
+			
 			xpregel.iterate[MessageC, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageC, Long ], messages :MemoryChunk[MessageC] ) => {
 						
@@ -285,7 +323,6 @@ public final class StronglyConnectedComponent {
 								}
 							}
 						}
-						//						Console.OUT.println("value.minimId"+ctx.realId()+" " + ctx.value().minimId);
 						if(update) {
 							val mes = new MessageC(ctx.value().leaderId, ctx.value().minimId);
 							for(i in ctx.outEdgesId().range())
@@ -307,6 +344,7 @@ public final class StronglyConnectedComponent {
 			ctx.output(1, ctx.value().childCnt+plus);
 			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
 		});
+		
 		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0), xpregel.stealOutput[Long](1));
 		Console.OUT.println("numOfCluster" + numOfCluster);
 		return result;
