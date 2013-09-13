@@ -8,14 +8,17 @@ import TAP
 
 tap=None
 ##kriiyamaのテスト用の変数
-TestFile=os.environ["HOME"]+"/Develop/ScaleGraph/src/test/GraphTest.x10"
+ModuleName="TeamBenchmark"
+TestFile=os.environ["HOME"]+"/Develop/ScaleGraph/src/test/"+ModuleName+".x10"
 
 TestWorkDir= os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
 SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
+
 def runBuild():
     global tap
+    initDir(TestWorkDir)
     tap  = TAP.Builder.create(1)
-    build_test("GraphTest",TestFile,TestWorkDir,SrcDir)
+    build_test(ModuleName,TestFile,TestWorkDir,SrcDir)
 
 def genHostFile(file,dest,numHosts,duplicates):
     with open(file) as file:
@@ -86,7 +89,7 @@ def initDir(workdir):
     dirs = ["/bin","/log","/output","/results"]
     for directory in dirs:
         if not path.isdir(workdir+directory):
-            os.mkdir(workdir+directory)
+            os.makedirs(workdir+directory)
 
 
 def initTap(testNum,tapBulider):
