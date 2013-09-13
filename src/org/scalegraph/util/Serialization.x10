@@ -15,17 +15,17 @@ import x10.compiler.NativeRep;
 
 public class Serialization {
 
-	@Native("c++", "x10aux::count_ser_size<#T >((#data)->raw() , #data_offset, #data_count)")
+	@Native("c++", "x10aux::count_ser_size<#T >((#data)->pointer() , #data_offset, #data_count)")
 	private static native def count_ser_size[T](place :Long, data :MemoryChunk[T], data_offset :Int, data_count :Int): Int;
 	
-	@Native("c++", "x10aux::write_ser_data<#T >((#data)->raw() , #data_offset, #data_count, (#ser_data)->raw(), #ser_off, #ser_count)")
+	@Native("c++", "x10aux::write_ser_data<#T >((#data)->pointer() , #data_offset, #data_count, (#ser_data)->pointer(), #ser_off, #ser_count)")
 	private static native def write_ser_data[T](place :Long, data :MemoryChunk[T], data_offset :Int, data_count :Int, ser_data :MemoryChunk[Byte], ser_off :Int, ser_count :Int): void;
 
-	@Native("c++", "x10aux::read_deser_data<#T >((#data)->raw(), #data_offset, #data_count, (#deser_data)->raw(), #deser_off, #deser_count)")
+	@Native("c++", "x10aux::read_deser_data<#T >((#data)->pointer(), #data_offset, #data_count, (#deser_data)->pointer(), #deser_off, #deser_count)")
 	private static native def read_deser_data[T](place :Long, data :MemoryChunk[T], data_offset :Int, data_count :Int, deser_data :MemoryChunk[Byte], deser_off :Int, deser_count :Int): void;
 
-	@Native("c++", "x10aux::getRTT<TPMGL(T) >()->containsPtrs;")
-	public def needToSerialize[T] () : Boolean = false;
+	@Native("c++", "x10aux::getRTT<TPMGL(T) >()->containsPtrs")
+	public static def needToSerialize[T] () : Boolean = false;
 
 	public static def serialize[T](data :MemoryChunk[T], data_offset :Int, data_count :Int): MemoryChunk[Byte]
 	{
