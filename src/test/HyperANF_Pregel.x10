@@ -140,7 +140,7 @@ final class HyperANF_Pregel extends STest {
 				md(superstep) = aggVal;
 				results()() = md;
 			}
-			return superstep > niter;
+			return superstep >= niter;
 		});
 		var iter:Int=0;
 		while(iter<niter) {
