@@ -78,8 +78,9 @@ final class HyperANF_Pregel extends sx10Test {
 		val start_time = System.currentTimeMillis();
 		
 		xpregel.updateInEdge();
-		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		
+		val niter = 30;
 		
 		val N:Long = g.numberOfVertices();
 		val B = 7;
@@ -89,6 +90,7 @@ final class HyperANF_Pregel extends sx10Test {
 		if(B==5) alpha = 0.697;
 		else if(B==6) alpha = 0.769;
 		else alpha = 0.7213 / (1.00+1.073/M);
+		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
 
@@ -129,10 +131,23 @@ final class HyperANF_Pregel extends sx10Test {
 					//			Console.OUT.println("retval"  + ctx.realId() + " " + retval);
 					ctx.aggregate(retval);
 					ctx.setValue(counterB);
+					
 				},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
-		(superstep :Int, aggVal :Double) => (superstep >= 30) );
-		
+		(superstep :Int, aggVal :Double) => {
+			if(results.home==here) {
+				val md:MemoryChunk[Double] = results()();
+				md(superstep) = aggVal;
+				results()() = md;
+			}
+			return superstep > niter;
+		});
+		var iter:Int=0;
+		while(iter<niter) {
+				Console.OUT.println( (iter+1) + " "+ results()()(iter));
+				iter++;
+		}
+	
 		val end_time = System.currentTimeMillis();
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));

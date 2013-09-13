@@ -352,7 +352,7 @@ public final class StronglyConnectedComponent {
 		return result;
 	}
 	
-	/** Run the calculation of PageRank.
+	/** Run the calculation of StronglyConnectedComponent.
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
@@ -361,7 +361,7 @@ public final class StronglyConnectedComponent {
 		throw new UnsupportedOperationException();
 	}
 	
-	/** Run the calculation of PageRank.
+	/** Run the calculation of StronglyConnectedComponent.
 	 * @param g The graph object. 
 	 */
 	public def execute(g :Graph) {	

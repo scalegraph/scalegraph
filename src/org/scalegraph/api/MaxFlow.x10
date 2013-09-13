@@ -180,6 +180,8 @@ final public class MaxFlow {
     	
     	var currFlow:Long;
     	val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+    	
+    	
     	val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
     	val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
     	
@@ -524,7 +526,7 @@ final public class MaxFlow {
 
 
    
-    public def execute(matrix :DistSparseMatrix[Double]): Result {
+    public def execute(matrix :DistSparseMatrix[Long], dm:DistMemoryChunk[Double]): Result {
         throw new UnsupportedOperationException();
     }
     
@@ -536,18 +538,14 @@ final public class MaxFlow {
 //    	return execute(this,g,  matrix);
     	throw new UnsupportedOperationException();
     }
+    
+    
     public static def run(g :Graph): Result {
         throw new UnsupportedOperationException();
     }
     
-    public static def run(matrix :DistSparseMatrix[Double]): Result {
+    public static def run(matrix :DistSparseMatrix[Long] ,dm:DistMemoryChunk[Double]): Result {
         throw new UnsupportedOperationException();
     }
     
-    private static def execute(inst: DegreeDistribution, g :Graph): Result {
-        throw new UnsupportedOperationException();
-    }
-    
-
-    // Interface between API and Impl
 }
