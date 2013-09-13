@@ -10,10 +10,10 @@
  */
 package test;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.MemoryChunk;
 
-final class MemoryChunkTest extends sx10Test {
+final class MemoryChunkTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new MemoryChunkTest().execute(args);
 	}

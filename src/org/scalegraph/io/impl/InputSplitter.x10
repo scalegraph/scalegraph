@@ -19,7 +19,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.SString;
 import org.scalegraph.io.FileReader;
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 
 public abstract class InputSplitter {
 	
@@ -59,7 +59,7 @@ public abstract class InputSplitter {
 		public def size() = end - start;
 		
 		public def open() {
-			sx10Test.println(here.id + " => (" + start + ", " + end + ")");
+			STest.println(here.id + " => (" + start + ", " + end + ")");
 			val reader = new FileReader(path);
 			reader.skip(start);
 			return reader;
@@ -125,7 +125,7 @@ public abstract class InputSplitter {
 			val s_chunk_size = T_CHUNK_SIZE * nthreads;
 			
 			// split P_CHUNK into S_CHUNK
-			for(sidx in splits.range()) {
+			finish for(sidx in splits.range()) {
 				val split = splits(sidx);
 				val reader = split.open();
 				while(true) {
@@ -224,7 +224,7 @@ public abstract class InputSplitter {
 			val splits_end = Math.min((role + 1) * splits_per_place, splits.size());
 			val splits_here = splits.raw().subpart(splits_begin, splits_end - splits_begin);
 			
-			finish new SplitterContext(splits_here, parse, nthreads).split();
+			new SplitterContext(splits_here, parse, nthreads).split();
 			
 		});
 	}

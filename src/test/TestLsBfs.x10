@@ -14,9 +14,8 @@ package test;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.io.SimpleText;
-import org.scalegraph.harness.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.LsBfsVisitor;
 import org.scalegraph.fileread.DistributedReader;
@@ -26,7 +25,7 @@ import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.Bitmap2;
 import org.scalegraph.graph.id.OnedC;
 
-final class TestLsBfs extends sx10Test {
+final class TestLsBfs extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestLsBfs().execute(args);
 	}

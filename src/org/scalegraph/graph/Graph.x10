@@ -387,6 +387,42 @@ import org.scalegraph.id.Type;
 			}
 		});
 	}
+
+	private def internalRetrieveAttributeValues[T](vertexOrEdge :Boolean, indexes : () => MemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
+		val team_ = team;
+		
+		val srcList_ = srcList;
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		
+		return DistMemoryChunk[T](team_.placeGroup(), () => {
+			var att_ :MemoryChunk[T] = new MemoryChunk[T]();
+			try {
+				if(vertexOrEdge) {
+					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
+					att_ = new MemoryChunk[T](actualLocalVertices);
+				}
+				else {
+					att_ = new MemoryChunk[T](srcList_().size());
+				}
+				
+				val mask = team_.size() - 1;
+				val shift = MathAppend.log2(team_.size()) as Int;
+				val indexes_ = indexes();
+				val values_ = values();
+				Remote.put(team_, att_, indexes_.range(),
+						(index:Long, put:(Int, Long,  T)=>void)=> {
+							val dstRole = indexes_(index) & mask;
+							val dstIdx = indexes_(index) >> shift;
+							put(dstRole as Int, dstIdx, values_(index));
+						});
+				
+			}
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
+			}
+			return att_;
+		});
+	}
 	
 	/** Set edge attribute values. The length of values for each place must be match the length of edge list.
 	 * If the same attribute is exist, replaces the all values.
@@ -420,8 +456,16 @@ import org.scalegraph.id.Type;
 	 * for each attribute values.
 	 * @param values The attribute values.
 	 */
-	public def setEdgeAttribute[T](name :String, sparseMatrix : DistSparseMatrix[Long], values :DistMemoryChunk[T]) {T haszero} {
-		internalSetAttributeValues(false, name, ()=>sparseMatrix().values, values);
+	public def setEdgeAttribute[T](name :String, distEdgeIndexMatrix : DistSparseMatrix[Long], values :DistMemoryChunk[T]) {T haszero} {
+		internalSetAttributeValues(false, name, ()=>distEdgeIndexMatrix().values, values);
+	}
+	
+	public def retrieveEdgeAttribute[T](indexes :DistMemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
+		return internalRetrieveAttributeValues(false, ()=>indexes(), values);
+	}
+	
+	public def retrieveEdgeAttribute[T](distEdgeIndexMatrix :DistSparseMatrix[Long], values :DistMemoryChunk[T]) {T haszero} {
+		return internalRetrieveAttributeValues(false, ()=>distEdgeIndexMatrix().values, values);
 	}
 	
 	private static struct VertexInfo {
@@ -500,6 +544,10 @@ import org.scalegraph.id.Type;
 			values :DistMemoryChunk[T]) {T haszero}
 	{
 		setVertexAttribute[T](name, sparseMatrix, values, 0);
+	}
+	
+	public def retrieveVertexAttribute[T](ids :DistMemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
+		return internalRetrieveAttributeValues(true, ()=>ids(), values);
 	}
 	
 	/** Set vertex attribute values with vertex IDs.

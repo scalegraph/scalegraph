@@ -24,6 +24,7 @@ import x10.util.Team;
 import org.scalegraph.io.ID;
 import org.scalegraph.util.SString;
 import org.scalegraph.id.Type;
+import org.scalegraph.util.SStringBuilder;
 
 
 @NativeCPPInclude("CSVHelper.h")
@@ -41,10 +42,16 @@ public class CSVAttributeHandler {
 	
 	public def isSkip() :Boolean = true;
 	public def typeId() :Int = typeId;
+	public def localSizeOf(any : Any) :Long {
+		throw new IllegalOperationException("Type NULL Handler does not contain any data.");
+	}
 	public def createBlockGrowableMemory() :Any = null;
 	public def parseElements(elemPtrs :MemoryPointer[MemoryPointer[Byte]], lines :Int, outBuf :Any) :void { }
 	public def mergeResult(team :Team, nthreads :Int,
 			getChunkSize :(tid :Int) => MemoryChunk[Long], getBuffer :(tid :Int) => Any) :Any {
+		throw new IllegalOperationException("Type NULL Handler does not contain any data.");
+	}
+	public def makeStringClosure(any : Any) :(sb :SStringBuilder, idx :Long) => void {
 		throw new IllegalOperationException("Type NULL Handler does not contain any data.");
 	}
 	public def print(team :Team, any : Any) {
@@ -106,6 +113,18 @@ public class CSVAttributeHandler {
 		public def this(typeId :Int, doubleQuoated :Boolean) { super(typeId, doubleQuoated); }
 
 		public def isSkip() :Boolean = false;
+		
+		public def localSizeOf(any : Any) {
+			val dmc = any as DistMemoryChunk[T];
+			return dmc().size();
+		}
+		
+		/** The make string closure is bind to the place. You may not move this closure. */
+		public def makeStringClosure(any : Any) :(sb :SStringBuilder, idx :Long) => void {
+			val dmc = any as DistMemoryChunk[T];
+			val mc = dmc();
+			return (sb :SStringBuilder, idx :Long) => { sb.add(mc(idx)); };
+		}
 		
 		public def createBlockGrowableMemory() = new GrowableMemory[T]();
 		

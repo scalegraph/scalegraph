@@ -12,13 +12,13 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.io.ID;
 import org.scalegraph.io.CSV;
 import org.scalegraph.id.Type;
 import x10.io.File;
 
-final class CSVReaderTest extends sx10Test {
+final class CSVReaderTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new CSVReaderTest().execute(args);
 	}
@@ -33,7 +33,7 @@ final class CSVReaderTest extends sx10Test {
 			// print result
 			Console.OUT.println(nd.name());
 		
-			CSV.write("csvwTest", nd);
+			CSV.write("csvwTest", nd, true);
 			//CSVWriter.writeSafe(team,"csvwTest",nd);
 			
 		}else if(mode==2){
@@ -42,7 +42,7 @@ final class CSVReaderTest extends sx10Test {
 			Console.OUT.println("twitest");
 			Console.OUT.println(nd.name());
 			
-			CSV.write("csvwTest", nd);
+			CSV.write("csvwTest", nd, true);
 			
 		}else if(mode==3){
 			val O  = new File("fileouttest");

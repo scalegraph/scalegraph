@@ -14,7 +14,7 @@ package test;
 import x10.util.Team;
 import x10.util.Timer;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Dist2D;
@@ -27,7 +27,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.fileread.DistributedReader;
 
-final class GIMVPageRank extends sx10Test {
+final class GIMVPageRank extends STest {
 	public static def main(args: Array[String](1)) {
 		new GIMVPageRank().execute(args);
 	}

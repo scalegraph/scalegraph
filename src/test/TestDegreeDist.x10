@@ -15,7 +15,7 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.io.SimpleText;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
@@ -26,7 +26,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.DegreeDistribution;
 
-final class TestDegreeDist extends sx10Test {
+final class TestDegreeDist extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestDegreeDist().execute(args);
 	}
@@ -62,9 +62,9 @@ final class TestDegreeDist extends sx10Test {
         val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
         val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
 
-        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]));
-        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]));
-        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]));
+        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]),true);
+        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]),true);
+        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]),true);
         
         return true;
     }

@@ -51,6 +51,10 @@ public final struct SStringBuilder {
 	
 	public def capacity() = buffer.capacity();
 	
+	public def clear(){
+		buffer.clear();
+	}
+	
 	public def delete(start :Int, end :Int) {
 		val buf_size = buffer.size();
 		if(start > end) throw new IllegalArgumentException("start > end");

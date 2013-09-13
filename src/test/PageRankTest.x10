@@ -8,36 +8,31 @@
  * 
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-
 package test;
 
-import x10.util.Team;
-
-import org.scalegraph.harness.sx10Test;
-import org.scalegraph.id.Type;
-import org.scalegraph.io.CSV;
-import org.scalegraph.io.NamedDistData;
-import org.scalegraph.util.*;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.io.CSV;
 
-final class PageRankTest extends sx10Test {
+final class PageRankTest extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
 		new PageRankTest().execute(args);
 	}
     
-    public def run(args :Array[String](1)): Boolean {
-		val start_read_time = System.currentTimeMillis();
-		val g = Graph.make(CSV.read(args(0), 
-				[Type.Long as Int, Type.Long, Type.None, Type.Double],
-				["source", "target", "weight"]));
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");	
+    public def run(args :Array[String](1), g :Graph): Boolean {
 		
-		val result = org.scalegraph.api.PageRank.run(g);
+    	val result = org.scalegraph.api.PageRank.run(g);
 		
-		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [result as Any]));
-		return true;
+		if(args(0).equals("write")) {
+			CSV.write(args(1), new NamedDistData(["pagerank" as String], [result as Any]), true);
+			return true;
+		}
+		else if(args(0).equals("check")) {
+			return checkResult(result, args(1), 0.0001);
+		}
+		else {
+			throw new IllegalArgumentException("Unknown command :" + args(0));
+		}
 	}
 }
