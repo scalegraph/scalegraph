@@ -103,22 +103,24 @@ public abstract class InputSplitter {
 		}
 		
 		private def subtask() {
-			val data = frontBuffer.raw();
-			val size = data.size();
-			val t_chunk_size = (size + nthreads - 1) / nthreads;
-			var offset :Long = 0;
-			
-			// split S_CHUNK into T_CHUNK
-			finish for(tid in 0..(nthreads-1)) {
-				val start = Math.min(offset, size);
-				val end = nextBreak(data, Math.min(offset + t_chunk_size, size));
-				// We must call the parse closure even if the data length is zero
-				// so that the parse closure can count the number of chunks.
-				async parse(tid, data.subpart(start, end - start));
-				offset = end;
-			}
-			
-			notifySubtaskCompletion();
+			try {
+				val data = frontBuffer.raw();
+				val size = data.size();
+				val t_chunk_size = (size + nthreads - 1) / nthreads;
+				var offset :Long = 0;
+				
+				// split S_CHUNK into T_CHUNK
+				finish for(tid in 0..(nthreads-1)) {
+					val start = Math.min(offset, size);
+					val end = nextBreak(data, Math.min(offset + t_chunk_size, size));
+					// We must call the parse closure even if the data length is zero
+					// so that the parse closure can count the number of chunks.
+					async parse(tid, data.subpart(start, end - start));
+					offset = end;
+				}
+				
+				notifySubtaskCompletion();
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		}
 		
 		public def split() {
@@ -219,12 +221,14 @@ public abstract class InputSplitter {
 
 		val splits_per_place = (splits.size()+teamSize-1) / teamSize;
 		team.placeGroup().broadcastFlat(() => {
-			val role = team.role()(0);
-			val splits_begin = Math.min(role * splits_per_place, splits.size());
-			val splits_end = Math.min((role + 1) * splits_per_place, splits.size());
-			val splits_here = splits.raw().subpart(splits_begin, splits_end - splits_begin);
-			
-			new SplitterContext(splits_here, parse, nthreads).split();
+			try {
+				val role = team.role()(0);
+				val splits_begin = Math.min(role * splits_per_place, splits.size());
+				val splits_end = Math.min((role + 1) * splits_per_place, splits.size());
+				val splits_here = splits.raw().subpart(splits_begin, splits_end - splits_begin);
+				
+				new SplitterContext(splits_here, parse, nthreads).split();
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 			
 		});
 	}
