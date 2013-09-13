@@ -89,14 +89,16 @@ public class CSVWriter {
 		}
 		
 		private def subtask() {
-			for(tid in frontBuffer.range()) {
-				val bytes = frontBuffer(tid).result().bytes();
-			//	STest.println(here.id + " => Write " + bytes.size() + " bytes");
-				fw.write(bytes);
-				frontBuffer(tid).clear();
-			}
-			
-			notifySubtaskCompletion();
+			try {
+				for(tid in frontBuffer.range()) {
+					val bytes = frontBuffer(tid).result().bytes();
+				//	STest.println(here.id + " => Write " + bytes.size() + " bytes");
+					fw.write(bytes);
+					frontBuffer(tid).clear();
+				}
+				
+				notifySubtaskCompletion();
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		}
 		
 		public def write(numLines :Long) {
@@ -127,38 +129,40 @@ public class CSVWriter {
 		val dmc = data.data();
 		
 		team.placeGroup().broadcastFlat(() => {
-			val teamRole = team.role()(0);
-			val teamSize = team.size();
-			
-			val makeStringClosures = new GrowableMemory[(sb :SStringBuilder, idx :Long) => void]();
-
-			if(putIdFlag){
-				makeStringClosures.add((sb :SStringBuilder, idx :Long) => {
-					val id = idx * teamSize + teamRole;
-					sb.add(id);
-				});
-			}
-			for (i in 0..(colNum-1)) {
-				makeStringClosures.add(atts(i).makeStringClosure(dmc(i)));
-			}
-			
-			val fw = fman.openWrite(teamRole);
-			
-			if (teamRole == 0){
-				// write header
-				val ssb = new SStringBuilder();
+			try {
+				val teamRole = team.role()(0);
+				val teamSize = team.size();
+				
+				val makeStringClosures = new GrowableMemory[(sb :SStringBuilder, idx :Long) => void]();
+	
 				if(putIdFlag){
-					ssb.add("\"ID <Long>\" , ");
+					makeStringClosures.add((sb :SStringBuilder, idx :Long) => {
+						val id = idx * teamSize + teamRole;
+						sb.add(id);
+					});
 				}
 				for (i in 0..(colNum-1)) {
-					ssb.add("\"" + data.name()(i) + " <" + Type.typeNameStr(data.typeId()(i) ) + ">\"" + ( i != colNum-1 ?  " , " : "\n"));
+					makeStringClosures.add(atts(i).makeStringClosure(dmc(i)));
 				}
-				fw.write(ssb.result().bytes());
-			}
-			
-			val writer = new ParallelWriter(fw, makeStringClosures.raw());
-			writer.write(atts(0).localSizeOf(dmc(0)));
-			fw.close();
+				
+				val fw = fman.openWrite(teamRole);
+				
+				if (teamRole == 0){
+					// write header
+					val ssb = new SStringBuilder();
+					if(putIdFlag){
+						ssb.add("\"ID <Long>\" , ");
+					}
+					for (i in 0..(colNum-1)) {
+						ssb.add("\"" + data.name()(i) + " <" + Type.typeNameStr(data.typeId()(i) ) + ">\"" + ( i != colNum-1 ?  " , " : "\n"));
+					}
+					fw.write(ssb.result().bytes());
+				}
+				
+				val writer = new ParallelWriter(fw, makeStringClosures.raw());
+				writer.write(atts(0).localSizeOf(dmc(0)));
+				fw.close();
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
 
