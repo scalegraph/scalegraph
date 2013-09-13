@@ -53,9 +53,12 @@ final class SpectralClusteringTest extends STest {
 		if(mode.equals("rmat")) {
 			val scale = Int.parse(arglist.removeFirst());
 			val edgeFactor = Int.parse(arglist.removeFirst());
+			val a = Double.parse(arglist.removeFirst());
+			val b = Double.parse(arglist.removeFirst());
+			val c = Double.parse(arglist.removeFirst());
 			
 			val rnd = new Random(2, 3);
-			val edgelist = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
+			val edgelist = GraphGenerator.genRMAT(scale, edgeFactor, a, b, c, rnd);
 			// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 			val weight = new DistMemoryChunk[Double](team.placeGroup(),
 					() => new MemoryChunk[Double](edgelist.src().size(), (Long) => 1.0));
