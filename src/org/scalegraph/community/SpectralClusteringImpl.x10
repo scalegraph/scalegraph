@@ -228,7 +228,7 @@ final public class SpectralClusteringImpl {
 			
 			// create initial centroids
 			// if(team.role()(0) == 0) Console.OUT.println("create initial centroids");
-			val r = new x10.util.Random();
+			val r = new x10.util.Random(2L);
 			for(j in 0..(k-1)) {
 				val i = r.nextLong(nloc);
 				for(l in 0..(k-1)) {

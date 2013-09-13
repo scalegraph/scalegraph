@@ -14,6 +14,7 @@ import x10.util.ArrayList;
 import x10.util.Team;
 
 import org.scalegraph.Config;
+import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.test.STest;
 import org.scalegraph.api.SpectralClustering;
 import org.scalegraph.blas.DistSparseMatrix;
@@ -31,72 +32,26 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.tuple.Tuple3;
 
 
-final class SpectralClusteringTest extends STest {
+final class SpectralClusteringTest extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
 		new SpectralClusteringTest().execute(args);
 	}
 
-	public def run(args :Array[String](1)): Boolean {
+	public def run(args :Array[String](1), g : Graph): Boolean {
 		val config = Config.get();
 		val team = config.worldTeam();
 		val dist = config.dist2d();
 		
-		val arglist = new ArrayList[String]();
-		for(v in args.values()) arglist.add(v);
-		
-		val sw = new MyStopWatch();
-		sw.start("graph generation");
-		
-		var g:Graph = null;
-		
-		val mode = arglist.removeFirst();
-		if(mode.equals("rmat")) {
-			val scale = Int.parse(arglist.removeFirst());
-			val edgeFactor = Int.parse(arglist.removeFirst());
-			val a = Double.parse(arglist.removeFirst());
-			val b = Double.parse(arglist.removeFirst());
-			val c = Double.parse(arglist.removeFirst());
-			
-			val rnd = new Random(2, 3);
-			val edgelist = GraphGenerator.genRMAT(scale, edgeFactor, a, b, c, rnd);
-			// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
-			val weight = new DistMemoryChunk[Double](team.placeGroup(),
-					() => new MemoryChunk[Double](edgelist.src().size(), (Long) => 1.0));
-
-			g = Graph.make(edgelist);
-			g.setEdgeAttribute("edgevalue", weight);
-			
-		} else if(mode.equals("file")) {
-			val fileList = [arglist.removeFirst() as String];
-			val tuple2 = DistributedReader.read(fileList, (line:String) => {
-				val list = line.split(" ");
-				Tuple3[Long, Long, Double](Long.parse(list(0)), Long.parse(list(1)), 1.0)
-			});
-			val splittedEdgeList = split(team, tuple2.get1().raw(team.placeGroup()));
-			val edgelist = EdgeList[Long](splittedEdgeList.get1(), splittedEdgeList.get2());
-			val weight = tuple2.get2().raw(team.placeGroup());
-			
-			g = Graph.make(edgelist);
-			g.setEdgeAttribute("edgevalue", weight);
-		}
-		
-		return run(g, arglist, sw);
-	}
-	
-	public def run(g :Graph, arglist :ArrayList[String], sw :MyStopWatch): Boolean {
-		val config = Config.get();
-		val team = config.worldTeam();
-		val dist = config.dist2d();
-		
-		val numCluster = Int.parse(arglist.removeFirst());
-		val tolerance = Double.parse(arglist.removeFirst());
-		val maxitr = Int.parse(arglist.removeFirst());
-		val threshold = Double.parse(arglist.removeFirst());
+		val numCluster = Int.parse(args(0));
+		val tolerance = Double.parse(args(1));
+		val maxitr = Int.parse(args(2));
+		val threshold = Double.parse(args(3));
 		
 		Console.OUT.println("vertices = " + g.numberOfVertices());
 		Console.OUT.println("edges    = " + g.numberOfEdges());
 		
-		sw.next("spectral clustering");
+		val sw = new MyStopWatch();
+		sw.start("spectral clustering");
 		
 		val result = SpectralClustering.run(g, "edgevalue", numCluster, tolerance, maxitr, threshold);
 		
@@ -104,7 +59,7 @@ final class SpectralClusteringTest extends STest {
 		
 		//DistributedReader.write("outvec-%d.txt", result);
 		
-		sw.next("normalized cut");
+		sw.next("validation");
 		
 		val W = g.createDistSparseMatrix[Double](dist, "edgevalue", false, false);
 		val ncut = normalizedCut(W, result, numCluster);
