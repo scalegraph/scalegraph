@@ -8,7 +8,4 @@
  *
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-package org.scalegraph.io;
-
-public class SimpleTextReader {
-}
+#include <mpi.h>

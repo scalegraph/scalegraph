@@ -89,7 +89,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 			super(path);
 		}
 		public def isScattered() = true;
-		public def fileName(index :Int) = SString.format("%s/part-%05d" as SString, path, index);
+		public def fileName(index :Int) = SString.format("%s/part-%05d" as SString, path.c_str(), index);
 		public def mkdir() {
 			(new File(path.toString())).mkdirs();
 		}
@@ -120,10 +120,14 @@ public abstract class FileNameProvider implements Iterable[SString] {
 			return new NumberScatteredFileNameProvider(path);
 		}
 		if(isRead) {
-			if(new File(path.toString()).isFile()) {
+			val file = new File(path.toString());
+			if(file.isFile()) {
 				return new SingleFileNameProvider(path);
 			}
-			return new DirectoryScatteredFileNameProvider(path);
+			if(file.isDirectory()) {
+				return new DirectoryScatteredFileNameProvider(path);
+			}
+			throw new IllegalArgumentException("Provided path does not name a file nor a directory.");
 		}
 		else {
 			if(scattered) {

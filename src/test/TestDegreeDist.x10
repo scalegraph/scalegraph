@@ -15,8 +15,10 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
-import org.scalegraph.harness.sx10Test;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.test.STest;
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.SparseMatrix;
@@ -24,7 +26,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.DegreeDistribution;
 
-final class TestDegreeDist extends sx10Test {
+final class TestDegreeDist extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestDegreeDist().execute(args);
 	}
@@ -52,24 +54,17 @@ final class TestDegreeDist extends sx10Test {
             return false;
         }
         val team = Team.WORLD;
-        val fileList = new Array[String](1);
-        fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(fileList, inputFormat);
-        
-        // Create graph
-        val edgeList = rawData.get1();
-        val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.raw(team.placeGroup()));
+        val g = Graph.make(SimpleText.read(args(0), inputFormat));
         
         val indegResult = new DegreeDistribution(DegreeDistribution.IN_DEGREE).execute(g);
         val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
         val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
 
-        DistributedReader.write("out/indeg-%d", indegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/outdeg-%d", outdegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/inoutdeg-%d", inOutdegResult.raw(team.placeGroup()));
+        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]),true);
+        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]),true);
+        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]),true);
         
         return true;
     }

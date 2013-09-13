@@ -24,37 +24,45 @@ import x10.compiler.Inline;
  */
 final public class MaxFlow {
     
+    /**
+     * A class storing the result from MaxFlow
+     */
+    public static struct Result (maxiMumFlow: Long){
+       protected def this(mf: Long) {
+           property(mf);
+       }
+    }
     
     /** Calculate the maximum flow between two vertices
      * @param g The graph object
      * @return A long integer, the value of the maximum flow
      */
-    public def execute(g :Graph): Long {
+    public def execute(g :Graph): Result {
         throw new UnsupportedOperationException();
 
     }
     
    
-    public def execute(matrix :DistSparseMatrix[Double]): Long {
+    public def execute(matrix :DistSparseMatrix[Double]): Result {
         throw new UnsupportedOperationException();
     }
     
 
-    public static def run(g :Graph): Long {
+    public static def run(g :Graph): Result {
         throw new UnsupportedOperationException();
     }
     
-    public static def run(matrix :DistSparseMatrix[Double]): Long {
+    public static def run(matrix :DistSparseMatrix[Double]): Result {
         throw new UnsupportedOperationException();
     }
     
-    private static def execute(inst: DegreeDistribution, g :Graph): Long {
+    private static def execute(inst: DegreeDistribution, g :Graph): Result {
         throw new UnsupportedOperationException();
     }
     
     // Interface between API and Impl
     @Inline
-    private static def run(matrix :DistSparseMatrix[Long]): Long {
+    private static def run(matrix :DistSparseMatrix[Long]): Result {
         throw new UnsupportedOperationException();
     }
 }

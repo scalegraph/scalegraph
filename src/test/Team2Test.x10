@@ -15,11 +15,11 @@ import x10.util.Team;
 import x10.util.Timer;
 import x10.util.StringBuilder;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 
-final class Team2Test extends sx10Test {
+final class Team2Test extends STest {
 	public static def main(args: Array[String](1)) {
 		new Team2Test().execute(args);
 	}
