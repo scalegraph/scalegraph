@@ -13,11 +13,11 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 
-final class TestDistributedReader extends sx10Test {
+final class TestDistributedReader extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestDistributedReader().execute(args);
 	}

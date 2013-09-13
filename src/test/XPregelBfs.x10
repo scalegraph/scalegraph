@@ -10,7 +10,7 @@
  */
 package test;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.Config;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
@@ -22,7 +22,7 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 
-final class XPregelBfs extends sx10Test {
+final class XPregelBfs extends STest {
 	public static def main(args: Array[String](1)) {
 		new XPregelBfs().execute(args);
 	}

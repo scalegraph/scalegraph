@@ -9,13 +9,13 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package org.scalegraph.harness;
+package org.scalegraph.test;
 
 import x10.util.StringBuilder;
 import x10.io.Console;
 import org.scalegraph.util.SString;
 
-abstract public class sx10Test {
+abstract public class STest {
 	private static val buffer = new StringBuilder();
 	private static val linebreak = "\n    "; // 4 space
 
