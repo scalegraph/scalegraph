@@ -1,8 +1,33 @@
 #!/bin/env python
 import subprocess as SProc
 import yaml,re
+import contextlib
 from os import path
 import os
+import TAP
+
+tap=None
+##kriiyamaのテスト用の変数
+TestFile=os.environ["HOME"]+"/Develop/ScaleGraph/src/test/GraphTest.x10"
+
+TestWorkDir= os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
+SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
+def runBuild():
+    global tap
+    tap  = TAP.Builder.create(1)
+    build_test("GraphTest",TestFile,TestWorkDir,SrcDir)
+
+def genHostFile(file,dest,numHosts,duplicates):
+    with open(file) as file:
+        hosts = file.readlines()
+    newhosts=[]
+    for n in numHosts:
+        for _ in range(duplicates):
+            newhosts.append(hosts[n])
+    with opne(dest,'w') as file:
+        for host in newhosts:
+            file.write(host)
+    
 
 def getMPISettings(mpi,attr):
     """
@@ -33,12 +58,11 @@ def loadFromYaml(filename,testcase="small"):
     @param filename 読み込むファイル名
     @param testcase テストケースの名前
     """
-    file = open(filename)
-    loadedData=yaml.load(file.read())
-    file.close()
-    if loadedData.has_key(testcase) :
+    with open(filename) as file : 
+        loadedData=yaml.load(file.read())
+    if testcase in loadedData:
         attribute=loadedData[testcase]
-    elif loadedData.has_key("small"): 
+    elif 'small' in loadedData: 
         attribute=loadedData["small"]
     else:
         print("No valid test case in " + filename)
@@ -63,57 +87,86 @@ def initDir(workdir):
     for directory in dirs:
         if not path.isdir(workdir+directory):
             os.mkdir(workdir+directory)
+
+
+def initTap(testNum,tapBulider):
+    """
+    @param testNum テストの個数を指定する
+    """
     
+                
 def x10outToYaml(src,dst):
     """
     @param src 入力ファイルパス
     @param dst 出力先のファイルパス
     """
-    x10out2yaml = "./iyuuscripts/"
+    x10out2yaml = "./iyuuscripts/x10output2yaml.sh"
     inFile = open(src,'r')
     outFile = open(dst,'w')
-    with SProc.Popen(["cat","src"],stdin=inFile,stdout=SProc.PIPE) as cat:
-        with SProc.Popen(["sed","-e",
-            r"s/^.*\/workspace\/src\(\/.*\)$/\1/"],
-        stdin=cat.stdout,stdout=SProc.PIPE) as sed:
-            SProc.call([x10out2yaml],
-                       stdin=sed.stdout,
-                       stdout=outFile)
+    with contextlib.ExitStack() as stack:
+        cat = stack.enter_context(SProc.Popen(["cat",src],stdin=inFile,stdout=SProc.PIPE))
+        sed = stack.enter_context(SProc.Popen(["sed","-e",r"s/^.*\/workspace\/src\(\/.*\)$/\1/"],stdin=cat.stdout,stdout=SProc.PIPE))
+        SProc.call([x10out2yaml],stdin=sed.stdout,stdout=outFile)
 
-
-def run_test(name, describe,mpi,testcase,attributes):
+def run_test_dummy(name,describe,mpi,attribute):
+    print("-------------------------------")
+    print("run_test_dummy method")
+    print("args:")
+    print("    moduleName:"+name)
+    print("    describe:"+describe)
+    print("    mpi:"+mpi)
+    print("    attribute"+str(attribute))
+    print("-------------------------------")
+    
+def run_test(name,describe,mpi,attributes):
     (env,args) = getMPISettings(mpi,attributes)
+    args = list(map(os.path.expandvars,args))
+    
+    if "WORKSPACE" not in os.environ:
+        print("evnvironment value \"WORKSPACE\" is undefined.\
+        please set. ")
+        return
     for k,v in env:
         os.environ[k] = v
-    runCmd=["mpirun", "-n", "8", "-hosts",
+    runCmd = ["mpirun", "-n", "8", "-hosts",
              "st01,st02,st03,st04,st05,st06,st07,st08",
-              "$WORKSPACE/bin/$NAME"]
+             os.environ["WORKSPACE"]+"/bin/$NAME"] \
+             + args
+    runResult = SProc.call(runCmd)
+    tap.ok(runResult == 0, name + " " + describe)
     
-def build_test(name,moduleName,workingDir="./"):
+def build_test_dummy(name,workingDir="./"):
+    print("----------------------------")
+    print("build_test_dummy() is called")
+    print("args:")
+    print("    moduleName:"+name)
+    print("    workingDir:"+workingDir)
+    print("----------------------------")
+    
+def build_test(name,x10file,workingDir,srcDir):
     """
-    @param name      ビルドするモジュールの名前
+    @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
     @param describe  実行中のジョブの説明
     """
-    bindir = workingDir + "bin/"
-    logdir = workingDir + "log/"
-    outputdir = workingDir + "output/"
+    bindir = workingDir + "/bin/"
+    logdir = workingDir + "/log/"
+    
+    outputdir = workingDir + "/output/"
     outFileName = outputdir + "output-build-" + name + ".txt"
     yamlFileName = outputdir + "output-build-" + name + ".yaml"
+    
     X10CXX = "x10c++"
     buildCmd = [X10CXX, "-cxx-prearg", "-g", "-x10rt", "mpi",
-                "-o", bindir + moduleName]
-    logFile = open(logdir+"buildlog-"+name+".log",'r+')
-    errFile = open(outFileName,'r+')
-    buildResult = SProc.call(buildCmd,
-                             stdout=logFile,stderr=errFile)
+                "-sourcepath",srcDir, "-o", bindir + name, x10file]
+    logFile = open(logdir+"buildlog-"+name+".log",'w')
+    errFile = open(outFileName,'w')
 
+    buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
-
-    tapFile = open(yamlFileName,'a')
-    if buildResult == 0:
-        tapFile.write("ok 1 - "+ moduleName +" "+ errors + "\n")
-    else:
-        tapFile.write("not ok 1 - "+ moduleName + " " + errors + "\n")
-    tapFile.write("  ---\n")
+    tap.ok(buildResult == 0,name+".x10 "+errors.decode()) #buildResult == 0 ならビルドに成功
+    print("   ---")
+    with open(yamlFileName) as yamlFile:
+        for line in yamlFile.readlines():
+            print("    "+line,end="")
     return buildResult
