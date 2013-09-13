@@ -79,25 +79,21 @@ public class SimpleTextWriter {
 				if(numColumns == 0L) return ;
 				for(i in r) {
 					strClousure(0)(buf,i);
-					/*					for(c in 0..(numColumns-2)) {
-					 * strClousure(c)(buf, i);
-					 * buf.add(',');
-					 * }
-					 * strClousure(numColumns-1)(buf, i);
-					 * buf.add('\n');
-				 */				}
+				}
 			});
 		}
 		
 		private def subtask() {
-			for(tid in frontBuffer.range()) {
-				val bytes = frontBuffer(tid).result().bytes();
-				//	STest.println(here.id + " => Write " + bytes.size() + " bytes");
-				fw.write(bytes);
-				frontBuffer(tid).clear();
-			}
+			try {
+				for(tid in frontBuffer.range()) {
+					val bytes = frontBuffer(tid).result().bytes();
+					//	STest.println(here.id + " => Write " + bytes.size() + " bytes");
+					fw.write(bytes);
+					frontBuffer(tid).clear();
+				}
 			
-			notifySubtaskCompletion();
+				notifySubtaskCompletion();
+			} catch (e :CheckedThrowable) {e.printStackTrace(); }
 		}
 		
 		public def write(numLines :Long) {
@@ -130,35 +126,27 @@ public class SimpleTextWriter {
 		val dmc = data.data();
 		
 		team.placeGroup().broadcastFlat(() => {
-			val teamRole = team.role()(0);
-			val teamSize = team.size();
-			
-			val makeStringClosures = new GrowableMemory[(sb :SStringBuilder, idx :Long) => void]();
-
-			//			for (i in 0..(colNum-1)) {
-			//				makeStringClosures.add(att.makeStringClosure(kuro,dmc(0),dmc(1),dmc(2) ));
-			val mc1 = dmc(0) as DistMemoryChunk[Long]; val mc2 = dmc(1) as DistMemoryChunk[Long]; val mc3 = dmc(2) as DistMemoryChunk[T];
-			makeStringClosures.add( (sb :SStringBuilder, idx :Long) => { sb.add( kuro(mc1()(idx),mc2()(idx),mc3()(idx) ) ); } );
-			//			}
-			
-			val fw = fman.openWrite(teamRole);
-			
-			if (teamRole == 0){
-				// write header
-				val ssb = new SStringBuilder();
-				for (i in 0..(colNum-1)) {
-					if( data.typeId()(i) == Type.String ){
-						ssb.add("\"" + data.name()(i) + "<" + Type.typeNameStr(data.typeId()(i) ) + ">\"" + ( i != colNum-1 ?  "," : "\n"));
-					}else{
-						ssb.add("" + data.name()(i) + "<" + Type.typeNameStr(data.typeId()(i) ) + ">" + ( i != colNum-1 ?  "," : "\n"));
-					}
+			try {
+				val teamRole = team.role()(0);
+				val teamSize = team.size();
+				
+				val makeStringClosures = new GrowableMemory[(sb :SStringBuilder, idx :Long) => void]();
+	
+				val mc1 = dmc(0) as DistMemoryChunk[Long]; val mc2 = dmc(1) as DistMemoryChunk[Long]; val mc3 = dmc(2) as DistMemoryChunk[T];
+				makeStringClosures.add( (sb :SStringBuilder, idx :Long) => { sb.add( kuro(mc1()(idx),mc2()(idx),mc3()(idx) ) ); } );
+				//			}
+				
+				val fw = fman.openWrite(teamRole);
+				
+				if (teamRole == 0){
+					// write header
+					fw.write(header.bytes());
 				}
-				fw.write(ssb.result().bytes());
-			}
-			
-			val writer = new ParallelWriter[T](fw, makeStringClosures.raw());
-			writer.write(atts(0).localSizeOf(dmc(0)));
-			fw.close();
+				
+				val writer = new ParallelWriter[T](fw, makeStringClosures.raw());
+				writer.write(atts(0).localSizeOf(dmc(0)));
+				fw.close();
+			} catch (e :CheckedThrowable) {e.printStackTrace(); }
 		});
 	}
 
