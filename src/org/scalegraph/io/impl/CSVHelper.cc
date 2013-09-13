@@ -232,8 +232,9 @@ Tuple2<x10_long, x10_long> LineEndAndNextBreak(MemoryChunk<x10_byte> data, x10_l
 	bool cr = false;
 	for( ; ; ++ptr) {
 		if(ptr == end) {
-			x10_long off = end - start;
-			return Tuple2<x10_long, x10_long>::_make(off, off);
+			return Tuple2<x10_long, x10_long>::_make(
+					end - (cr ? 1 : 0) - start,
+					end - start);
 		}
 		if(*ptr == '\r') {
 			cr = true;
