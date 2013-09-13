@@ -53,7 +53,7 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		val sw = new MyStopWatch();
 		sw.start("spectral clustering");
 		
-		val result = SpectralClustering.run(g, "edgevalue", numCluster, tolerance, maxitr, threshold);
+		val result = SpectralClustering.run(g, "weight", numCluster, tolerance, maxitr, threshold);
 		
 		//sw.next("output");
 		
@@ -61,7 +61,7 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		
 		sw.next("validation");
 		
-		val W = g.createDistSparseMatrix[Double](dist, "edgevalue", false, false);
+		val W = g.createDistSparseMatrix[Double](dist, "weight", false, false);
 		val ncut = normalizedCut(W, result, numCluster);
 		Console.OUT.println("ncut = " + ncut);
 		
