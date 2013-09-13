@@ -81,7 +81,7 @@ public class HyperANF {
 		
 		xpregel.updateInEdge();
 		
-		val N:Long = g.numberOfVertices();
+		val N:Long = graph.numberOfVertices();
 		val B = 7;
 		val M = 1<<B;
 
@@ -173,10 +173,11 @@ public class HyperANF {
 	public def execute(g :Graph) {	
 		throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
-		this.team = g.team();	
+	/*	this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, true);
 		return execute(matrix);
+		 * */
 	}
 
 
@@ -188,7 +189,6 @@ public class HyperANF {
 	public static def run(g :Graph) {
 		throw new UnsupportedOperationException();
 		//new StronglyConnectedComponent().execute(g);
-		}
 	}
 	
 	/** Run the calculation of StronglyConnectedComponent with default parameters.

@@ -51,10 +51,10 @@ public final class StronglyConnectedComponent {
 	 */
 	public static struct Result (
 			cluster: Long,
-			dmc1 :DistMemoryChunk[Double],
-			dmc2 :DistMemoryChunk[Double]
+			dmc1 :DistMemoryChunk[Long],
+			dmc2 :DistMemoryChunk[Long]
 	) {
-		protected def this(cl: Long, dmc1 :DistMemoryChunk[Double], dmc2 :DistMemoryChunk[Double]) {
+		protected def this(cl: Long, dmc1 :DistMemoryChunk[Long], dmc2 :DistMemoryChunk[Long]) {
 			property(cl, dmc1, dmc2);
 		}
 	}
@@ -126,9 +126,9 @@ public final class StronglyConnectedComponent {
 		
 		val blockLength = 3L;
 
-		val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 		val xpregel = new XPregelGraph[SCCVertex, Long](csr);
-		val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
+		val edgeValue = graph.createDistAttribute[Double](csr, false, "weight");
 		
 		
 		xpregel.updateInEdge();
@@ -364,13 +364,14 @@ public final class StronglyConnectedComponent {
 	/** Run the calculation of StronglyConnectedComponent.
 	 * @param g The graph object. 
 	 */
-	public def execute(g :Graph) {	
+	public def execute(g :Graph) :Result {	
 		throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
-		this.team = g.team();	
+/*		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Long](
 				Config.get().distXPregel(), weights, directed, true);
 		return execute(matrix);
+		 * */
 	}
 
 
@@ -379,17 +380,17 @@ public final class StronglyConnectedComponent {
 	/** Run the calculation of StronglyConnectedComponent with default parameters.
 	 * @param g The graph object. 
 	 */
-	public static def run(g :Graph) {
+	public static def run(g :Graph) :Result {
 		throw new UnsupportedOperationException();
 		//new StronglyConnectedComponent().execute(g);
-		}
+		
 	}
 	
 	/** Run the calculation of StronglyConnectedComponent with default parameters.
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
-	public static def run(matrix :DistSparseMatrix[Long]) {
+	public static def run(matrix :DistSparseMatrix[Long]) :Result {
 		throw new UnsupportedOperationException();
 		//new StronglyConnectedComponent().execute(matrix);
 	}
