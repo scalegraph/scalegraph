@@ -14,7 +14,7 @@ import x10.util.ArrayList;
 import x10.util.Team;
 
 import org.scalegraph.Config;
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.api.SpectralClustering;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.fileread.DistributedReader;
@@ -31,7 +31,7 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.tuple.Tuple3;
 
 
-final class SpectralClusteringTest extends sx10Test {
+final class SpectralClusteringTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new SpectralClusteringTest().execute(args);
 	}
