@@ -8,11 +8,11 @@ import x10.compiler.NativeCPPCompilationUnit;
 @NativeCPPCompilationUnit("NativeARPACK.cc")
 public class ARPACK {
 	
-	public static val LA:Int = 1;                 // Largest Algebraic
-	public static val SA:Int = 2;                 // Smallest Algebraic
-	public static val LM:Int = 3;                 // Largest Magnitude
-	public static val SM:Int = 4;                 // Smallest Magnitude
-	public static val BE:Int = 5;                 // Both End
+	public static val LA:Int = 0;                 // Largest Algebraic
+	public static val SA:Int = 1;                 // Smallest Algebraic
+	public static val LM:Int = 2;                 // Largest Magnitude
+	public static val SM:Int = 3;                 // Smallest Magnitude
+	public static val BE:Int = 4;                 // Both End
 	
 	public static class Params {
 		public var nev:Int = 1;                   // number of eigenvalues to compute (satisfy 0 < nev < n)

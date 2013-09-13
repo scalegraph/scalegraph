@@ -8,67 +8,45 @@
  * 
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-package test;
+package org.scalegraph.community;
 
 import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
 import x10.util.Team;
 
-import org.scalegraph.test.STest;
+import org.scalegraph.Config;
 import org.scalegraph.arpack.ARPACK;
 import org.scalegraph.blas.BLAS;
 import org.scalegraph.blas.DistDiagonalMatrix;
 import org.scalegraph.blas.DistSparseMatrix;
-import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.GraphGenerator;
-import org.scalegraph.util.*;
-import org.scalegraph.util.random.*;
-import org.scalegraph.util.tuple.*;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.MathAppend;
+import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Team2;
 
 
 @NativeCPPInclude("mpi.h")
-final class SpectralClustering extends STest {
-	public static def main(args: Array[String](1)) {
-		new SpectralClustering().execute(args);
-	}
-
-	public def run(args :Array[String](1)): Boolean {
-		val team = Team.WORLD;
-		val scale = Int.parse(args(0));         // scale of RMAT graph
-		val edgeFactor = Int.parse(args(1));    // edge factor of RMAT graph
-		val numCluster = Int.parse(args(2));    // number of clusters
-		val tolerance = Double.parse(args(3));  // tolerance of ARPACK
-		val maxitr = Int.parse(args(4));        // max number of iteration in k-means
-		val threshold = Double.parse(args(5));  // threshold for convergence test in k-means
+final public class SpectralClusteringImpl {
+	
+	private def this() {}
+	
+	public static def run(g : Graph, attrName : String, numCluster : Int,
+			tolerance : Double, maxitr : Int, threshold : Double): DistMemoryChunk[Int] {
+		val config = Config.get();
+		val team = config.worldTeam();
+		val dist = config.dist2d();
 		
-		val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
-		val C = team.size() / R;
-		val RC = R * C;
-		val dist = Dist2D.make2D(team, R, C);
+		//Console.OUT.println(dist);
+		//Console.OUT.println("vertices = " + g.numberOfVertices());
+		//Console.OUT.println("edges    = " + g.numberOfEdges());
 		
 		val sw = new MyStopWatch();
+		sw.start("create affinity matrix");
 		
-		Console.OUT.println(dist);
-		Console.OUT.println("Graph generation ...");
-		
-		sw.start("graph generation");
-		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
-		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
-		val weight = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](edgelist.src().size(), (Long) => 1.0));
-
-		val g = Graph.make(edgelist);
-		g.setEdgeAttribute("edgevalue", weight);
-		Console.OUT.println("vertices = " + g.numberOfVertices());
-		Console.OUT.println("edges    = " + g.numberOfEdges());
-		
-		sw.next("create matrix");
-		
-		val W = g.createDistSparseMatrix[Double](dist, "edgevalue", false, false);
-		//printIdStruct(W.ids());
-		//printSparseMatrix(team, W);
+		val W = g.createDistSparseMatrix[Double](dist, attrName, false, false);
 		val N = W.ids().numberOfLocalVertexes2N();
 		val D = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](N, (Long) => 1.0));
 		BLAS.mult[Double](1.0, W, true, D, 0.0, D);
@@ -93,21 +71,17 @@ final class SpectralClustering extends STest {
 		
 		val result = kmeans(team, V, numCluster, maxitr, threshold);
 		
-		sw.next("output");
-		
-		DistributedReader.write("outvec-%d.txt", result);
-		
 		sw.end();
 		sw.print();
 		
-		return true;
+		return result;
 	}
 	
 	
 	/*
 	 * returns row-major dense matrix whose columns are nev eigenvectors
 	 */
-	static def calcEigenVectors(team : Team, A : DistSparseMatrix[Double], params : ARPACK.Params) : DistMemoryChunk[Double] {
+	private static def calcEigenVectors(team : Team, A : DistSparseMatrix[Double], params : ARPACK.Params) : DistMemoryChunk[Double] {
 		
 		assert(team.equals(Team.WORLD));  // current limitation
 		
@@ -163,9 +137,9 @@ final class SpectralClustering extends STest {
 			
 			var iter:Int = 0;
 			while(true) {
-				if(role == 0 && iter % 100 == 0) {
-					Console.OUT.println("iter = " + iter);
-				}
+				//if(role == 0 && iter % 100 == 0) {
+				//	Console.OUT.println("iter = " + iter);
+				//}
 				iter++;
 				
 				ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
@@ -233,7 +207,7 @@ final class SpectralClustering extends STest {
 	/*
 	 * It's better to implement Kmeans++ method.
 	 */
-	static def kmeans(team : Team, dmc : DistMemoryChunk[Double], k : Int, maxitr : Int, threshold : Double) : DistMemoryChunk[Int] {
+	private static def kmeans(team : Team, dmc : DistMemoryChunk[Double], k : Int, maxitr : Int, threshold : Double) : DistMemoryChunk[Int] {
 		assert(dmc().size() % k == 0L);
 		val team2 = new Team2(team);
 		val root = team.role()(0);
@@ -243,6 +217,8 @@ final class SpectralClustering extends STest {
 		val count = new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](k));
 		
 		team2.placeGroup().broadcastFlat(() => {
+			//Console.OUT.println(here + ": K-means started");
+			
 			val nloc = dmc().size() / k;
 			val mc = dmc();
 			val lassign = assign();
@@ -262,6 +238,7 @@ final class SpectralClustering extends STest {
 			}
 			
 			for(itr in 1..maxitr) {
+				if(team.role()(0) == 0) Console.OUT.println("itr = " + itr);
 				
 				// reduce centroids
 				// if(team.role()(0) == 0) Console.OUT.println("reduce centroids");
@@ -328,27 +305,12 @@ final class SpectralClustering extends STest {
 					lcount(best)++;
 				}
 			}
+			//Console.OUT.println(here + ": K-means finished");
 		});
 		
 		return assign;
 	}
 	
-	static def printSparseMatrix(team:Team, A:DistSparseMatrix[Double]) : void {
-		for(p in team.placeGroup()) at(p) {
-			val offsets = A().offsets;
-			val vertexes = A().vertexes;
-			val values = A().values;
-			Console.OUT.println("****** SparseMatrix(" + team.role()(0) + ") ******");
-			Console.OUT.println(offsets);
-			Console.OUT.println(vertexes);
-			Console.OUT.println(values);
-			Console.OUT.println("*****************************");
-		}
-	}
-	
-	static def printIdStruct(ids:org.scalegraph.graph.id.IdStruct) : void {
-		Console.OUT.println("[" + ids.lgl + ", " + ids.lgc + ", " + ids.lgr + "]");
-	}
 }
 
 
