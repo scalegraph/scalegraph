@@ -13,6 +13,7 @@ package org.scalegraph.io.impl;
 import x10.util.Team;
 import x10.util.concurrent.Monitor;
 
+import org.scalegraph.test.STest;
 import org.scalegraph.util.SString;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
@@ -24,8 +25,6 @@ import org.scalegraph.io.NamedDistData;
 import org.scalegraph.id.Type;
 import org.scalegraph.io.FileWriter;
 
-//@NativeCPPInclude("CSVHelper.h")
-//@NativeCPPCompilationUnit("CSVHelper.cc") 
 public class CSVWriter {
 	/*hedder 1 line
 	 * string with double quotation 
@@ -34,7 +33,7 @@ public class CSVWriter {
 	 * file num = place num ( each place writes files)
 	 * */
 	
-	public static CHUNK_SIZE = 1*1024;
+	public static CHUNK_SIZE = 128*1024;
 
 	private static class ParallelWriter {
 		private var frontBuffer :MemoryChunk[SStringBuilder];
@@ -91,7 +90,9 @@ public class CSVWriter {
 		
 		private def subtask() {
 			for(tid in frontBuffer.range()) {
-				fw.write(frontBuffer(tid).result().bytes());
+				val bytes = frontBuffer(tid).result().bytes();
+			//	STest.println(here.id + " => Write " + bytes.size() + " bytes");
+				fw.write(bytes);
 				frontBuffer(tid).clear();
 			}
 			
@@ -100,7 +101,7 @@ public class CSVWriter {
 		
 		public def write(numLines :Long) {
 			val nthreads = Runtime.NTHREADS;
-			for(var start :Long = 0; start < numLines; start += CHUNK_SIZE * nthreads) {
+			finish for(var start :Long = 0; start < numLines; start += CHUNK_SIZE * nthreads) {
 				val end = MathAppend.min(start + CHUNK_SIZE * nthreads, numLines) - 1;
 				makeString(start..end);
 				cycleBuffers(1);
