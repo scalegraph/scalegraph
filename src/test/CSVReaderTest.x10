@@ -45,6 +45,14 @@ final class CSVReaderTest extends STest {
 			CSV.write("csvwTest", nd, true);
 			
 		}else if(mode==3){
+			val colTypes = [Type.Long as Int, Type.Long];
+			val nd = CSV.read(args(0), colTypes, false);
+			Console.OUT.println("twitest");
+			Console.OUT.println(nd.name());
+			
+	//		CSV.write("csvwTest", nd, true);
+			
+		}else if(mode==4){
 			val O  = new File("fileouttest");
 			val P    = O.printer();
 			for( i in 0..2090000){

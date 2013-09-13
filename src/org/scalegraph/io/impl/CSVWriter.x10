@@ -148,10 +148,14 @@ public class CSVWriter {
 				// write header
 				val ssb = new SStringBuilder();
 				if(putIdFlag){
-					ssb.add("\"ID <Long>\" , ");
+					ssb.add("ID <Long>,");
 				}
 				for (i in 0..(colNum-1)) {
-					ssb.add("\"" + data.name()(i) + " <" + Type.typeNameStr(data.typeId()(i) ) + ">\"" + ( i != colNum-1 ?  " , " : "\n"));
+					if( data.typeId()(i) == Type.String ){
+						ssb.add("\"" + data.name()(i) + "<" + Type.typeNameStr(data.typeId()(i) ) + ">\"" + ( i != colNum-1 ?  "," : "\n"));
+					}else{
+						ssb.add("" + data.name()(i) + "<" + Type.typeNameStr(data.typeId()(i) ) + ">" + ( i != colNum-1 ?  "," : "\n"));
+					}
 				}
 				fw.write(ssb.result().bytes());
 			}
