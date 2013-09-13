@@ -39,13 +39,12 @@ final public class SpectralClusteringImpl {
 		val team = config.worldTeam();
 		val dist = config.dist2d();
 		
+		//Console.OUT.println(dist);
+		//Console.OUT.println("vertices = " + g.numberOfVertices());
+		//Console.OUT.println("edges    = " + g.numberOfEdges());
+		
 		val sw = new MyStopWatch();
-		
-		Console.OUT.println(dist);
-		Console.OUT.println("vertices = " + g.numberOfVertices());
-		Console.OUT.println("edges    = " + g.numberOfEdges());
-		
-		sw.start("create matrix");
+		sw.start("create affinity matrix");
 		
 		val W = g.createDistSparseMatrix[Double](dist, attrName, false, false);
 		val N = W.ids().numberOfLocalVertexes2N();
@@ -138,9 +137,9 @@ final public class SpectralClusteringImpl {
 			
 			var iter:Int = 0;
 			while(true) {
-				if(role == 0 && iter % 100 == 0) {
-					Console.OUT.println("iter = " + iter);
-				}
+				//if(role == 0 && iter % 100 == 0) {
+				//	Console.OUT.println("iter = " + iter);
+				//}
 				iter++;
 				
 				ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
@@ -218,7 +217,7 @@ final public class SpectralClusteringImpl {
 		val count = new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](k));
 		
 		team2.placeGroup().broadcastFlat(() => {
-			Console.OUT.println(here + ": K-means started");
+			//Console.OUT.println(here + ": K-means started");
 			
 			val nloc = dmc().size() / k;
 			val mc = dmc();
@@ -306,7 +305,7 @@ final public class SpectralClusteringImpl {
 					lcount(best)++;
 				}
 			}
-			Console.OUT.println(here + ": K-means finished");
+			//Console.OUT.println(here + ": K-means finished");
 		});
 		
 		return assign;
