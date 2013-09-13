@@ -17,14 +17,14 @@ import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.StopWatch;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.HashMap;
 
-final class TestHashMap extends sx10Test {
+final class TestHashMap extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestHashMap().execute(args);
 	}

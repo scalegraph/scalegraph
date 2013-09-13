@@ -19,7 +19,7 @@
 #include <org/scalegraph/io/FileReader.h>
 
 #include <org/scalegraph/util/MemoryChunkData.h>
-#include <org/scalegraph/io/impl/CSVReader__ReaderBuffer.h>
+#include <org/scalegraph/util/tuple/Tuple2.h>
 
 #include <org/scalegraph/io/impl/CSVHelper.h>
 
@@ -224,6 +224,28 @@ x10_long LineNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
 	}
 }
 
+Tuple2<x10_long, x10_long> LineEndAndNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
+{
+	x10_byte* start = data->pointer();
+	x10_byte* end = start + data->size();
+	x10_byte* ptr = start + offset;
+	bool cr = false;
+	for( ; ; ++ptr) {
+		if(ptr == end) {
+			x10_long off = end - start;
+			return Tuple2<x10_long, x10_long>::_make(off, off);
+		}
+		if(*ptr == '\r') {
+			cr = true;
+		}
+		if(*ptr == '\n') {
+			return Tuple2<x10_long, x10_long>::_make(
+					ptr - (cr ? 1 : 0) - start,
+					ptr + 1 - start);
+		}
+	}
+}
+
 x10_long DQCSVNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
 {
 	x10_byte* start = data->pointer();
@@ -307,15 +329,13 @@ restart:
 	return buf->raw();
 }
 
-x10_long CSVReaderParseChunk(CSVReader__ReaderBuffer* th, MemoryChunk<x10_byte> data) {
+Tuple2<x10_long, x10_long> CSVReaderParseChunk(MemoryChunk<x10_byte> data, int stride, int numElems, x10_byte** out) {
 	CSVParser p;
 
-	int stride = th->FMGL(stride);
-	int numElems = th->FMGL(numElems);
 	x10_byte* start = data->pointer();
 	x10_byte* ptr = start;
 	x10_byte* end = start + data->size();
-	x10_byte** out = th->FMGL(elemPtrs);
+//	x10_byte** out = th->FMGL(elemPtrs);
 
 	if(numElems == 0) {
 		x10aux::throwException(x10::lang::IllegalArgumentException::_make(String::Lit(
@@ -356,8 +376,7 @@ x10_long CSVReaderParseChunk(CSVReader__ReaderBuffer* th, MemoryChunk<x10_byte> 
 		}
 	}
 
-	th->FMGL(lines) = numOutLines;
-	return ptr - start;
+	return Tuple2<x10_long, x10_long>::_make(ptr - start, numOutLines);
 }
 
 template <typename T> T strtot(const char* str, char **endptr);

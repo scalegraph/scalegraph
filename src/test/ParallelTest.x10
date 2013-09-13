@@ -15,11 +15,11 @@ import x10.util.ArrayUtils;
 import x10.util.Team;
 import x10.util.Random;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MemoryChunk;
 
-public final class ParallelTest extends sx10Test {
+public final class ParallelTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new ParallelTest().execute(args);
 	}

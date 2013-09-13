@@ -204,7 +204,7 @@ public final struct SString {
 	
 	public def split(ch: Char) = new TokenCollection(this, ch);
 	
-	public def split(str: String) = new TokenCollection(this, str);
+	public def split(str: SString) = new TokenCollection(this, str);
 	
 	public def trim() {
 		val length = content.size();
