@@ -14,6 +14,7 @@ import x10.util.Team;
 
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
+import org.scalegraph.util.StopWatch;
 
 /** Provides the default data distribution, which includes world team and 1D/2D distribution.
  * Config is used by ScaleGraph API.
@@ -89,12 +90,14 @@ public class Config {
 	private val world :Team;
 	private val distXPregel :Dist2D;
 	private val distBLAS :Dist2D;
+	private val stopWatch :StopWatch;
 	
 	private def this(ownByThis :Boolean, worldTeam :Team, distForXPregel :Dist2D, distForBLAS :Dist2D) {
 		own = ownByThis;
 		world = worldTeam;
 		distXPregel = distForXPregel;
 		distBLAS = distForBLAS;
+		stopWatch = new StopWatch();
 	}
 	
 	private def del_() {
@@ -118,4 +121,7 @@ public class Config {
 	
 	/** Returns the 1D partitioning distribution */ 
 	public def dist1d() = distXPregel;
+	
+	/** Returns the StopWatch */ 
+	public def stopWatch() = stopWatch;
 }

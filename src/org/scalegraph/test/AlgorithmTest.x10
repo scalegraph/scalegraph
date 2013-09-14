@@ -45,36 +45,37 @@ public abstract class AlgorithmTest extends STest {
 			val C = (args.size > 5) ? Double.parse(args(5)) : 0.15;
 			val rnd = new Random(2, 3);
 			
-			val start_read_time = System.currentTimeMillis();
+			val sw = Config.get().stopWatch();
 			val edgeList = GraphGenerator.genRMAT(scale, edgefactor, A, B, C, rnd);
+			sw.lap("Generate RMAT[scale=" + scale + ",edgefactor=" + edgefactor + "]");
 			val rawWeight = GraphGenerator.genRandomEdgeValue(scale, edgefactor, rnd);
+			sw.lap("Generate random edge value");
 			val g = Graph.make(edgeList);
 			g.setEdgeAttribute[Double]("weight", rawWeight);
-			val end_read_time = System.currentTimeMillis();
-			Console.OUT.println("Gen RMAT graph: "+(end_read_time-start_read_time)+" millis");	
+			sw.lap("Complete making graph");
 			return g;
 		}
 		else if (args(0).equals("random")) {
 			val scale = Int.parse(args(1));
 			val edgefactor = (args.size > 2) ? Int.parse(args(2)) : 16;
 			val rnd = new Random(2, 3);
-			
-			val start_read_time = System.currentTimeMillis();
+
+			val sw = Config.get().stopWatch();
 			val edgeList = GraphGenerator.genRandomGraph(scale, edgefactor, rnd);
+			sw.lap("Generate edos random graph[scale=" + scale + ",edgefactor=" + edgefactor + "]");
 			val rawWeight = GraphGenerator.genRandomEdgeValue(scale, edgefactor, rnd);
+			sw.lap("Generate random edge value");
 			val g = Graph.make(edgeList);
 			g.setEdgeAttribute[Double]("weight", rawWeight);
-			val end_read_time = System.currentTimeMillis();
-			Console.OUT.println("Gen random graph: "+(end_read_time-start_read_time)+" millis");	
+			sw.lap("Complete making graph");
 			return g;
 		}
 		else if (args(0).equals("file")) {
 			val colTypes = [Type.Long as Int, Type.Long, Type.Double];
-			
-			val start_read_time = System.currentTimeMillis();
+
+			val sw = Config.get().stopWatch();
 			val g = Graph.make(CSV.read(args(1), colTypes, true));
-			val end_read_time = System.currentTimeMillis();
-			Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
+			sw.lap("Read graph[path=" + args(1) + "]");
 			return g;
 		}
 		else {
@@ -167,6 +168,7 @@ public abstract class AlgorithmTest extends STest {
 			}
 		});
 		
+		Config.get().stopWatch().lap("Check result(D)[reference=" + reference + "]");
 		return checkResult()();
 	}
 		
@@ -222,7 +224,7 @@ public abstract class AlgorithmTest extends STest {
 				checkResult.getLocalOrCopy()() = (error == 0);
 			}
 		});
-		
+
 		return checkResult()();
 	}
 	
@@ -237,8 +239,10 @@ public abstract class AlgorithmTest extends STest {
 				[Type.Long as Int, Type.Long, Type.Double],
 				["source" as String, "target", "weight"]));
 		val ref = refdata.createDistSparseMatrix[T](Config.get().dist1d(), "weight", true, true);
+		val ret = internalCheckResult(res, ref, true, threshold);
 		
-		return internalCheckResult(res, ref, true, threshold);
+		Config.get().stopWatch().lap("Check result(DDD)[reference=" + reference + "]");
+		return ret;
 	}
 	
 	public def checkResult(source :DistMemoryChunk[Long], target :DistMemoryChunk[Long], reference :String)
@@ -249,8 +253,10 @@ public abstract class AlgorithmTest extends STest {
 				[Type.Long as Int, Type.Long, Type.Double],
 				["source" as String, "target", "weight"]));
 		val ref = refdata.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+		val ret = internalCheckResult(res, ref, false, 0L);
 		
-		return internalCheckResult(res, ref, false, 0L);
+		Config.get().stopWatch().lap("Check result(DD)[reference=" + reference + "]");
+		return ret;
 	}
 
 }
