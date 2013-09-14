@@ -13,117 +13,117 @@ import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.util.Algorithm;
 
-private struct AdjVertex {
-	val vertexId:Long;
-	val myId:Long;
-	val isOutEdge:Boolean;
-	val capacity:Long;
-	val height:Long;
-	val excess:Long;
-	public def this(v:Long, m:Long, is:Boolean ,cap:Long) {
-		vertexId = v;
-		myId = m;
-		isOutEdge = is;
-		capacity = cap;
-		height = 0L;
-		excess = 0L;
-	}
 
-	@Native("c++", "(#this)->FMGL(excess) = #v")
-	native def setExcess(v:Long):void;
-	
-	@Native("c++", "(#this)->FMGL(height) = #v")
-	native def setHeight(v:Long):void;
-	
-	@Native("c++", "(#this)->FMGL(capacity) = #v")
-	native def setCapacity(v:Long):void;
-}
-
-private struct FlowMessage {
-	val flow:Long;
-	val fromId:Long;
-	def this(f:Long, i:Long) {
-		this.flow = f;
-		this.fromId = i;
-	}
-}
-
-private struct ValueMessage {
-	val excess:Long;
-	val height:Long;
-	val id:Long;
-	def this(e:Long, h:Long, i:Long) {
-		excess = e;
-		height = h;
-		id  = i;
-	}
-}
-
-private struct InitMessage {
-	val val1:Long;
-	val val2:Long;
-	val isOutEdge:Boolean;
-	val capacity:Long;
-	def this(val a:Long, val b:Long, val c:Boolean ,val cap:Long) {
-		val1=a;
-		val2=b;
-		isOutEdge=c;
-		capacity = cap;
-	}
-}
-
-private class MFEdge {
-	var capacity:Long;
-}
-
-private struct MFVertex {
-	val adjVertex:MemoryChunk[AdjVertex];
-	val excess:Long;
-	val height:Long;
-	val isExcessNonZero:Boolean;
-	public def this() {
-		this.adjVertex = new MemoryChunk[AdjVertex](0);
-		excess = 0L;
-		height = 0L;
-		isExcessNonZero = false;
-	}
-	
-	public def this(val adj:MemoryChunk[AdjVertex]) {
-		this.adjVertex = adj;
-		excess = height = 0L;
-		isExcessNonZero = false;
-	}
-	@Native("c++", "(#this)->FMGL(adjVertex) = #v")
-	native def setAdj(v:MemoryChunk[AdjVertex]):void;
-
-	@Native("c++", "(#this)->FMGL(excess) = #v")
-	native def setExcess(v:Long):void;
-	
-	@Native("c++", "(#this)->FMGL(height) = #v")
-	native def setHeight(v:Long):void;
-	
-	@Native("c++", "(#this)->FMGL(isExcessNonZero) = #v")
-	native def setIsExcessNonZero(v:Boolean):void;
-	
-	def setAdjCapacity(id:Long, cap:Long) {
-		val adjV = adjVertex(id);
-		adjV.setCapacity(cap);
-		adjVertex(id) = adjV;
-	}
-	def setAdjExcess(id:Long, excess:Long) {
-		val adjV = adjVertex(id);
-		adjV.setExcess(excess);
-		adjVertex(id) = adjV;
-	}
-	def setAdjHeight(id:Long, height:Long) {
-		val adjV = adjVertex(id);
-		adjV.setHeight(height);
-		adjVertex(id) = adjV;
-	}
-}
 
 public class MaxFlow {
-	
+	private static struct AdjVertex {
+		val vertexId:Long;
+		val myId:Long;
+		val isOutEdge:Boolean;
+		val capacity:Long;
+		val height:Long;
+		val excess:Long;
+		public def this(v:Long, m:Long, is:Boolean ,cap:Long) {
+			vertexId = v;
+			myId = m;
+			isOutEdge = is;
+			capacity = cap;
+			height = 0L;
+			excess = 0L;
+		}
+
+		@Native("c++", "(#this)->FMGL(excess) = #v")
+		native def setExcess(v:Long):void;
+		
+		@Native("c++", "(#this)->FMGL(height) = #v")
+		native def setHeight(v:Long):void;
+		
+		@Native("c++", "(#this)->FMGL(capacity) = #v")
+		native def setCapacity(v:Long):void;
+	}
+
+	private static struct FlowMessage {
+		val flow:Long;
+		val fromId:Long;
+		def this(f:Long, i:Long) {
+			this.flow = f;
+			this.fromId = i;
+		}
+	}
+
+	private static struct ValueMessage {
+		val excess:Long;
+		val height:Long;
+		val id:Long;
+		def this(e:Long, h:Long, i:Long) {
+			excess = e;
+			height = h;
+			id  = i;
+		}
+	}
+
+	private static struct InitMessage {
+		val val1:Long;
+		val val2:Long;
+		val isOutEdge:Boolean;
+		val capacity:Long;
+		def this(val a:Long, val b:Long, val c:Boolean ,val cap:Long) {
+			val1=a;
+			val2=b;
+			isOutEdge=c;
+			capacity = cap;
+		}
+	}
+
+	private class MFEdge {
+		var capacity:Long;
+	}
+
+	private static struct MFVertex {
+		val adjVertex:MemoryChunk[AdjVertex];
+		val excess:Long;
+		val height:Long;
+		val isExcessNonZero:Boolean;
+		public def this() {
+			this.adjVertex = new MemoryChunk[AdjVertex](0);
+			excess = 0L;
+			height = 0L;
+			isExcessNonZero = false;
+		}
+		
+		public def this(val adj:MemoryChunk[AdjVertex]) {
+			this.adjVertex = adj;
+			excess = height = 0L;
+			isExcessNonZero = false;
+		}
+		@Native("c++", "(#this)->FMGL(adjVertex) = #v")
+		native def setAdj(v:MemoryChunk[AdjVertex]):void;
+
+		@Native("c++", "(#this)->FMGL(excess) = #v")
+		native def setExcess(v:Long):void;
+		
+		@Native("c++", "(#this)->FMGL(height) = #v")
+		native def setHeight(v:Long):void;
+		
+		@Native("c++", "(#this)->FMGL(isExcessNonZero) = #v")
+		native def setIsExcessNonZero(v:Boolean):void;
+		
+		def setAdjCapacity(id:Long, cap:Long) {
+			val adjV = adjVertex(id);
+			adjV.setCapacity(cap);
+			adjVertex(id) = adjV;
+		}
+		def setAdjExcess(id:Long, excess:Long) {
+			val adjV = adjVertex(id);
+			adjV.setExcess(excess);
+			adjVertex(id) = adjV;
+		}
+		def setAdjHeight(id:Long, height:Long) {
+			val adjV = adjVertex(id);
+			adjV.setHeight(height);
+			adjVertex(id) = adjV;
+		}
+	}
 	public static def main(args:Array[String](1)) {
 		val team = Config.get().worldTeam();
 		
