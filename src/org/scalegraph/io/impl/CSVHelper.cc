@@ -165,7 +165,7 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 		x10_byte* attNameEnd = trimSpace(p.end, attName);
 		x10_byte* typeName = NULL;
 		x10_byte* typeNameEnd = NULL;
-		x10_byte* ptr = attName;
+		ptr = attName;
 		// search "<"
 		for( ; ; ++ptr) {
 			if(ptr == p.end) {
@@ -196,6 +196,7 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 		NativeCSVAttribute att = { (typeName != NULL), p.doubleQuoated, attNameMC, typeNameMC };
 		attrs.push_back(att);
 
+		ptr = p.next;
 		if(p.lastElement) break;
 	}
 	if(attrs.size() == 0) {

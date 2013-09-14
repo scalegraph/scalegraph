@@ -102,8 +102,10 @@ public abstract class AlgorithmTest extends STest {
 	public def checkResult[T](result :DistMemoryChunk[T], reference :String, threshold :T)
 	{ T <: Arithmetic[T], T <: Ordered[T], T haszero }
 	{
+		val sw = Config.get().stopWatch();
 		val team = Config.get().worldTeam();
 		val refdata = CSV.read(reference, [Type.Long as Int, Type.typeId[T]()], true);
+		sw.lap("Read reference data[path=" + reference + "]");
 		val index = refdata.get[Long](0);
 		val refval = refdata.get[T](1);
 		val checkResult = GlobalRef[Cell[Boolean]](new Cell[Boolean](false));
@@ -167,8 +169,8 @@ public abstract class AlgorithmTest extends STest {
 				checkResult.getLocalOrCopy()() = (flags == 0);
 			}
 		});
+		sw.lap("Compare result and reference data");
 		
-		Config.get().stopWatch().lap("Check result(D)[reference=" + reference + "]");
 		return checkResult()();
 	}
 		
@@ -232,30 +234,38 @@ public abstract class AlgorithmTest extends STest {
 			value :DistMemoryChunk[T], reference :String, threshold :T)
 	{ T <: Arithmetic[T], T <: Ordered[T], T haszero }
 	{
+		val sw = Config.get().stopWatch();
 		val resdata = Graph.make(EdgeList(source, target));
 		resdata.setEdgeAttribute("weight", value);
 		val res = resdata.createDistSparseMatrix[T](Config.get().dist1d(), "weight", true ,true);
+		sw.lap("Construct a graph from result");
 		val refdata = Graph.make(CSV.read(reference,
 				[Type.Long as Int, Type.Long, Type.Double],
 				["source" as String, "target", "weight"]));
+		sw.lap("Read reference data[path=" + reference + "]");
 		val ref = refdata.createDistSparseMatrix[T](Config.get().dist1d(), "weight", true, true);
+		sw.lap("Construct a graph from reference data");
 		val ret = internalCheckResult(res, ref, true, threshold);
+		sw.lap("Compare result and reference data");
 		
-		Config.get().stopWatch().lap("Check result(DDD)[reference=" + reference + "]");
 		return ret;
 	}
 	
 	public def checkResult(source :DistMemoryChunk[Long], target :DistMemoryChunk[Long], reference :String)
 	{
+		val sw = Config.get().stopWatch();
 		val resdata = Graph.make(EdgeList(source, target));
 		val res = resdata.createDistEdgeIndexMatrix(Config.get().dist1d(), true ,true);
+		sw.lap("Construct a graph from result");
 		val refdata = Graph.make(CSV.read(reference,
 				[Type.Long as Int, Type.Long, Type.Double],
 				["source" as String, "target", "weight"]));
+		sw.lap("Read reference data[path=" + reference + "]");
 		val ref = refdata.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+		sw.lap("Construct a graph from reference data");
 		val ret = internalCheckResult(res, ref, false, 0L);
+		sw.lap("Compare result and reference data");
 		
-		Config.get().stopWatch().lap("Check result(DD)[reference=" + reference + "]");
 		return ret;
 	}
 

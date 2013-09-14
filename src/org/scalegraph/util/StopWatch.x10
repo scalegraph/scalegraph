@@ -27,7 +27,8 @@ public final class StopWatch {
 	public def lap(message :String) {
 		val curTime = x10.util.Timer.nanoTime();
 		val lapTime = (curTime - prevTime) as Double / 1000000.0;
+		val elapsedTime = (curTime - startTime) as Double / 1000000.0;
 		prevTime = curTime;
-		STest.bufferedPrintln(message + ": " + lapTime + " ms");
+		STest.bufferedPrintln(message + ": " + lapTime + " ms: " + elapsedTime + " ms elapsed");
 	}
 }
