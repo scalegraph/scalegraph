@@ -1,5 +1,15 @@
-package org.scalegraph.api;
+/* 
+ *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 
+package org.scalegraph.api;
 
 import x10.util.Team;
 import x10.compiler.Native;
@@ -162,7 +172,7 @@ public class HyperANF {
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
-	public def execute(matrix :DistSparseMatrix[Double]) {
+	public def execute(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double]{
 		//= execute(this, matrix);
 		throw new UnsupportedOperationException();
 	}
@@ -170,7 +180,7 @@ public class HyperANF {
 	/** Run the calculation of HyperANF.
 	 * @param g The graph object. 
 	 */
-	public def execute(g :Graph) {	
+	public def execute(g :Graph) :MemoryChunk[Double]{	
 		throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
 	/*	this.team = g.team();	
@@ -186,7 +196,7 @@ public class HyperANF {
 	/** Run the calculation of HyperANF with default parameters.
 	 * @param g The graph object. 
 	 */
-	public static def run(g :Graph) {
+	public static def run(g :Graph) :MemoryChunk[Double]{
 		throw new UnsupportedOperationException();
 		//new StronglyConnectedComponent().execute(g);
 	}
@@ -195,7 +205,7 @@ public class HyperANF {
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
-	public static def run(matrix :DistSparseMatrix[Double]) {
+	public static def run(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double]{
 		throw new UnsupportedOperationException();
 		//new StronglyConnectedComponent().execute(matrix);
 	}

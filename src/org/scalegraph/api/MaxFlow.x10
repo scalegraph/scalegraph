@@ -50,7 +50,7 @@ final public class MaxFlow {
     /**
      * A class storing the result from MaxFlow
      */
-    public static struct Result (maxiMumFlow: Long, flows:DistMemoryChunk[Long]){
+    public static struct Result (maxFlow: Long, edgeFlow:DistMemoryChunk[Long]){
        protected def this(mf: Long, fl:DistMemoryChunk[Long]) {
            property(mf, fl);
        }
@@ -61,7 +61,7 @@ final public class MaxFlow {
      * @return A long integer, the value of the maximum flow
      */    
 
-	static struct AdjVertex {
+	private static struct AdjVertex {
 		val vertexId:Long;
 		val myId:Long;
 		val isOutEdge:Boolean;
@@ -87,7 +87,7 @@ final public class MaxFlow {
 		native def setCapacity(v:Long):void;
 	}
 
-	static struct FlowMessage {
+	private static struct FlowMessage {
 		val flow:Long;
 		val fromId:Long;
 		def this(f:Long, i:Long) {
@@ -96,7 +96,7 @@ final public class MaxFlow {
 		}
 	}
 
-	static struct ValueMessage {
+	private static struct ValueMessage {
 		val excess:Long;
 		val height:Long;
 		val id:Long;
@@ -107,7 +107,7 @@ final public class MaxFlow {
 		}
 	}
 
-	static struct InitMessage {
+	private static struct InitMessage {
 		val val1:Long;
 		val val2:Long;
 		val isOutEdge:Boolean;
@@ -120,7 +120,8 @@ final public class MaxFlow {
 		}
 	}
 
-	static struct MFVertex {
+	
+	private static struct MFVertex {
 		val adjVertex:MemoryChunk[AdjVertex];
 		val excess:Long;
 		val height:Long;
@@ -132,7 +133,7 @@ final public class MaxFlow {
 			isExcessNonZero = false;
 		}
 
-		public def this(val adj:MemoryChunk[AdjVertex]) {
+		def this(val adj:MemoryChunk[AdjVertex]) {
 			this.adjVertex = adj;
 			excess = height = 0L;
 			isExcessNonZero = false;

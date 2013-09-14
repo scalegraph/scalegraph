@@ -13,7 +13,7 @@ import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.util.Algorithm;
 
-struct AdjVertex {
+private struct AdjVertex {
 	val vertexId:Long;
 	val myId:Long;
 	val isOutEdge:Boolean;
@@ -39,7 +39,7 @@ struct AdjVertex {
 	native def setCapacity(v:Long):void;
 }
 
-struct FlowMessage {
+private struct FlowMessage {
 	val flow:Long;
 	val fromId:Long;
 	def this(f:Long, i:Long) {
@@ -48,7 +48,7 @@ struct FlowMessage {
 	}
 }
 
-struct ValueMessage {
+private struct ValueMessage {
 	val excess:Long;
 	val height:Long;
 	val id:Long;
@@ -59,7 +59,7 @@ struct ValueMessage {
 	}
 }
 
-struct InitMessage {
+private struct InitMessage {
 	val val1:Long;
 	val val2:Long;
 	val isOutEdge:Boolean;
@@ -72,11 +72,11 @@ struct InitMessage {
 	}
 }
 
-class MFEdge {
+private class MFEdge {
 	var capacity:Long;
 }
 
-struct MFVertex {
+private struct MFVertex {
 	val adjVertex:MemoryChunk[AdjVertex];
 	val excess:Long;
 	val height:Long;
