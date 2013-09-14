@@ -16,18 +16,27 @@ SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
 def runBuild():
     global tap
+    
     initDir(TestWorkDir)
     tap  = TAP.Builder.create(1)
     build_test(ModuleName,TestFile,TestWorkDir,SrcDir)
 
+    
 def genHostFile(file,dest,numHosts,duplicates):
+    """
+    mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
+    @param file       使用できるノードのいちらんが書かれたファイルへのPath
+    @param dest       生成したHostFileの出力先のPATH
+    @param numHosts   使用するホストノードの数
+    @param duplicates 1nodeあたりのPlace数
+    """
     with open(file) as file:
         hosts = file.readlines()
     newhosts=[]
     for n in numHosts:
         for _ in range(duplicates):
             newhosts.append(hosts[n])
-    with opne(dest,'w') as file:
+    with open(dest,'w') as file:
         for host in newhosts:
             file.write(host)
     
@@ -146,7 +155,7 @@ def build_test_dummy(name,workingDir="./"):
     print("    workingDir:"+workingDir)
     print("----------------------------")
     
-def build_test(name,x10file,workingDir,srcDir):
+def build_tes(toname,x10file,workingDir,srcDir):
     """
     @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
     @param describe  実行中のジョブの説明
