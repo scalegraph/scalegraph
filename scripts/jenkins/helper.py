@@ -169,7 +169,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         print("    args:"+str(args))
     hostSrc = os.path.expandvars("$prefix/hosts.txt")
     hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
-    os.path.makedirsos.path.expandvars("$prefix/py_temp")
+    os.path.makedirs(os.path.expandvars("$prefix/py_temp"))
     genHostFile(hostSrc,hostDst,
                 numHosts  =attributes["thread"],
                 duplicate =attributes["duplicates"] )
