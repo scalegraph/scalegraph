@@ -76,7 +76,7 @@ def getMPISettings(mpi,attr):
     @return (env,args) (環境変数のディクショナリ,mpiへの引数)
     """
     # mpirunへの引数
-    args=attr["args"]
+    args=os.path.expandvars(attr["args"]).split()
     # 環境変数
     env={}
     env["X10_NTHREADS"] = str(attr["thread"])
