@@ -1,4 +1,5 @@
-#!/usr/bin/pythonimport helper
+#!/usr/bin/python
+import helper
 from helper import *
 import helper
 import os
