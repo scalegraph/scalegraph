@@ -4,7 +4,10 @@ import yaml,re
 import contextlib
 from os import path
 import os
+import tempfile as tmp
 import TAP
+
+DEBUG=False
 
 tap=None
 ##kriiyamaのテスト用の変数
@@ -16,12 +19,23 @@ SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
 def runBuild():
     global tap
-    
-    initDir(TestWorkDir)
     tap  = TAP.Builder.create(1)
+    initDir(TestWorkDir)
     build_test(ModuleName,TestFile,TestWorkDir,SrcDir)
 
-    
+def run_runTest():
+    global tap
+    tap = TAP.Builder.create(1)
+    attr = None
+    run_test(ModuleName,ModuleName,attr,TestWorkDir,mpi="mvapich")
+        
+def check_env():
+    envs = ["prefix"]
+    for env in envs:
+        if env not in os.environ:
+            return False
+    return True
+        
 def genHostFile(file,dest,numHosts,duplicates):
     """
     mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
@@ -40,6 +54,19 @@ def genHostFile(file,dest,numHosts,duplicates):
         for host in newhosts:
             file.write(host)
     
+def isValidAttr(attr):
+
+    if not isinstance(attr,dict):
+        print("attr:"+attr+"\n"+"type:"+str(type(attr)))
+        return False
+    
+    param = ["args","thread","gcproc","process","duplicate"]
+    for x in param:
+        if x in attr:
+            continue
+        else:
+            return False
+    return True
 
 def getMPISettings(mpi,attr):
     """
@@ -81,15 +108,6 @@ def loadFromYaml(filename,testcase="small"):
         
     return attribute
 
-def printOpts(opts,args):
-    """
-    debug用のメソッド
-    """
-    print("DEBUG: arguments")
-    print("  opts:     "+str(opts))
-    print("  testcase: "+opts.testcase)
-    print("  mpi:      "+opts.mpi)
-    print("  args:     "+str(args))
 
 def initDir(workdir):
     """
@@ -101,11 +119,12 @@ def initDir(workdir):
             os.makedirs(workdir+directory)
 
 
-def initTap(testNum,tapBulider):
+def initTap(testNum):
     """
     @param testNum テストの個数を指定する
     """
-    
+    global tap
+    tap  = TAP.Builder.create(testNum)
                 
 def x10outToYaml(src,dst):
     """
@@ -130,22 +149,59 @@ def run_test_dummy(name,describe,mpi,attribute):
     print("    attribute"+str(attribute))
     print("-------------------------------")
     
-def run_test(name,describe,mpi,attributes):
-    (env,args) = getMPISettings(mpi,attributes)
-    args = list(map(os.path.expandvars,args))
-    
-    if "WORKSPACE" not in os.environ:
-        print("evnvironment value \"WORKSPACE\" is undefined.\
-        please set. ")
+def run_test(name,binName,attributes,workPath,mpi="mvapich"):
+    """
+    @param name       runするモジュールの名前
+    @param attributes テストパラメータ
+    @param workPath   作業を行うpath
+    """
+    if isValidAttr(attributes) == False:
+        tap.ok(0, name+".yaml is invalid testfile.")
         return
-    for k,v in env:
-        os.environ[k] = v
-    runCmd = ["mpirun", "-n", "8", "-hosts",
-             "st01,st02,st03,st04,st05,st06,st07,st08",
-             os.environ["WORKSPACE"]+"/bin/$NAME"] \
-             + args
-    runResult = SProc.call(runCmd)
-    tap.ok(runResult == 0, name + " " + describe)
+    
+    if "name" not in attributes:
+        describe = attributes["name"]
+    (env,args) = getMPISettings(mpi,attributes)
+    if(DEBUG):
+        print("    env :"+str(env))
+        print("    args:"+str(args))
+    
+    #---argument settings--------------------#
+    numProcess = str(attributes["process"])
+    hostFile   = os.path.expandvars("$prefix/hosts.txt")
+    binFile    = workPath+"/"+binName
+    args = list(map(os.path.expandvars,args))
+    stdout = tmp.TemporaryFile()
+    stderr = tmp.TemporaryFile()
+    if "timeout" in attributes:
+        timeOut = attributes["timeout"]
+    else:
+        timeOut = None
+    #----------------------------------------#
+    
+    for k in env:
+        os.environ[k] = env[k]
+
+    runCmd = [
+        "mpirun","-np",numProcess,
+        "--hostfile",hostFile,
+        binFile] + args
+
+    #run
+    mpirunProc = SProc.Popen(runCmd,
+                             stdout=SProc.PIPE,stderr=SProc.PIPE)
+    try:
+        stdout, stderr = mpirunProc.communicate(timeout = timeOut)
+    except SProc.TimeoutExpired:
+        mpirunProc.kill()
+        stdout, stderr = mpirunProc.communicate()
+    runResult = mpirunProc.poll()
+    Message = {"name":name,
+               "stderr":stderr.decode(),
+               "stdout":stdout.decode()}
+    tap.ok(runResult == 0,
+           name + "\n"+
+           "Message:"+yaml.dump(Message,default_flow_style=False))
     
 def build_test_dummy(name,workingDir="./"):
     print("----------------------------")
@@ -155,10 +211,11 @@ def build_test_dummy(name,workingDir="./"):
     print("    workingDir:"+workingDir)
     print("----------------------------")
     
-def build_tes(toname,x10file,workingDir,srcDir):
+def build_test(name,x10file,workingDir,srcDir):
     """
     @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
     @param describe  実行中のジョブの説明
+    @return buildResult ビルドの終了コード
     """
     bindir = workingDir + "/bin/"
     logdir = workingDir + "/log/"
