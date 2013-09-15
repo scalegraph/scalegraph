@@ -149,7 +149,7 @@ def run_test_dummy(name,describe,mpi,attribute):
     print("    attribute"+str(attribute))
     print("-------------------------------")
 def fail_run_test(name,binName,attributes,workPath,describe):
-    tap.ok(0,"running "+binName+" failure\n"+describe,skip=True)
+    tap.ok(0,"running "+binName+" failure."+describe,skip=True)
     
 def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     """
@@ -167,10 +167,17 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if(DEBUG):
         print("    env :"+str(env))
         print("    args:"+str(args))
+    hostSrc = os.path.expandvars("$prefix/hosts.txt")
+    hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
+    os.path.makedirsos.path.expandvars("$prefix/py_temp")
+    genHostFile(hostSrc,hostDst,
+                numHosts  =attributes["thread"],
+                duplicate =attributes["duplicates"] )
+
     
     #---argument settings--------------------#
     numProcess = str(attributes["process"])
-    hostFile   = os.path.expandvars("$prefix/hosts.txt")
+    hostFile   = hostDst
     binFile    = workPath+"/"+binName
     args = list(map(os.path.expandvars,args))
     stdout = tmp.TemporaryFile()
@@ -203,7 +210,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
                "stdout":stdout.decode()}
     tap.ok(runResult == 0,
            name + "\n"+
-           "Message:"+yaml.dump(Message,default_flow_style=False))
+           "Message:\n"+yaml.dump(Message,default_flow_style=False))
     
 def build_test_dummy(name,workingDir="./"):
     print("----------------------------")

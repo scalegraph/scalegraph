@@ -88,10 +88,11 @@ def main():
                 mpi="mvapich",
                 attributes=attribute)
             else:
-                fail_run_test(filePref,
-                        opts.x10Dir+"/"+filePref+".x10",
-                        sandbox,
-                        "build failed")
+                fail_run_test(name = filePref,
+                        binName=filePref,
+                        workPath=sandbox,
+                        attributes=attribute,
+                        describe="build failed")
                 pass
     
     if(DEBUG):
