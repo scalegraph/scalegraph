@@ -90,8 +90,7 @@ def main():
                 fail_run_test(filePref,
                         opts.x10Dir+"/"+filePref+".x10",
                         sandbox,
-                        "build failed") 
-                    name,binName,attributes,workPath,describe):
+                        "build failed")
                 pass
     
     if(DEBUG):
