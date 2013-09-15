@@ -148,6 +148,8 @@ def run_test_dummy(name,describe,mpi,attribute):
     print("    mpi:"+mpi)
     print("    attribute"+str(attribute))
     print("-------------------------------")
+def fail_run_test(name,binName,attributes,workPath,describe):
+    tap.ok(0,"running "+binName+" failure\n"+describe,pass=True)
     
 def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     """

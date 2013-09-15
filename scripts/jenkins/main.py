@@ -80,13 +80,18 @@ def main():
                         opts.x10Dir+"/"+filePref+".x10",
                         sandbox,
                         opts.srcDir) 
-            if buildresult == 1:
+            if buildresult == 0:
                 run_test(name=filePref,
                 binName=filePref,
                 workPath=sandbox,
                 mpi="mvapich",
                 attributes=attribute)
             else:
+                fail_run_test(filePref,
+                        opts.x10Dir+"/"+filePref+".x10",
+                        sandbox,
+                        "build failed") 
+                    name,binName,attributes,workPath,describe):
                 pass
     
     if(DEBUG):
