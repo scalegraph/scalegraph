@@ -26,6 +26,7 @@ abstract public class STest {
        var b :boolean = false;
        try {
            finish b = this.run(args);
+           if(b) bufferedPrintln("Pass");
         }
        catch (e :CheckedThrowable) {
     	   printException(e);
