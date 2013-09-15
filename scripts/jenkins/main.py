@@ -13,10 +13,9 @@ DEBUG=False
 ##
 
 #-------------------------------------------------#
-ModuleName    = "TeamBenchmark"
-TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
-
-TestWorkDir   = os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
+#ModuleName    = "TeamBenchmark"
+#TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
+#TestWorkDir   = os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
 SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
 #-------------------------------------------------#
@@ -71,7 +70,7 @@ def main():
         sandbox    = workingDir+"/"+filePref
 
         initDir(sandbox)
-        print("load yamlfile:"+filename)
+        #print("load yamlfile:"+filename)
         attributes = helper.loadFromYaml(
             opts.yamlDir+"/"+filename,
             testcase=opts.testcase)

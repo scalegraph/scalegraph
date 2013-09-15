@@ -140,14 +140,15 @@ def x10outToYaml(src,dst):
         SProc.call([x10out2yaml],stdin=sed.stdout,stdout=outFile)
 
 def run_test_dummy(name,describe,mpi,attribute):
-    print("-------------------------------")
-    print("run_test_dummy method")
-    print("args:")
-    print("    moduleName:"+name)
-    print("    describe:"+describe)
-    print("    mpi:"+mpi)
-    print("    attribute"+str(attribute))
-    print("-------------------------------")
+    if DEBUG:
+        print("-------------------------------")
+        print("run_test_dummy method")
+        print("args:")
+        print("    moduleName:"+name)
+        print("    describe:"+describe)
+        print("    mpi:"+mpi)
+        print("    attribute"+str(attribute))
+        print("-------------------------------")
 def fail_run_test(name,binName,attributes,workPath,describe):
     tap.ok(0,"running "+binName+" failure."+describe,skip=True)
     
@@ -213,13 +214,14 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
            "Message:\n"+yaml.dump(Message,default_flow_style=False))
     
 def build_test_dummy(name,workingDir="./"):
-    print("----------------------------")
-    print("build_test_dummy() is called")
-    print("args:")
-    print("    moduleName:"+name)
-    print("    workingDir:"+workingDir)
-    print("----------------------------")
-    
+    if DEBUG:
+        print("----------------------------")
+        print("build_test_dummy() is called")
+        print("args:")
+        print("    moduleName:"+name)
+        print("    workingDir:"+workingDir)
+        print("----------------------------")
+        
 def build_test(name,x10file,workingDir,srcDir):
     """
     @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
@@ -242,7 +244,8 @@ def build_test(name,x10file,workingDir,srcDir):
     buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
-    tap.ok(buildResult == 0,name+".x10 "+errors.decode()) #buildResult == 0 ならビルドに成功
+    tap.ok(buildResult == 0,"Building "name+".x10 "+
+           errors.decode()) #buildResult == 0 ならビルドに成功
     print("   ---")
     with open(yamlFileName) as yamlFile:
         for line in yamlFile.readlines():
