@@ -36,7 +36,7 @@ def check_env():
             return False
     return True
         
-def genHostFile(file,dest,numHosts,duplicates):
+def genHostFile(file,dest,numHosts,duplicate):
     """
     mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
     @param file       使用できるノードのいちらんが書かれたファイルへのPath
@@ -47,8 +47,8 @@ def genHostFile(file,dest,numHosts,duplicates):
     with open(file) as file:
         hosts = file.readlines()
     newhosts=[]
-    for n in numHosts:
-        for _ in range(duplicates):
+    for n in range(numHosts):
+        for _ in range(duplicate):
             newhosts.append(hosts[n])
     with open(dest,'w') as file:
         for host in newhosts:
@@ -170,10 +170,12 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         print("    args:"+str(args))
     hostSrc = os.path.expandvars("$prefix/hosts.txt")
     hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
-    os.path.makedirs(os.path.expandvars("$prefix/py_temp"))
+
+    os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
+
     genHostFile(hostSrc,hostDst,
                 numHosts  =attributes["thread"],
-                duplicate =attributes["duplicates"] )
+                duplicate =attributes["duplicate"] )
 
     
     #---argument settings--------------------#
@@ -244,7 +246,7 @@ def build_test(name,x10file,workingDir,srcDir):
     buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
-    tap.ok(buildResult == 0,"Building "name+".x10 "+
+    tap.ok(buildResult == 0,"Building "+name+".x10 "+
            errors.decode()) #buildResult == 0 ならビルドに成功
     print("   ---")
     with open(yamlFileName) as yamlFile:

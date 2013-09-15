@@ -5,3 +5,4 @@ small:
     gcproc: 2
     process: 8
     duplicate: 2
+    timeout: 100

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/bin/env python3
 import helper
 from helper import *
 import helper
