@@ -2,8 +2,10 @@ package test;
 import org.scalegraph.external.MetisInterface;
 import org.scalegraph.util.MemoryChunk;
 import x10.util.Team;
+import x10.compiler.Native;
 
 public class MetisTest {
+    
     
     public static def main(args: Array[String]) {
         Test_ParMETIS_V3_PartKway();
@@ -31,12 +33,12 @@ public class MetisTest {
                                                            adjncy,
                                                            MemoryChunk.getNull[Long](),
                                                            MemoryChunk.getNull[Long](),
-                                                           new MemoryChunk[Long](1, (Long)=> 0L),
-                                                           new MemoryChunk[Long](1, (Long)=> 0L),
-                                                           new MemoryChunk[Long](1, (Long)=> 0L),
-                                                           new MemoryChunk[Long](1, (Long)=> 2L),
-                                                           new MemoryChunk[Double](1, (Long)=> 0D),
-                                                           new MemoryChunk[Double](1, (Long)=> 0D),
+                                                           0L,
+                                                           0L,
+                                                           0L,
+                                                           2L,
+                                                           new MemoryChunk[Double](2, (Long)=> 0.5D),
+                                                           new MemoryChunk[Double](1, (Long)=> 1.05D),
                                                            new MemoryChunk[Long](1, (Long)=> 0L),
                                                            new MemoryChunk[Long](1, (Long)=> -1L),
                                                            parts
@@ -44,6 +46,137 @@ public class MetisTest {
             if (here == Place.FIRST_PLACE) {
                 Console.OUT.println(ret);
             }
-        });                                       
+        });                             
+        Console.OUT.println("---------------------------------------");
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V3_PartGeomKway(vtxDist,
+                                                           xadj,
+                                                           adjncy,
+                                                           MemoryChunk.getNull[Long](),
+                                                           MemoryChunk.getNull[Long](),
+                                                           0L,
+                                                           0L,
+                                                           1L,
+                                                           new MemoryChunk[Double](2, (Long)=> 0.5D),
+                                                           0L,
+                                                           2L,
+                                                           new MemoryChunk[Double](2, (Long)=> 0.5D),
+                                                           new MemoryChunk[Double](1, (Long)=> 1.05D),
+                                                           new MemoryChunk[Long](1, (Long)=> 0L),
+                                                           new MemoryChunk[Long](1, (Long)=> -1L),
+                                                           parts);
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        });         
+        Console.OUT.println("---------------------------------------");
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V3_PartGeom(vtxDist,
+                                                               1L,
+                                                               new MemoryChunk[Double](2, (Long)=> 0.5D),
+                                                               parts);
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        });       
+        Console.OUT.println("---------------------------------------");
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V3_PartMeshKway(vtxDist,
+                                                               xadj,
+                                                               adjncy,
+                                                               MemoryChunk.getNull[Long](),
+                                                               0L,
+                                                               0L,
+                                                               0L,
+                                                               1L,
+                                                               2L,
+                                                               new MemoryChunk[Double](2, (Long)=> 0.5D),
+                                                               new MemoryChunk[Double](1, (Long)=> 1.05D),
+                                                               new MemoryChunk[Long](1, (Long)=> 0L),
+                                                               new MemoryChunk[Long](1, (Long)=> -1L),
+                                                               parts);
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        }); 
+        Console.OUT.println("---------------------------------------");
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V3_AdaptiveRepart(vtxDist,
+                                                           xadj,
+                                                           adjncy,
+                                                           MemoryChunk.getNull[Long](),
+                                                           MemoryChunk.getNull[Long](),
+                                                           MemoryChunk.getNull[Long](),
+                                                           0L,
+                                                           0L,
+                                                           0L,
+                                                           2L,
+                                                           new MemoryChunk[Double](2, (Long)=> 0.5D),
+                                                           new MemoryChunk[Double](1, (Long)=> 1.05D),
+                                                           100D,
+                                                           new MemoryChunk[Long](1, (Long)=> 0L),
+                                                           new MemoryChunk[Long](1, (Long)=> -1L),
+                                                           parts
+            );
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        });   
+        Console.OUT.println("---------------------------------------");
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V3_RefineKway(vtxDist,
+                                                           xadj,
+                                                           adjncy,
+                                                           MemoryChunk.getNull[Long](),
+                                                           MemoryChunk.getNull[Long](),
+                                                           0L,
+                                                           0L,
+                                                           0L,
+                                                           2L,
+                                                           new MemoryChunk[Double](2, (Long)=> 0.5D),
+                                                           new MemoryChunk[Double](1, (Long)=> 1.05D),
+                                                           new MemoryChunk[Long](1, (Long)=> 0L),
+                                                           new MemoryChunk[Long](1, (Long)=> -1L),
+                                                           parts
+            );
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        });    
+        Console.OUT.println("---------------------------------------");
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V3_NodeND(vtxDist,
+                                                             xadj,
+                                                             adjncy,
+                                                             0L,
+                                                             new MemoryChunk[Long](1, (Long)=> 0L),
+                                                             new MemoryChunk[Long](1, (Long)=> -1L),
+                                                             new MemoryChunk[Long](1, (Long)=> -1L)
+            );
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        });   
+        Console.OUT.println("---------------------------------------");
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V32_NodeND(vtxDist,
+                                                          xadj,
+                                                          adjncy,
+                                                          MemoryChunk.getNull[Long](),
+                                                          0L,
+                                                          MetisInterface.PARMETIS_MTYPE_LOCAL,
+                                                          MetisInterface.PARMETIS_SRTYPE_GREEDY,
+                                                          0L,
+                                                          2L,
+                                                          1.05D,
+                                                          0L,
+                                                          0L,
+                                                          new MemoryChunk[Long](1, (Long)=> 0L),
+                                                          new MemoryChunk[Long](1, (Long)=> -1L)
+            );
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        });    
     }
 }
