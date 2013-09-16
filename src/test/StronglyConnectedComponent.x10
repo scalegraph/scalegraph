@@ -77,6 +77,17 @@ public class StronglyConnectedComponent {
 			leaderId = leader;
 		}
 	}
+	private static struct MessageD {
+		val ctxId:Long;
+		val realId:Long;
+		val childCnt:Long;
+		def this(ctx:Long, real:Long, cnt:Long) {
+			ctxId = ctx;
+			realId = real;
+			childCnt = cnt;
+		}
+	}
+	
 	
 	public static def main(args:Array[String](1)) {
 		val niter:Int = 10;
@@ -268,10 +279,8 @@ public class StronglyConnectedComponent {
 			 * So, in this phase using BFSlike algorithm, partition group.
 			 * In end of this operation, new leaderId is minimal (ctx)Id of (weakly) connected component. 
 			 * in superstep
-			 * 		0~ : send message and set my value. todo this 
+			 * 		0~ : send message and set my value. 
 			 */
-			
-			
 			xpregel.iterate[MessageC, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageC, Long ], messages :MemoryChunk[MessageC] ) => {
 						
@@ -302,11 +311,55 @@ public class StronglyConnectedComponent {
 					(values :MemoryChunk[Long]) => MathAppend.sum(values),
 					(superstep :Int, aggVal :Long) => (superstep >= 100) );
 		}
+		/* phaseD
+		 * Final phase before output.
+		 * Before this phase, all (value().leaderId) is (ctx.id()).
+		 * But, we need realId. Calculate minimum realId of StronglyConnectedComponent
+		 * 
+		 * in superstep
+		 * 		0 : Send to current leader.
+		 * 		1 : Leaders calculate minim realId of each strongly connected component.
+		 * 		    And, send this id to all member of strongly connected component.
+		 * 		2 : Rewrite leaderId. 
+		 */
+		
 		xpregel.resetSholdBeActiveFlag();
+		xpregel.iterate[MessageD, Long](
+				(ctx :VertexContext[SCCVertex, Long, MessageD,Long ], messages :MemoryChunk[MessageD] ) => {
+					if(ctx.superstep()==0) {
+						val mes = new MessageD(ctx.id(), ctx.realId(), 0L);
+						ctx.sendMessage(ctx.value().leaderId, mes);
+					}
+					else if(ctx.superstep()==1) {
+						var minim:Long = -1L;
+						if(messages.size()>0) 
+							minim = messages(0).realId;
+						for(i in messages.range()) {
+							minim = MathAppend.min(minim, messages(i).realId);
+						}
+						val mes = new MessageD(0L, minim , ctx.value().childCnt);
+						for(i in messages.range()) {
+							ctx.sendMessage(messages(i).ctxId, mes);
+						}
+					}
+					else if(ctx.superstep()==2) {
+						if(messages.size()==0L) {
+							Console.OUT.println("ERROR.");
+							return ;
+						}
+						var childCnt:Long = ctx.value().childCnt;
+						if(ctx.id() == ctx.value().leaderId) childCnt = 0L;
+						if(ctx.realId() == messages(0).realId) childCnt = messages(0).childCnt;
+						val newInfo = new SCCVertex( messages(0).realId  , ctx.value().front, ctx.value().back, ctx.value().minimId, childCnt);
+						ctx.setValue(newInfo);
+					}
+				},
+				(values :MemoryChunk[Long]) => MathAppend.sum(values),
+				(superstep :Int, aggVal :Long) => (superstep >= 2) );
 		xpregel.once((ctx :VertexContext[SCCVertex, Long, Any, Any]) => {
 			ctx.output(0, ctx.value().leaderId);
 			var plus:Long = 0L;
-			if(ctx.id() == ctx.value().leaderId && ctx.value().childCnt==0L)
+			if(ctx.realId() == ctx.value().leaderId && ctx.value().childCnt==0L)
 				plus = 1L;
 			ctx.output(1, ctx.value().childCnt+plus);
 			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
