@@ -10,7 +10,7 @@ public class MetisTest {
     }
     
     private static def Test_ParMETIS_V3_PartKway() {
-        val _vtxDist = [0L, 8L];
+        val _vtxDist = [0L, 8L, 8L];
         val _xadj = [0L, 3L, 6L, 10L, 14L, 17L, 20L];
         val _adjncy = [1L,2L,4L,
                        0L, 2L, 3L,
@@ -24,22 +24,26 @@ public class MetisTest {
         val xadj = new MemoryChunk[Long](_xadj.raw());
         val adjncy = new MemoryChunk[Long](_adjncy.raw());
         val parts = new MemoryChunk[Long](_xadj.size);
-        MetisInterface._ParMETIS_V3_PartKway(vtxDist,
-                                             xadj,
-                                             adjncy,
-                                             MemoryChunk.getNull[Long](),
-                                             MemoryChunk.getNull[Long](),
-                                             new MemoryChunk[Long](1, (Long)=> 0L),
-                                             new MemoryChunk[Long](1, (Long)=> 0L),
-                                             new MemoryChunk[Long](1, (Long)=> 0L),
-                                             new MemoryChunk[Long](1, (Long)=> 2L),
-                                             new MemoryChunk[Double](1, (Long)=> 0D),
-                                             new MemoryChunk[Double](1, (Long)=> 0D),
-                                             new MemoryChunk[Long](1, (Long)=> 0L),
-                                             new MemoryChunk[Long](1, (Long)=> -1L),
-                                             parts,
-                                             Team.WORLD
-                                             );
-                                                         
+        val comm =Team.WORLD;
+        comm.placeGroup().broadcastFlat(() => {
+            val ret = MetisInterface._ParMETIS_V3_PartKway(vtxDist,
+                                                           xadj,
+                                                           adjncy,
+                                                           MemoryChunk.getNull[Long](),
+                                                           MemoryChunk.getNull[Long](),
+                                                           new MemoryChunk[Long](1, (Long)=> 0L),
+                                                           new MemoryChunk[Long](1, (Long)=> 0L),
+                                                           new MemoryChunk[Long](1, (Long)=> 0L),
+                                                           new MemoryChunk[Long](1, (Long)=> 2L),
+                                                           new MemoryChunk[Double](1, (Long)=> 0D),
+                                                           new MemoryChunk[Double](1, (Long)=> 0D),
+                                                           new MemoryChunk[Long](1, (Long)=> 0L),
+                                                           new MemoryChunk[Long](1, (Long)=> -1L),
+                                                           parts
+            );
+            if (here == Place.FIRST_PLACE) {
+                Console.OUT.println(ret);
+            }
+        });                                       
     }
 }
