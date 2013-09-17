@@ -18,6 +18,7 @@ import org.scalegraph.util.random.Random;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Team2;
 
 /**
  * Provides various graph generators.
@@ -95,6 +96,48 @@ public final class GraphGenerator {
 		return EdgeList(srcMemory, dstMemory);
 	}
 	
+	public static def genRandomEdgeValue(getSize :()=>Long, rnd :Random)
+	: DistMemoryChunk[Double]
+	{
+		val team = Config.get().worldTeam();
+		val sizeArray = new GlobalRef[Cell[MemoryChunk[Long]]](new Cell(new MemoryChunk[Long](team.size())));
+		
+		team.placeGroup().broadcastFlat(() => {
+			val t2 = new Team2(team);
+			val src = new MemoryChunk[Long](1);
+			src(0) = getSize();
+			val dst = (sizeArray.home == here) ? sizeArray.getLocalOrCopy()() : new MemoryChunk[Long](0);
+			t2.gather(0, src, dst);
+		});
+		
+		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](getSize()));
+		
+		val sizeArray_ = sizeArray()();
+		val placeArray = team.places();
+		var numEdges :Long = 0;
+		for([role] in placeArray) {
+			val numLocalEdges = sizeArray_(role);
+			val offset = numEdges;
+			at(placeArray(role)) async {
+				Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
+					val rnd_ = rnd.clone();
+					// 2 random values per single edge (nextDouble() uses 2 generated random values)
+					rnd_.skip((offset + r.min)*2);
+					val edgeMem_ = edgeMemory();
+					for(i in r) {
+						edgeMem_(i) = rnd_.nextDouble();
+					}
+				});
+			}
+			numEdges += numLocalEdges;
+		}
+		
+		rnd.skip(numEdges * 2);
+		
+		return edgeMemory;
+	}
+	
 	public static def genRandomEdgeValue(scale :Int, edgefactor :Int, rnd :Random)
 	: DistMemoryChunk[Double]
 	{
@@ -114,7 +157,6 @@ public final class GraphGenerator {
 				// 2 random values per single edge (nextDouble() uses 2 generated random values)
 				rnd_.skip((offset + r.min)*2);
 				val edgeMem_ = edgeMemory();
-				val vertexMask = numVertices - 1;
 				for(i in r) {
 					edgeMem_(i) = rnd_.nextDouble();
 				}
