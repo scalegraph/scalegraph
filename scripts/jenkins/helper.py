@@ -6,6 +6,7 @@ from os import path
 import os
 import tempfile as tmp
 import TAP
+import sys
 
 DEBUG=False
 
@@ -36,23 +37,25 @@ def check_env():
             return False
     return True
         
-def genHostFile(file,dest,numHosts,duplicate):
+def genHostFile(filepath,destpath,numHosts,duplicate):
     """
     mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
-    @param file       使用できるノードのいちらんが書かれたファイルへのPath
-    @param dest       生成したHostFileの出力先のPATH
-    @param numHosts   使用するホストノードの数
-    @param duplicates 1nodeあたりのPlace数
+    @param filepath       使用できるノードのいちらんが書かれたファイルへのPath
+    @param destpath       生成したHostFileの出力先のPATH
+    @param numHosts       使用するホストノードの数
+    @param duplicates     1nodeあたりのPlace数
     """
-    with open(file) as file:
-        hosts = file.readlines()
+    filepath = os.path.expandvars(filepath)
+    destpath = os.path.expandvars(destpath)
+    with open(filepath) as File:
+        hosts = File.readlines()
     newhosts=[]
     for n in range(numHosts):
         for _ in range(duplicate):
             newhosts.append(hosts[n])
-    with open(dest,'w') as file:
+    with open(destpath,'w') as File:
         for host in newhosts:
-            file.write(host)
+            File.write(host)
     
 def isValidAttr(attr):
 
@@ -168,9 +171,13 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if(DEBUG):
         print("    env :"+str(env))
         print("    args:"+str(args))
+        
+    sys.stderr.write("generating hostfile.")
     hostSrc = os.path.expandvars("$prefix/hosts.txt")
     hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
-
+    sys.stderr.write("hostSrc:"+hostSrc)
+    sys.stderr.write("hostDst:"+hostSrc)
+    
     os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
 
     genHostFile(hostSrc,hostDst,
@@ -200,7 +207,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         binFile] + args
 
     #run
-    mpirunProc = SProc.Popen(runCmd,
+    mpirunProc = SProc.Popen(runCmd,shell=True,
                              stdout=SProc.PIPE,stderr=SProc.PIPE)
     try:
         stdout, stderr = mpirunProc.communicate(timeout = timeOut)
@@ -212,7 +219,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
                "stderr":stderr.decode(),
                "stdout":stdout.decode()}
     tap.ok(runResult == 0,
-           name + "\n"+
+           "Run "+name + "\n"+
            "Message:\n"+yaml.dump(Message,default_flow_style=False))
     
 def build_test_dummy(name,workingDir="./"):
