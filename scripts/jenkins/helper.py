@@ -37,25 +37,25 @@ def check_env():
             return False
     return True
         
-def genHostFile(filepath,destpath,numHosts,duplicate):
+def genHostFile(file,dest,numHosts,duplicate):
     """
     mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
-    @param filepath       使用できるノードのいちらんが書かれたファイルへのPath
-    @param destpath       生成したHostFileの出力先のPATH
-    @param numHosts       使用するホストノードの数
-    @param duplicates     1nodeあたりのPlace数
+    @param file       使用できるノードのいちらんが書かれたファイルへのPath
+    @param dest       生成したHostFileの出力先のPATH
+    @param numHosts   使用するホストノードの数
+    @param duplicates 1nodeあたりのPlace数
     """
-    filepath = os.path.expandvars(filepath)
-    destpath = os.path.expandvars(destpath)
-    with open(filepath) as File:
-        hosts = File.readlines()
+    file = os.path.expandvars(file)
+    dest = os.path.expandvars(dest)
+    with open(file) as file:
+        hosts = file.readlines()
     newhosts=[]
     for n in range(numHosts):
         for _ in range(duplicate):
             newhosts.append(hosts[n])
-    with open(destpath,'w') as File:
+    with open(dest,'w') as file:
         for host in newhosts:
-            File.write(host)
+            file.write(host)
     
 def isValidAttr(attr):
 
@@ -168,6 +168,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if "name" not in attributes:
         describe = attributes["name"]
     (env,args) = getMPISettings(mpi,attributes)
+    
     if(DEBUG):
         print("    env :"+str(env))
         print("    args:"+str(args))
@@ -188,7 +189,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     #---argument settings--------------------#
     numProcess = str(attributes["process"])
     hostFile   = hostDst
-    binFile    = workPath+"/"+binName
+    binPath    = workPath+"/bin/"+binName
     args = list(map(os.path.expandvars,args))
     stdout = tmp.TemporaryFile()
     stderr = tmp.TemporaryFile()
@@ -203,11 +204,12 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
 
     runCmd = [
         "mpirun","-np",numProcess,
-        "--hostfile",hostFile,
-        binFile] + args
+        "--hostfile", hostFile,
+        binPath] + args
 
     #run
-    mpirunProc = SProc.Popen(runCmd,shell=True,
+    print(runCmd)
+    mpirunProc = SProc.Popen(runCmd,
                              stdout=SProc.PIPE,stderr=SProc.PIPE)
     try:
         stdout, stderr = mpirunProc.communicate(timeout = timeOut)
@@ -245,8 +247,9 @@ def build_test(name,x10file,workingDir,srcDir):
     yamlFileName = outputdir + "output-build-" + name + ".yaml"
     
     X10CXX = "x10c++"
-    buildCmd = [X10CXX, "-cxx-prearg", "-g", "-x10rt", "mpi",
+    buildCmd = [X10CXX, "-cxx-prearg", "-I"+srcDir+"/../include", "-cxx-prearg","-g", "-x10rt", "mpi",
                 "-sourcepath",srcDir, "-o", bindir + name, x10file]
+    print(buildCmd)
     logFile = open(logdir+"buildlog-"+name+".log",'w')
     errFile = open(outFileName,'w')
 

@@ -15,7 +15,7 @@ DEBUG=False
 #-------------------------------------------------#
 #ModuleName    = "TeamBenchmark"
 #TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
-#TestWorkDir   = os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
+TestWorkDir   = os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
 SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
 #-------------------------------------------------#
@@ -42,7 +42,7 @@ def main():
                     default="../../src/test",
                     help="Test file directory")
     parser.add_option("--workspace",action="store",dest="workspace",
-                    default="./workspace",
+                    default=TestWorkDir,
                     help="directory to build and to run test")
     parser.add_option("--source",action="store",
                       dest="srcDir",default=SrcDir)

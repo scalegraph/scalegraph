@@ -1,6 +1,6 @@
 small:
   - name: team benchmark
-    args: rmat 26 - 1024 10
+    args: 4 1
     thread: 4
     gcproc: 2
     process: 8
