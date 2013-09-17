@@ -1,0 +1,8 @@
+small:
+  - name: team benchmark
+    args: 4 1
+    thread: 4
+    gcproc: 2
+    process: 8
+    duplicate: 2
+    timeout: 100
