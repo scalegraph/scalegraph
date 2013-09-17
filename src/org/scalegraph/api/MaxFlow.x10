@@ -324,6 +324,7 @@ final public class MaxFlow {
     			(superstep :Int, aggVal :Long) => (superstep >= 1) );
 
     	
+    	
     	val flowNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
     	var recursion:Long = 1;
     	while(recursion<=recursionLimit) {
@@ -483,7 +484,6 @@ final public class MaxFlow {
     							}
     							var ret:Long = 0L;
     							for(i in count.range()) {
-    								//							Console.OUT.println("GAPHEURISTICPHASE : "+i+" "+ count(i));
     								if(count(i)==0L) {
     									ret = i;
     									break;
@@ -495,7 +495,6 @@ final public class MaxFlow {
     							val n = ctx.numberOfVertices();
     							val border = ctx.aggregatedValue();
     							if(ctx.value().height>border && ctx.value().height<n) {
- 							// Console.OUT.println("[CHANGED] ctx.realId() , value().height : " +  ctx.realId() + " " + ctx.value().height);
     								ctx.setVertexShouldBeActive(true);
     								val vval = ctx.value();
     								vval.setHeight(n);
@@ -518,6 +517,8 @@ final public class MaxFlow {
     	}	
     	
     	val output = xpregel.stealOutput[Long]();
+    	
+    	Console.OUT.println("flow = " + flowNum()());
 
     	val flows = g.retrieveEdgeAttribute[Long](csr, output);
     	val result = new Result(flowNum()(), flows);

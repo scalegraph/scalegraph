@@ -283,8 +283,6 @@ public final class StronglyConnectedComponent {
 								}
 								cnt(iter)+=1;
 							}
-							
-							//							Console.OUT.println("              cnt"+ctx.realId()+":" + cnt(0) +" "+cnt(1) + " "+cnt(2) + " " + cnt(3));
 							ctx.aggregate(1);
 							val newInfo = 
 								new SCCVertex(ctx.value().leaderId, ctx.value().front  , ctx.value().back, ctx.value().minimId , cnt(3));
@@ -293,11 +291,6 @@ public final class StronglyConnectedComponent {
 						}
 
 						if(ctx.superstep()==2) {
-							//messageはそれぞれ一つしかこないので、0のはず
-							//							Console.OUT.println("    :ctx.realId() "+ctx.realId() );
-							//							Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
-							//					Console.OUT.println("     value" + ctx.value().leaderId);
-							
 							if(messages(0).front) {
 								ctx.clearOutEdges();
 								ctx.setVertexShouldBeActive(false);
