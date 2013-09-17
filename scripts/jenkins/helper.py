@@ -6,6 +6,7 @@ from os import path
 import os
 import tempfile as tmp
 import TAP
+import sys
 
 DEBUG=False
 
@@ -36,7 +37,7 @@ def check_env():
             return False
     return True
         
-def genHostFile(file,dest,numHosts,duplicates):
+def genHostFile(file,dest,numHosts,duplicate):
     """
     mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
     @param file       使用できるノードのいちらんが書かれたファイルへのPath
@@ -44,11 +45,13 @@ def genHostFile(file,dest,numHosts,duplicates):
     @param numHosts   使用するホストノードの数
     @param duplicates 1nodeあたりのPlace数
     """
+    file = os.path.expandvars(file)
+    dest = os.path.expandvars(dest)
     with open(file) as file:
         hosts = file.readlines()
     newhosts=[]
-    for n in numHosts:
-        for _ in range(duplicates):
+    for n in range(numHosts):
+        for _ in range(duplicate):
             newhosts.append(hosts[n])
     with open(dest,'w') as file:
         for host in newhosts:
@@ -140,14 +143,17 @@ def x10outToYaml(src,dst):
         SProc.call([x10out2yaml],stdin=sed.stdout,stdout=outFile)
 
 def run_test_dummy(name,describe,mpi,attribute):
-    print("-------------------------------")
-    print("run_test_dummy method")
-    print("args:")
-    print("    moduleName:"+name)
-    print("    describe:"+describe)
-    print("    mpi:"+mpi)
-    print("    attribute"+str(attribute))
-    print("-------------------------------")
+    if DEBUG:
+        print("-------------------------------")
+        print("run_test_dummy method")
+        print("args:")
+        print("    moduleName:"+name)
+        print("    describe:"+describe)
+        print("    mpi:"+mpi)
+        print("    attribute"+str(attribute))
+        print("-------------------------------")
+def fail_run_test(name,binName,attributes,workPath,describe):
+    tap.ok(0,"running "+binName+" failure."+describe,skip=True)
     
 def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     """
@@ -162,14 +168,28 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if "name" not in attributes:
         describe = attributes["name"]
     (env,args) = getMPISettings(mpi,attributes)
+    
     if(DEBUG):
         print("    env :"+str(env))
         print("    args:"+str(args))
+        
+    sys.stderr.write("generating hostfile.")
+    hostSrc = os.path.expandvars("$prefix/hosts.txt")
+    hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
+    sys.stderr.write("hostSrc:"+hostSrc)
+    sys.stderr.write("hostDst:"+hostSrc)
+    
+    os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
+
+    genHostFile(hostSrc,hostDst,
+                numHosts  =attributes["thread"],
+                duplicate =attributes["duplicate"] )
+
     
     #---argument settings--------------------#
     numProcess = str(attributes["process"])
-    hostFile   = os.path.expandvars("$prefix/hosts.txt")
-    binFile    = workPath+"/"+binName
+    hostFile   = hostDst
+    binPath    = workPath+"/bin/"+binName
     args = list(map(os.path.expandvars,args))
     stdout = tmp.TemporaryFile()
     stderr = tmp.TemporaryFile()
@@ -184,10 +204,11 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
 
     runCmd = [
         "mpirun","-np",numProcess,
-        "--hostfile",hostFile,
-        binFile] + args
+        "--hostfile", hostFile,
+        binPath] + args
 
     #run
+    print(runCmd)
     mpirunProc = SProc.Popen(runCmd,
                              stdout=SProc.PIPE,stderr=SProc.PIPE)
     try:
@@ -200,17 +221,18 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
                "stderr":stderr.decode(),
                "stdout":stdout.decode()}
     tap.ok(runResult == 0,
-           name + "\n"+
-           "Message:"+yaml.dump(Message,default_flow_style=False))
+           "Run "+name + "\n"+
+           "Message:\n"+yaml.dump(Message,default_flow_style=False))
     
 def build_test_dummy(name,workingDir="./"):
-    print("----------------------------")
-    print("build_test_dummy() is called")
-    print("args:")
-    print("    moduleName:"+name)
-    print("    workingDir:"+workingDir)
-    print("----------------------------")
-    
+    if DEBUG:
+        print("----------------------------")
+        print("build_test_dummy() is called")
+        print("args:")
+        print("    moduleName:"+name)
+        print("    workingDir:"+workingDir)
+        print("----------------------------")
+        
 def build_test(name,x10file,workingDir,srcDir):
     """
     @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
@@ -225,15 +247,17 @@ def build_test(name,x10file,workingDir,srcDir):
     yamlFileName = outputdir + "output-build-" + name + ".yaml"
     
     X10CXX = "x10c++"
-    buildCmd = [X10CXX, "-cxx-prearg", "-g", "-x10rt", "mpi",
+    buildCmd = [X10CXX, "-cxx-prearg", "-I"+srcDir+"/../include", "-cxx-prearg","-g", "-x10rt", "mpi",
                 "-sourcepath",srcDir, "-o", bindir + name, x10file]
+    print(buildCmd)
     logFile = open(logdir+"buildlog-"+name+".log",'w')
     errFile = open(outFileName,'w')
 
     buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
-    tap.ok(buildResult == 0,name+".x10 "+errors.decode()) #buildResult == 0 ならビルドに成功
+    tap.ok(buildResult == 0,"Building "+name+".x10 "+
+           errors.decode()) #buildResult == 0 ならビルドに成功
     print("   ---")
     with open(yamlFileName) as yamlFile:
         for line in yamlFile.readlines():

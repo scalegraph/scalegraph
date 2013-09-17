@@ -1,4 +1,5 @@
-#!/usr/bin/pythonimport helper
+#!/bin/env python3
+import helper
 from helper import *
 import helper
 import os
@@ -12,9 +13,8 @@ DEBUG=False
 ##
 
 #-------------------------------------------------#
-ModuleName    = "TeamBenchmark"
-TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
-
+#ModuleName    = "TeamBenchmark"
+#TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 TestWorkDir   = os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
 SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
@@ -42,7 +42,7 @@ def main():
                     default="../../src/test",
                     help="Test file directory")
     parser.add_option("--workspace",action="store",dest="workspace",
-                    default="./workspace",
+                    default=TestWorkDir,
                     help="directory to build and to run test")
     parser.add_option("--source",action="store",
                       dest="srcDir",default=SrcDir)
@@ -70,7 +70,7 @@ def main():
         sandbox    = workingDir+"/"+filePref
 
         initDir(sandbox)
-        print("load yamlfile:"+filename)
+        #print("load yamlfile:"+filename)
         attributes = helper.loadFromYaml(
             opts.yamlDir+"/"+filename,
             testcase=opts.testcase)
@@ -80,13 +80,18 @@ def main():
                         opts.x10Dir+"/"+filePref+".x10",
                         sandbox,
                         opts.srcDir) 
-            if buildresult == 1:
+            if buildresult == 0:
                 run_test(name=filePref,
                 binName=filePref,
                 workPath=sandbox,
                 mpi="mvapich",
                 attributes=attribute)
             else:
+                fail_run_test(name = filePref,
+                        binName=filePref,
+                        workPath=sandbox,
+                        attributes=attribute,
+                        describe="build failed")
                 pass
     
     if(DEBUG):
