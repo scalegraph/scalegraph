@@ -137,7 +137,7 @@ public abstract class AlgorithmTest extends STest {
 				(o1 :Int, o2 :Int) => o1 | o2);
 			}
 			
-			flags = team.allreduce(teamRole, flags, Team.OR);
+			flags = team.allreduce(teamRole, flags, Team.BOR);
 			
 			if((flags & 2) != 0) {
 				val shift = MathAppend.ceilLog2(teamSize);
@@ -162,7 +162,7 @@ public abstract class AlgorithmTest extends STest {
 				},
 				(o1 :Int, o2 :Int) => o1 | o2);
 				
-				flags = team.allreduce(teamRole, flags, Team.OR);
+				flags = team.allreduce(teamRole, flags, Team.BOR);
 			}
 			
 			if(checkResult.home == here) {
@@ -220,7 +220,7 @@ public abstract class AlgorithmTest extends STest {
 				}
 			}
 			
-			error = team.allreduce(teamRole, error, Team.OR);
+			error = team.allreduce(teamRole, error, Team.BOR);
 			
 			if(checkResult.home == here) {
 				checkResult.getLocalOrCopy()() = (error == 0);
