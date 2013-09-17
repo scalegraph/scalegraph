@@ -76,6 +76,10 @@ import org.scalegraph.id.Type;
 	public def numberOfEdges() = numberOfEdges;
 	
 	public def team() = team;
+	
+	public def source() = srcList;
+	
+	public def target() = dstList;
 
 	private static def createVertexTranslator[T](team :Team) {T haszero}
 	{

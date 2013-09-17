@@ -1,0 +1,18 @@
+#インデントに注意すること.
+#{TESTCASE}:
+#  args: {プログラムの引数(argc)} ... 走らせるプログラムのコマンドライン引数
+#  thread: {スレッドの本数} ...
+#  gcproc: {gcのスレッド数} ...
+#  process: {プロセスの数} ... mpirun の -n オプションの引数に対応している
+#
+small:
+  args: [graph.txt]
+  thread: 2
+  gcproc: 2
+  process: 8
+
+large:
+  args: graph-large.txt
+  thread: 4
+  gcproc: 2
+  node: 8

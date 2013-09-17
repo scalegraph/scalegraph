@@ -517,10 +517,10 @@ template <> SStringBuilder StringBuilderAdd_<x10_uint>(SStringBuilder th, const 
 	FormatAdd_(th->FMGL(buffer), "%u", x); return th;
 }
 template <> SStringBuilder StringBuilderAdd_<x10_float>(SStringBuilder th, const x10_float x) {
-	FormatAdd_(th->FMGL(buffer), "%f", x); return th;
+	FormatAdd_(th->FMGL(buffer), "%.7g", x); return th;
 }
 template <> SStringBuilder StringBuilderAdd_<x10_double>(SStringBuilder th, const x10_double x) {
-	FormatAdd_(th->FMGL(buffer), "%f", x); return th;
+	FormatAdd_(th->FMGL(buffer), "%.16g", x); return th;
 }
 template <> SStringBuilder StringBuilderAdd_<x10_long>(SStringBuilder th, const x10_long x) {
 	FormatAdd_(th->FMGL(buffer), "%ld", x); return th;
