@@ -24,18 +24,22 @@ final class StronglyConnectedComponentTest extends AlgorithmTest{
 	
 	public def run(args :Array[String](1), g :Graph): Boolean {
 		val result = org.scalegraph.api.StronglyConnectedComponent.run(g);
-		
+		val dmc1 = result.dmc1;
+		val dmc2 = result.dmc2;
 		if(args(0).equals("write")) {
-			CSV.write(args(1), new NamedDistData(["pagerank" as String], [result as Any]), true);
+			CSV.write(args(1), new NamedDistData(["sccA" as String], [dmc1 as Any]), true);
+			CSV.write(args(2), new NamedDistData(["sccB" as String], [dmc2 as Any]), true);
 			return true;
 		}
 		else if(args(0).equals("check")) {
-			/*
-			 *  check!!
-			 */
-			
-			
-			return false;
+			var ok : Boolean = true;
+			ok = checkResult(dmc1, args(1), 0L);
+			if(!ok) return false;
+			ok = checkResult(dmc2, args(2), 0L);
+			if(!ok) return false;
+			val numC = Long.parse(args(3));
+			if(numC != result.cluster) return false;
+			return true;
 		}
 		else {
 			throw new IllegalArgumentException("Unknown command :" + args(0));
