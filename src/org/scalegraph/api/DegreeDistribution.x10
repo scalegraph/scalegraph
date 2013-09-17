@@ -17,6 +17,7 @@ import org.scalegraph.metrics.DegreeDistImpl;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.DistMemoryChunk;
 import x10.compiler.Inline;
+import org.scalegraph.Config;
 
 
 /**
@@ -98,13 +99,15 @@ final public class DegreeDistribution {
         if (m < 0 || m > 2) {
             throw new IllegalArgumentException("The mode argument must be DegreeDistribution.IN_DEGREE, DegreeDistribution.OUT_DEGREE or DegreeDistribution.INOUT_DEGREE");
         }
-        
+        val sw = Config.get().stopWatch();
         val team = g.team();
         val outerOrInner = (m == IN_DEGREE) ? false: true;
         val directed = (m == INOUT_DEGREE) ? false: true;
         val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
         val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
+        sw.lap("Graph construction");
         val result = run[Long](columnDistGraph);
+        sw.lap("Degree distribution calculation");
         
         // delete graph
         columnDistGraph.del();
