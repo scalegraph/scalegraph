@@ -287,7 +287,7 @@ final public class MaxFlow {
     	//step 3 : initialization of preflow push relabel. 
     	xpregel.iterate[FlowMessage,Long](
     			(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
-    				Console.OUT.println("phase3");
+//    				Console.OUT.println("phase3");
     				if(ctx.superstep()==0 && ctx.realId()==sourceVertexId) {
     					//				Console.OUT.println("adjVertex.sizd()" + ctx.value().adjVertex.size());
     					for(i in ctx.value().adjVertex.range()) {
