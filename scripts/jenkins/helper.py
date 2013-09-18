@@ -17,24 +17,18 @@ tap=None
 
 #TestWorkDir= os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
 #SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
-"""
-def runBuild():
-    global tap
-    tap  = TAP.Builder.create(1)
-    initDir(TestWorkDir)
-    build_test(ModuleName,TestFile,TestWorkDir,SrcDir)
 
-def run_runTest():
-    global tap
-    tap = TAP.Builder.create(1)
-    attr = None
-    run_test(ModuleName,ModuleName,attr,TestWorkDir,mpi="mvapich")
-"""
-def indentDeeper(str):
+def indentDeeper(str,n=1):
+    """
+    
+    """
     lines=str.splitlines()
     retStr=""
+    delimiter=""
+    for _ in range(n):
+        delimiter=delimiter+"  "
     for line in lines:
-        retStr = retStr + "  "+line +"\n"
+        retStr = retStr + delimiter +line +"\n"
     return retStr
         
 def check_env():
@@ -233,18 +227,22 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
 
     #run
     if(DEBUG):print(runCmd)
+
+    isTimeOut=False
     mpirunProc = SProc.Popen(runCmd,
                              stdout=SProc.PIPE,stderr=SProc.PIPE)
     try:
         stdout, stderr = mpirunProc.communicate(timeout = timeOut)
     except SProc.TimeoutExpired:
         mpirunProc.kill()
+        isTimeOut=True
         stdout, stderr = mpirunProc.communicate()
     runResult = mpirunProc.poll()
     Message = "name:"  + name           + "\n" + \
-              "stderr:\n"+ indentDeeper(stderr.decode())+ "\n" + \
-              "stdout:\n"+ indentDeeper(stdout.decode())
-              
+              "stderr:\n"+ indentDeeper(stderr.decode(),2)+ "\n" + \
+              "stdout:\n"+ indentDeeper(stdout.decode(),2)
+    if isTimeOut:
+        Message="This test case exceeds timeout.\n"+Message
     tap.ok(runResult == 0,
            "Run "+name + "\n"+ \
            "Message:\n"+indentDeeper(Message))
@@ -274,7 +272,7 @@ def build_test(name,x10file,workingDir,srcDir):
     X10CXX = "x10c++"
     buildCmd = [X10CXX, "-cxx-prearg", "-I"+srcDir+"/../include", "-cxx-prearg","-g", "-x10rt", "mpi",
                 "-sourcepath",srcDir, "-o", bindir + name, x10file]
-    if(DEBUG):print("build command:"+buildCmd)
+    if(DEBUG):print("build command:"+str(buildCmd))
     logFile = open(logdir+"buildlog-"+name+".log",'w')
     errFile = open(outFileName,'w')
 
