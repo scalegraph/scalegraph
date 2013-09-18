@@ -25,36 +25,6 @@ public class ProfilingDBTest extends STest {
 		new ProfilingDBTest().execute(args);
 	}
 	
-	static def printProfResult(result :MemoryChunk[Double], names :Array[String](1)) {
-		val header :SString = "avg(th),min(th),max(th),stddev(th),avg(proc),min(proc),max(proc),stddev(proc),time(cpu),time(proc),time(real)\n";
-		val th_fmt :SString = "%f,%f,%f,%f,";
-		val proc_fmt :SString = "%f,%f,%f,%f,";
-		val time_fmt :SString = "%f,%f,%f: [%s]\n";
-		
-		val width = names.size;
-		val th_avg = result.subpart(width * ProfilingDB.TH_AVG, width);
-		val th_min = result.subpart(width * ProfilingDB.TH_MIN, width);
-		val th_max = result.subpart(width * ProfilingDB.TH_MAX, width);
-		val th_stddev = result.subpart(width * ProfilingDB.TH_STDDEV, width);
-		val proc_avg = result.subpart(width * ProfilingDB.PROC_AVG, width);
-		val proc_min = result.subpart(width * ProfilingDB.PROC_MIN, width);
-		val proc_max = result.subpart(width * ProfilingDB.PROC_MAX, width);
-		val proc_stddev = result.subpart(width * ProfilingDB.PROC_STDDEV, width);
-		val cpu_time = result.subpart(width * ProfilingDB.CPU_TIME_TOTAL, width);
-		val proc_time = result.subpart(width * ProfilingDB.PROC_TIME_TOTAL, width);
-		val real_time = result.subpart(width * ProfilingDB.REAL_TIME_TOTAL, width);
-		
-		val sb = new SStringBuilder();
-		sb.add(header);
-		for(i in 0..(width-1)) {
-			sb.add(th_fmt, th_avg(i), th_min(i), th_max(i), th_stddev(i));
-			sb.add(proc_fmt, proc_avg(i), proc_min(i), proc_max(i), proc_stddev(i));
-			sb.add(time_fmt, cpu_time(i), proc_time(i), real_time(i), (names(i) as SString).c_str());
-		}
-		
-		print(sb);
-	}
-	
 	public def run(args: Array[String](1)): Boolean {
 		
 		val prof = new ProfilingDB([4 as Int, 2]);
@@ -89,14 +59,16 @@ public class ProfilingDBTest extends STest {
 			prof.finishStepWithAll();
 		});
 		
-		printProfResult(prof.result(), [
-			"Memory allocating" as String,
-			"Normal iteration",
-			"Many timer callings",
-			"Parallel iter overhead",
-			                        
-			"Normal iteration thread",
-			"Many timer callings thread"]);
+		val desc = [
+		            "Memory allocating" as String,
+		            "Normal iteration",
+		            "Many timer callings",
+		            "Parallel iter overhead",
+		            "Normal iteration thread",
+		            "Many timer callings thread"];
+
+		print(prof.resultString(desc));
+		print(prof.detailedResultString(desc));
 				
 		return true;
 	}
