@@ -15,6 +15,7 @@ import x10.util.Team;
 import x10.io.Printer;
 import x10.compiler.Inline;
 import x10.compiler.Ifndef;
+import x10.compiler.Ifdef;
 
 import org.scalegraph.Config;
 
@@ -24,6 +25,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.test.STest;
 
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
@@ -37,6 +39,7 @@ import org.scalegraph.graph.id.OnedC;
  * E: Edge value type
  */
 public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
+	private static type XP = org.scalegraph.ProfilingID.XPregel; 
 
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
@@ -297,5 +300,14 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 				workers_().run[Any,Any](actual_compute, null, null, (Int,Any) => true);
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
+	}
+	
+	@Ifdef("PROF_XP") public def dumpProfilingData(detail :Boolean) {
+		val prof = Config.get().profXPregel();
+		prof.finishStep();
+		val result = detail
+				? prof.detailedResultString(XP.DESCRIPTION)
+				: prof.resultString(XP.DESCRIPTION);
+		STest.print(result);
 	}
 }

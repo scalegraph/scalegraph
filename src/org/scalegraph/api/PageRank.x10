@@ -1,6 +1,7 @@
 package org.scalegraph.api;
 
 import x10.util.Team;
+import x10.compiler.Ifdef;
 
 import org.scalegraph.Config;
 import org.scalegraph.util.MemoryChunk;
@@ -113,12 +114,18 @@ public final class PageRank {
 			}
 			return (superstep >= niter || aggVal < eps);
 		});
+
+		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(false); }
+		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(true); }
 		
 		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
 		
 		sw.lap("Retrieve output");
+
+		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(false); }
+		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(true); }
 		
 		return xpgraph.stealOutput[Double]();
 	}

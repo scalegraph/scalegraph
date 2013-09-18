@@ -396,6 +396,7 @@ final class MessageCommunicator[M] { M haszero } {
 	}
 	
 	def exchangeMessages(UCEnabled :Boolean, BCEnabled :Boolean) :void {
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		val numPlaces = mTeam.size();
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
@@ -406,6 +407,7 @@ final class MessageCommunicator[M] { M haszero } {
 		if(UCEnabled) {
 			
 			mTeam.alltoall(mUCSCount, recvCount);
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMM_COUNT); }
 			
 			recvOffset(0) = 0;
 			for(i in recvCount.range()) {
@@ -421,6 +423,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val UCRMessagesTmp = new MemoryChunk[M](recvSize);
 			mTeam.alltoallv(mUCSMessages, mUCSOffset, mUCSCount, UCRMessagesTmp, recvOffset, recvCount);
 			mUCSMessages.del();
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_COMM); }
 			
 			mUCSCount.del();
 			mUCSOffset.del();
@@ -429,6 +432,7 @@ final class MessageCommunicator[M] { M haszero } {
 			mUCRMessages = new MemoryChunk[M](recvSize);
 			
 			Parallel.sort(mIds.lgl, UCRIdsTmp, UCRMessagesTmp, UCRIds, mUCRMessages);
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_SORT); }
 
 			UCRMessagesTmp.del();
 			UCRIdsTmp.del();
@@ -437,6 +441,7 @@ final class MessageCommunicator[M] { M haszero } {
 			mUCROffset = new MemoryChunk[Long](numLocalVertexes+1);
 			Parallel.makeOffset(UCRIds, mUCROffset);
 			UCRIds.del();
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_MAKE_OFFSET); }
 		}
 		
 		if(BCEnabled) {
@@ -444,6 +449,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val numLocalVertexesBC = numLocalVertexesBC();
 			
 			mTeam.alltoall(mBCSCount, recvCount);
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMM_COUNT); }
 			
 			recvOffset(0) = 0;
 			for(i in recvCount.range()) {
@@ -455,10 +461,12 @@ final class MessageCommunicator[M] { M haszero } {
 			mBCRMessages = new MemoryChunk[M](recvSize);
 			mTeam.alltoallv(mBCSMessages, mBCSOffset, mBCSCount, mBCRMessages, recvOffset, recvCount);
 			mBCSMessages.del();
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_BC_COMM_MES); }
 
 			mBCRHasMessage = new Bitmap(numLocalVertexesBC * numPlaces);
 			mTeam.alltoall(mBCSMask.raw(), mBCRHasMessage.raw());
 			mBCSMask.del();
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_BC_COMM_MASK); }
 			
 			// pack mBCRHasMessage if it is needed
 			if(numLocalVertexes2N < Bitmap.BitsPerWord) {
@@ -479,6 +487,7 @@ final class MessageCommunicator[M] { M haszero } {
 			
 			assert recvOffset(numPlaces) as Long ==
 				mBCROffset(Bitmap.numWords(numLocalVertexes2N * numPlaces));
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_BC_MAKE_OFFSET); }
 		}
 
 		recvCount.del();
