@@ -543,7 +543,7 @@ final public class MaxFlow {
     
     
     public static def run(g :Graph): Result {
-        return execute(g);
+        return new MaxFlow().execute(g);
     }
     
     public static def run(matrix :DistSparseMatrix[Long] ,dm:DistMemoryChunk[Double]): Result {
