@@ -93,6 +93,7 @@ final class HyperANF_Pregel extends STest {
 		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
+					bufferedPrintln("V[" + ctx.realId() + "] " + messages.size());
 
 					var counterB:MemoryChunk[Byte];
 					if(ctx.superstep()==0) {
@@ -135,6 +136,8 @@ final class HyperANF_Pregel extends STest {
 				},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
+			flush();
+			
 			if(results.home==here) {
 				val md:MemoryChunk[Double] = results()();
 				md(superstep) = aggVal;
