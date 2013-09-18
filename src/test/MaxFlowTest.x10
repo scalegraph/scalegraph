@@ -32,8 +32,9 @@ final class MaxFlowTest extends AlgorithmTest {
 			val mf = result.maxFlow;
 			val ef = result.edgeFlow;
 			
-			
-			return false;
+			if(mf != Long.parse(args(1)))
+				return false;
+			return true;
 		}
 		else {
 			throw new IllegalArgumentException("Unknown command :" + args(0));
