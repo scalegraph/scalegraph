@@ -78,8 +78,9 @@ final class HyperANF_Pregel extends STest {
 		val start_time = System.currentTimeMillis();
 		
 		xpregel.updateInEdge();
-		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		
+		val niter = 30;
 		
 		val N:Long = g.numberOfVertices();
 		val B = 7;
@@ -89,51 +90,64 @@ final class HyperANF_Pregel extends STest {
 		if(B==5) alpha = 0.697;
 		else if(B==6) alpha = 0.769;
 		else alpha = 0.7213 / (1.00+1.073/M);
+		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
-		
-//������Ă��Ȃ����Ǒ��v�H
-			val counter = ctx.value() ;
-			if(ctx.superstep()==0) {
-				//init�n�ɂ��̂�����̏������Ȃ������͂��Ȃ̂Œǉ�
-//				counter = new MemoryChunk[Byte](M);
-				for(i in counter.range()) counter(i) = 0;
-				
-				val rand = new Random(ctx.realId(ctx.id()), 1000);
-				val pos = rand.nextLong()%M;
-				var num:Long = rand.nextLong()+1;
-				var cnt:Byte = 0;
-				while(num%2==0L) {
-					num /= 2;
-					cnt = cnt+1;
-				}
-				counter(pos) =  cnt;
-				
-			}
-			else {
-//				counter = ctx.value();
-				//maxim massages
-				for(i in messages.range()) {
-					for(j in counter.range()) {
-						counter(j) = MathAppend.max(messages(i)(j) , counter(j));
-					}
-				}
-				
-			}
 
-			if (here.id == 0 && ctx.id() == 0L) {
-				Console.OUT.println("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
-			}
-			
-			ctx.sendMessageToAllNeighbors(counter);
-			
-			val retval = calcSize(counter,alpha);
-			
-			ctx.aggregate(retval);
-		},
+					var counterB:MemoryChunk[Byte];
+					if(ctx.superstep()==0) {
+						val counterA = new MemoryChunk[Byte](M);
+						for(i in counterA.range()) counterA(i) = 0;
+						val rand = new Random(ctx.realId(ctx.id()), 1000);
+						val pos = rand.nextLong()%M;
+						var num:Long = rand.nextLong()+1;
+						var cnt:Byte = 0;
+						while(num%2==0L) {
+							num /= 2;
+							cnt = cnt+1;
+						}
+						counterA(pos) =  cnt;
+						counterB = counterA;
+					}
+					else {
+						val counterA = ctx.value();
+						//maxim massages
+						for(i in messages.range()) {
+							for(j in counterA.range()) {
+								counterA(j) = MathAppend.max(messages(i)(j) , counterA(j));
+							}
+						}
+						counterB =counterA;
+
+					}
+
+					if (here.id == 0 && ctx.id() == 0L) {
+						Console.OUT.println("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
+					}
+					
+					ctx.sendMessageToAllNeighbors(counterB);
+					
+					val retval = calcSize(counterB,alpha);
+					//			Console.OUT.println("retval"  + ctx.realId() + " " + retval);
+					ctx.aggregate(retval);
+					ctx.setValue(counterB);
+					
+				},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
-		(superstep :Int, aggVal :Double) => (superstep >= 30) );
-		
+		(superstep :Int, aggVal :Double) => {
+			if(results.home==here) {
+				val md:MemoryChunk[Double] = results()();
+				md(superstep) = aggVal;
+				results()() = md;
+			}
+			return superstep >= niter;
+		});
+		var iter:Int=0;
+		while(iter<niter) {
+				Console.OUT.println( (iter+1) + " "+ results()()(iter));
+				iter++;
+		}
+	
 		val end_time = System.currentTimeMillis();
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));

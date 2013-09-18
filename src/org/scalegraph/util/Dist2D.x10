@@ -241,11 +241,13 @@ public final struct Dist2D {
     public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, outerOrInner :Boolean) {
     	val R = R();
     	val C = C();
+    	val size = R * C;
+    	val avgNumberOfLocalVertices = (numberOfVertices + size - 1) / size;
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))
     		throw new IllegalArgumentException();
     	val teamSize = allTeam().size();
     	return new IdStruct(MathAppend.ceilLog2(R), MathAppend.ceilLog2(C),
-    			MathAppend.ceilLog2(numberOfLocalVertices), outerOrInner, numberOfLocalVertices, numberOfVertices);
+    			MathAppend.ceilLog2(avgNumberOfLocalVertices), outerOrInner, numberOfLocalVertices, numberOfVertices);
     }
     
     /** Delete Dist2D and related objects.
