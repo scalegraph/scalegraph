@@ -3,6 +3,6 @@ small:
     args: 4 1
     thread: 4
     gcproc: 2
-    process: 8
+    place: 8
     duplicate: 2
     timeout: 100

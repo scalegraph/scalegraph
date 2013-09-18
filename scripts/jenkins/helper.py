@@ -12,12 +12,12 @@ DEBUG=False
 
 tap=None
 ##kriiyamaのテスト用の変数
-ModuleName="TeamBenchmark"
-TestFile=os.environ["HOME"]+"/Develop/ScaleGraph/src/test/"+ModuleName+".x10"
+#ModuleName="TeamBenchmark"
+#TestFile=os.environ["HOME"]+"/Develop/ScaleGraph/src/test/"+ModuleName+".x10"
 
-TestWorkDir= os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
-SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
-
+#TestWorkDir= os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
+#SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
+"""
 def runBuild():
     global tap
     tap  = TAP.Builder.create(1)
@@ -29,8 +29,18 @@ def run_runTest():
     tap = TAP.Builder.create(1)
     attr = None
     run_test(ModuleName,ModuleName,attr,TestWorkDir,mpi="mvapich")
+"""
+def indentDeeper(str):
+    lines=str.splitlines()
+    retStr=""
+    for line in lines:
+        retStr = retStr + "  "+line +"\n"
+    return retStr
         
 def check_env():
+    """
+    環境変数が正しく設定されているかを確認する
+    """
     envs = ["prefix"]
     for env in envs:
         if env not in os.environ:
@@ -58,12 +68,12 @@ def genHostFile(file,dest,numHosts,duplicate):
             file.write(host)
     
 def isValidAttr(attr):
-
+    
     if not isinstance(attr,dict):
         print("attr:"+attr+"\n"+"type:"+str(type(attr)))
         return False
     
-    param = ["args","thread","gcproc","process","duplicate"]
+    param = ["args","thread","gcproc","place","duplicate"]
     for x in param:
         if x in attr:
             continue
@@ -142,6 +152,7 @@ def x10outToYaml(src,dst):
         sed = stack.enter_context(SProc.Popen(["sed","-e",r"s/^.*\/workspace\/src\(\/.*\)$/\1/"],stdin=cat.stdout,stdout=SProc.PIPE))
         SProc.call([x10out2yaml],stdin=sed.stdout,stdout=outFile)
 
+"""
 def run_test_dummy(name,describe,mpi,attribute):
     if DEBUG:
         print("-------------------------------")
@@ -152,6 +163,8 @@ def run_test_dummy(name,describe,mpi,attribute):
         print("    mpi:"+mpi)
         print("    attribute"+str(attribute))
         print("-------------------------------")
+"""
+
 def fail_run_test(name,binName,attributes,workPath,describe):
     tap.ok(0,"running "+binName+" failure."+describe,skip=True)
     
@@ -164,30 +177,40 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if isValidAttr(attributes) == False:
         tap.ok(0, name+".yaml is invalid testfile.")
         return
-    
     if "name" not in attributes:
-        describe = attributes["name"]
+        attributes["name"] = name
+    if "duplicate" not in attributes:
+        attributes["duplicate"]="2"
+    if "thread" not in attributes:
+        attributes["thread"]=str(24 // int(attributes["duplicate"]) )
+    if "gcproc" not in attributes:
+        attributes["gcproc"]=str( int(attributes["thread"]) // 2)
+    if "place" not in attributes:
+        attributes["place"] = str( int(attributes["node"]) * int(attributes["duplicate"]))
+    
+
     (env,args) = getMPISettings(mpi,attributes)
     
     if(DEBUG):
         print("    env :"+str(env))
         print("    args:"+str(args))
         
-    sys.stderr.write("generating hostfile.")
+    if(DEBUG):sys.stderr.write("generating hostfile.")
     hostSrc = os.path.expandvars("$prefix/hosts.txt")
     hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
-    sys.stderr.write("hostSrc:"+hostSrc)
-    sys.stderr.write("hostDst:"+hostSrc)
+    if(DEBUG):
+        sys.stderr.write("hostSrc:"+hostSrc)
+        sys.stderr.write("hostDst:"+hostSrc)
     
     os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
 
     genHostFile(hostSrc,hostDst,
-                numHosts  =attributes["thread"],
+                numHosts  =attributes["node"],
                 duplicate =attributes["duplicate"] )
-
+    
     
     #---argument settings--------------------#
-    numProcess = str(attributes["process"])
+    numPlace = str(attributes["place"])
     hostFile   = hostDst
     binPath    = workPath+"/bin/"+binName
     args = list(map(os.path.expandvars,args))
@@ -200,15 +223,16 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     #----------------------------------------#
     
     for k in env:
+
         os.environ[k] = env[k]
 
     runCmd = [
-        "mpirun","-np",numProcess,
+        "mpirun","-np",numPlace,
         "--hostfile", hostFile,
         binPath] + args
 
     #run
-    print(runCmd)
+    if(DEBUG):print(runCmd)
     mpirunProc = SProc.Popen(runCmd,
                              stdout=SProc.PIPE,stderr=SProc.PIPE)
     try:
@@ -217,13 +241,14 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         mpirunProc.kill()
         stdout, stderr = mpirunProc.communicate()
     runResult = mpirunProc.poll()
-    Message = {"name":name,
-               "stderr":stderr.decode(),
-               "stdout":stdout.decode()}
+    Message = "name:"  + name           + "\n" + \
+              "stderr:\n"+ indentDeeper(stderr.decode())+ "\n" + \
+              "stdout:\n"+ indentDeeper(stdout.decode())
+              
     tap.ok(runResult == 0,
-           "Run "+name + "\n"+
-           "Message:\n"+yaml.dump(Message,default_flow_style=False))
-    
+           "Run "+name + "\n"+ \
+           "Message:\n"+indentDeeper(Message))
+
 def build_test_dummy(name,workingDir="./"):
     if DEBUG:
         print("----------------------------")
@@ -249,7 +274,7 @@ def build_test(name,x10file,workingDir,srcDir):
     X10CXX = "x10c++"
     buildCmd = [X10CXX, "-cxx-prearg", "-I"+srcDir+"/../include", "-cxx-prearg","-g", "-x10rt", "mpi",
                 "-sourcepath",srcDir, "-o", bindir + name, x10file]
-    print(buildCmd)
+    if(DEBUG):print("build command:"+buildCmd)
     logFile = open(logdir+"buildlog-"+name+".log",'w')
     errFile = open(outFileName,'w')
 

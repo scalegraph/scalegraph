@@ -31,6 +31,9 @@ def main():
     parser.add_option("-t","--test",action="store",default="small",
                     type="string",
                     help="Test case to run",dest="testcase")
+    parser.add_option("-n",action="store",default="4",
+                      type="int",
+                      help="number of nodes",dest="maxNode")
     parser.add_option("--mpi",action="store",
                     default="mvapich",type="string",
                     dest="mpi",help="mpi to run tests",
@@ -57,7 +60,7 @@ def main():
 ##yamlからの設定の読み込み
 
 #各ファイルのビルド、テストの実行
-    print("Test will performed in "+opts.yamlDir)
+    print(opts.yamlDir+"/*.yaml is loaded")
     yamlFiles = os.listdir( opts.yamlDir )
     print(yamlFiles)
     helper.initTap(len(yamlFiles))
@@ -76,6 +79,8 @@ def main():
             testcase=opts.testcase)
     
         for attribute in attributes:
+            attribute["node"] = opts.maxNode
+            
             buildresult = build_test(filePref,
                         opts.x10Dir+"/"+filePref+".x10",
                         sandbox,
@@ -84,7 +89,7 @@ def main():
                 run_test(name=filePref,
                 binName=filePref,
                 workPath=sandbox,
-                mpi="mvapich",
+                mpi=opts.mpi,
                 attributes=attribute)
             else:
                 fail_run_test(name = filePref,
