@@ -16,6 +16,8 @@ import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Bitmap;
 
+import x10.compiler.Inline;
+
 /**
  * Provides XPregel framework service for compute kernels. <br>
  * This object is available only in the compute kernel.
@@ -40,7 +42,7 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	// aggregate values
 	var mAggregatedValue :A;
 	val mAggregateValue :GrowableMemory[A] = new GrowableMemory[A]();
-
+	
 	var mSrcid :Long;
 	
 	// Output
@@ -50,9 +52,15 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	var mNumActiveVertexes :Long = 0L;
 	var mBCSInputCount :Long = 0L;
 	
+	var mDiffInDst :GrowableMemory[Long];
+	var mDiffInSrcWithAR :GrowableMemory[Long];
+	public static val INEDGE_ADDBIT :Long= (1L<<62);
+	
 	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
 		mWorker = worker;
 		mCtx = ctx;
+		mDiffInDst = worker.mWDiffInDst(tid);
+		mDiffInSrcWithAR = worker.mWDiffInSrcWithAR(tid);
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
 		mUCCMessages = mCtx.messageBuffer(tid);
 		mOut = worker.outBuffer(tid);
@@ -132,26 +140,75 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 * replace the out edges for the current vertex with the given edges
 	 */
 	public def setOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
+		//TODO: uwaaaaaaaaaaaaaaaaaaaa
+		mWorker.mNeedsAllUpdateInEdge=true;	//atode henkou yotei
 		mEdgeProvider.setOutEdges(id, value);
 	}
 	
 	/**
 	 * remove all the out edges for the current vertex
 	 */
-	public def clearOutEdges() { mEdgeProvider.clearOutEdges(); }
+	public def clearOutEdges() {
+		if(!mWorker.mNeedsAllUpdateInEdge){
+			val oEId = outEdgesId();
+			if(judgeFewInEdgeModify(oEId.size())){
+				mDiffInDst.add(oEId);
+				for(i in oEId.range())
+					mDiffInSrcWithAR.add(mSrcid);
+			}else{
+				mWorker.mNeedsAllUpdateInEdge=true;
+			}
+		}
+		mEdgeProvider.clearOutEdges();
+	}
+	
+	/**
+	 * remove out edges for the current vertex
+	 */
+	public def removeOutEdges(id :MemoryChunk[Long]) {
+		if(!mWorker.mNeedsAllUpdateInEdge){
+			if(judgeFewInEdgeModify(id.size())){
+				mDiffInDst.add(id);
+				for(i in id.range())
+					mDiffInSrcWithAR.add(mSrcid);
+			}else{
+				mWorker.mNeedsAllUpdateInEdge=true;
+			}
+		}
+		mEdgeProvider.removeOutEdges(mSrcid, id);
+	}
 	
 	/**
 	 * add out edge to the current vertex
 	 */
-	public def addOutEdge(id :Long, value :E) { mEdgeProvider.addOutEdge(id, value); }
+	public def addOutEdge(id :Long, value :E) {
+		if(!mWorker.mNeedsAllUpdateInEdge){
+			if(judgeFewInEdgeModify(1)){
+				mDiffInDst.add(id);
+				mDiffInSrcWithAR.add(mSrcid + INEDGE_ADDBIT);
+			}else{
+				mWorker.mNeedsAllUpdateInEdge=true;
+			}
+		}
+		mEdgeProvider.addOutEdge(id, value);
+	}
 	
 	/**
 	 * add out edges to the current vertex
 	 */
 	public def addOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
+		if(!mWorker.mNeedsAllUpdateInEdge){
+			if(judgeFewInEdgeModify(id.size())){
+				mDiffInDst.add(id);
+				for(i in id.range())
+					mDiffInSrcWithAR.add(mSrcid + INEDGE_ADDBIT);
+			}else{
+				mWorker.mNeedsAllUpdateInEdge=true;
+			}
+		}
 		mEdgeProvider.addOutEdges(id, value);
 	}
-
+	
 	/**
 	 * get aggregated value on a previous superstep
 	 */
@@ -242,6 +299,10 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 		assert (index < WorkerPlaceGraph.MAX_OUTPUT_NUMBER);
 		val outbuf = WorkerPlaceGraph.castTo[T](mOut(index));
 		outbuf.add(value);
+	}
+	
+	private @Inline def judgeFewInEdgeModify(v:Long) :Boolean{
+		return mWorker.getDiffInDstSize()+v<(mWorker.mOutEdge.vertexes.size()>>6);
 	}
 }
 

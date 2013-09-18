@@ -14,7 +14,9 @@ package org.scalegraph.xpregel;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
+import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.graph.id.IdStruct;
+import org.scalegraph.util.Bitmap;
 
 class EdgeProvider [E]/* {E haszero} */{
 	// srcid, offset
@@ -31,6 +33,7 @@ class EdgeProvider [E]/* {E haszero} */{
 	var mInOffset :MemoryChunk[Long];
 	var mInVertex :MemoryChunk[Long];
 	var mInValue :MemoryChunk[E];
+	
 	
 	def this(outEdge :GraphEdge[E], inEdge :GraphEdge[E]) {
 		mOutOffset = outEdge.offsets;
@@ -55,7 +58,7 @@ class EdgeProvider [E]/* {E haszero} */{
 		val offsetPerThread = new MemoryChunk[Long](numThreads + 1, 0);
 		offsetPerThread(0) = 0L;
 		
-		val outOffset = outEdge.offsets;
+		val GoutOffset = outEdge.offsets;
 		
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
@@ -70,7 +73,7 @@ class EdgeProvider [E]/* {E haszero} */{
 					++diffIndex;
 				}
 				else {
-					numEdges += outOffset(srcid + 1) - outOffset(srcid);
+					numEdges += GoutOffset(srcid + 1) - GoutOffset(srcid);
 				}
 			}
 			offsetPerThread(tid + 1) = numEdges;
@@ -94,7 +97,7 @@ class EdgeProvider [E]/* {E haszero} */{
 			val diffOffset = e.mDiffOffset.raw();
 			val diffVertex = e.mDiffVertex.raw();
 			val diffValue = e.mDiffValue.raw();
-		//	val outOffset = e.mOutOffset;
+			val outOffset = e.mOutOffset;		//modified
 			val outVertex = e.mOutVertex;
 			val outValue = e.mOutValue;
 			
@@ -157,8 +160,6 @@ class EdgeProvider [E]/* {E haszero} */{
 			val start = mOutOffset(srcid);
 			val length = mOutOffset(srcid + 1) - start;
 			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
-					//kono sansyou no shikata wo surunara WorkerPlacegraph no mOutEdge:GraphEdge[E] wo
-					//each thread ni copy shita mono wo sansyou sureba iikiga suru
 					mOutVertex.subpart(start, length),
 					mOutValue.subpart(start, length));
 		}
@@ -199,7 +200,6 @@ class EdgeProvider [E]/* {E haszero} */{
 	def inEdgesValue(srcid :Long) {
 		val start = mInOffset(srcid);
 		val length = mInOffset(srcid + 1) - start;
-//		Console.OUT.println("inEdgeValueRange"+start+" "+length);
 		return mInValue.subpart(start, length);
 	}
 	
@@ -216,6 +216,32 @@ class EdgeProvider [E]/* {E haszero} */{
 		mDiffValue.setSize(mDiffStartOffset);
 		mEdgeChanged = true;
 	}
+	
+	def removeOutEdges(srcid :Long, id :MemoryChunk[Long]) {
+		//TODO: sort ids (dareka tukutteta)
+		val oldOutEdges = outEdges(srcid);
+		val len = oldOutEdges.get1().size();
+		
+		var sIndex:Long = 0L;
+		//optimize!!!!!!!!!!
+		//O(i) de yarou
+		//updateoutEdge mitaini nameru
+		for(i in 0L..(id.size()-1L)){
+			val removeIndex = binariSearch(oldOutEdges.get1(), id(i), sIndex);
+			if(removeIndex<0L)	//not found
+				continue;
+			if(0L != removeIndex-sIndex){	//need to copy
+				addOutEdges(
+					oldOutEdges.get1().subpart(sIndex,removeIndex-sIndex),
+					oldOutEdges.get2().subpart(sIndex,removeIndex-sIndex));
+			}
+			sIndex = removeIndex+1;
+		}
+		addOutEdges(
+				oldOutEdges.get1().subpart(sIndex,len-sIndex),
+				oldOutEdges.get2().subpart(sIndex,len-sIndex));
+		mEdgeChanged = true;
+	}
 
 	def addOutEdge(id :Long, value :E) {
 		mDiffVertex.add(id);
@@ -228,4 +254,43 @@ class EdgeProvider [E]/* {E haszero} */{
 		mDiffValue.add(value);
 		mEdgeChanged = true;
 	}
+	
+	private static def binariSearch(id :MemoryChunk[Long], num :Long, fleft:Long) :Long{
+		var l :Long = fleft;
+		var r :Long = id.size() - 1L;
+		var m :Long;
+		var value :Long = -1L;
+		
+		while(l<=r){
+			m = (l+r) >> 1;
+			if(id(m) < num){
+				l = m + 1;
+			}else if(id(m) > num){
+				r = m - 1;
+			}else{
+				value = m;
+				break;
+			}
+		}
+		return value;
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

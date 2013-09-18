@@ -18,6 +18,7 @@ import x10.util.concurrent.AtomicLong;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.Tuple2;
+import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.util.Bitmap;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
@@ -60,8 +61,13 @@ final class WorkerPlaceGraph[V,E] {
 	var mLogPrinter :Printer;
 	var mEnableStatistics :Boolean = true;
 	
+	var mWDiffInDst :MemoryChunk[GrowableMemory[Long]];
+	var mWDiffInSrcWithAR :MemoryChunk[GrowableMemory[Long]];
+	var mNeedsAllUpdateInEdge :Boolean = true;
+	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_c = team.role()(0);
+		
 		mTeam = new Team2(team);
 		mIds = ids;
 		
@@ -76,11 +82,18 @@ final class WorkerPlaceGraph[V,E] {
 		mVertexValue = new MemoryChunk[V](numVertexes);
 		mVertexActive = new Bitmap(numVertexes, true);
 		mVertexShouldBeActive = new Bitmap(numVertexes, true);
-
+		
 		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
 		
 		mOutput = new MemoryChunk[GrowableMemory[Int]](numThreads * MAX_OUTPUT_NUMBER, 0, true);
+		
+		mWDiffInDst = new MemoryChunk[GrowableMemory[Long]](
+				numThreads,
+				(i :Long) => new GrowableMemory[Long](32));
+		mWDiffInSrcWithAR = new MemoryChunk[GrowableMemory[Long]](
+				numThreads,
+				(i :Long) => new GrowableMemory[Long](32));
 		
 		if (here.id == 0) {
 			Console.OUT.println("lgl = " + mIds.lgl);
@@ -97,34 +110,104 @@ final class WorkerPlaceGraph[V,E] {
 	}
 	
 	public def updateInEdge() {
-		val numThreads = Runtime.NTHREADS;
-		val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
+		//kono naka de broadcast ha dekinai
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+		//place goto ni S,D ha kotonaru noni douyatte kyuusyuu site iruno?
 		
-		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
-			val UCCMessages = mesComm.messageBuffer(tid);
-			val offset = mOutEdge.offsets;
-			val id = mOutEdge.vertexes;
-			for(vid in r) {
-				val vid_ = StoD(vid);
-				for(i in offset(vid)..(offset(vid + 1) - 1)) {
-					val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
-					mesBuf.messages.add(vid_);
-					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
+		
+		mNeedsAllUpdateInEdge = 0 < mTeam.allreduce[Long](mNeedsAllUpdateInEdge?1:0,Team.ADD) ? true : false;
+		
+		if(mNeedsAllUpdateInEdge){
+			val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
+			val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+				val UCCMessages = mesComm.messageBuffer(tid);
+				val offset = mOutEdge.offsets;
+				val id = mOutEdge.vertexes;
+				for(vid in r) {
+					val vid_ = StoD(vid);
+					for(i in offset(vid)..(offset(vid + 1) - 1)) {
+						val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));	//D no aru column
+						mesBuf.messages.add(vid_);								//message ni S wo D ni shitayatu wo ireru
+						mesBuf.dstIds.add(mesComm.mDtoS(id(i)));				//okurisaki ni D wo S ni shitayatu wo ireteru
+					}
 				}
+			});
+			
+			mesComm.preProcess();
+			mesComm.process(null, true, false);
+			mesComm.exchangeMessages(true, false);
+	
+			mInEdge.offsets = mesComm.mUCROffset;
+			mInEdge.vertexes = mesComm.mUCRMessages;
+			mesComm.mUCROffset = new MemoryChunk[Long]();
+			mesComm.mUCRMessages = new MemoryChunk[Long]();
+			mesComm.del();	//TODO tosika kakarete inai
+		}else{
+			val allInEdgeNum = getDiffInDstSize();
+			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == srcId
+			assert(mWDiffInSrcWithAR(0).size() == mWDiffInDst(0).size());
+			
+			val teamNum = mTeam.size();
+			//each place ni sonzai suru data suu wo shiraberu
+			val diffInEdgeOffset = new MemoryChunk[Int](teamNum);
+			val diffInEdgeData = new MemoryChunk[Tuple2[Long,Long]](allInEdgeNum);
+			val diffInEdgeCount = new MemoryChunk[Int](teamNum);
+			for (i in mWDiffInDst.range())
+			for (j in mWDiffInDst(i).range()){
+				diffInEdgeCount(mDtoS.c(mWDiffInDst(i)(j)))++;	//data suu ++
+				mWDiffInSrcWithAR(i)(j) =  mStoV(mWDiffInSrcWithAR(i)(j));	//tsuide
 			}
-		});
-		
-		mesComm.preProcess();
-		mesComm.process(null, true, false);
-		mesComm.exchangeMessages(true, false);
+			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == vId		(kokokara)
+			diffInEdgeOffset(0) = 0;
+			for(i in 0L..(diffInEdgeOffset.size()-1L)){
+				diffInEdgeOffset(i + 1) += diffInEdgeOffset(i)+diffInEdgeCount(i);
+				diffInEdgeCount(i) = 0;
+			}
+			diffInEdgeCount(diffInEdgeCount.size()-1L) = 0;
+			
+			for (i in mWDiffInDst.range())
+			for (j in mWDiffInDst(i).range()){
+				val index = mDtoS.c(mWDiffInDst(i)(j));
+				diffInEdgeData(diffInEdgeOffset(index) + diffInEdgeCount(index)++)
+					= new Tuple2(mWDiffInDst(i)(j),mWDiffInSrcWithAR(i)(j));
+			}
+			/*
+			 * TODO: diffInDst wo key to shite diffInDst,diffInSrc wo
+			 * 		sorezore stable sort suru
+			 */
 
-		mInEdge.offsets = mesComm.mUCROffset;
-		mInEdge.vertexes = mesComm.mUCRMessages;
-		mesComm.mUCROffset = new MemoryChunk[Long]();
-		mesComm.mUCRMessages = new MemoryChunk[Long]();
-		mesComm.del();
+			val recvCount = new MemoryChunk[Int](teamNum);
+			val recvOffset = new MemoryChunk[Int](teamNum + 1);
+			mTeam.alltoall(diffInEdgeCount,recvCount);
+			recvOffset(0) = 0;
+			for(i in recvCount.range()) {
+				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
+			}
+			val recvSize = recvOffset(teamNum);
+			val dstDIEO = new MemoryChunk[Int](teamNum);
+			val dstDIED = new MemoryChunk[Tuple2[Long,Long]](recvSize);
+			val dstDIEC = new MemoryChunk[Int](teamNum);
+			mTeam.alltoallv[Tuple2[Long,Long]](diffInEdgeData, diffInEdgeOffset, diffInEdgeCount, dstDIED, dstDIEO,dstDIEC);
+
+			for(off in dstDIEO.range())
+			for(cnt in 0..dstDIEC(off)){
+				dstDIED(dstDIEO(off)+cnt) 
+					= new Tuple2(dstDIED(dstDIEO(off)+cnt).val1, mVtoD(dstDIED(dstDIEO(off)+cnt).val2));
+			}
+			/* TODO: sort!!!!!*/
+			
+			//update outedge no youryou de owari
+			
+		}
+		
+		//!!!!!kanarazu koko wo toosu!!!!!
+		//TODO:atosyori
+		for(i in mWDiffInDst.range()){
+			mWDiffInDst(i).clear();
+			mWDiffInSrcWithAR(i).clear();
+		}
+		mNeedsAllUpdateInEdge = false;
 	}
 	
 	public def updateInEdgeWithValue() {E haszero} {
@@ -218,8 +301,7 @@ final class WorkerPlaceGraph[V,E] {
 		// if there are no active vertex nor messages, we terminate computation.
 		if(recvStt(STT_ACTIVE_VERTEX) == 0L &&
 				recvStt(STT_RAW_MESSAGE) == 0L &&
-				recvStt(STT_VERTEX_MESSAGE) == 0L)
-		{
+				recvStt(STT_VERTEX_MESSAGE) == 0L){
 			return true;
 		}
 		
@@ -382,4 +464,13 @@ final class WorkerPlaceGraph[V,E] {
 		
 		return outMem;
 	}
+	
+	public def getDiffInDstSize() :Long{
+		var l:Long = 0L;
+		for(i in mWDiffInDst.range()){
+			l += mWDiffInDst(i).size();
+		}
+		return l;
+	}
+	
 }
