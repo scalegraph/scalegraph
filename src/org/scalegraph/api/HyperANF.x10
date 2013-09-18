@@ -38,6 +38,7 @@ public class HyperANF {
 	 */
 	public var niter:Int = 30;
 	
+	public var weights :String = "weight";
 	/*
 	 * calcSize Method
 	 * 
@@ -107,7 +108,7 @@ public class HyperANF {
 		 * 		0~ : recieve messages , change my value and send my value to adjacent nodes.
 		 */
 		
-		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter)));
+		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
 
@@ -181,15 +182,13 @@ public class HyperANF {
 	 * @param g The graph object. 
 	 */
 	public def execute(g :Graph) :MemoryChunk[Double]{	
-		throw new UnsupportedOperationException();
+		//throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
-	/*	this.team = g.team();	
+		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), weights, directed, true);
-		return execute(matrix);
-		 * */
+				Config.get().distXPregel(), weights, true, true);
+		return execute(this,g,matrix);	
 	}
-
 
 	// The algorithm interface also needs two helper methods like this.
 	
@@ -197,8 +196,8 @@ public class HyperANF {
 	 * @param g The graph object. 
 	 */
 	public static def run(g :Graph) :MemoryChunk[Double]{
-		throw new UnsupportedOperationException();
-		//new StronglyConnectedComponent().execute(g);
+		//throw new UnsupportedOperationException();
+		return new HyperANF().execute(g);
 	}
 	
 	/** Run the calculation of StronglyConnectedComponent with default parameters.
