@@ -339,6 +339,7 @@ final class WorkerPlaceGraph[V,E] {
 				if(aggregator != null) {
 					intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
 				}
+				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_AGGREGATE); }
 				vc.mAggregateValue.clear();
 				vc.mNumActiveVertexes = numProcessed;
 			});

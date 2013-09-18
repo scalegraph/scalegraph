@@ -26,7 +26,7 @@ import x10.compiler.Ifdef;
 public abstract class InputSplitter {
 	private static type IO = org.scalegraph.id.ProfilingID.IO;
 	
-	public static T_CHUNK_SIZE = 1*1024;
+	public static T_CHUNK_SIZE = 128*1024;
 	
 	/**
 	 * Returns the position of the next line start from the specified offset.

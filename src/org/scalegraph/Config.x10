@@ -39,8 +39,16 @@ public class Config {
 	}
 	
 	private static def broadcast(cfg :Config) {
+		// we also check the environment.
+		val nthreads = Runtime.NTHREADS;
+		
 		cfg.world.placeGroup().broadcastFlat(() => {
 			Config.instance() = cfg;
+			
+			if(Runtime.NTHREADS != nthreads) {
+				throw new IllegalArgumentException("Non unified X10_NTHREADS setting is not supported."
+						+ " [here=" + here.id + ",Runtime.NTHREADS=" + Runtime.NTHREADS + ",NumThreadsOfFirstPlace=" + nthreads + "]");
+			}
 		});
 	}
 	

@@ -73,8 +73,20 @@ public struct ProfilingDB {
 			return offsets;
 		}
 		
-		def get(frame :Int, tid :Long)
-			= step.subpart(tid * width + frameOffsets(frame), numPoints(frame)*2 + 1);
+		def get(frame :Int, tid :Long) {
+			if(tid >= numThreads) {
+				throw new IllegalArgumentException("tid must not exceed Runtime.NTHREADS."
+						+ "[tid=" + tid + ",Runtime.NTHREADS=" + Runtime.NTHREADS + ",numThreads=" + numThreads + "]");
+			}
+			if(frame >= numFrames) {
+				throw new IllegalArgumentException("frame must not exceed numFrames."
+						+ "[frame=" + frame + ",numFrames=" + numFrames + "]");
+			}
+			if(frameOffsets(frame) + numPoints(frame)*2 + 1 != frameOffsets(frame+1)) {
+				throw new IllegalArgumentException("Oh no ...");
+			}
+			return step.subpart(tid * width + frameOffsets(frame), numPoints(frame)*2 + 1);
+		}
 		
 		private def resbuf(idx :Int) = result.subpart(idx * totalPoints, totalPoints);
 

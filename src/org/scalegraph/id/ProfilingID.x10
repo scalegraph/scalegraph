@@ -40,8 +40,9 @@ public class ProfilingID {
 		public static val MAIN_TH_FRAME = 1;
 		
 		public static val MAIN_TH_COMPUTE = 0;
-		public static val MAIN_TH_COPY_OUT = 1;
-		public static val MAIN_TH_POINT_COUNT = 2;
+		public static val MAIN_TH_AGGREGATE = 1;
+		public static val MAIN_TH_COPY_OUT = 2;
+		public static val MAIN_TH_POINT_COUNT = 3;
 		
 		public static val FRAME_VECTOR = [MAIN_POINT_COUNT as Int, MAIN_TH_POINT_COUNT];
 		public static val DESCRIPTION = [
@@ -67,6 +68,7 @@ public class ProfilingID {
 		                 "MAIN_OUTPUT", // 19
   
   							"MAIN_TH_COMPUTE",
+  							"MAIN_TH_AGGREGATE",
                    		"MAIN_TH_COPY_OUT"
 		                                 ];
 	}
