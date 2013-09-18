@@ -15,6 +15,7 @@ import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.CSV;
+import org.scalegraph.util.MathAppend;
 
 final class MaxFlowTest extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
@@ -27,7 +28,7 @@ final class MaxFlowTest extends AlgorithmTest {
 		if(args(0).equals("check")) {
 			val mf = result.maxFlow;
 			
-			if(mf != Long.parse(args(1)))
+			if(MathAppend.abs((mf+1.0) / ( Double.parse(args(1)) + 1.0 ) - 1.0) > 0.01   )
 				return false;
 			return true;
 		}

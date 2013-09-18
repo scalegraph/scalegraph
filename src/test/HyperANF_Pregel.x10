@@ -64,7 +64,7 @@ final class HyperANF_Pregel extends STest {
 		
 		val start_read_time = System.currentTimeMillis();
 		val g = Graph.make(CSV.read(args(0), 
-				[Type.Long as Int, Type.Long, Type.None, Type.Double],
+				[Type.Long as Int, Type.Long, Type.None],
 				["source", "target", "weight"]));
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");

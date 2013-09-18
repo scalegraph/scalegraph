@@ -15,6 +15,14 @@ import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.CSV;
+import org.scalegraph.util.SString;
+import org.scalegraph.util.SStringBuilder;
+import org.scalegraph.io.FileWriter;
+import org.scalegraph.io.FileMode;
+import org.scalegraph.util.GrowableMemory;
+import org.scalegraph.io.FileReader;
+import org.scalegraph.util.*;
+import x10.io.EOFException;
 
 final class HyperANFTest extends AlgorithmTest{
 	
@@ -25,12 +33,39 @@ final class HyperANFTest extends AlgorithmTest{
 	public def run(args :Array[String](1), g :Graph): Boolean {
 		val result = org.scalegraph.api.HyperANF.run(g);		
 		if(args(0).equals("write")) {
-			CSV.write(args(1), new NamedDistData(["hyperanf" as String], [result as Any]), true);
+			var iter:Long = 0;
+			val sb = new SStringBuilder();
+			for(i in result.range()) {
+				sb.add(result(i)).add("\n");
+			}
+			val fw = new FileWriter(args(1), FileMode.Create);
+			fw.write(sb.result().bytes());
+			fw.close();
 			return true;
 		}
 		else if(args(0).equals("check")) {
+			val fr = new FileReader(args(1));
+			val refdata = new GrowableMemory[Double]();
+			try {
+				do {
+					refdata.add(fr.fastReadLine().toDouble());
+				} while(true);
+			}
+			catch(e :EOFException) { }
+			fr.close();
 			
-			return checkResult(result, args(1), 0.1);
+			if(result.size() != refdata.size()) {
+				return false;
+			}
+			else {
+				for(i in result.range()) {
+					val abs = MathAppend.abs( (result(i) + 1.0) /( refdata(i) + 1.0 ));
+					if(abs > 0.0001) {
+						return false;
+					}
+				}
+			}
+			return true;
 			
 		}
 		else {

@@ -32,7 +32,7 @@ import org.scalegraph.util.Algorithm;
 
 final public class MaxFlow {
 	public var team :Team = Config.get().worldTeam();
-	/** The name of the attribute used to give edge weights for the calculation of weighted PageRank.
+	/** The name of the attribute used to give edge weights for the calculation of weighted maxflow.
 	 * Default: "weight"
 	 */
 	public var weights :String = "weight";
@@ -43,15 +43,20 @@ final public class MaxFlow {
 	public var sourceVertexId:Long = 0;
 	public var sinkVertexId:Long = 1;
 	
-	/* The name of the number of recursion that preflow-push-relavel do.
+	/** The name of error.
+	 * 
+	 */
+	public var eps:Double = 1e-6;
+	
+	/** The name of the number of recursion that preflow-push-relavel do.
 	 * Default : 1000
 	 */
     public var recursionLimit:Long = 1000;
     /**
      * A class storing the result from MaxFlow
      */
-    public static struct Result (maxFlow: Long){
-       protected def this(mf: Long) {
+    public static struct Result (maxFlow: Double){
+       protected def this(mf: Double) {
            property(mf);
        }
     }
@@ -61,119 +66,138 @@ final public class MaxFlow {
      * @return A long integer, the value of the maximum flow
      */    
 
-	private static struct AdjVertex {
-		val vertexId:Long;
-		val myId:Long;
-		val isOutEdge:Boolean;
-		val capacity:Long;
-		val height:Long;
-		val excess:Long;
-		public def this(v:Long, m:Long, is:Boolean ,cap:Long) {
-			vertexId = v;
-			myId = m;
-			isOutEdge = is;
-			capacity = cap;
-			height = 0L;
-			excess = 0L;
-		}
+    private static struct AdjVertex {
+    	val vertexId:Long;
+    	val myId:Long;
+    	val isOutEdge:Boolean;
+    	val capacity:Double;
+    	// val capacity:Long;
+    	val height:Long;
+    	val excess:Double;
+    	// val excess:Long;
+    	// public def this(v:Long, m:Long, is:Boolean ,cap:Long) {
+    	public def this (v:Long, m:Long,is:Boolean,  cap:Double) {
+    		vertexId = v;
+    		myId = m;
+    		isOutEdge = is;
+    		capacity = cap;
+    		height = 0L;
+    		// excess = 0L;
+    		excess = 0.0;
+    	}
 
-		@Native("c++", "(#this)->FMGL(excess) = #v")
-		native def setExcess(v:Long):void;
+    	@Native("c++", "(#this)->FMGL(excess) = #v")
+    	native def setExcess(v:Double):void;
+    	// native def setExcess(v:Long):void;
+    	
+    	@Native("c++", "(#this)->FMGL(height) = #v")
+    	native def setHeight(v:Long):void;
+    	
+    	@Native("c++", "(#this)->FMGL(capacity) = #v")
+    	native def setCapacity(v:Double):void;
+    	// native def setCapacity(v:Long):void;
+    }
 
-		@Native("c++", "(#this)->FMGL(height) = #v")
-		native def setHeight(v:Long):void;
+    private static struct FlowMessage {
+    	// val flow:Long;
+    	val flow:Double;
+    	val fromId:Long;
+    	// def this(f:Long, i:Long) {
+    	def this(f:Double, i:Long) {
+    		this.flow = f;
+    		this.fromId = i;
+    	}
+    }
 
-		@Native("c++", "(#this)->FMGL(capacity) = #v")
-		native def setCapacity(v:Long):void;
-	}
+    private static struct ValueMessage {
+    	// val excess:Long;
+    	val excess:Double;
+    	val height:Long;
+    	val id:Long;
+    	// def this(e:Long, h:Long, i:Long) {
+    	def this(e:Double, h:Long, i:Long) {
+    		excess = e; 
+    		height = h;
+    		id  = i;
+    	}
+    }
 
-	private static struct FlowMessage {
-		val flow:Long;
-		val fromId:Long;
-		def this(f:Long, i:Long) {
-			this.flow = f;
-			this.fromId = i;
-		}
-	}
+    private static struct InitMessage {
+    	val val1:Long;
+    	val val2:Long;
+    	val isOutEdge:Boolean;
+    	val capacity:Double;
+    	//val capacity:Long;
+    	// def this(val a:Long, val b:Long, val c:Boolean ,val cap:Long) {
+    	def this(val a:Long, val b:Long, val c:Boolean, val cap:Double) {
+    		val1=a;
+    		val2=b;
+    		isOutEdge=c;
+    		capacity = cap;
+    	}
+    }
 
-	private static struct ValueMessage {
-		val excess:Long;
-		val height:Long;
-		val id:Long;
-		def this(e:Long, h:Long, i:Long) {
-			excess = e;
-			height = h;
-			id  = i;
-		}
-	}
+    private static class MFEdge {
+    	// var capacity:Long;
+    	var capacity:Double;
+    	//		def this(val cap:Long) {
+    	def this(val cap:Double) {
+    		capacity = cap;
+    	}
+    }
 
-	private static struct InitMessage {
-		val val1:Long;
-		val val2:Long;
-		val isOutEdge:Boolean;
-		val capacity:Long;
-		def this(val a:Long, val b:Long, val c:Boolean ,val cap:Long) {
-			val1=a;
-			val2=b;
-			isOutEdge=c;
-			capacity = cap;
-		}
-	}
+    private static struct MFVertex {
+    	val adjVertex:MemoryChunk[AdjVertex];
+    	// val excess:Long;
+    	val excess:Double;
+    	val height:Long;
+    	val isExcessNonZero:Boolean;
+    	public def this() {
+    		this.adjVertex = new MemoryChunk[AdjVertex](0);
+    		// excess = 0L;
+    		excess = 0.0;
+    		height = 0L;
+    		isExcessNonZero = false;
+    	}
+    	
+    	public def this(val adj:MemoryChunk[AdjVertex]) {
+    		this.adjVertex = adj;
+    		// excess = 0L;
+    		excess = 0.0;
+    		height = 0L;
+    		isExcessNonZero = false;
+    	}
+    	@Native("c++", "(#this)->FMGL(adjVertex) = #v")
+    	native def setAdj(v:MemoryChunk[AdjVertex]):void;
 
-	
-	private static struct MFVertex {
-		val adjVertex:MemoryChunk[AdjVertex];
-		val excess:Long;
-		val height:Long;
-		val isExcessNonZero:Boolean;
-		public def this() {
-			this.adjVertex = new MemoryChunk[AdjVertex](0);
-			excess = 0L;
-			height = 0L;
-			isExcessNonZero = false;
-		}
-
-		def this(val adj:MemoryChunk[AdjVertex]) {
-			this.adjVertex = adj;
-			excess = height = 0L;
-			isExcessNonZero = false;
-		}
-		@Native("c++", "(#this)->FMGL(adjVertex) = #v")
-		native def setAdj(v:MemoryChunk[AdjVertex]):void;
-
-		@Native("c++", "(#this)->FMGL(excess) = #v")
-		native def setExcess(v:Long):void;
-
-		@Native("c++", "(#this)->FMGL(height) = #v")
-		native def setHeight(v:Long):void;
-
-		@Native("c++", "(#this)->FMGL(isExcessNonZero) = #v")
-		native def setIsExcessNonZero(v:Boolean):void;
-
-		def setAdjCapacity(id:Long, cap:Long) {
-			val adjV = adjVertex(id);
-			adjV.setCapacity(cap);
-			adjVertex(id) = adjV;
-		}
-		def setAdjExcess(id:Long, excess:Long) {
-			val adjV = adjVertex(id);
-			adjV.setExcess(excess);
-			adjVertex(id) = adjV;
-		}
-		def setAdjHeight(id:Long, height:Long) {
-			val adjV = adjVertex(id);
-			adjV.setHeight(height);
-			adjVertex(id) = adjV;
-		}
-	}
-	private static class MFEdge {
-		var capacity:Long;
-		def this(val cap:Long) {
-			capacity = cap;
-		}
-	}
-
-	
+    	@Native("c++", "(#this)->FMGL(excess) = #v")
+    	native def setExcess(v:Double):void;
+    	// native def setExcess(v:Long):void;
+    	
+    	@Native("c++", "(#this)->FMGL(height) = #v")
+    	native def setHeight(v:Long):void;
+    	
+    	@Native("c++", "(#this)->FMGL(isExcessNonZero) = #v")
+    	native def setIsExcessNonZero(v:Boolean):void;
+    	
+    	// def setAdjCapacity(id:Long, cap:Long) {
+    	def setAdjCapacity(id:Long, cap:Double) {
+    		val adjV = adjVertex(id);
+    		adjV.setCapacity(cap);
+    		adjVertex(id) = adjV;
+    	}
+    	// def setAdjExcess(id:Long, excess:Long) {
+    	def setAdjExcess(id:Long, excess:Double) {
+    		val adjV = adjVertex(id);
+    		adjV.setExcess(excess);
+    		adjVertex(id) = adjV;
+    	}
+    	def setAdjHeight(id:Long, height:Long) {
+    		val adjV = adjVertex(id);
+    		adjV.setHeight(height);
+    		adjVertex(id) = adjV;
+    	}
+    }
     private static def execute(param:MaxFlow, g:Graph, matrix:DistSparseMatrix[Double]): Result {
 
     	// define parameters as local values
@@ -182,6 +206,8 @@ final public class MaxFlow {
     	val sinkVertexId = param.sinkVertexId;
     	val weights = param.weights;
     	val recursionLimit = param.recursionLimit;
+    	val eps = param.eps;
+    	
     	
     	var currFlow:Long;
     	val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
@@ -196,7 +222,8 @@ final public class MaxFlow {
     		val dst = xpregel.edgeValues();
     		Parallel.iter(dst.range(), (tid :Long, r :LongRange) => {
     			for(i in r)
-    				dst(i) = new MFEdge(src(i) as Long);
+    				dst(i) = new MFEdge(src(i));
+    			// dst(i) = new MFEdge(src(i) as Long);
     		});
     	});
 
@@ -290,15 +317,17 @@ final public class MaxFlow {
     	//step 3 : initialization of preflow push relabel. 
     	xpregel.iterate[FlowMessage,Long](
     			(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
-   // 				Console.OUT.println("phase3");
+    				//				Console.OUT.println("phase3");
     				if(ctx.superstep()==0 && ctx.realId()==sourceVertexId) {
     					for(i in ctx.value().adjVertex.range()) {
     						val toId = ctx.value().adjVertex(i).vertexId;
     						val m = ctx.value().adjVertex(i).myId;
     						val flow = ctx.value().adjVertex(i).capacity;
     						val mes = new FlowMessage(flow ,m);
-    						ctx.value().adjVertex(i).setCapacity(0L);
-    						if(flow!=0L)
+    						// ctx.value().adjVertex(i).setCapacity(0L);
+    						ctx.value().adjVertex(i).setCapacity(0.0);
+    						// if(flow!=0L)
+    						if(flow>eps)
     							ctx.sendMessage(toId, mes);
     					}
     					val vval = ctx.value();
@@ -307,7 +336,8 @@ final public class MaxFlow {
     					ctx.setVertexShouldBeActive(true);
     				}
     				if(ctx.superstep()==1) {
-    					var excess:Long = ctx.value().excess;
+    					// var excess:Long = ctx.value().excess;
+    					var excess:Double  = ctx.value().excess;
     					for(i in messages.range()) {
     						excess += messages(i).flow;
     						val vval = ctx.value();
@@ -325,7 +355,8 @@ final public class MaxFlow {
     			(superstep :Int, aggVal :Long) => (superstep >= 1) );
 
     	
-    	val flowNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
+    	//		val flowNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
+    	val flowNum: GlobalRef[Cell[Double]] = new GlobalRef[Cell[Double]](new Cell[Double](0));
     	var recursion:Long = 1;
     	while(recursion<=recursionLimit) {
     		recursion++;
@@ -336,8 +367,9 @@ final public class MaxFlow {
     				(ctx :VertexContext[MFVertex, MFEdge, ValueMessage, Long ], messages :MemoryChunk[ValueMessage ] ) => {
 
     					if(ctx.superstep()==0) {
-    						ctx.setVertexShouldBeActive( ctx.value().excess!=0L );
-
+    						// ctx.setVertexShouldBeActive( ctx.value().excess!=0L );
+    						ctx.setVertexShouldBeActive(ctx.value().excess > eps);
+    						
     						if(ctx.realId() == sinkVertexId) {
     							Console.OUT.println("                              CURRENT FLOW"  + ctx.value().excess);
     							if(flowNum.home==here) {
@@ -363,7 +395,8 @@ final public class MaxFlow {
     						}
     					}
     					if(ctx.superstep()==1) {
-    						var excess:Long = ctx.value().excess;
+    						//							var excess:Long = ctx.value().excess;
+    						var excess:Double = ctx.value().excess;
     						for(i in messages.range()) {
     							val id:Long = messages(i).id;
     							val vval = ctx.value();
@@ -384,15 +417,18 @@ final public class MaxFlow {
     			val updatedNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
     			xpregel.iterate[FlowMessage,Long](
     					(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
-    						if(ctx.superstep()==0  && ctx.value().excess>0L 
+    						// if(ctx.superstep()==0  && ctx.value().excess>0L 
+    						if(ctx.superstep()==0 && ctx.value().excess>eps
     								&& ctx.realId()!=sourceVertexId && ctx.realId()!=sinkVertexId) {
-    							
-    							var excess:Long = ctx.value().excess;
+    							ctx.aggregate(1);
+    							// var excess:Long = ctx.value().excess;
+    							var excess:Double = ctx.value().excess;
     							var haveFlow:Boolean = false;
     							var minimHeight:Long = 1000000000L ;
     							minimHeight *= minimHeight;
     							for(i in ctx.value().adjVertex.range()) {
-    								if(excess==0L) break;
+    								// if(excess==0L) break;
+    								if(excess<eps) break;
     								val toId = ctx.value().adjVertex(i).vertexId;
     								val m = ctx.value().adjVertex(i).myId;
     								val flow = Math.min(ctx.value().adjVertex(i).capacity, excess);
@@ -400,7 +436,8 @@ final public class MaxFlow {
     								if(ctx.value().adjVertex(i).height<ctx.value().height) {
     									val mes = new FlowMessage(flow ,m);
     									excess -= flow;
-    									if(flow!=0L) {
+    									// if(flow!=0L) {
+    									if(flow>eps) {
     										val capacity = ctx.value().adjVertex(i).capacity;
     										val vval = ctx.value();
     										vval.setAdjCapacity(i, capacity - flow);
@@ -410,7 +447,8 @@ final public class MaxFlow {
     										haveFlow = true;
     									}
     								}
-    								else if(flow!=0L){
+    								// else if(flow!=0L){
+    								else if(flow>eps) {
     									minimHeight = Math.min(minimHeight, ctx.value().adjVertex(i).height);
     								}
     							}
@@ -420,14 +458,15 @@ final public class MaxFlow {
     								ctx.setValue(vval);
     								ctx.setVertexShouldBeActive(true);				
     							}
-    							else ctx.aggregate(1);
+    							//else ctx.aggregate(1);
     							val vval = ctx.value();
     							vval.setExcess(excess);
     							ctx.setValue(vval);
 
     						}
     						if(ctx.superstep()==1) {
-    							var excess:Long = ctx.value().excess;
+    							// var excess:Long = ctx.value().excess;
+    							var excess:Double = ctx.value().excess;
     							for(i in messages.range()) {
     								val id = messages(i).fromId;
     								val capacity = ctx.value().adjVertex(id).capacity;
@@ -448,7 +487,8 @@ final public class MaxFlow {
     					(values :MemoryChunk[Long]) => MathAppend.sum(values),
     					(superstep :Int, aggVal :Long) => {
     						if(updatedNum.home == here)
-    							updatedNum()() = aggVal;
+    							if(superstep==0)
+    								updatedNum()() = aggVal;
     						
     						return superstep >= 1; 
     					}) ;
@@ -500,7 +540,8 @@ final public class MaxFlow {
     								ctx.setValue(vval);
     							}
     							else {
-    								if(ctx.value().excess>0) {
+    								// if(ctx.value().excess>0L) {
+    								if(ctx.value().excess>eps) {
     									ctx.setVertexShouldBeActive(true);
     									val vval = ctx.value();
     									vval.setIsExcessNonZero(true);
@@ -516,8 +557,7 @@ final public class MaxFlow {
     	}	
     	
     	
-    	Console.OUT.println("flow = " + flowNum()());
-
+    	
 //    	val flows = g.retrieveEdgeAttribute[Long](csr, output);
     	val result = new Result(flowNum()());
     

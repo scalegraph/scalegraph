@@ -371,7 +371,7 @@ public class MaxFlow {
 							// if(ctx.superstep()==0  && ctx.value().excess>0L 
 							if(ctx.superstep()==0 && ctx.value().excess>eps
 									&& ctx.realId()!=sourceVertexId && ctx.realId()!=sinkVertexId) {
-								
+								ctx.aggregate(1);
 								// var excess:Long = ctx.value().excess;
 								var excess:Double = ctx.value().excess;
 								var haveFlow:Boolean = false;
@@ -409,7 +409,7 @@ public class MaxFlow {
 									ctx.setValue(vval);
 									ctx.setVertexShouldBeActive(true);				
 								}
-								else ctx.aggregate(1);
+								//else ctx.aggregate(1);
 								val vval = ctx.value();
 								vval.setExcess(excess);
 								ctx.setValue(vval);
@@ -438,7 +438,8 @@ public class MaxFlow {
 						(values :MemoryChunk[Long]) => MathAppend.sum(values),
 						(superstep :Int, aggVal :Long) => {
 							if(updatedNum.home == here)
-								updatedNum()() = aggVal;
+								if(superstep==0)
+									updatedNum()() = aggVal;
 							
 							return superstep >= 1; 
 						}) ;
