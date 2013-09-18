@@ -141,6 +141,7 @@ public final class GrowableMemory[T] {
 	 * @param reqCapacity The capacity you need at least.
 	 */
 	public def grow(var reqCapacity:Long):void {
+		if(reqCapacity < size) return ;
 		var newCapacity :Long = capacity();
 		if (newCapacity < 8) newCapacity = 8;
 		while (newCapacity < reqCapacity) newCapacity *= 2;

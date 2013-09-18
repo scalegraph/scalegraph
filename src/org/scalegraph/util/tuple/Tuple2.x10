@@ -8,8 +8,8 @@
  * 
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-
 package org.scalegraph.util.tuple;
+
 public final struct Tuple2 [T1,T2] {
     public val1: T1;
     public val2: T2;

@@ -22,13 +22,13 @@ import x10.compiler.Native;
 public class DoubleQuoatedCSVSplitter extends InputSplitter {
 
 	@Native("c++", "org::scalegraph::io::impl::DQCSVNextBreak(#data, #offset)")
-	public native def nativeNextBreak(data :MemoryChunk[Byte], offset :Long) :Long;
+	public static native def nativeNextBreak(data :MemoryChunk[Byte], offset :Long) :Long;
 	
 	public def nextBreak(data :MemoryChunk[Byte], offset :Long)
 			= nativeNextBreak(data, offset);
 
 	@Native("c++", "org::scalegraph::io::impl::DQCSVNextBreak(#reader)")
-	public native def nativeNextBreak(reader :FileReader) :MemoryChunk[Byte];
+	public static native def nativeNextBreak(reader :FileReader) :MemoryChunk[Byte];
 	
 	public def nextBreak(reader :FileReader) = nativeNextBreak(reader);
 	

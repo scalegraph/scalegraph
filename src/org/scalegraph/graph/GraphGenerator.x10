@@ -18,6 +18,7 @@ import org.scalegraph.util.random.Random;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Team2;
 
 /**
  * Provides various graph generators.
@@ -26,50 +27,52 @@ public final class GraphGenerator {
 
 	/** Generates a 2D-grid graph of Rows rows and Cols columns. */
 	public static def genGrid(rows :Long, columns :Long)
-	: DistMemoryChunk[Long]
+	: EdgeList[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a graph with star topology. Node id 0 is in the center and then links to all other nodes.  */
 	public static def genStar(scale :Int)
-	: DistMemoryChunk[Long]
+	: EdgeList[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a circle graph where every node creates out-links to NodeOutDeg forward nodes.  */
 	public static def genCircle(scale :Int, nodeOutDeg :Int)
-	: DistMemoryChunk[Long]
+	: EdgeList[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a complete graph on Nodes nodes. Graph has no self-loops.  */
 	public static def genFull(fanout :Int, levels :Int, childPointsToParent :Boolean)
-	: DistMemoryChunk[Long]
+	: EdgeList[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 
 	/** Generates a tree graph of Levels levels with every parent having Fanout children.  */
 	public static def genTree(scale :Int)
-	: DistMemoryChunk[Long]
+	: EdgeList[Long]
 	{
 		throw new UnsupportedOperationException();
 	}
 	
 	/** Generates an Erdos-Renyi random graph. */
 	public static def genRandomGraph(scale :Int, edgefactor :Int, rnd :Random)
-	: DistMemoryChunk[Long]
+	: EdgeList[Long]
 	{
 		val team = Config.get().worldTeam();
 		val numVertices = 1L << scale;
 		val numEdges = edgefactor * numVertices;
 		val numLocalEdges = numEdges / team.size();
 		
-		val edgeMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges*2));
+		val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
+				() => new MemoryChunk[Long](numLocalEdges));
+		val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
+				() => new MemoryChunk[Long](numLocalEdges));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.role()(0);
@@ -78,16 +81,59 @@ public final class GraphGenerator {
 				val rnd_ = rnd.clone();
 				// 4 random values per single edge (nextLong() uses 2 generated random values)
 				rnd_.skip((offset + r.min)*4);
-				val edgeMem_ = edgeMemory();
+				val srcMem_ = srcMemory();
+				val dstMem_ = dstMemory();
 				val vertexMask = numVertices - 1;
 				for(i in r) {
-					edgeMem_(i*2+0) = rnd_.nextLong() & vertexMask;
-					edgeMem_(i*2+1) = rnd_.nextLong() & vertexMask;
+					srcMem_(i) = rnd_.nextLong() & vertexMask;
+					dstMem_(i) = rnd_.nextLong() & vertexMask;
 				}
 			});
 		});
 		
 		rnd.skip(numEdges * 4);
+		
+		return EdgeList(srcMemory, dstMemory);
+	}
+	
+	public static def genRandomEdgeValue(getSize :()=>Long, rnd :Random)
+	: DistMemoryChunk[Double]
+	{
+		val team = Config.get().worldTeam();
+		val sizeArray = new GlobalRef[Cell[MemoryChunk[Long]]](new Cell(new MemoryChunk[Long](team.size())));
+		
+		team.placeGroup().broadcastFlat(() => {
+			val t2 = new Team2(team);
+			val src = new MemoryChunk[Long](1);
+			src(0) = getSize();
+			val dst = (sizeArray.home == here) ? sizeArray.getLocalOrCopy()() : new MemoryChunk[Long](0);
+			t2.gather(0, src, dst);
+		});
+		
+		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](getSize()));
+		
+		val sizeArray_ = sizeArray()();
+		val placeArray = team.places();
+		var numEdges :Long = 0;
+		for([role] in placeArray) {
+			val numLocalEdges = sizeArray_(role);
+			val offset = numEdges;
+			at(placeArray(role)) async {
+				Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
+					val rnd_ = rnd.clone();
+					// 2 random values per single edge (nextDouble() uses 2 generated random values)
+					rnd_.skip((offset + r.min)*2);
+					val edgeMem_ = edgeMemory();
+					for(i in r) {
+						edgeMem_(i) = rnd_.nextDouble();
+					}
+				});
+			}
+			numEdges += numLocalEdges;
+		}
+		
+		rnd.skip(numEdges * 2);
 		
 		return edgeMemory;
 	}
@@ -111,7 +157,6 @@ public final class GraphGenerator {
 				// 2 random values per single edge (nextDouble() uses 2 generated random values)
 				rnd_.skip((offset + r.min)*2);
 				val edgeMem_ = edgeMemory();
-				val vertexMask = numVertices - 1;
 				for(i in r) {
 					edgeMem_(i) = rnd_.nextDouble();
 				}
@@ -126,7 +171,7 @@ public final class GraphGenerator {
 	/** Generates a R-MAT graph using recursive descent into a 2x2 matrix [A,B; C, 1-(A+B+C)]. */
 	public static def genRMAT(scale :Int, edgefactor :Int,
 			A :Double, B :Double, C :Double, rnd :Random)
-	: DistMemoryChunk[Long]
+	: EdgeList[Long]
 	{
 		if(A+B+C >= 1.0f) throw new IllegalArgumentException("A+B+C >= 1.0: Invalid probabilities");
 
@@ -134,9 +179,11 @@ public final class GraphGenerator {
 		val numVertices = 1L << scale;
 		val numEdges = edgefactor * numVertices;
 		val numLocalEdges = numEdges / team.size();
-		
-		val edgeMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges*2));
+
+		val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
+				() => new MemoryChunk[Long](numLocalEdges));
+		val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
+				() => new MemoryChunk[Long](numLocalEdges));
 
 		val sumA = new MemoryChunk[Double](scale);
 		val sumAB = new MemoryChunk[Double](scale);
@@ -158,7 +205,8 @@ public final class GraphGenerator {
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
 				rnd_.skip((offset + r.min) * scale);
-				val edgeMem_ = edgeMemory();
+				val srcMem_ = srcMemory();
+				val dstMem_ = dstMemory();
 				for(i in r) {
 					var srcVertex :Long = 0;
 					var dstVertex :Long = 0;
@@ -171,14 +219,14 @@ public final class GraphGenerator {
 						else if(x < sumABC(depth)) { srcVertex += 1; }
 						else { dstVertex += 1; srcVertex += 1; }
 					}
-					edgeMem_(i*2+0) = srcVertex;
-					edgeMem_(i*2+1) = dstVertex;
+					srcMem_(i) = srcVertex;
+					dstMem_(i) = dstVertex;
 				}
 			});
 		});
 		
 		rnd.skip(numEdges * scale);
-		
-		return edgeMemory;
+
+		return EdgeList(srcMemory, dstMemory);
 	}
 }

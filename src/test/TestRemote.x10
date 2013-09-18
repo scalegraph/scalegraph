@@ -17,12 +17,12 @@ import x10.util.Timer;
 import x10.util.Random;
 import x10.util.Pair;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Remote;
 
-public final class TestRemote extends sx10Test {
+public final class TestRemote extends STest {
 	public static def main(args: Array[String](1)) {
 		new GeneratorTest().execute(args);
 	}

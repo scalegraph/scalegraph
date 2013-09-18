@@ -798,6 +798,25 @@ public final class Parallel {
 		return r;
 	}
 
+	public static def reduce[U](range :LongRange, func :(Long,LongRange)=>U, op :(U,U)=>U) {U haszero} :U {
+		val size = range.max - range.min + 1;
+		if(size == 0L) return Zero.get[U]();
+		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
+		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
+		val intermid = new MemoryChunk[U](nthreads);
+		finish for(i in 0..(nthreads-1)) {
+			val idx = i;
+			val i_start = range.min + i*chunk_size;
+			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
+			async {
+				intermid(idx) = func(i, i_range);
+			}
+		}
+		var r :U = Zero.get[U]();
+		for(i in 0..(nthreads-1)) r = op(r,intermid(i));
+		return r;
+	}
+
 	public static @Inline def scan[U](range :IntRange, dst :Array[U](1), init :U, func :(Int,U)=>U, op :(U,U)=>U) {U haszero} :U {
 		val size = range.max - range.min + 1;
 		if(size == 0) return Zero.get[U]();

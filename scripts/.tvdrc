@@ -1,0 +1,6 @@
+# default arguments
+dset ARGS_DEFAULT {}
+# default signal handling
+dset TV::signal_handling_mode {Resend=SIGXCPU,SIGPWR}
+# 
+dset TV::auto_save_breakpoints true

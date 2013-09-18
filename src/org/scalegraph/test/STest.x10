@@ -9,13 +9,13 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package org.scalegraph.harness;
+package org.scalegraph.test;
 
 import x10.util.StringBuilder;
 import x10.io.Console;
 import org.scalegraph.util.SString;
 
-abstract public class sx10Test {
+abstract public class STest {
 	private static val buffer = new StringBuilder();
 	private static val linebreak = "\n    "; // 4 space
 
@@ -26,6 +26,7 @@ abstract public class sx10Test {
        var b :boolean = false;
        try {
            finish b = this.run(args);
+           if(b) bufferedPrintln("Pass");
         }
        catch (e :CheckedThrowable) {
     	   printException(e);
@@ -86,14 +87,13 @@ abstract public class sx10Test {
     	printException(e, 0);
     }
     
-    public atomic static def print(obj :Any) {
-    	buffer.add(escapeString(obj.toString()));
+    public static def print(obj :Any) {
+    	bufferedPrint(obj);
     	flush();
     }
     
-    public atomic static def println(obj :Any) {
-    	buffer.add(escapeString(obj.toString()));
-    	buffer.add(linebreak);
+    public static def println(obj :Any) {
+    	bufferedPrintln(obj);
     	flush();
     }
     

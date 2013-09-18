@@ -29,6 +29,7 @@ import x10.util.Pair;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph.VertexType;
+import org.scalegraph.graph.EdgeList;
 
 public final class MinimumSpanningTreeImpl {
         
@@ -81,7 +82,7 @@ public final class MinimumSpanningTreeImpl {
 	
 	public static def run(csr: DistSparseMatrix[Double]): Graph {
 	    val team = csr.dist().allTeam();
-	    val xpregel = XPregelGraph.make[VertexValue, Double](team, csr);
+	    val xpregel = XPregelGraph.make[VertexValue, Double](csr);
 		
 		xpregel.updateInEdge();
 		
@@ -287,24 +288,6 @@ public final class MinimumSpanningTreeImpl {
 		val outDst = xpregel.stealOutput[Long](1);
 		
 		// Create Graph with selected edges
-		
-		val edgesList = new DistMemoryChunk[Long](team.placeGroup(), () => {
-		    val localSrc = outSrc();
-		    val localDst = outDst();
-		    val numEdges = localSrc.size();
-		    var index: Long = 0;
-		    val m = new MemoryChunk[Long](numEdges * 2);
-		    for (i in 0..(numEdges - 1)) {
-		        m(index++) = localSrc(i);
-		        m(index++) = localDst(i);
-		    }
-		    
-		    return m;
-		});
-		
-		val resultGraph = new Graph(team, VertexType.Long, false);
-		resultGraph.addEdges(edgesList);
-		
-		return resultGraph;
+		return Graph.make(EdgeList(outSrc, outDst));
 	}
 }

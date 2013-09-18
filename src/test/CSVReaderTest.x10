@@ -12,23 +12,54 @@ package test;
 
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.io.ID;
-import org.scalegraph.io.impl.CSVReader;
+import org.scalegraph.io.CSV;
+import org.scalegraph.id.Type;
+import x10.io.File;
 
-final class CSVReaderTest extends sx10Test {
+final class CSVReaderTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new CSVReaderTest().execute(args);
 	}
 	
 	public def run(args: Array[String](1)): Boolean {
-		val team = Team.WORLD;
-		val colTypes = [ID.TYPE_LONG as Int, ID.TYPE_LONG, ID.TYPE_NONE, ID.TYPE_DOUBLE];
-		val nd = CSVReader.read(team, args(0), colTypes, false);
+		val mode = 1;
 		
-		//Console.OUT.println(InputSplitter.T_CHUNK_SIZE);
-		// print result
-		Console.OUT.println(nd.name());
+		if(mode==1){
+			val colTypes = [Type.Long as Int, Type.Long, Type.None, Type.Double];
+			val nd = CSV.read(args(0), colTypes, false);
+		
+			// print result
+			Console.OUT.println(nd.name());
+		
+			CSV.write("csvwTest", nd, true);
+			//CSVWriter.writeSafe(team,"csvwTest",nd);
+			
+		}else if(mode==2){
+			val colTypes = [Type.Long as Int, Type.Long];
+			val nd = CSV.read(args(0), colTypes, false);
+			Console.OUT.println("twitest");
+			Console.OUT.println(nd.name());
+			
+			CSV.write("csvwTest", nd, true);
+			
+		}else if(mode==3){
+			val colTypes = [Type.Long as Int, Type.Long];
+			val nd = CSV.read(args(0), colTypes, false);
+			Console.OUT.println("twitest");
+			Console.OUT.println(nd.name());
+			
+	//		CSV.write("csvwTest", nd, true);
+			
+		}else if(mode==4){
+			val O  = new File("fileouttest");
+			val P    = O.printer();
+			for( i in 0..2090000){
+				P.print("hoge,hoga\n");
+			}
+		}
+		
 		return true;
 	}
 }

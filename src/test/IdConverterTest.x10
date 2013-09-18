@@ -11,14 +11,14 @@
 
 package test;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.id.Twod;
 import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.OnedR;
 
-final class IdConverterTest extends sx10Test {
+final class IdConverterTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new IdConverterTest().execute(args);
 	}

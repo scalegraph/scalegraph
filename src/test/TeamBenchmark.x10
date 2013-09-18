@@ -14,9 +14,9 @@ package test;
 import x10.util.Team;
 import x10.util.Timer;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 
-final class TeamBenchmark extends sx10Test {
+final class TeamBenchmark extends STest {
 	public static def main(args: Array[String](1)) {
 		new TeamBenchmark().execute(args);
 	}

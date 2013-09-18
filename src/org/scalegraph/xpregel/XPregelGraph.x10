@@ -28,7 +28,6 @@ import org.scalegraph.util.Parallel;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.id.OnedC;
-import org.scalegraph.graph.Attribute;
 
 /**
  * a main entry for processing 
@@ -169,6 +168,13 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 	/** Returns the iterator over the local vertexes.
 	 */
 	public def iterator() = new VertexIterator[V, E](mWorkers());
+	
+	/** Returns local edge data */
+	public def edgeOffsets() = mWorkers().mOutEdge.offsets;
+	/** Returns local edge data */
+	public def edgeIds() = mWorkers().mOutEdge.vertexes;
+	/** Returns local edge data */
+	public def edgeValues() = mWorkers().mOutEdge.value;
 	
 	/** Detatch the index-th ouput and return it as a DistMemoryChunk.
 	 */

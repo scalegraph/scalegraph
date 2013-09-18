@@ -16,6 +16,9 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
@@ -50,16 +53,9 @@ public final class DegreeDistributionExample {
             return;
         }
         val team = Team.WORLD;
-        val fileList = new Array[String](1);
-        fileList(0) = args(0); 
         
         // Load data
-        val rawData = DistributedReader.read(fileList, inputFormat);
-        
-        // Create graph
-        val edgeList = rawData.get1();
-        val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.raw(team.placeGroup()));
+        val g = Graph.make(SimpleText.read(args(0), inputFormat));
         
         val degreeDist = new DegreeDistribution();
         
@@ -75,8 +71,8 @@ public final class DegreeDistributionExample {
         degreeDist.mode = DegreeDistribution.INOUT_DEGREE;
         val inOutdegResult = degreeDist.execute(g);
 
-        DistributedReader.write("out/indeg-%d", indegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/outdeg-%d", outdegResult.raw(team.placeGroup()));
-        DistributedReader.write("out/inoutdeg-%d", inOutdegResult.raw(team.placeGroup()));
+        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]),true);
+        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]),true);
+        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]),true);
     }
 }

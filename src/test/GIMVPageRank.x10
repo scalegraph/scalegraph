@@ -14,21 +14,20 @@ package test;
 import x10.util.Team;
 import x10.util.Timer;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.GIMV;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.Attribute;
 import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.fileread.DistributedReader;
 
-final class GIMVPageRank extends sx10Test {
+final class GIMVPageRank extends STest {
 	public static def main(args: Array[String](1)) {
 		new GIMVPageRank().execute(args);
 	}
@@ -47,8 +46,8 @@ final class GIMVPageRank extends sx10Test {
 
 		Console.OUT.println("Generating edge list ...");
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
-		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 
 		Console.OUT.println("Creating graph object ...");
 
