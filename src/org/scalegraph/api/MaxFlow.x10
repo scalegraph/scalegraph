@@ -50,9 +50,9 @@ final public class MaxFlow {
     /**
      * A class storing the result from MaxFlow
      */
-    public static struct Result (maxFlow: Long, edgeFlow:DistMemoryChunk[Long]){
-       protected def this(mf: Long, fl:DistMemoryChunk[Long]) {
-           property(mf, fl);
+    public static struct Result (maxFlow: Long){
+       protected def this(mf: Long) {
+           property(mf);
        }
     }
     
@@ -190,6 +190,7 @@ final public class MaxFlow {
     	val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
     	val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
     	
+
     	team.placeGroup().broadcastFlat(() => {
     		val src = edgeValue();
     		val dst = xpregel.edgeValues();
@@ -198,6 +199,8 @@ final public class MaxFlow {
     				dst(i) = new MFEdge(src(i) as Long);
     		});
     	});
+
+    	val start_time = System.currentTimeMillis();
 
     	xpregel.updateInEdge();
     	
@@ -287,9 +290,8 @@ final public class MaxFlow {
     	//step 3 : initialization of preflow push relabel. 
     	xpregel.iterate[FlowMessage,Long](
     			(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
-//    				Console.OUT.println("phase3");
+   // 				Console.OUT.println("phase3");
     				if(ctx.superstep()==0 && ctx.realId()==sourceVertexId) {
-    					//				Console.OUT.println("adjVertex.sizd()" + ctx.value().adjVertex.size());
     					for(i in ctx.value().adjVertex.range()) {
     						val toId = ctx.value().adjVertex(i).vertexId;
     						val m = ctx.value().adjVertex(i).myId;
@@ -299,7 +301,6 @@ final public class MaxFlow {
     						if(flow!=0L)
     							ctx.sendMessage(toId, mes);
     					}
-    					//				ctx.value().setHeight(ctx.numberOfVertices() );
     					val vval = ctx.value();
     					vval.setHeight(ctx.numberOfVertices() );
     					ctx.setValue(vval);
@@ -316,8 +317,6 @@ final public class MaxFlow {
     					val vvalue = ctx.value();
     					vvalue.setExcess(excess);
     					ctx.setValue(vvalue);
-    					//				ctx.value().setExcess(excess);
-    					//				Console.OUT.println("(ctx.id(), ctx.value().excess, excess) : "+ctx.id()+" "+ctx.value().excess + " " + excess);
     					ctx.setVertexShouldBeActive(true);
     				}
     				ctx.voteToHalt();
@@ -325,7 +324,6 @@ final public class MaxFlow {
     			(values :MemoryChunk[Long]) => MathAppend.sum(values),
     			(superstep :Int, aggVal :Long) => (superstep >= 1) );
 
-    	
     	
     	val flowNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
     	var recursion:Long = 1;
@@ -337,7 +335,6 @@ final public class MaxFlow {
     		xpregel.iterate[ValueMessage,Long](
     				(ctx :VertexContext[MFVertex, MFEdge, ValueMessage, Long ], messages :MemoryChunk[ValueMessage ] ) => {
 
-    					//				ctx.voteToHalt();
     					if(ctx.superstep()==0) {
     						ctx.setVertexShouldBeActive( ctx.value().excess!=0L );
 
@@ -346,8 +343,6 @@ final public class MaxFlow {
     							if(flowNum.home==here) {
     								flowNum()() = ctx.value().excess;
     							}
-//    							ctx.output(ctx.value().excess);
-    						
     						}
     						val goNext = ctx.value().isExcessNonZero;
     						{
@@ -383,8 +378,8 @@ final public class MaxFlow {
     				},
     				(values :MemoryChunk[Long]) => MathAppend.sum(values),
     				(superstep :Int, aggVal :Long) => (superstep >= 1) );
-// step 5 : Excessing vertex determine where flowing to and how volume flow have.
-    		if(recursion%10!=0L)  {
+    		// step 5 : Excessing vertex determine where flowing to and how volume flow have.
+    		if(recursion%10!=0L) {
 
     			val updatedNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
     			xpregel.iterate[FlowMessage,Long](
@@ -463,14 +458,10 @@ final public class MaxFlow {
 
     		else  {
     			xpregel.resetSholdBeActiveFlag();
-    			 // step 6 : gap-heuristic
+    			// step 6 : gap-heuristic
     			xpregel.iterate[Long,Long](
     					(ctx :VertexContext[MFVertex, MFEdge, Long, Long ], messages :MemoryChunk[Long ] ) => {
     						if(ctx.superstep()==0) {
-    							/*						val vval = ctx.value();
-    							 * vval.setIsExcessNonZero(false);
-    							 * ctx.setValue(vval);
-    							 */						
     							val n = ctx.numberOfVertices();
     							val mes = ctx.value().height;
     							if(mes<n)
@@ -524,12 +515,11 @@ final public class MaxFlow {
     		}
     	}	
     	
-    	val output = xpregel.stealOutput[Long]();
     	
     	Console.OUT.println("flow = " + flowNum()());
 
-    	val flows = g.retrieveEdgeAttribute[Long](csr, output);
-    	val result = new Result(flowNum()(), flows);
+//    	val flows = g.retrieveEdgeAttribute[Long](csr, output);
+    	val result = new Result(flowNum()());
     
     	return result;
     }

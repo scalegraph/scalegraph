@@ -24,13 +24,8 @@ final class MaxFlowTest extends AlgorithmTest {
 	public def run(args :Array[String](1), g :Graph): Boolean {
 		val result = org.scalegraph.api.MaxFlow.run(g);
 		
-		if(args(0).equals("write")) {
-			CSV.write(args(1), new NamedDistData(["maxflow" as String], [result as Any]), true);
-			return true;
-		}
-		else if(args(0).equals("check")) {
+		if(args(0).equals("check")) {
 			val mf = result.maxFlow;
-			val ef = result.edgeFlow;
 			
 			if(mf != Long.parse(args(1)))
 				return false;
