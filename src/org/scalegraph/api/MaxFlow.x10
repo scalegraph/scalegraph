@@ -44,9 +44,9 @@ final public class MaxFlow {
 	public var sinkVertexId:Long = 1;
 	
 	/* The name of the number of recursion that preflow-push-relavel do.
-	 * Default : 300
+	 * Default : 1000
 	 */
-    public var recursionLimit:Long = 300;
+    public var recursionLimit:Long = 1000;
     /**
      * A class storing the result from MaxFlow
      */
@@ -166,9 +166,13 @@ final public class MaxFlow {
 			adjVertex(id) = adjV;
 		}
 	}
-	public class MFEdge {
+	private static class MFEdge {
 		var capacity:Long;
+		def this(val cap:Long) {
+			capacity = cap;
+		}
 	}
+
 	
     private static def execute(param:MaxFlow, g:Graph, matrix:DistSparseMatrix[Double]): Result {
 
@@ -191,12 +195,10 @@ final public class MaxFlow {
     		val dst = xpregel.edgeValues();
     		Parallel.iter(dst.range(), (tid :Long, r :LongRange) => {
     			for(i in r)
-    				dst(i).capacity = src(i) as Long;
+    				dst(i) = new MFEdge(src(i) as Long);
     		});
     	});
 
-    	
-    	
     	xpregel.updateInEdge();
     	
     	//step 1 : initialize vertex information
@@ -382,7 +384,9 @@ final public class MaxFlow {
     				(values :MemoryChunk[Long]) => MathAppend.sum(values),
     				(superstep :Int, aggVal :Long) => (superstep >= 1) );
 // step 5 : Excessing vertex determine where flowing to and how volume flow have.
-    		if(recursion%10!=0L) 
+    		if(recursion%10!=0L)  {
+
+    			val updatedNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
     			xpregel.iterate[FlowMessage,Long](
     					(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
     						if(ctx.superstep()==0  && ctx.value().excess>0L 
@@ -397,7 +401,6 @@ final public class MaxFlow {
     								val toId = ctx.value().adjVertex(i).vertexId;
     								val m = ctx.value().adjVertex(i).myId;
     								val flow = Math.min(ctx.value().adjVertex(i).capacity, excess);
-    								//							Console.OUT.println("(id,pos,excess,height,EXCESS ,MyHeight, flow )"+ctx.id()+" "+i+" "+ctx.value().adjVertex(i).excess + " "+ctx.value().adjVertex(i).height+" "+excess + " "+ ctx.value().height + " " + flow);
     								
     								if(ctx.value().adjVertex(i).height<ctx.value().height) {
     									val mes = new FlowMessage(flow ,m);
@@ -420,10 +423,9 @@ final public class MaxFlow {
     								val vval = ctx.value();
     								vval.setHeight(minimHeight+1);
     								ctx.setValue(vval);
-    								ctx.setVertexShouldBeActive(true);
-
-    								//							Console.OUT.println("not have flow" + ctx.id());					
+    								ctx.setVertexShouldBeActive(true);				
     							}
+    							else ctx.aggregate(1);
     							val vval = ctx.value();
     							vval.setExcess(excess);
     							ctx.setValue(vval);
@@ -444,14 +446,20 @@ final public class MaxFlow {
     							vval.setExcess(excess);
     							ctx.setValue(vval);
     							ctx.setVertexShouldBeActive(true);
-    							//						Console.OUT.println("come message" + ctx.id());
     						}
-    						//					Console.OUT.println("superstep , survive vertex" +ctx.superstep() + " " + ctx.realId());
 
     						ctx.voteToHalt();
     					},
     					(values :MemoryChunk[Long]) => MathAppend.sum(values),
-    					(superstep :Int, aggVal :Long) => (superstep >= 1) );
+    					(superstep :Int, aggVal :Long) => {
+    						if(updatedNum.home == here)
+    							updatedNum()() = aggVal;
+    						
+    						return superstep >= 1; 
+    					}) ;
+    			if(updatedNum()()==0L)
+    				break;
+    		}
 
     		else  {
     			xpregel.resetSholdBeActiveFlag();
