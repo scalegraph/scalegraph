@@ -1,9 +1,11 @@
 package org.scalegraph.blas;
 
+import org.scalegraph.Config;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.util.ProfilingDB;
 
 public final class BLAS {
 	
@@ -89,6 +91,15 @@ public final class BLAS {
 	public static def mult_[T](alpha :T, A :DistSparseMatrix[T], trans :Boolean, x :DistMemoryChunk[T], beta :T, y :DistMemoryChunk[T])
 	{ T haszero, T <: Arithmetic[T] }
 	{
+		val prof = Config.get().profBLAS();
+		val all  = prof.timer(0, 0);
+		val calc = prof.timer(1, 0);
+		val comm = prof.timer(3, 0);
+		val localCalc = new MemoryChunk[ProfilingDB.Timer](
+				Runtime.NTHREADS, (i:Long) => prof.timer(2, i));
+		
+		all.start();
+		
 		val allTeam = Team2(A.dist().allTeam());
 		
 		if( (!trans && A.ids().isCSR()) ||
@@ -111,7 +122,9 @@ public final class BLAS {
 				val tmpSendVector = new MemoryChunk[T](localHeight);
 				val tmpRecvVector = new MemoryChunk[T](localHeight);
 				
+				comm.start();
 				columnTeam.allgather(x(), refVector);
+				comm.lap(0);
 				
 				/*
 				val team = A.dist().allTeam();
@@ -127,22 +140,29 @@ public final class BLAS {
 					team.barrier(team.role()(0));
 				}
 				*/
+				calc.start();
 				Parallel.iter(0L..(localHeight-1), (tid :Long, range :LongRange) => {
+					localCalc(tid).start();
 					for(i in range) {
 						val off = A_.offsets(i);
 						val next = A_.offsets(i+1);
 						var sum :T = Zero.get[T]();
 						for(ei in off..(next-1)) {
-							if(A_.vertexes(ei) >= localWidth) Console.OUT.println("A_.vertexes(ei) = " + A_.vertexes(ei));
 							sum += A_.values(ei) * refVector(A_.vertexes(ei));
 						}
 						tmpSendVector(i) = sum;
 					}
+					localCalc(tid).lap(0);
 				});
+				calc.lap(0);
 				
+				comm.start();
 				rowTeam.alltoall(tmpSendVector, tmpRecvVector);
+				comm.lap(0);
 				
+				calc.start();
 				Parallel.iter(0L..(localSize-1), (tid :Long, range :LongRange) => {
+					localCalc(tid).start();
 					for(i in range) {
 						var sum :T = Zero.get[T]();
 						for(j in 0L..(C-1)) {
@@ -150,7 +170,9 @@ public final class BLAS {
 						}
 						y_(i) = alpha * sum + beta * y_(i);
 					}
+					localCalc(tid).lap(1);
 				});
+				calc.lap(1);
 				
 				refVector.del();
 				tmpSendVector.del();
@@ -162,7 +184,7 @@ public final class BLAS {
 			// NG
 			throw new UnsupportedOperationException();
 		}
-		
+		all.lap(0);
 	}
 	
 	/** B <- alpha * A + beta * B */

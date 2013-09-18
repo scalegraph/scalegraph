@@ -67,7 +67,20 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		
 		sw.end();
 		sw.print();
-		
+
+		val desc = [
+		            "Exec time of matvec" as String,
+		            "Matvec mult",
+		            "Reduction",
+		            "Local matvec mult",
+		            "Local reduction",
+		            "Allgather",
+		            "Alltoall"];
+
+		val prof = config.profBLAS();
+		print(prof.resultString(desc));
+		print(prof.detailedResultString(desc));
+
 		return true;
 	}
 	

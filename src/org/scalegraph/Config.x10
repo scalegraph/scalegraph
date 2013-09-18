@@ -12,6 +12,7 @@ package org.scalegraph;
 
 import x10.util.Team;
 import x10.compiler.Ifdef;
+import x10.compiler.Uninitialized;
 
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
@@ -95,7 +96,9 @@ public class Config {
 	private val stopWatch :StopWatch;
 	
 	@Ifdef("PROF_XP")
-	private var profXPregel :ProfilingDB;
+	@Uninitialized private var profXPregel :ProfilingDB;
+	@Ifdef("PROF_BLAS")
+	@Uninitialized private var profBLAS :ProfilingDB;
 	
 	
 	private def this(ownByThis :Boolean, worldTeam :Team, distForXPregel :Dist2D, distForBLAS :Dist2D) {
@@ -106,6 +109,9 @@ public class Config {
 		stopWatch = new StopWatch();
 		@Ifdef("PROF_XP") {
 			profXPregel = new ProfilingDB([10 as Int, 10]);
+		}
+		@Ifdef("PROF_BLAS") {
+			profBLAS = new ProfilingDB([10 as Int, 10, 10, 10]);
 		}
 	}
 	
@@ -136,4 +142,7 @@ public class Config {
 	
 	@Ifdef("PROF_XP")
 	public def profXPregel() = profXPregel;
+	
+	@Ifdef("PROF_BLAS")
+	public def profBLAS() = profBLAS;
 }
