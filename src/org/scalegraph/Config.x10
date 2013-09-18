@@ -11,10 +11,12 @@
 package org.scalegraph;
 
 import x10.util.Team;
+import x10.compiler.Ifdef;
 
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.StopWatch;
+import org.scalegraph.util.ProfilingDB;
 
 /** Provides the default data distribution, which includes world team and 1D/2D distribution.
  * Config is used by ScaleGraph API.
@@ -92,12 +94,19 @@ public class Config {
 	private val distBLAS :Dist2D;
 	private val stopWatch :StopWatch;
 	
+	@Ifdef("PROF_XP")
+	private var profXPregel :ProfilingDB;
+	
+	
 	private def this(ownByThis :Boolean, worldTeam :Team, distForXPregel :Dist2D, distForBLAS :Dist2D) {
 		own = ownByThis;
 		world = worldTeam;
 		distXPregel = distForXPregel;
 		distBLAS = distForBLAS;
 		stopWatch = new StopWatch();
+		@Ifdef("PROF_XP") {
+			profXPregel = new ProfilingDB([10 as Int, 10]);
+		}
 	}
 	
 	private def del_() {
@@ -124,4 +133,7 @@ public class Config {
 	
 	/** Returns the StopWatch */ 
 	public def stopWatch() = stopWatch;
+	
+	@Ifdef("PROF_XP")
+	public def profXPregel() = profXPregel;
 }

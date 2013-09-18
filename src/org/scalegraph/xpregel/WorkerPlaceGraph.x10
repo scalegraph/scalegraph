@@ -13,7 +13,9 @@ package org.scalegraph.xpregel;
 
 import x10.util.Team;
 import x10.util.ArrayList;
-import x10.util.concurrent.AtomicLong;
+import x10.compiler.Ifdef;
+
+import org.scalegraph.Config;
 
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
@@ -34,6 +36,7 @@ import x10.io.Printer;
 
 final class WorkerPlaceGraph[V,E] {
 	static val MAX_OUTPUT_NUMBER = 8;
+	private static type XP = org.scalegraph.ProfilingID.XPregel; 
 	
 	val mTeam :Team2;
 	val mIds :IdStruct;
@@ -253,6 +256,11 @@ final class WorkerPlaceGraph[V,E] {
 			combiner :(MemoryChunk[M]) => M,
 			end :(Int,A)=>Boolean) { M haszero, A haszero }
 	{
+		@Ifdef("PROF_XP")
+		val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP")
+		{ mtimer.start(); }
+		
 		val root = (mTeam.base.role()(0) == 0);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
@@ -274,6 +282,9 @@ final class WorkerPlaceGraph[V,E] {
 		val vertexActvieBitmap = mVertexActive.raw();
 		MemoryChunk.copy(mVertexShouldBeActive.raw(), 0L,
 				vertexActvieBitmap, 0L, vertexActvieBitmap.size());
+		
+		@Ifdef("PROF_XP")
+		{ mtimer.lap(XP.MAIN_INIT); }
 		
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
