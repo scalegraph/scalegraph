@@ -3,6 +3,6 @@ small:
     args: rmat 14 - write $prefix/temp/pagerank
     thread: 4
     gcproc: 2
-    process: 8
+    place: 8
     duplicate: 2
-    timeout: 10
+    timeout: 120

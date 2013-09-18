@@ -326,9 +326,14 @@ final class MessageCommunicator[M] { M haszero } {
 			val rawHasMessage = mBCCHasMessage.raw();
 			
 			var placeNumMessage :Int = 0;
-			for(i in placeHasMessage.range()) {
+			// The size of mBCCHasMessage is the actual number of vertexes (NumberOfLocalVertexes).
+			// But the size of placeHasMessage and placeInEdgeMask is the power of 2 number (NumberOfLocalVertexes2N).
+			for(i in 0..(rawHasMessage.size()-1)) {
 				placeHasMessage(i) = rawHasMessage(i) & placeInEdgeMask(i);
 				placeNumMessage += MathAppend.popcount(placeHasMessage(i));
+			}
+			for(i in rawHasMessage.size()..(placeInEdgeMask.size()-1)) {
+				placeHasMessage(i) = 0L;
 			}
 			mBCSCount(p) = placeNumMessage;
 		});

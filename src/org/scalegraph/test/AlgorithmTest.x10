@@ -123,7 +123,7 @@ public abstract class AlgorithmTest extends STest {
 		throw new IllegalArgumentException("Input parameter does not have splitter flag");
 	}
 
-	public def run(args :Array[String](1)): Boolean {
+	public final def run(args :Array[String](1)): Boolean {
 		val [ graphArgs, mainArgs ] = splitArgs(args);
 		return run(mainArgs, loadGraph(graphArgs));
 	}
