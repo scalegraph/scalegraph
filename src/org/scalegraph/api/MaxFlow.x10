@@ -170,7 +170,7 @@ final public class MaxFlow {
 		var capacity:Long;
 	}
 	
-    private static def execute(param:MaxFlow, g:Graph, matrix:DistSparseMatrix[Long]): Result {
+    private static def execute(param:MaxFlow, g:Graph, matrix:DistSparseMatrix[Double]): Result {
 
     	// define parameters as local values
     	val team = param.team;
@@ -535,10 +535,10 @@ final public class MaxFlow {
     public def execute(g :Graph):Result {
     	// Since graph object has its own team, we shold use graph's one.
     	this.team = g.team();	
-    	val matrix = g.createDistSparseMatrix[Long](
+    	val matrix = g.createDistSparseMatrix[Double](
     			Config.get().distXPregel(), weights, true, true);
-//    	return execute(this,g,  matrix);
-    	throw new UnsupportedOperationException();
+    	return execute(this,g,  matrix);
+//    	throw new UnsupportedOperationException();
     }
     
     
