@@ -8,7 +8,7 @@ import tempfile as tmp
 import TAP
 import sys
 
-DEBUG=False
+DEBUG=True
 
 tap=None
 ##kriiyamaのテスト用の変数
@@ -199,8 +199,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     hostSrc = os.path.expandvars("$prefix/hosts.txt")
     hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
     if(DEBUG):
-        sys.stderr.write("hostSrc:"+hostSrc)
-        sys.stderr.write("hostDst:"+hostSrc)
+        sys.stderr.write("hostSrc:"+hostSrc+"\n")
+        sys.stderr.write("hostDst:"+hostDst+"\n")
     
     os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
 

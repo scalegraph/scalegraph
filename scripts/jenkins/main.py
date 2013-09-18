@@ -15,11 +15,12 @@ DEBUG=False
 #-------------------------------------------------#
 #ModuleName    = "TeamBenchmark"
 #TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
-TestWorkDir   = os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
+TestWorkDir   = os.environ["prefix"]
 SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
-#-------------------------------------------------#
 
+
+#-------------------------------------------------#
 ##引数を設定.-hオプションでhelpが見られる
 ## --mpi {MPI} mpich,mvapich,openmpiのいずれかを指定
 ## -t {TESTCASE} でテストケースの指定.デフォルトは TESTCASE=small
