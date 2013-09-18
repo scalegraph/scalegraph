@@ -401,12 +401,12 @@ public final class StronglyConnectedComponent {
 			if(ctx.realId() == ctx.value().leaderId && ctx.value().childCnt==0L)
 				plus = 1L;
 			ctx.output(1, ctx.value().childCnt+plus);
-			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
+//			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
 		});
 		
 		Console.OUT.println("numOfCluster" + numOfCluster);
 		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0), xpregel.stealOutput[Long](1));
-		Console.OUT.println("numOfCluster" + numOfCluster);
+//		Console.OUT.println("numOfCluster" + numOfCluster);
 		return result;
 	}
 	
