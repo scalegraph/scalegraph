@@ -423,13 +423,12 @@ public final class StronglyConnectedComponent {
 	 * @param g The graph object. 
 	 */
 	public def execute(g :Graph) :Result {	
-		throw new UnsupportedOperationException();
+//		throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
-/*		this.team = g.team();	
+		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Long](
 				Config.get().distXPregel(), weights, directed, true);
-		return execute(matrix);
-		 * */
+		return execute(this, g, matrix);		 
 	}
 
 
@@ -439,8 +438,8 @@ public final class StronglyConnectedComponent {
 	 * @param g The graph object. 
 	 */
 	public static def run(g :Graph) :Result {
-		throw new UnsupportedOperationException();
-		//new StronglyConnectedComponent().execute(g);
+		//throw new UnsupportedOperationException();
+		return new StronglyConnectedComponent().execute(g);
 		
 	}
 	
