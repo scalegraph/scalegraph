@@ -37,7 +37,7 @@ import x10.io.Printer;
 
 final class WorkerPlaceGraph[V,E] {
 	static val MAX_OUTPUT_NUMBER = 8;
-	private static type XP = org.scalegraph.ProfilingID.XPregel; 
+	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 	
 	val mTeam :Team2;
 	val mIds :IdStruct;
@@ -101,12 +101,17 @@ final class WorkerPlaceGraph[V,E] {
 	}
 	
 	public def updateInEdge() {
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP") { mtimer.start(); }
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
 		
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+			@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
+			@Ifdef("PROF_XP") { thtimer.start(); }
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
@@ -118,10 +123,14 @@ final class WorkerPlaceGraph[V,E] {
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
 			}
+			@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COMPUTE); }
 		});
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 		
 		mesComm.preProcess();
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PRE_PROCESS); }
 		mesComm.process(null, true, false);
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PROCESS); }
 		mesComm.exchangeMessages(true, false);
 
 		mInEdge.offsets = mesComm.mUCROffset;
@@ -129,15 +138,21 @@ final class WorkerPlaceGraph[V,E] {
 		mesComm.mUCROffset = new MemoryChunk[Long]();
 		mesComm.mUCRMessages = new MemoryChunk[Long]();
 		mesComm.del();
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 	}
 	
 	public def updateInEdgeWithValue() {E haszero} {
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP") { mtimer.start(); }
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
 		
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+			@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
+			@Ifdef("PROF_XP") { thtimer.start(); }
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
@@ -150,10 +165,14 @@ final class WorkerPlaceGraph[V,E] {
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
 			}
+			@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COMPUTE); }
 		});
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 
 		mesComm.preProcess();
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PRE_PROCESS); }
 		mesComm.process(null, true, false);
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PROCESS); }
 		mesComm.exchangeMessages(true, false);
 		
 		val numEdges = mesComm.mUCRMessages.size();
@@ -172,6 +191,7 @@ final class WorkerPlaceGraph[V,E] {
 		
 		mesComm.mUCROffset = new MemoryChunk[Long]();
 		mesComm.del();
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 	}
 	
 	// src will be destroyed
@@ -399,12 +419,12 @@ final class WorkerPlaceGraph[V,E] {
 				// If it is not, all method call to typed_buf
 				// will invoke the method of GrowableMemory<int> 
 				// through its virtual function table.
-				@Ifdef("PROF_XP") val thtimer = prof.timer(XP.MAIN_TH_FRAME, tid);
+				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, i);
 				@Ifdef("PROF_XP") { thtimer.start(); }
 				val typed_buf = castTo[T](buf);
 				MemoryChunk.copy(typed_buf.raw(), 0L, outMem, offset_, src_len);
 				typed_buf.clear();
-				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_OUTPUT); }
+				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COPY_OUT); }
 			}
 			offset += src_len;
 		}

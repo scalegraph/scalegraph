@@ -11,6 +11,10 @@
 
 package org.scalegraph.xpregel;
 
+import x10.compiler.Ifdef;
+
+import org.scalegraph.Config;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.Bitmap;
@@ -29,6 +33,7 @@ final struct MessageBuffer[M] { M haszero } {
 }
 
 final class MessageCommunicator[M] { M haszero } {
+	private static type XP = org.scalegraph.ProfilingID.XPregel; 
 	/* Name form
 	 * UC : UniCast message
 	 * BC : BroadCast message

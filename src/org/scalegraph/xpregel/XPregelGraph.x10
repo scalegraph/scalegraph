@@ -39,7 +39,7 @@ import org.scalegraph.graph.id.OnedC;
  * E: Edge value type
  */
 public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
-	private static type XP = org.scalegraph.ProfilingID.XPregel; 
+	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
@@ -300,14 +300,5 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 				workers_().run[Any,Any](actual_compute, null, null, (Int,Any) => true);
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
-	}
-	
-	@Ifdef("PROF_XP") public def dumpProfilingData(detail :Boolean) {
-		val prof = Config.get().profXPregel();
-		prof.finishStep();
-		val result = detail
-				? prof.detailedResultString(XP.DESCRIPTION)
-				: prof.resultString(XP.DESCRIPTION);
-		STest.print(result);
 	}
 }

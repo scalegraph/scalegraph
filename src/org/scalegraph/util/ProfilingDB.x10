@@ -3,6 +3,7 @@ package org.scalegraph.util;
 import x10.util.Team;
 
 import org.scalegraph.Config;
+import org.scalegraph.test.STest;
 
 public struct ProfilingDB {
 
@@ -247,9 +248,12 @@ public struct ProfilingDB {
 			}
 			
 			// clear step
-			for(th in tr)
-				for(i in pr)
-					step(th * width + pointIndex(i)) = 0L;
+			for(th in tr) {
+				for(i in pr) {
+					step(th * width + pointIndex(i) + 0) = 0L;
+					step(th * width + pointIndex(i) + 1) = 0L;
+				}
+			}
 			
 			buf.del();
 			dbuf.del();
@@ -279,8 +283,12 @@ public struct ProfilingDB {
 	}
 	
 	public def this(numPoints :Array[Int](1)) {
-		team = new Team2(Config.get().worldTeam());
-		plh = PlaceLocalHandle.make[DB](team.placeGroup(), () => new DB(numPoints));
+		this(Config.get().worldTeam(), numPoints);
+	}
+	
+	public def this(team :Team, numPoints :Array[Int](1)) {
+		this.team = new Team2(team);
+		this.plh = PlaceLocalHandle.make[DB](team.placeGroup(), () => new DB(numPoints));
 	}
 	
 	public def timer(frameIndex :Int, tid :Long)
@@ -388,5 +396,14 @@ public struct ProfilingDB {
 		}
 		
 		return sb.result();
+	}
+	
+	public def finishStepAndPrint(detail :Boolean, title :String, names :Array[String](1)) {
+		finishStep();
+		STest.println(title);
+		val result = detail
+				? detailedResultString(names)
+				: resultString(names);
+		STest.print(result);
 	}
 }

@@ -95,6 +95,7 @@ public final class PageRank {
 		xpgraph.updateInEdge();
 		
 		sw.lap("UpdateInEdge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		xpgraph.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
@@ -115,19 +116,17 @@ public final class PageRank {
 			return (superstep >= niter || aggVal < eps);
 		});
 
-		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(false); }
-		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(true); }
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate:"); }
 		
 		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
+		val result = xpgraph.stealOutput[Double]();
 		
 		sw.lap("Retrieve output");
-
-		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(false); }
-		@Ifdef("PROF_XP") { xpgraph.dumpProfilingData(true); }
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Retrieve Output:"); }
 		
-		return xpgraph.stealOutput[Double]();
+		return result;
 	}
 
 	// The algorithm interface also needs two helper methods like this.

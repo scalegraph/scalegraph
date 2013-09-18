@@ -11,13 +11,14 @@
 package org.scalegraph;
 
 import x10.util.Team;
+import x10.compiler.Uninitialized;
 import x10.compiler.Ifdef;
 
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.StopWatch;
 import org.scalegraph.util.ProfilingDB;
-import x10.compiler.Uninitialized;
+import org.scalegraph.id.ProfilingID;
 
 /** Provides the default data distribution, which includes world team and 1D/2D distribution.
  * Config is used by ScaleGraph API.
@@ -96,7 +97,7 @@ public class Config {
 	private val stopWatch :StopWatch;
 	
 	@Ifdef("PROF_XP") @Uninitialized private var profXPregel :ProfilingDB;
-	
+	@Ifdef("PROF_IO") @Uninitialized private var profIO :ProfilingDB;
 	
 	private def this(ownByThis :Boolean, worldTeam :Team, distForXPregel :Dist2D, distForBLAS :Dist2D) {
 		own = ownByThis;
@@ -104,7 +105,8 @@ public class Config {
 		distXPregel = distForXPregel;
 		distBLAS = distForBLAS;
 		stopWatch = new StopWatch();
-		@Ifdef("PROF_XP") { profXPregel = new ProfilingDB(org.scalegraph.ProfilingID.XPregel.FRAME_VECTOR); }
+		@Ifdef("PROF_XP") { profXPregel = new ProfilingDB(worldTeam, ProfilingID.XPregel.FRAME_VECTOR); }
+		@Ifdef("PROF_IO") { profIO = new ProfilingDB(worldTeam, ProfilingID.IO.FRAME_VECTOR); }
 	}
 	
 	private def del_() {
@@ -131,6 +133,11 @@ public class Config {
 	
 	/** Returns the StopWatch */ 
 	public def stopWatch() = stopWatch;
-	
+
 	@Ifdef("PROF_XP") public def profXPregel() = profXPregel;
+	@Ifdef("PROF_XP") public def dumpProfXPregel(title :String)
+	{ profXPregel.finishStepAndPrint(true, title, ProfilingID.XPregel.DESCRIPTION); }
+	@Ifdef("PROF_IO") public def profIO() = profIO;
+	@Ifdef("PROF_IO") public def dumpProfIO(title :String)
+	{ profIO.finishStepAndPrint(true, title, ProfilingID.IO.DESCRIPTION); }
 }
