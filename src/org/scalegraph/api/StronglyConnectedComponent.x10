@@ -137,7 +137,7 @@ public final class StronglyConnectedComponent {
 	 * 
 	 */
 	
-	private static def execute(param :StronglyConnectedComponent, graph:Graph, matrix :DistSparseMatrix[Long]):Result {
+	private static def execute(param :StronglyConnectedComponent, graph:Graph, matrix :DistSparseMatrix[Double]):Result {
 
 		val team = param.team;
 		val niter = param.niter;
@@ -426,7 +426,7 @@ public final class StronglyConnectedComponent {
 //		throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
-		val matrix = g.createDistSparseMatrix[Long](
+		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, true);
 		return execute(this, g, matrix);		 
 	}
