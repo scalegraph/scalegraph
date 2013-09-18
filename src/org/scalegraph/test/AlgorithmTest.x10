@@ -33,6 +33,26 @@ public abstract class AlgorithmTest extends STest {
 	
 	public abstract def run(args :Array[String](1), graph :Graph) :Boolean;
 	
+	private static def genConstanceValueEdges(getSize :()=>Long, value :Double)
+	{
+		val team = Config.get().worldTeam();
+		
+		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](getSize()));
+		
+		team.placeGroup().broadcastFlat(() => {
+			val role = team.role()(0);
+			Parallel.iter(0..(getSize() - 1), (tid :Long, r :LongRange) => {
+				val edgeMem_ = edgeMemory();
+				for(i in r) {
+					edgeMem_(i) = value;
+				}
+			});
+		});
+		
+		return edgeMemory;
+	}
+	
 	private static def loadGraph(args :Array[String](1)) {
 		if(args.size < 2) {
 			throw new IllegalArgumentException("Too few arguments");
@@ -45,36 +65,46 @@ public abstract class AlgorithmTest extends STest {
 			val C = (args.size > 5) ? Double.parse(args(5)) : 0.15;
 			val rnd = new Random(2, 3);
 			
-			val start_read_time = System.currentTimeMillis();
+			val sw = Config.get().stopWatch();
 			val edgeList = GraphGenerator.genRMAT(scale, edgefactor, A, B, C, rnd);
+			sw.lap("Generate RMAT[scale=" + scale + ",edgefactor=" + edgefactor + "]");
 			val rawWeight = GraphGenerator.genRandomEdgeValue(scale, edgefactor, rnd);
+			sw.lap("Generate random edge value");
 			val g = Graph.make(edgeList);
 			g.setEdgeAttribute[Double]("weight", rawWeight);
-			val end_read_time = System.currentTimeMillis();
-			Console.OUT.println("Gen RMAT graph: "+(end_read_time-start_read_time)+" millis");	
+			sw.lap("Complete making graph");
 			return g;
 		}
 		else if (args(0).equals("random")) {
 			val scale = Int.parse(args(1));
 			val edgefactor = (args.size > 2) ? Int.parse(args(2)) : 16;
 			val rnd = new Random(2, 3);
-			
-			val start_read_time = System.currentTimeMillis();
+
+			val sw = Config.get().stopWatch();
 			val edgeList = GraphGenerator.genRandomGraph(scale, edgefactor, rnd);
+			sw.lap("Generate edos random graph[scale=" + scale + ",edgefactor=" + edgefactor + "]");
 			val rawWeight = GraphGenerator.genRandomEdgeValue(scale, edgefactor, rnd);
+			sw.lap("Generate random edge value");
 			val g = Graph.make(edgeList);
 			g.setEdgeAttribute[Double]("weight", rawWeight);
-			val end_read_time = System.currentTimeMillis();
-			Console.OUT.println("Gen random graph: "+(end_read_time-start_read_time)+" millis");	
+			sw.lap("Complete making graph");
 			return g;
 		}
 		else if (args(0).equals("file")) {
-			val colTypes = [Type.Long as Int, Type.Long, Type.Double];
-			
-			val start_read_time = System.currentTimeMillis();
+			val randomEdge :Boolean = (args.size > 2) ? args(2).equals("random") : true;
+			val edgeConstVal = randomEdge ? 0.0 : Double.parse(args(2));
+			val colTypes = [Type.Long as Int, Type.Long];
+
+			val sw = Config.get().stopWatch();
 			val g = Graph.make(CSV.read(args(1), colTypes, true));
-			val end_read_time = System.currentTimeMillis();
-			Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
+			sw.lap("Read graph[path=" + args(1) + "]");
+			val srcList = g.source();
+			val getSize = ()=>srcList().size();
+			val edgeList = randomEdge
+					? GraphGenerator.genRandomEdgeValue(getSize, new Random(2, 3))
+					: genConstanceValueEdges(getSize, edgeConstVal);
+			g.setEdgeAttribute("weight", edgeList);
+			sw.lap("Generate the edge weights");
 			return g;
 		}
 		else {
@@ -101,8 +131,10 @@ public abstract class AlgorithmTest extends STest {
 	public def checkResult[T](result :DistMemoryChunk[T], reference :String, threshold :T)
 	{ T <: Arithmetic[T], T <: Ordered[T], T haszero }
 	{
+		val sw = Config.get().stopWatch();
 		val team = Config.get().worldTeam();
 		val refdata = CSV.read(reference, [Type.Long as Int, Type.typeId[T]()], true);
+		sw.lap("Read reference data[path=" + reference + "]");
 		val index = refdata.get[Long](0);
 		val refval = refdata.get[T](1);
 		val checkResult = GlobalRef[Cell[Boolean]](new Cell[Boolean](false));
@@ -134,7 +166,7 @@ public abstract class AlgorithmTest extends STest {
 				(o1 :Int, o2 :Int) => o1 | o2);
 			}
 			
-			flags = team.allreduce(teamRole, flags, Team.OR);
+			flags = team.allreduce(teamRole, flags, Team.BOR);
 			
 			if((flags & 2) != 0) {
 				val shift = MathAppend.ceilLog2(teamSize);
@@ -159,13 +191,14 @@ public abstract class AlgorithmTest extends STest {
 				},
 				(o1 :Int, o2 :Int) => o1 | o2);
 				
-				flags = team.allreduce(teamRole, flags, Team.OR);
+				flags = team.allreduce(teamRole, flags, Team.BOR);
 			}
 			
 			if(checkResult.home == here) {
 				checkResult.getLocalOrCopy()() = (flags == 0);
 			}
 		});
+		sw.lap("Compare result and reference data");
 		
 		return checkResult()();
 	}
@@ -216,13 +249,13 @@ public abstract class AlgorithmTest extends STest {
 				}
 			}
 			
-			error = team.allreduce(teamRole, error, Team.OR);
+			error = team.allreduce(teamRole, error, Team.BOR);
 			
 			if(checkResult.home == here) {
 				checkResult.getLocalOrCopy()() = (error == 0);
 			}
 		});
-		
+
 		return checkResult()();
 	}
 	
@@ -230,27 +263,39 @@ public abstract class AlgorithmTest extends STest {
 			value :DistMemoryChunk[T], reference :String, threshold :T)
 	{ T <: Arithmetic[T], T <: Ordered[T], T haszero }
 	{
+		val sw = Config.get().stopWatch();
 		val resdata = Graph.make(EdgeList(source, target));
 		resdata.setEdgeAttribute("weight", value);
 		val res = resdata.createDistSparseMatrix[T](Config.get().dist1d(), "weight", true ,true);
+		sw.lap("Construct a graph from result");
 		val refdata = Graph.make(CSV.read(reference,
 				[Type.Long as Int, Type.Long, Type.Double],
 				["source" as String, "target", "weight"]));
+		sw.lap("Read reference data[path=" + reference + "]");
 		val ref = refdata.createDistSparseMatrix[T](Config.get().dist1d(), "weight", true, true);
+		sw.lap("Construct a graph from reference data");
+		val ret = internalCheckResult(res, ref, true, threshold);
+		sw.lap("Compare result and reference data");
 		
-		return internalCheckResult(res, ref, true, threshold);
+		return ret;
 	}
 	
 	public def checkResult(source :DistMemoryChunk[Long], target :DistMemoryChunk[Long], reference :String)
 	{
+		val sw = Config.get().stopWatch();
 		val resdata = Graph.make(EdgeList(source, target));
 		val res = resdata.createDistEdgeIndexMatrix(Config.get().dist1d(), true ,true);
+		sw.lap("Construct a graph from result");
 		val refdata = Graph.make(CSV.read(reference,
 				[Type.Long as Int, Type.Long, Type.Double],
 				["source" as String, "target", "weight"]));
+		sw.lap("Read reference data[path=" + reference + "]");
 		val ref = refdata.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+		sw.lap("Construct a graph from reference data");
+		val ret = internalCheckResult(res, ref, false, 0L);
+		sw.lap("Compare result and reference data");
 		
-		return internalCheckResult(res, ref, false, 0L);
+		return ret;
 	}
 
 }

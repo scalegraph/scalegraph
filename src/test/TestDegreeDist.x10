@@ -25,47 +25,32 @@ import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.DegreeDistribution;
+import org.scalegraph.test.AlgorithmTest;
 
-final class TestDegreeDist extends STest {
+final class TestDegreeDist extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
 		new TestDegreeDist().execute(args);
 	}
     
-    public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        try {
-            val x = Long.parse(items(0).trim());
-            val y = Long.parse(items(1).trim());
-            
-        } catch(e: Exception) {
-            Console.OUT.println(items(0).trim() + " " + items(1).trim());
-        }
-        return Tuple3[Long, Long, Double] (
-                Long.parse(items(0).trim()),
-                Long.parse(items(1).trim()),
-                0D
-        );
-    };
-
-    public def run(args: Array[String](1)): Boolean {
-        
-        if (args.size < 1) {
-            Console.OUT.println("Please enter file name");
-            return false;
-        }
-        val team = Team.WORLD;
-        
-        // Load data
-        val g = Graph.make(SimpleText.read(args(0), inputFormat));
-        
-        val indegResult = new DegreeDistribution(DegreeDistribution.IN_DEGREE).execute(g);
-        val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
-        val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
-
-        CSV.write("out/indeg-%d", new NamedDistData(["indeg" as String], [indegResult as Any]),true);
-        CSV.write("out/outdeg-%d", new NamedDistData(["outdeg" as String], [outdegResult as Any]),true);
-        CSV.write("out/inoutdeg-%d", new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]),true);
-        
-        return true;
-    }
+	public def run(args :Array[String](1), g :Graph): Boolean {
+	    
+	    val indegResult = new DegreeDistribution(DegreeDistribution.IN_DEGREE).execute(g);
+	    val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
+	    val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
+	   
+	    if(args(0).equals("write")) {
+	        CSV.write(args(1), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
+	        CSV.write(args(1), new NamedDistData(["outdeg" as String], [outdegResult as Any]), true);
+	        CSV.write(args(1), new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]), true);
+	        return true;
+	    }
+	    else if(args(0).equals("check")) {
+	        return checkResult[Long](indegResult, args(1) + "/RMAT_20_INDEG", 0L) 
+	        && checkResult[Long](outdegResult, args(1) + "/RMAT_20_OUTDEG", 0L)
+	        && checkResult[Long](inOutdegResult, args(1) + "/RMAT_20_INOUTDEG", 0L);
+	    }
+	    else {
+	        throw new IllegalArgumentException("Unknown command :" + args(0));
+	    }
+	}
 }

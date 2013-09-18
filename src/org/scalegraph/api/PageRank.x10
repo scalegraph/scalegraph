@@ -68,6 +68,7 @@ public final class PageRank {
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, true);
+		Config.get().stopWatch().lap("Graph construction");
 		return execute(matrix);
 	}
 	
@@ -86,10 +87,13 @@ public final class PageRank {
 		val damping = param.damping;
 		val eps = param.eps;
 		val niter = param.niter;
+		val sw = Config.get().stopWatch();
 		
 		// compute PageRank
 		val xpgraph = XPregelGraph.make[Double, Double](matrix);
 		xpgraph.updateInEdge();
+		
+		sw.lap("UpdateInEdge");
 		
 		xpgraph.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
@@ -105,7 +109,7 @@ public final class PageRank {
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
 			if (here.id == 0) {
-				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
 			return (superstep >= niter || aggVal < eps);
 		});
@@ -113,6 +117,8 @@ public final class PageRank {
 		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
+		
+		sw.lap("Retrieve output");
 		
 		return xpgraph.stealOutput[Double]();
 	}

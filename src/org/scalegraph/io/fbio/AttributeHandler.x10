@@ -82,7 +82,6 @@ public abstract class AttributeHandler {
 }
 
 @NativeCPPInclude("NativeSupport.h")
-@NativeCPPOutputFile("fbio_fmt.h")
 @NativeCPPCompilationUnit("NativeSupport.cc") 
 class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	
@@ -122,7 +121,6 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 }
 
 @NativeCPPInclude("NativeSupport.h")
-@NativeCPPOutputFile("fbio_fmt.h")
 @NativeCPPCompilationUnit("NativeSupport.cc") 
 class StringAttributeHandler extends AttributeHandler {
 	
