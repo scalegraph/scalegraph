@@ -77,7 +77,8 @@ void NativeFile::_constructor (org::scalegraph::util::SString name, int  fileMod
 	}
 	FMGL(fd) = ::open((char*)name->c_str(), flags, 0666);
 	if (FMGL(fd) == -1)
-		x10aux::throwException(FileNotFoundException::_make(name->toString()));
+		x10aux::throwException(FileNotFoundException::_make(String::__plus(
+				String::__plus(name->toString(), x10aux::makeStringLit(" -> ERRNO: ")), (x10_int)errno)));
 }
 
 void NativeFile::close() {
