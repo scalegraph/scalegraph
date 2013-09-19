@@ -20,7 +20,7 @@ import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.Config;
 
 class EdgeProvider [E]/* {E haszero} */{
-	private static type XP = org.scalegraph.ProfilingID.XPregel; 
+	private static type XP = org.scalegraph.id.ProfilingID.XPregel; 
 	// srcid, offset
 	val mDiffOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();
 	val mDiffVertex :GrowableMemory[Long] = new GrowableMemory[Long]();

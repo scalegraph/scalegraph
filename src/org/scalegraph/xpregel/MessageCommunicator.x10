@@ -33,7 +33,7 @@ final struct MessageBuffer[M] { M haszero } {
 }
 
 final class MessageCommunicator[M] { M haszero } {
-	private static type XP = org.scalegraph.ProfilingID.XPregel; 
+	private static type XP = org.scalegraph.id.ProfilingID.XPregel; 
 	/* Name form
 	 * UC : UniCast message
 	 * BC : BroadCast message

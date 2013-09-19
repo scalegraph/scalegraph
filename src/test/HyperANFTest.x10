@@ -11,6 +11,7 @@
 
 package test;
 
+import org.scalegraph.Config;
 import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.io.NamedDistData;
@@ -31,20 +32,34 @@ final class HyperANFTest extends AlgorithmTest{
 	}
 	
 	public def run(args :Array[String](1), g :Graph): Boolean {
-		val result = org.scalegraph.api.HyperANF.run(g);		
-		if(args(0).equals("write")) {
+//		val result = org.scalegraph.api.HyperANF.run(g);	
+		val result :MemoryChunk[Double];
+		if(args(0).equals("high")) {
+			result = org.scalegraph.api.HyperANF.run(g);
+		}
+		else if(args(0).equals("low")) {
+			val matrix = g.createDistSparseMatrix[Double](
+			Config.get().distXPregel(), "weight", true, true);
+			// delete the graph object in order to reduce the memory consumption
+			g.del();
+			result = org.scalegraph.api.HyperANF.run(matrix);
+		}
+		else {
+			throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+		}
+		if(args(1).equals("write")) {
 			var iter:Long = 0;
 			val sb = new SStringBuilder();
 			for(i in result.range()) {
 				sb.add(result(i)).add("\n");
 			}
-			val fw = new FileWriter(args(1), FileMode.Create);
+			val fw = new FileWriter(args(2), FileMode.Create);
 			fw.write(sb.result().bytes());
 			fw.close();
 			return true;
 		}
-		else if(args(0).equals("check")) {
-			val fr = new FileReader(args(1));
+		else if(args(1).equals("check")) {
+			val fr = new FileReader(args(2));
 			val refdata = new GrowableMemory[Double]();
 			try {
 				do {
@@ -59,7 +74,7 @@ final class HyperANFTest extends AlgorithmTest{
 			}
 			else {
 				for(i in result.range()) {
-					val abs = MathAppend.abs( (result(i) + 1.0) /( refdata(i) + 1.0 ));
+					val abs = MathAppend.abs( (result(i) + 1.0) /( refdata(i) + 1.0 ) - 1.0);
 					if(abs > 0.0001) {
 						return false;
 					}

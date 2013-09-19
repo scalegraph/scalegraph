@@ -26,28 +26,44 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.DegreeDistribution;
 import org.scalegraph.test.AlgorithmTest;
+import org.scalegraph.api.MinimumSpanningTree;
+import org.scalegraph.Config;
 
-final class TestDegreeDist extends AlgorithmTest {
+final class TestMST extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
-		new TestDegreeDist().execute(args);
+		new TestMST().execute(args);
 	}
     
 	public def run(args :Array[String](1), g :Graph): Boolean {
 	    
-	    val indegResult = new DegreeDistribution(DegreeDistribution.IN_DEGREE).execute(g);
-	    val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
-	    val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
-	   
-	    if(args(0).equals("write")) {
-	        CSV.write(args(1), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
-	        CSV.write(args(1), new NamedDistData(["outdeg" as String], [outdegResult as Any]), true);
-	        CSV.write(args(1), new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]), true);
+	    if(args.size < 3) {
+	        println("Usage: [high|low] [write|check] <path>");
+	        return false;
+	    }
+	    
+	    var result :Graph;
+	    if(args(0).equals("high")) {
+	        result = MinimumSpanningTree.run(g);
+	    }
+	    else if(args(0).equals("low")) {
+	        val team = g.team();
+	        val matrix = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", false, true);
+	        g.del();
+
+	        result = MinimumSpanningTree.run(matrix);
+	    }
+	    else {
+	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+	    }
+	    
+	    val op = args(1);
+	    val ref = args(2);
+	    if(op.equals("write")) {
+	        CSV.write(args(2), new NamedDistData(["source" as String, "target"], [result.source() as Any, result.target()]), false);
 	        return true;
 	    }
-	    else if(args(0).equals("check")) {
-	        return checkResult[Long](indegResult, args(1) + "/RMAT_20_INDEG", 0L) 
-	        && checkResult[Long](outdegResult, args(1) + "/RMAT_20_OUTDEG", 0L)
-	        && checkResult[Long](inOutdegResult, args(1) + "/RMAT_20_INOUTDEG", 0L);
+	    else if(op.equals("check")) {
+	        return checkResult(result.source(), result.target(), ref);
 	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown command :" + args(0));
