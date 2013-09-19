@@ -19,6 +19,9 @@ tap=None
 #TestWorkDir= os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
 #SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
+def escapeStr(str):
+    str.replace("\"","\\\"")
+
 def indentDeeper(str,n=1):
     """
     
@@ -239,6 +242,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     Message = "name: "  + name           + "\n" + \
               "stderr: |\n"+ indentDeeper(stderr.decode())+ "\n"
               #+"stdout: |\n"+ indentDeeper(stdout.decode(),2)
+    Message=escapeStr(Message)
     if isTimeOut:
         Message="This test case exceeds timeout.\n"+Message
     os.remove(hostDst)
@@ -290,6 +294,6 @@ def build_test(name,x10file,workingDir,srcDir):
             "Building "+name+".x10\n"+\
             "  ---\n"+\
              #buildResult == 0 ならビルドに成功
-            indentDeeper(yaml.dump(yamlFile.read()))+\
+            indentDeeper(escapeStr(yamlFile.read()))+\
             "  ---")
     return buildResult
