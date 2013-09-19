@@ -39,15 +39,13 @@ final class TestBetweennessCentralityUnweighted extends AlgorithmTest {
 	    if (args(0).equals("high")) {
 	        val bc = new BetweennessCentrality();
 	        result = bc.execute(g);
-	        return true;
 	    } else if (args(0).equals("low")) {
 	        val bc = new BetweennessCentrality();
 	        bc.weighted =false;
-	        bc.source = [0L];
+	        bc.source = [ Long.parseLong(args(3))];
 	        bc.directed = true;
 	        bc.exactBc = false;
 	        result = bc.execute(g);
-	        return true;
 	    }  else if (args(0).equals("default")) {
 	        val bc = new BetweennessCentrality();
 	        result = bc.execute(g);
