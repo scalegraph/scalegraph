@@ -298,7 +298,7 @@ def build_test(name,x10file,workingDir,srcDir):
     
     with open(yamlFileName) as yamlFile:
         tap.ok(buildResult == 0,
-            "Building "+name+".x10"+\ 
+            "Building "+name+".x10"+\
             "  ---\n"+\
              #buildResult == 0 ならビルドに成功
             indentDeeper(yamlFile.read())+\
