@@ -66,7 +66,7 @@ def main():
     yamlFiles = os.listdir( opts.yamlDir )
     if(DEBUG):
         print(yamlFiles)
-    helper.initTap(len(yamlFiles))
+    helper.initTap(len(yamlFiles)*2)
     
     for filename in yamlFiles:
         filePref, ext = os.path.splitext(filename)
