@@ -2,6 +2,7 @@
 import subprocess as SProc
 import yaml,re
 import contextlib
+import tempfile
 from os import path
 import os
 import tempfile as tmp
@@ -124,7 +125,7 @@ def initDir(workdir):
     dirs = ["/bin","/log","/output","/results"]
     for directory in dirs:
         if not path.isdir(workdir+directory):
-            os.makedirs(workdir+directory)
+            os.makedirs(workdir+directory,exist_ok=True)
 
 
 def initTap(testNum):
@@ -200,7 +201,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         sys.stderr.write("hostDst:"+hostDst+"\n")
     
     os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
-
+    
     genHostFile(hostSrc,hostDst,
                 numHosts  =attributes["node"],
                 duplicate =attributes["duplicate"] )
@@ -247,6 +248,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
               "stdout:\n"+ indentDeeper(stdout.decode(),2)
     if isTimeOut:
         Message="This test case exceeds timeout.\n"+Message
+    os.remove(hostDst)
+    
     tap.ok(runResult == 0,
            "Run "+name + "\n" + \
            "  ---\n" + \
