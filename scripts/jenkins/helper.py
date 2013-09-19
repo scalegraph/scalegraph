@@ -300,8 +300,8 @@ def build_test(name,x10file,workingDir,srcDir):
             "Building "+name+".x10 "+ errors.decode()+"\n"+ \
             "  ---\n"+\
              #buildResult == 0 ならビルドに成功
-            indentDeeper(yamlFile.read()))+\
-            "  ---\n"
+            indentDeeper(yamlFile.read())+\
+            "  ---\n")
     #print("   ---")
     """
     with open(yamlFileName) as yamlFile:
