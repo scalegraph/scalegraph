@@ -16,8 +16,7 @@ DEBUG=False
 #ModuleName    = "TeamBenchmark"
 #TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 TestWorkDir   = os.environ["prefix"]
-SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
-
+SrcDir= os.path.abspath(os.path.dirname(__file__))+"/../../src"
 
 
 #-------------------------------------------------#
