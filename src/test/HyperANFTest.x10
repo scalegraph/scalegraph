@@ -74,7 +74,7 @@ final class HyperANFTest extends AlgorithmTest{
 			}
 			else {
 				for(i in result.range()) {
-					val abs = MathAppend.abs( (result(i) + 1.0) /( refdata(i) + 1.0 ));
+					val abs = MathAppend.abs( (result(i) + 1.0) /( refdata(i) + 1.0 ) - 1.0);
 					if(abs > 0.0001) {
 						return false;
 					}
