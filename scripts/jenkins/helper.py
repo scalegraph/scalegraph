@@ -290,6 +290,6 @@ def build_test(name,x10file,workingDir,srcDir):
             "Building "+name+".x10\n"+\
             "  ---\n"+\
              #buildResult == 0 ならビルドに成功
-            indentDeeper(yamlFile.read())+\
+            indentDeeper(yaml.dump(yamlFile.read()))+\
             "  ---")
     return buildResult
