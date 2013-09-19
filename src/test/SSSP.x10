@@ -9,7 +9,7 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package org.scalegraph.xpregel.test;
+package test;
 
 import x10.util.Team;
 

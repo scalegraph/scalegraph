@@ -263,7 +263,7 @@ import org.scalegraph.id.Type;
 		val srcList_ = srcList();
 		val dstList_ = dstList();
 		
-		val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size() / 2, Team.ADD);
+		val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size(), Team.ADD);
 		if(here == ref.home) {
 			val g = ref.getLocalOrCopy();
 			g.numberOfVertices = Math.max(maxVertexID + 1, g.numberOfVertices);

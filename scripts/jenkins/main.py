@@ -15,11 +15,12 @@ DEBUG=False
 #-------------------------------------------------#
 #ModuleName    = "TeamBenchmark"
 #TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
-TestWorkDir   = os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
+TestWorkDir   = os.environ["prefix"]
 SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
-#-------------------------------------------------#
 
+
+#-------------------------------------------------#
 ##引数を設定.-hオプションでhelpが見られる
 ## --mpi {MPI} mpich,mvapich,openmpiのいずれかを指定
 ## -t {TESTCASE} でテストケースの指定.デフォルトは TESTCASE=small
@@ -31,6 +32,9 @@ def main():
     parser.add_option("-t","--test",action="store",default="small",
                     type="string",
                     help="Test case to run",dest="testcase")
+    parser.add_option("-n",action="store",default="4",
+                      type="int",
+                      help="number of nodes",dest="maxNode")
     parser.add_option("--mpi",action="store",
                     default="mvapich",type="string",
                     dest="mpi",help="mpi to run tests",
@@ -57,9 +61,11 @@ def main():
 ##yamlからの設定の読み込み
 
 #各ファイルのビルド、テストの実行
-    print("Test will performed in "+opts.yamlDir)
+    if(DEBUG):
+        print(opts.yamlDir+"/*.yaml is loaded")
     yamlFiles = os.listdir( opts.yamlDir )
-    print(yamlFiles)
+    if(DEBUG):
+        print(yamlFiles)
     helper.initTap(len(yamlFiles))
     
     for filename in yamlFiles:
@@ -76,6 +82,8 @@ def main():
             testcase=opts.testcase)
     
         for attribute in attributes:
+            attribute["node"] = opts.maxNode
+            
             buildresult = build_test(filePref,
                         opts.x10Dir+"/"+filePref+".x10",
                         sandbox,
@@ -84,7 +92,7 @@ def main():
                 run_test(name=filePref,
                 binName=filePref,
                 workPath=sandbox,
-                mpi="mvapich",
+                mpi=opts.mpi,
                 attributes=attribute)
             else:
                 fail_run_test(name = filePref,

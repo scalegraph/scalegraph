@@ -13,6 +13,7 @@ package org.scalegraph.test;
 
 import x10.util.Team;
 import x10.util.Ordered;
+import x10.compiler.Ifdef;
 
 import org.scalegraph.Config;
 import org.scalegraph.blas.DistSparseMatrix;
@@ -98,6 +99,7 @@ public abstract class AlgorithmTest extends STest {
 			val sw = Config.get().stopWatch();
 			val g = Graph.make(CSV.read(args(1), colTypes, true));
 			sw.lap("Read graph[path=" + args(1) + "]");
+			@Ifdef("PROF_IO") { Config.get().dumpProfIO("Graph Load (AlgorithmTest):"); }
 			val srcList = g.source();
 			val getSize = ()=>srcList().size();
 			val edgeList = randomEdge
@@ -123,7 +125,7 @@ public abstract class AlgorithmTest extends STest {
 		throw new IllegalArgumentException("Input parameter does not have splitter flag");
 	}
 
-	public def run(args :Array[String](1)): Boolean {
+	public final def run(args :Array[String](1)): Boolean {
 		val [ graphArgs, mainArgs ] = splitArgs(args);
 		return run(mainArgs, loadGraph(graphArgs));
 	}

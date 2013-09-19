@@ -60,6 +60,12 @@ public:
 		}
 		assert((alignment & (alignment-1)) == 0);
 		x10_long size = alignment + numElements*sizeof(ELEM);
+
+		// for memory usage analisys
+		//if(size > 1000000) {
+		//	printf("Large memory allocation: [%d bytes]\n", size);
+		//}
+
        bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
        ELEM* allocMem = static_cast<ELEM*>(x10aux::alloc_chunk(size, containsPtrs));
 		if (zeroed) {
