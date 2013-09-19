@@ -117,13 +117,13 @@ public class BetweennessCentrality {
         val dummy = 0..(1L);
 
         if (inst.exactBc == true){ 
-            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta,inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
-            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.resultAttrName, inst.delta, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Array[Long]) {
-            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof LongRange) {
-            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
         } else {
             throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
         }
