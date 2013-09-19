@@ -75,7 +75,8 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		            "Local matvec mult",
 		            "Local reduction",
 		            "Allgather",
-		            "Alltoall"];
+		            "Alltoall"
+		];
 
 		val prof = config.profBLAS();
 		print(prof.resultString(desc));

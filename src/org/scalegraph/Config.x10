@@ -117,7 +117,7 @@ public class Config {
 		stopWatch = new StopWatch();
 		@Ifdef("PROF_XP") { profXPregel = new ProfilingDB(worldTeam, ProfilingID.XPregel.FRAME_VECTOR); }
 		@Ifdef("PROF_IO") { profIO = new ProfilingDB(worldTeam, ProfilingID.IO.FRAME_VECTOR); }
-		@Ifdef("PROF_BLAS") { profBLAS = new ProfilingDB([10 as Int, 10, 10, 10]); }
+		@Ifdef("PROF_BLAS") { profBLAS = new ProfilingDB(worldTeam, [1 as Int, 2, 2, 2]); }
 	}
 	
 	private def del_() {

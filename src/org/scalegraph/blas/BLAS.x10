@@ -158,7 +158,7 @@ public final class BLAS {
 				
 				comm.start();
 				rowTeam.alltoall(tmpSendVector, tmpRecvVector);
-				comm.lap(0);
+				comm.lap(1);
 				
 				calc.start();
 				Parallel.iter(0L..(localSize-1), (tid :Long, range :LongRange) => {
@@ -185,6 +185,7 @@ public final class BLAS {
 			throw new UnsupportedOperationException();
 		}
 		all.lap(0);
+		prof.finishStepWithAll();
 	}
 	
 	/** B <- alpha * A + beta * B */
