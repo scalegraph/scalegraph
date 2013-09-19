@@ -292,8 +292,12 @@ def build_test(name,x10file,workingDir,srcDir):
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
     with open(yamlFileName) as yamlFile:
-        tap.ok(buildResult == 0,"Building "+name+".x10 "+
-           errors.decode()+indentDeeper(yamlFile.read())) #buildResult == 0 ならビルドに成功
+        tap.ok(buildResult == 0,
+            "Building "+name+".x10 "+ errors.decode()+"\n" \
+            "  ---\n"+\
+             #buildResult == 0 ならビルドに成功
+            indentDeeper(yamlFile.read()))+\
+            "  ---\n"
     #print("   ---")
     """
     with open(yamlFileName) as yamlFile:
