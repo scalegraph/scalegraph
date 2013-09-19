@@ -444,6 +444,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         bc.start();
         // Normalize result
         val N = g.numberOfVertices();
+        g.del(); // work around for perf test
         if (normalize) {
             finish for (p in places) {
                 at (p) async {
