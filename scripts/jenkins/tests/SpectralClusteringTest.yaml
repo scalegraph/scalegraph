@@ -1,0 +1,15 @@
+small:
+  - name: small test (scale-16)
+    args: rmat 16 16 0.49 0.01 0.01 - 2 0.001 1000 0.00001
+    thread: 12
+    gcproc: 2
+    process: 4
+    duplicate: 2
+
+large:
+  - name: large test (scale-26)
+    args: rmat 26 16 0.49 0.01 0.01 - 2 0.001 1000 0.00001
+    thread: 12
+    gcproc: 2
+    process: 16
+    duplicate: 2

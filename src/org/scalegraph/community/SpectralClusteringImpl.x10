@@ -13,6 +13,7 @@ package org.scalegraph.community;
 import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
 import x10.util.Team;
+import x10.util.Random;
 
 import org.scalegraph.Config;
 import org.scalegraph.arpack.ARPACK;
@@ -115,15 +116,16 @@ final public class SpectralClusteringImpl {
 		
 		return new DistMemoryChunk[Double](team.placeGroup(), () => {
 			// local workspaces for pdsaupd
+			val random = new Random(2L);
 			val role = team.role()(0);
 			var ido:Int = 0;
-			val resid:Array[Double](1) = new Array[Double](nloc);
+			val resid:Array[Double](1) = new Array[Double](nloc, (Int) => random.nextDouble());
 			val u:Array[Double](1) = new Array[Double](ncv * ldu);
 			val iparam:Array[Int](1) = new Array[Int](11);
 			val ipntr:Array[Int](1) = new Array[Int](11);
 			val workd:Array[Double](1) = new Array[Double](3 * nloc);
 			val workl:Array[Double](1) = new Array[Double](lworkl);
-			var info:Int = 0;
+			var info:Int = 1;
 			
 			// local workspaces for pdseupd
 			val select:Array[Int](1) = new Array[Int](ncv);
@@ -228,7 +230,7 @@ final public class SpectralClusteringImpl {
 			
 			// create initial centroids
 			// if(team.role()(0) == 0) Console.OUT.println("create initial centroids");
-			val r = new x10.util.Random(2L);
+			val r = new Random(2L);
 			for(j in 0..(k-1)) {
 				val i = r.nextLong(nloc);
 				for(l in 0..(k-1)) {
