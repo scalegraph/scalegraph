@@ -255,11 +255,11 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     os.remove(hostDst)
     
     tap.ok(runResult == 0,
-           "Run "+name + "\n" + \
+           "Run "+name.rstrip() + "\n" + \
            "  ---\n" + \
            "  Message:\n" + \
            indentDeeper(Message,2) + \
-           "  ---\n")
+           "  ---")
 
 def build_test_dummy(name,workingDir="./"):
     if DEBUG:
@@ -295,13 +295,14 @@ def build_test(name,x10file,workingDir,srcDir):
     buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
+    
     with open(yamlFileName) as yamlFile:
         tap.ok(buildResult == 0,
-            "Building "+name+".x10 "+ errors.decode()+ \
+            "Building "+name+".x10 "+ errors.decode().rstrip() + "\n"+\
             "  ---\n"+\
              #buildResult == 0 ならビルドに成功
             indentDeeper(yamlFile.read())+\
-            "  ---\n")
+            "  ---")
     #print("   ---")
     """
     with open(yamlFileName) as yamlFile:
