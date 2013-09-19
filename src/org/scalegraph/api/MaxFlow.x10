@@ -208,8 +208,6 @@ final public class MaxFlow {
     	val recursionLimit = param.recursionLimit;
     	val eps = param.eps;
     	
-    	
-    	var currFlow:Long;
     	val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
     	
     	
