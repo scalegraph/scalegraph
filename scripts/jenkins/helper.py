@@ -8,7 +8,7 @@ import tempfile as tmp
 import TAP
 import sys
 
-DEBUG=True
+DEBUG=False
 
 tap=None
 ##kriiyamaのテスト用の変数
@@ -64,7 +64,8 @@ def genHostFile(file,dest,numHosts,duplicate):
 def isValidAttr(attr):
     
     if not isinstance(attr,dict):
-        print("attr:"+attr+"\n"+"type:"+str(type(attr)))
+        if(DEBUG):
+            print("attr:"+attr+"\n"+"type:"+str(type(attr)))
         return False
     
     param = ["args","thread","gcproc","place","duplicate"]
@@ -138,6 +139,7 @@ def x10outToYaml(src,dst):
     @param src 入力ファイルパス
     @param dst 出力先のファイルパス
     """
+    global DEBUG
     x10out2yaml = "./iyuuscripts/x10output2yaml.sh"
     inFile = open(src,'r')
     outFile = open(dst,'w')
@@ -168,6 +170,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     @param attributes テストパラメータ
     @param workPath   作業を行うpath
     """
+    global DEBUG
     if isValidAttr(attributes) == False:
         tap.ok(0, name+".yaml is invalid testfile.")
         return
@@ -226,7 +229,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         binPath] + args
 
     #run
-    if(DEBUG):print(runCmd)
+    if(DEBUG):
+        print(runCmd)
 
     isTimeOut=False
     mpirunProc = SProc.Popen(runCmd,
@@ -244,8 +248,11 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if isTimeOut:
         Message="This test case exceeds timeout.\n"+Message
     tap.ok(runResult == 0,
-           "Run "+name + "\n"+ \
-           "Message:\n"+indentDeeper(Message))
+           "Run "+name + "\n" + \
+           "  ---\n" + \
+           "  Message:\n" + \
+           indentDeeper(Message,2) + \
+           "  ---\n")
 
 def build_test_dummy(name,workingDir="./"):
     if DEBUG:
@@ -262,6 +269,7 @@ def build_test(name,x10file,workingDir,srcDir):
     @param describe  実行中のジョブの説明
     @return buildResult ビルドの終了コード
     """
+    global DEBUG
     bindir = workingDir + "/bin/"
     logdir = workingDir + "/log/"
     
@@ -279,10 +287,13 @@ def build_test(name,x10file,workingDir,srcDir):
     buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
-    tap.ok(buildResult == 0,"Building "+name+".x10 "+
-           errors.decode()) #buildResult == 0 ならビルドに成功
-    print("   ---")
+    with open(yamlFileName) as yamlFile:
+        tap.ok(buildResult == 0,"Building "+name+".x10 "+
+           errors.decode()+indentDeeper(yamlFile.read())) #buildResult == 0 ならビルドに成功
+    #print("   ---")
+    """
     with open(yamlFileName) as yamlFile:
         for line in yamlFile.readlines():
             print("    "+line,end="")
+    """
     return buildResult
