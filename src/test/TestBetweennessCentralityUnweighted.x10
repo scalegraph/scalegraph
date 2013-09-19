@@ -59,9 +59,10 @@ final class TestBetweennessCentralityUnweighted extends AlgorithmTest {
 	        return true;
 	    }
 	    else if(args(1).equals("check")) {
-	        val bc = new BetweennessCentrality();
 	        val reference = args(2);
 	        return checkResult[Double](result, reference, 0.001D); 
+	    }else if(args(1).equals("nowrite")) {
+	        return true;
 	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown command :" + args(0));

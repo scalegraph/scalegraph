@@ -333,7 +333,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         // Workaround for init sources for exteral API
         val numSource_ = isExactBc ? -1L: numSource;
         val sources_ = isExactBc ? null: sources;
-        val sourceRange_ = isExactBc ? 0..(g.numberOfVertices() - 1): sourceRange;
+        val N = g.numberOfVertices();
+        val sourceRange_ = isExactBc ? 0..(N - 1): sourceRange;
         val stopWatch = Config.get().stopWatch();
         stopWatch.lap("Graph construction");
         val localState = PlaceLocalHandle.make[LocalState](places, 
@@ -348,9 +349,10 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                             linearScale));
                 });
         val bc = new DistBetweennessCentrality(localState);
+        g.del(); //work around
         bc.start();
         // Normalize result
-        val N = g.numberOfVertices();
+       
         if (normalize) {
             finish for (p in places) {
                 at (p) async {
