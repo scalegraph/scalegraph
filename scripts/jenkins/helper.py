@@ -65,7 +65,7 @@ def isValidAttr(attr):
     
     if not isinstance(attr,dict):
         if(DEBUG):
-            print("attr:"+attr+"\n"+"type:"+str(type(attr)))
+            sys.stderr.write("attr:"+attr+"\n"+"type:"+str(type(attr)))
         return False
     
     param = ["args","thread","gcproc","place","duplicate"]
