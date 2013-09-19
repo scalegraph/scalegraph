@@ -33,6 +33,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Bitmap2;
+import org.scalegraph.Config;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -332,7 +333,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val numSource_ = isExactBc ? -1L: numSource;
         val sources_ = isExactBc ? null: sources;
         val sourceRange_ = isExactBc ? 0..(g.numberOfVertices() - 1): sourceRange;
-        
+        val stopWatch = Config.get().stopWatch();
+        stopWatch.lap("Graph construction");
         val localState = PlaceLocalHandle.make[LocalState](places, 
                 () => { 
                     return (new LocalState(csr,
@@ -390,6 +392,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         //     return id;
         // });
         // g.setVertexAttribute[Long]("name", vertexIds);
+        stopWatch.lap("Betweenness centrality calculation");
         return result;
     }
     
