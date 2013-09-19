@@ -280,7 +280,8 @@ def build_test(name,x10file,workingDir,srcDir):
     X10CXX = "x10c++"
     buildCmd = [X10CXX, "-cxx-prearg", "-I"+srcDir+"/../include", "-cxx-prearg","-g", "-x10rt", "mpi",
                 "-sourcepath",srcDir, "-o", bindir + name, x10file]
-    if(DEBUG):print("build command:"+str(buildCmd))
+    if(True):
+        sys.stderr.write("build command:"+str(buildCmd) + "\n")
     logFile = open(logdir+"buildlog-"+name+".log",'w')
     errFile = open(outFileName,'w')
 
