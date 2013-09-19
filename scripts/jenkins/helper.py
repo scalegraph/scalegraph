@@ -52,6 +52,11 @@ def genHostFile(filepath,destpath,numHosts,duplicate):
     """
     filepath = os.path.expandvars(filepath)
     destpath = os.path.expandvars(destpath)
+    try:
+        if os.path.exists(destpath):
+            os.remove(destpath)
+    except OSError:
+        return
     with open(filepath) as file:
         hosts = file.readlines()
     newhosts=[]
@@ -201,7 +206,6 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         sys.stderr.write("hostDst:"+hostDst+"\n")
     
     os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
-    
     genHostFile(hostSrc,hostDst,
                 numHosts  =attributes["node"],
                 duplicate =attributes["duplicate"] )
