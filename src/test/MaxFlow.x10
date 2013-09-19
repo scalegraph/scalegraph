@@ -26,7 +26,7 @@ public class MaxFlow {
 		val excess:Double;
 		// val excess:Long;
 		// public def this(v:Long, m:Long, is:Boolean ,cap:Long) {
-		public def this (v:Long, m:Long,is:Boolean,  cap:Double) {
+		private def this (v:Long, m:Long,is:Boolean,  cap:Double) {
 			vertexId = v;
 			myId = m;
 			isOutEdge = is;
@@ -53,7 +53,7 @@ public class MaxFlow {
 		val flow:Double;
 		val fromId:Long;
 		// def this(f:Long, i:Long) {
-		def this(f:Double, i:Long) {
+		private def this(f:Double, i:Long) {
 			this.flow = f;
 			this.fromId = i;
 		}
@@ -65,7 +65,7 @@ public class MaxFlow {
 		val height:Long;
 		val id:Long;
 		// def this(e:Long, h:Long, i:Long) {
-		def this(e:Double, h:Long, i:Long) {
+		private def this(e:Double, h:Long, i:Long) {
 			excess = e; 
 			height = h;
 			id  = i;
@@ -79,7 +79,7 @@ public class MaxFlow {
 		val capacity:Double;
 		//val capacity:Long;
 		// def this(val a:Long, val b:Long, val c:Boolean ,val cap:Long) {
-		def this(val a:Long, val b:Long, val c:Boolean, val cap:Double) {
+		private def this(val a:Long, val b:Long, val c:Boolean, val cap:Double) {
 			val1=a;
 			val2=b;
 			isOutEdge=c;
@@ -96,13 +96,13 @@ public class MaxFlow {
 		}
 	}
 
-	private static struct MFVertex {
-		val adjVertex:MemoryChunk[AdjVertex];
+	private static class MFVertex {
+		var adjVertex:MemoryChunk[AdjVertex];
 		// val excess:Long;
-		val excess:Double;
-		val height:Long;
-		val isExcessNonZero:Boolean;
-		public def this() {
+		var excess:Double;
+		var height:Long;
+		var isExcessNonZero:Boolean;
+		private def this() {
 			this.adjVertex = new MemoryChunk[AdjVertex](0);
 			// excess = 0L;
 			excess = 0.0;
@@ -110,39 +110,55 @@ public class MaxFlow {
 			isExcessNonZero = false;
 		}
 		
-		public def this(val adj:MemoryChunk[AdjVertex]) {
+		private def this(val adj:MemoryChunk[AdjVertex]) {
 			this.adjVertex = adj;
 			// excess = 0L;
 			excess = 0.0;
 			height = 0L;
 			isExcessNonZero = false;
 		}
+		
+		private def setAdj(adj:MemoryChunk[AdjVertex]) {
+			this.adjVertex = adj;
+		}
+		private def setExcess(ex:Double) {
+			this.excess = ex;
+		}
+		private def setHeight(h:Long) {
+			this.height = h;
+		}
+		
+		private def setIsExcessNonZero(b:Boolean) {
+			this.isExcessNonZero = b;
+		}
+		
+		/*
 		@Native("c++", "(#this)->FMGL(adjVertex) = #v")
 		native def setAdj(v:MemoryChunk[AdjVertex]):void;
-
+	
 		@Native("c++", "(#this)->FMGL(excess) = #v")
 		native def setExcess(v:Double):void;
 		// native def setExcess(v:Long):void;
-		
+	
 		@Native("c++", "(#this)->FMGL(height) = #v")
 		native def setHeight(v:Long):void;
 		
 		@Native("c++", "(#this)->FMGL(isExcessNonZero) = #v")
 		native def setIsExcessNonZero(v:Boolean):void;
-		
+		*/
 		// def setAdjCapacity(id:Long, cap:Long) {
-		def setAdjCapacity(id:Long, cap:Double) {
+		private def setAdjCapacity(id:Long, cap:Double) {
 			val adjV = adjVertex(id);
 			adjV.setCapacity(cap);
 			adjVertex(id) = adjV;
 		}
 		// def setAdjExcess(id:Long, excess:Long) {
-		def setAdjExcess(id:Long, excess:Double) {
+		private def setAdjExcess(id:Long, excess:Double) {
 			val adjV = adjVertex(id);
 			adjV.setExcess(excess);
 			adjVertex(id) = adjV;
 		}
-		def setAdjHeight(id:Long, height:Long) {
+		private def setAdjHeight(id:Long, height:Long) {
 			val adjV = adjVertex(id);
 			adjV.setHeight(height);
 			adjVertex(id) = adjV;

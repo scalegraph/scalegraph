@@ -118,7 +118,7 @@ final public class DegreeDistribution {
     
     // Interface between API and Impl
     @Inline
-    private static def run[T](matrix :DistSparseMatrix[T]): DistMemoryChunk[Long] {
+    public static def run[T](matrix :DistSparseMatrix[T]): DistMemoryChunk[Long] {
         return DegreeDistImpl.degreeDistribution[T](matrix);
     }
 }

@@ -12,6 +12,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.util.*;
 
 /**
  * Calculates the Strongly Connected Component.
@@ -145,10 +146,8 @@ public final class StronglyConnectedComponent {
 		val blockLength = 3L;
 
 		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
-		val xpregel = new XPregelGraph[SCCVertex, Long](csr);
-		val edgeValue = graph.createDistAttribute[Double](csr, false, "weight");
-		
-		
+		val xpregel = new XPregelGraph[SCCVertex, Long](csr);		
+//		val xpregel = XpregelGraph.make[SCCVertex, Double](matrix);
 		xpregel.updateInEdge();
 
 

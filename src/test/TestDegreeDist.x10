@@ -26,6 +26,8 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.DegreeDistribution;
 import org.scalegraph.test.AlgorithmTest;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.Config;
 
 final class TestDegreeDist extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
@@ -34,20 +36,43 @@ final class TestDegreeDist extends AlgorithmTest {
     
 	public def run(args :Array[String](1), g :Graph): Boolean {
 	    
-	    val indegResult = new DegreeDistribution(DegreeDistribution.IN_DEGREE).execute(g);
-	    val outdegResult = new DegreeDistribution(DegreeDistribution.OUT_DEGREE).execute(g);
-	    val inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
-	   
-	    if(args(0).equals("write")) {
-	        CSV.write(args(1), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
-	        CSV.write(args(1), new NamedDistData(["outdeg" as String], [outdegResult as Any]), true);
-	        CSV.write(args(1), new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]), true);
+	    if(args.size < 3) {
+	        println("Usage: [high|low] [write|check] <path>");
+	        return false;
+	    }
+	    
+	    var inOutdegResult: DistMemoryChunk[Long];
+	    
+	    if(args(0).equals("high")) {
+	        inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
+	    }
+	    else if(args(0).equals("low")) {
+	        val sw = Config.get().stopWatch();
+	        val team = g.team();
+	        val outerOrInner = true;
+	        val directed = false;
+	        val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
+	        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
+	        sw.lap("Graph construction");
+	        g.del();
+	        inOutdegResult = DegreeDistribution.run[Long](columnDistGraph);
+	        sw.lap("Degree distribution calculation");
+	    }
+	    else {
+	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+	    }
+	    
+	    if(args(1).equals("write")) {
+	        // CSV.write(args(1), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
+	        // CSV.write(args(1), new NamedDistData(["outdeg" as String], [outdegResult as Any]), true);
+	        CSV.write(args(2), new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]), true);
 	        return true;
 	    }
-	    else if(args(0).equals("check")) {
-	        return checkResult[Long](indegResult, args(1) + "/RMAT_20_INDEG", 0L) 
-	        && checkResult[Long](outdegResult, args(1) + "/RMAT_20_OUTDEG", 0L)
-	        && checkResult[Long](inOutdegResult, args(1) + "/RMAT_20_INOUTDEG", 0L);
+	    else if(args(1).equals("check")) {
+	        // return checkResult[Long](indegResult, args(1) + "/RMAT_20_INDEG", 0L) 
+	        // && checkResult[Long](outdegResult, args(1) + "/RMAT_20_OUTDEG", 0L)
+	        // && checkResult[Long](inOutdegResult, args(1) + "/RMAT_20_INOUTDEG", 0L);
+	        return checkResult[Long](inOutdegResult, args(2) + "/RMAT_20_INOUTDEG", 0L);
 	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown command :" + args(0));
