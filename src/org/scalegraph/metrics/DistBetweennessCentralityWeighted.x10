@@ -27,6 +27,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Bitmap2;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.SparseMatrix;
+import org.scalegraph.Config;
 
 
 /**
@@ -437,6 +438,8 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val localState = PlaceLocalHandle.make[LocalState](places, () => {
             return new LocalState(csr, weightAttr, transBuf, vInGraph, delta, numSource, sources, sourceRange);
         });
+        val stopWatch = Config.get().stopWatch();
+        stopWatch.lap("Graph construction");
         val bc = new DistBetweennessCentralityWeighted(localState);
         bc.start();
         // Normalize result
@@ -482,6 +485,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         //     return id;
         // });
         // g.setVertexAttribute[Long]("name", vertexIds);
+        stopWatch.lap("Betweenness centrality calculation");
         return result;
     }
     

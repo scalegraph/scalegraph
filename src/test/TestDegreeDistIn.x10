@@ -29,9 +29,9 @@ import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.Config;
 
-final class TestDegreeDist extends AlgorithmTest {
+final class TestDegreeDistIn extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
-		new TestDegreeDist().execute(args);
+		new TestDegreeDistIn().execute(args);
 	}
     
 	public def run(args :Array[String](1), g :Graph): Boolean {
@@ -41,21 +41,21 @@ final class TestDegreeDist extends AlgorithmTest {
 	        return false;
 	    }
 	    
-	    var inOutdegResult: DistMemoryChunk[Long];
+	    var indegResult: DistMemoryChunk[Long];
 	    
 	    if(args(0).equals("high")) {
-	        inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
+	        indegResult = new DegreeDistribution(DegreeDistribution.IN_DEGREE).execute(g);
 	    }
 	    else if(args(0).equals("low")) {
 	        val sw = Config.get().stopWatch();
 	        val team = g.team();
-	        val outerOrInner = true;
-	        val directed = false;
+	        val outerOrInner = false;
+	        val directed = true;
 	        val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
 	        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
 	        sw.lap("Graph construction");
 	        g.del();
-	        inOutdegResult = DegreeDistribution.run[Long](columnDistGraph);
+	        indegResult = DegreeDistribution.run[Long](columnDistGraph);
 	        sw.lap("Degree distribution calculation");
 	    }
 	    else {
@@ -63,16 +63,11 @@ final class TestDegreeDist extends AlgorithmTest {
 	    }
 	    
 	    if(args(1).equals("write")) {
-	        // CSV.write(args(1), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
-	        // CSV.write(args(1), new NamedDistData(["outdeg" as String], [outdegResult as Any]), true);
-	        CSV.write(args(2), new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]), true);
+	        CSV.write(args(2), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
 	        return true;
 	    }
 	    else if(args(1).equals("check")) {
-	        // return checkResult[Long](indegResult, args(1) + "/RMAT_20_INDEG", 0L) 
-	        // && checkResult[Long](outdegResult, args(1) + "/RMAT_20_OUTDEG", 0L)
-	        // && checkResult[Long](inOutdegResult, args(1) + "/RMAT_20_INOUTDEG", 0L);
-	        return checkResult[Long](inOutdegResult, args(2) + "/RMAT_20_INOUTDEG", 0L);
+	        return checkResult[Long](indegResult, args(2) + "/RMAT_20_INDEG", 0L);
 	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown command :" + args(0));
