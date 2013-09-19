@@ -27,9 +27,9 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.api.BetweennessCentrality;
 
-final class TestBetweennessCentrality extends AlgorithmTest {
+final class TestBetweennessCentralityUnweighted extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
-		new TestBetweennessCentrality().execute(args);
+		new TestBetweennessCentralityUnweighted().execute(args);
 	}
     
 	public def run(args :Array[String](1), g :Graph): Boolean {
@@ -42,6 +42,10 @@ final class TestBetweennessCentrality extends AlgorithmTest {
 	        return true;
 	    } else if (args(0).equals("low")) {
 	        val bc = new BetweennessCentrality();
+	        bc.weighted =false;
+	        bc.source = [0L];
+	        bc.directed = true;
+	        bc.exactBc = false;
 	        result = bc.execute(g);
 	        return true;
 	    }  else if (args(0).equals("default")) {
