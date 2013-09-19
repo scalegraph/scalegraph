@@ -154,19 +154,6 @@ def x10outToYaml(src,dst):
         sed = stack.enter_context(SProc.Popen(["sed","-e",r"s/^.*\/workspace\/src\(\/.*\)$/\1/"],stdin=cat.stdout,stdout=SProc.PIPE))
         SProc.call([x10out2yaml],stdin=sed.stdout,stdout=outFile)
 
-"""
-def run_test_dummy(name,describe,mpi,attribute):
-    if DEBUG:
-        print("-------------------------------")
-        print("run_test_dummy method")
-        print("args:")
-        print("    moduleName:"+name)
-        print("    describe:"+describe)
-        print("    mpi:"+mpi)
-        print("    attribute"+str(attribute))
-        print("-------------------------------")
-"""
-
 def fail_run_test(name,binName,attributes,workPath,describe):
     tap.ok(0,"running "+binName+" failure."+describe,skip=True)
     
@@ -178,7 +165,9 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     """
     global DEBUG
     if isValidAttr(attributes) == False:
-        tap.ok(0, name+".yaml is invalid testfile.")
+        tap.ok(0, name+".yaml is invalid testfile.\n"+\
+                "  ---\n  ---")
+        
         return
     if "name" not in attributes:
         attributes["name"] = name
@@ -248,8 +237,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         stdout, stderr = mpirunProc.communicate()
     runResult = mpirunProc.poll()
     Message = "name:"  + name           + "\n" + \
-              "stderr:\n"+ indentDeeper(stderr.decode(),2)+ "\n" + \
-              "stdout:\n"+ indentDeeper(stdout.decode(),2)
+              "stderr: |\n"+ indentDeeper(stderr.decode())+ "\n" + \
+              "stdout: |\n"+ indentDeeper(stdout.decode(),2)
     if isTimeOut:
         Message="This test case exceeds timeout.\n"+Message
     os.remove(hostDst)
@@ -298,15 +287,9 @@ def build_test(name,x10file,workingDir,srcDir):
     
     with open(yamlFileName) as yamlFile:
         tap.ok(buildResult == 0,
-            "Building "+name+".x10"+\
+            "Building "+name+".x10\n"+\
             "  ---\n"+\
              #buildResult == 0 ならビルドに成功
             indentDeeper(yamlFile.read())+\
             "  ---")
-    #print("   ---")
-    """
-    with open(yamlFileName) as yamlFile:
-        for line in yamlFile.readlines():
-            print("    "+line,end="")
-    """
     return buildResult
