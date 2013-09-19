@@ -34,16 +34,30 @@ final class TestBetweennessCentrality extends AlgorithmTest {
     
 	public def run(args :Array[String](1), g :Graph): Boolean {
 	    
-	    val bc = new BetweennessCentrality();
-	    val result = bc.execute(g);
-	   
-	    if(args(0).equals("write")) {
-	        CSV.write(args(1), new NamedDistData(["bc" as String], [result as Any]), true);
+	    var result: DistMemoryChunk[Double];
+	    
+	    if (args(0).equals("high")) {
+	        val bc = new BetweennessCentrality();
+	        result = bc.execute(g);
+	        return true;
+	    } else if (args(0).equals("low")) {
+	        val bc = new BetweennessCentrality();
+	        result = bc.execute(g);
+	        return true;
+	    }  else if (args(0).equals("default")) {
+	        val bc = new BetweennessCentrality();
+	        result = bc.execute(g);
+	    } else {
+	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+	    }
+	    if(args(1).equals("write")) {
+	        CSV.write(args(2), new NamedDistData(["bc" as String], [result as Any]), true);
 	        return true;
 	    }
-	    else if(args(0).equals("check")) {
-	        val reference = args(1);
-	        return checkResult[Double](result, reference, 0.00005D); 
+	    else if(args(1).equals("check")) {
+	        val bc = new BetweennessCentrality();
+	        val reference = args(2);
+	        return checkResult[Double](result, reference, 0.001D); 
 	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown command :" + args(0));
