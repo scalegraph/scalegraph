@@ -42,7 +42,7 @@ def check_env():
             return False
     return True
         
-def genHostFile(file,dest,numHosts,duplicate):
+def genHostFile(filepath,destpath,numHosts,duplicate):
     """
     mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
     @param file       使用できるノードのいちらんが書かれたファイルへのPath
@@ -50,15 +50,15 @@ def genHostFile(file,dest,numHosts,duplicate):
     @param numHosts   使用するホストノードの数
     @param duplicates 1nodeあたりのPlace数
     """
-    file = os.path.expandvars(file)
-    dest = os.path.expandvars(dest)
-    with open(file) as file:
+    filepath = os.path.expandvars(filepath)
+    destpath = os.path.expandvars(destpath)
+    with open(filepath) as file:
         hosts = file.readlines()
     newhosts=[]
     for n in range(numHosts):
         for _ in range(duplicate):
             newhosts.append(hosts[n])
-    with open(dest,'w') as file:
+    with open(destpath,'w') as file:
         for host in newhosts:
             file.write(host)
     
