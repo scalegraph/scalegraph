@@ -8,7 +8,7 @@ import tempfile as tmp
 import TAP
 import sys
 
-DEBUG=True
+DEBUG=False
 
 tap=None
 ##kriiyamaのテスト用の変数
@@ -64,7 +64,8 @@ def genHostFile(file,dest,numHosts,duplicate):
 def isValidAttr(attr):
     
     if not isinstance(attr,dict):
-        print("attr:"+attr+"\n"+"type:"+str(type(attr)))
+        if(DEBUG):
+            print("attr:"+attr+"\n"+"type:"+str(type(attr)))
         return False
     
     param = ["args","thread","gcproc","place","duplicate"]
@@ -138,6 +139,7 @@ def x10outToYaml(src,dst):
     @param src 入力ファイルパス
     @param dst 出力先のファイルパス
     """
+    global DEBUG
     x10out2yaml = "./iyuuscripts/x10output2yaml.sh"
     inFile = open(src,'r')
     outFile = open(dst,'w')
@@ -168,6 +170,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     @param attributes テストパラメータ
     @param workPath   作業を行うpath
     """
+    global DEBUG
     if isValidAttr(attributes) == False:
         tap.ok(0, name+".yaml is invalid testfile.")
         return
@@ -226,7 +229,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         binPath] + args
 
     #run
-    if(DEBUG):print(runCmd)
+    if(DEBUG):
+        print(runCmd)
 
     isTimeOut=False
     mpirunProc = SProc.Popen(runCmd,
@@ -262,6 +266,7 @@ def build_test(name,x10file,workingDir,srcDir):
     @param describe  実行中のジョブの説明
     @return buildResult ビルドの終了コード
     """
+    global DEBUG
     bindir = workingDir + "/bin/"
     logdir = workingDir + "/log/"
     

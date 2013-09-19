@@ -61,9 +61,11 @@ def main():
 ##yamlからの設定の読み込み
 
 #各ファイルのビルド、テストの実行
-    print(opts.yamlDir+"/*.yaml is loaded")
+    if(DEBUG):
+        print(opts.yamlDir+"/*.yaml is loaded")
     yamlFiles = os.listdir( opts.yamlDir )
-    print(yamlFiles)
+    if(DEBUG):
+        print(yamlFiles)
     helper.initTap(len(yamlFiles))
     
     for filename in yamlFiles:
