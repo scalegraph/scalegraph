@@ -248,8 +248,11 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if isTimeOut:
         Message="This test case exceeds timeout.\n"+Message
     tap.ok(runResult == 0,
-           "Run "+name + "\n"+ \
-           "Message:\n"+indentDeeper(Message))
+           "Run "+name + "\n" + \
+           "  ---\n" + \
+           "  Message:\n" + \
+           indentDeeper(Message,2) + \
+           "  ---\n")
 
 def build_test_dummy(name,workingDir="./"):
     if DEBUG:
@@ -284,10 +287,13 @@ def build_test(name,x10file,workingDir,srcDir):
     buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
-    tap.ok(buildResult == 0,"Building "+name+".x10 "+
-           errors.decode()) #buildResult == 0 ならビルドに成功
-    print("   ---")
+    with open(yamlFileName) as yamlFile:
+        tap.ok(buildResult == 0,"Building "+name+".x10 "+
+           errors.decode()+indentDeeper(yamlFile.read())) #buildResult == 0 ならビルドに成功
+    #print("   ---")
+    """
     with open(yamlFileName) as yamlFile:
         for line in yamlFile.readlines():
             print("    "+line,end="")
+    """
     return buildResult
