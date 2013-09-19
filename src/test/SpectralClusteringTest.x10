@@ -46,7 +46,7 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		val tolerance = Double.parse(args(1));
 		val maxitr = Int.parse(args(2));
 		val threshold = Double.parse(args(3));
-		val outdir = args(4);
+		//val outdir = args(4);
 		
 		Console.OUT.println("vertices = " + g.numberOfVertices());
 		Console.OUT.println("edges    = " + g.numberOfEdges());
@@ -56,9 +56,9 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		
 		val result = SpectralClustering.run(g, "weight", numCluster, tolerance, maxitr, threshold);
 		
-		sw.next("output");
+		//sw.next("output");
 		
-		DistributedReader.write(outdir + "/outvec-%d.txt", result);
+		//DistributedReader.write(outdir + "/outvec-%d.txt", result);
 		
 		//sw.next("validation");
 		

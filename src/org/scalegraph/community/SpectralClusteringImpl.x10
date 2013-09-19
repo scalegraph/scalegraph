@@ -47,6 +47,7 @@ final public class SpectralClusteringImpl {
 		sw.start("create affinity matrix");
 		
 		val W = g.createDistSparseMatrix[Double](dist, attrName, false, false);
+		g.del();
 		val N = W.ids().numberOfLocalVertexes2N();
 		val D = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](N, (Long) => 1.0));
 		BLAS.mult[Double](1.0, W, true, D, 0.0, D);
