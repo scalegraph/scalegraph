@@ -165,7 +165,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     """
     global DEBUG
     if isValidAttr(attributes) == False:
-        tap.ok(0, name+".yaml is invalid testfile.\n"+\
+        tap.ok(0, name+".yaml is invalid testfile. # SKIP True\n"+\
                 "  ---\n  ---")
         
         return
@@ -236,9 +236,9 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         isTimeOut=True
         stdout, stderr = mpirunProc.communicate()
     runResult = mpirunProc.poll()
-    Message = "name:"  + name           + "\n" + \
-              "stderr: |\n"+ indentDeeper(stderr.decode())+ "\n" + \
-              "stdout: |\n"+ indentDeeper(stdout.decode(),2)
+    Message = "name: "  + name           + "\n" + \
+              "stderr: |\n"+ indentDeeper(stderr.decode())+ "\n"
+              #+"stdout: |\n"+ indentDeeper(stdout.decode(),2)
     if isTimeOut:
         Message="This test case exceeds timeout.\n"+Message
     os.remove(hostDst)
