@@ -29,6 +29,6 @@ public final class StopWatch {
 		val lapTime = (curTime - prevTime) as Double / 1000000.0;
 		val elapsedTime = (curTime - startTime) as Double / 1000000.0;
 		prevTime = curTime;
-		STest.bufferedPrintln(message + ": " + lapTime + " ms: " + elapsedTime + " ms elapsed");
+		STest.println(message + ": " + lapTime + " ms: " + elapsedTime + " ms elapsed");
 	}
 }

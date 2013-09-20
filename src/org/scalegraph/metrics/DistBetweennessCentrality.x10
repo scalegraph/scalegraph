@@ -33,6 +33,8 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Bitmap2;
+import org.scalegraph.Config;
+import x10.util.concurrent.AtomicDouble;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -119,7 +121,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _succBuf: Array[Array[ArrayList[Vertex]]];
         val _deltaBuf: Array[Array[ArrayList[Double]]];
         val _sigmaBuf: Array[Array[ArrayList[Long]]];
-        val _muBuf: Array[Array[ArrayList[Long]]];                
+        val _muBuf: Array[Array[ArrayList[Long]]];
         
         protected def this(dsm: DistSparseMatrix[Long],
                            buffSize: Int,
@@ -332,7 +334,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val numSource_ = isExactBc ? -1L: numSource;
         val sources_ = isExactBc ? null: sources;
         val sourceRange_ = isExactBc ? 0..(g.numberOfVertices() - 1): sourceRange;
-        
+        val stopWatch = Config.get().stopWatch();
+        stopWatch.lap("Graph construction");
         val localState = PlaceLocalHandle.make[LocalState](places, 
                 () => { 
                     return (new LocalState(csr,
@@ -390,6 +393,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         //     return id;
         // });
         // g.setVertexAttribute[Long]("name", vertexIds);
+        stopWatch.lap("Betweenness centrality calculation");
         return result;
     }
     
@@ -732,6 +736,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                         && lch()._predMap(i).size() > 0
                         && lch()._successorCount(i) == 0L) {
                     backtrackingNextQ().set(i);
+                    // lch().debugLeafNode.getAndIncrement();
                 } 
             }
         };
@@ -816,26 +821,28 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     }
     
     private def calDependency(w_mu: Long, w_delta: Double, w_sigma: Long, v: Vertex) {
+        val inst = lch();
         val locPred = OrgToLocSrc(v);
-        val numUpdates = add_and_fetch[Long](lch()._numUpdate, locPred, 1L);
-        val sigma = lch()._pathCount(locPred) as Double;
+        val l = inst._dependenciesLock(locPred);
+        l.lock();
+        val numUpdates = add_and_fetch[Long](inst._numUpdate, locPred, 1L);
+        val sigma = inst._pathCount(locPred) as Double;
+        val tmp_delta = w_delta;
         
-        lch()._dependenciesLock(locPred).lock();
         var dep: Double = 0;
         if (lch()._linearScale) {
-            dep = lch()._dependencies(locPred) + (lch()._distanceMap(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
+            dep = inst._dependencies(locPred) + (inst._distanceMap(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + tmp_delta);
         } else {
-            dep = lch()._dependencies(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
+            dep = inst._dependencies(locPred) + ((sigma as Double)/ w_sigma ) * (1 + tmp_delta);
         }
-        lch()._dependencies(locPred) = dep;
-        lch()._dependenciesLock(locPred).unlock();
-        
-        if(numUpdates == lch()._successorCount(locPred)) {
-            if (LocSrcToOrg(locPred) != lch()._currentSource())
-                lch()._score(locPred) = lch()._score(locPred) + lch()._dependencies(locPred);
+        inst._dependencies(locPred) = dep;
+       
+        if(numUpdates == inst._successorCount(locPred)) {
+            if (LocSrcToOrg(locPred) != inst._currentSource()) {
+                inst._score(locPred) += dep;
+            }
             backtrackingNextQ().set(locPred);
         }
-        assert(lch()._successorCount(locPred) > 0 
-               && lch()._numUpdate(locPred) <= lch()._successorCount(locPred));
+       l.unlock();
     }
 }

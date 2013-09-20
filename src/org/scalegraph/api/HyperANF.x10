@@ -9,11 +9,11 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package test;
+package org.scalegraph.api;
 
 import x10.util.Team;
+import x10.compiler.Native;
 
-import org.scalegraph.test.STest;
 import org.scalegraph.Config;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
@@ -23,11 +23,28 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.util.random.Random;
+import org.scalegraph.blas.DistSparseMatrix;
 
-final class HyperANF_Pregel extends STest {
-	public static def main(args: Array[String](1)) {
-		new HyperANF_Pregel().execute(args);
-	}
+
+public class HyperANF {
+	
+	/** The team that provides place group the calculation will take on.
+	 * If the graph object provides different team, this variable is overridden with Graph's one. 
+	 * Default: Config.get().worldTeam()
+	 */
+	public var team :Team = Config.get().worldTeam();
+	/** Maximum number of iterations.
+	 * Default: 30
+	 */
+	public var niter:Int = 30;
+	
+	public var weights :String = "weight";
+	/*
+	 * calcSize Method
+	 * 
+	 * Calculate Approximating the Neighbourhood Function.
+	 * 
+	 */
 	
 	public static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
 		var Z:Double = 0.0;
@@ -60,29 +77,21 @@ final class HyperANF_Pregel extends STest {
 		
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	
+	private static def execute(param :HyperANF, matrix :DistSparseMatrix[Double]) {
+
+		val team = param.team;
+		val niter = param.niter;
 		
-		val start_read_time = System.currentTimeMillis();
-		val g = Graph.make(CSV.read(args(0), 
-				[Type.Long as Int, Type.Long, Type.None],
-				["source", "target", "weight"]));
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-		
-		val start_init_graph = System.currentTimeMillis();
-		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](
-				g.createDistSparseMatrix[Double](Config.get().dist1d(), "weight", true, true));
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
-		val start_time = System.currentTimeMillis();
-		
+		val blockLength = 3L;
+
+//		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+//		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
+		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
 		xpregel.updateInEdge();
-		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 		
-		val niter = 30;
-		
-		val N:Long = g.numberOfVertices();
+//		val N:Long = graph.numberOfVertices();
+		val N:Long = xpregel.size();
 		val B = 7;
 		val M = 1<<B;
 
@@ -90,10 +99,17 @@ final class HyperANF_Pregel extends STest {
 		if(B==5) alpha = 0.697;
 		else if(B==6) alpha = 0.769;
 		else alpha = 0.7213 / (1.00+1.073/M);
+		
+		/*
+		 *  
+		 * in superstep 
+		 * 		0 : initialize each node value(MemoryChunk)
+		 * 		0~ : recieve messages , change my value and send my value to adjacent nodes.
+		 */
+		
 		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
-					bufferedPrintln("V[" + ctx.realId() + "] " + messages.size());
 
 					var counterB:MemoryChunk[Byte];
 					if(ctx.superstep()==0) {
@@ -134,27 +150,58 @@ final class HyperANF_Pregel extends STest {
 					ctx.setValue(counterB);
 					
 				},
-		(values :MemoryChunk[Double]) => MathAppend.sum(values),
-		(superstep :Int, aggVal :Double) => {
-			flush();
-			
-			if(results.home==here) {
-				val md:MemoryChunk[Double] = results()();
-				md(superstep) = aggVal;
-				results()() = md;
-			}
-			return superstep >= niter;
-		});
+				(values :MemoryChunk[Double]) => MathAppend.sum(values),
+				(superstep :Int, aggVal :Double) => {
+					if(results.home==here) {
+						val md:MemoryChunk[Double] = results()();
+						md(superstep) = aggVal;
+						results()() = md;
+					}
+					return superstep > niter;
+				});
 		var iter:Int=0;
 		while(iter<niter) {
-				Console.OUT.println( (iter+1) + " "+ results()()(iter));
-				iter++;
+			Console.OUT.println( (iter+1) + " "+ results()()(iter));
+			iter++;
 		}
-	
-		val end_time = System.currentTimeMillis();
 		
-		Console.OUT.println("Finish after =" + (end_time-start_time));
-		Console.OUT.println("Finish application");
-		return true;
+		return results()();
+		
+	}	
+	/** Run the calculation of HyperANF.
+	 * This method is faster than run(Graph) method when it is called several times on the same graph.
+	 * @param matrix 1D row distributed adjacency matrix with edge weights.
+	 */
+	public def execute(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double] = execute(this, matrix);
+	
+	
+	/** Run the calculation of HyperANF.
+	 * @param g The graph object. 
+	 */
+	public def execute(g :Graph) :MemoryChunk[Double]{	
+		//throw new UnsupportedOperationException();
+		// Since graph object has its own team, we shold use graph's one.
+		this.team = g.team();	
+		val matrix = g.createDistSparseMatrix[Double](
+				Config.get().distXPregel(), weights, true, true);
+		return execute(matrix);	
 	}
+
+	// The algorithm interface also needs two helper methods like this.
+	
+	/** Run the calculation of HyperANF with default parameters.
+	 * @param g The graph object. 
+	 */
+	public static def run(g :Graph) :MemoryChunk[Double]{
+		//throw new UnsupportedOperationException();
+		return new HyperANF().execute(g);
+	}
+	
+	/** Run the calculation of StronglyConnectedComponent with default parameters.
+	 * This method is faster than run(Graph) method when it is called several times on the same graph.
+	 * @param matrix 1D row distributed adjacency matrix with edge weights.
+	 */
+	public static def run(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double] = 
+		new HyperANF().execute(matrix);
+
 }
