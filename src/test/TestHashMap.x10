@@ -237,10 +237,10 @@ final class TestHashMap extends STest {
             ks(i) = l;
             vs(i) = l;
         }
-        sw.start();
+ //       sw.start();
         t.put(ks, vs);
-        sw.stop();
-        sw.print("run5");
+//        sw.stop();
+ //       sw.print("run5");
 
         for (i in 0..(e - 1)) {
             ks(i) = r.nextLong();
