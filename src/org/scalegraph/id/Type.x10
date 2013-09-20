@@ -101,7 +101,7 @@ public final class Type {
 		case Type.Char:
 			return dmc instanceof DistMemoryChunk[Char];
 		case Type.String:
-			return dmc instanceof DistMemoryChunk[String];
+			return dmc instanceof DistMemoryChunk[SString];
 		default:
 			throw new Exception("invalid type id : " + id);
 			//			return null;
