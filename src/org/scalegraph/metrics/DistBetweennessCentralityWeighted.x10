@@ -386,32 +386,32 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private def swapUpdateScoreQ() { lch().backtrackingQPointer() = (lch().backtrackingQPointer() + 1) & 1; }
     
    
-    public static def calculate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, delta: Int, normalize: Boolean): void {
-        val sourceRange = 0..(g.numberOfVertices() - 1);
-        run(g, directed, weightAttrName, bcAttrName, delta, false, -1, null, sourceRange, false, true);
-
-    }
-    
-  
-    public static def estimate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, numSource: Long, delta: Int, linearScale: Boolean): void {
-        run(g, directed, weightAttrName, bcAttrName, delta, false, numSource, null, 0..(-1 as Long), linearScale, false);
-    }
-    
-
-    public static def estimate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, sources: Array[Vertex], delta: Int,  linearScale: Boolean): void {
-        run(g, directed, weightAttrName, bcAttrName, delta, false, -1, sources, 0..(-1 as Long), linearScale, false);
-    }
-    
-    public static def estimate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, sourceRange: LongRange, delta: Int, linearScale: Boolean): void {
-        run(g, directed, weightAttrName, bcAttrName, delta, false, -1, null, sourceRange, linearScale, false);
-
-    }
+//     public static def calculate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, delta: Int, normalize: Boolean): void {
+//         val sourceRange = 0..(g.numberOfVertices() - 1);
+//         run(g, directed, weightAttrName, bcAttrName, delta, false, -1, null, sourceRange, false, true);
+// 
+//     }
+//     
+//   
+//     public static def estimate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, numSource: Long, delta: Int, linearScale: Boolean): void {
+//         run(g, directed, weightAttrName, bcAttrName, delta, false, numSource, null, 0..(-1 as Long), linearScale, false);
+//     }
+//     
+// 
+//     public static def estimate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, sources: Array[Vertex], delta: Int,  linearScale: Boolean): void {
+//         run(g, directed, weightAttrName, bcAttrName, delta, false, -1, sources, 0..(-1 as Long), linearScale, false);
+//     }
+//     
+//     public static def estimate(g: Graph, directed: Boolean, weightAttrName: String, bcAttrName: String, sourceRange: LongRange, delta: Int, linearScale: Boolean): void {
+//         run(g, directed, weightAttrName, bcAttrName, delta, false, -1, null, sourceRange, linearScale, false);
+// 
+//     }
     
     // Suppose to be called by API wrapper
     public static def run(g: Graph,
                           directed: Boolean,
                           weightAttrName: String,
-                          bcAttrName: String,
+                          /*bcAttrName: String,*/
                           delta: Int,
                           normalize: Boolean,
                           numSource: Long,
@@ -444,6 +444,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         bc.start();
         // Normalize result
         val N = g.numberOfVertices();
+        g.del(); // work around for perf test
         if (normalize) {
             finish for (p in places) {
                 at (p) async {
@@ -485,7 +486,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         //     return id;
         // });
         // g.setVertexAttribute[Long]("name", vertexIds);
-        stopWatch.lap("Betweenness centrality calculation");
+        stopWatch.lap("Betweenness centrality (Weighted) calculation");
         return result;
     }
     
