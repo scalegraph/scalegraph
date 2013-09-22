@@ -828,13 +828,12 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         l.lock();
         val numUpdates = add_and_fetch[Long](inst._numUpdate, locPred, 1L);
         val sigma = inst._pathCount(locPred) as Double;
-        val tmp_delta = w_delta;
         
         var dep: Double = 0;
         if (lch()._linearScale) {
-            dep = inst._dependencies(locPred) + (inst._distanceMap(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + tmp_delta);
+            dep = inst._dependencies(locPred) + (inst._distanceMap(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
         } else {
-            dep = inst._dependencies(locPred) + ((sigma as Double)/ w_sigma ) * (1 + tmp_delta);
+            dep = inst._dependencies(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
         }
         inst._dependencies(locPred) = dep;
        
