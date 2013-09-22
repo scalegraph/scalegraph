@@ -107,7 +107,7 @@ final public class DegreeDistribution {
         val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
         sw.lap("Graph construction");
         val result = run[Long](columnDistGraph);
-        sw.lap("Degree distribution calculation");
+        sw.lap("Degree distribution calculation (mode = " + m +")");
         
         // delete graph
         columnDistGraph.del();

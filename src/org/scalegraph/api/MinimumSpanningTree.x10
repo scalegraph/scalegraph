@@ -18,6 +18,7 @@ import org.scalegraph.util.DistGrowableMemory;
 import org.scalegraph.metrics.MinimumSpanningTreeImpl;
 import x10.util.Pair;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.Config;
 
 
 /**
@@ -72,6 +73,10 @@ final public class MinimumSpanningTree {
      * @return A graph object, a spanning tree or spanning forest of the given graph.
      */
     public static def run(matrix :DistSparseMatrix[Double]): Graph {
-        return MinimumSpanningTreeImpl.run(matrix);
+        val sw = Config.get().stopWatch();
+        sw.lap("Graph construction");
+        val ret =  MinimumSpanningTreeImpl.run(matrix);
+        sw.lap("Minimum spanning tree calculation");
+        return ret;
     }
 }

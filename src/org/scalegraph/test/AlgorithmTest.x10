@@ -130,6 +130,10 @@ public abstract class AlgorithmTest extends STest {
 		return run(mainArgs, loadGraph(graphArgs));
 	}
 	
+	private def printError[T](teamSize :Int, teamRole :Int, local :Long, result :T, reference :T) {
+	    println("Check result: error: here=" + here.id + ",pos=" + (local * teamSize + teamRole) + "(local=" + local + "),result=" + result + ",reference=" + reference);
+	}
+	
 	public def checkResult[T](result :DistMemoryChunk[T], reference :String, threshold :T)
 	{ T <: Arithmetic[T], T <: Ordered[T], T haszero }
 	{
@@ -160,6 +164,7 @@ public abstract class AlgorithmTest extends STest {
 						}
 						val diff = MathAppend.abs(result_(i) - refval_(i));
 						if(diff > threshold) {
+						    printError(teamSize, teamRole, i, result_(i), refval_(i));
 							return 1;
 						}
 					}
@@ -186,6 +191,7 @@ public abstract class AlgorithmTest extends STest {
 					for(i in r) {
 						val diff = MathAppend.abs(result_(i) - recv(i));
 						if(diff > threshold) {
+						    printError(teamSize, teamRole, i, result_(i), recv(i));
 							return 1;
 						}
 					}
