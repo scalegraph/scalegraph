@@ -13,6 +13,7 @@ package org.scalegraph.test;
 
 import x10.util.Team;
 import x10.util.Ordered;
+import x10.compiler.Ifdef;
 
 import org.scalegraph.Config;
 import org.scalegraph.blas.DistSparseMatrix;
@@ -32,6 +33,26 @@ import org.scalegraph.id.Type;
 public abstract class AlgorithmTest extends STest {
 	
 	public abstract def run(args :Array[String](1), graph :Graph) :Boolean;
+	
+	private static def genConstanceValueEdges(getSize :()=>Long, value :Double)
+	{
+		val team = Config.get().worldTeam();
+		
+		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
+				() => new MemoryChunk[Double](getSize()));
+		
+		team.placeGroup().broadcastFlat(() => {
+			val role = team.role()(0);
+			Parallel.iter(0..(getSize() - 1), (tid :Long, r :LongRange) => {
+				val edgeMem_ = edgeMemory();
+				for(i in r) {
+					edgeMem_(i) = value;
+				}
+			});
+		});
+		
+		return edgeMemory;
+	}
 	
 	private static def loadGraph(args :Array[String](1)) {
 		if(args.size < 2) {
@@ -71,11 +92,21 @@ public abstract class AlgorithmTest extends STest {
 			return g;
 		}
 		else if (args(0).equals("file")) {
-			val colTypes = [Type.Long as Int, Type.Long, Type.Double];
+			val randomEdge :Boolean = (args.size > 2) ? args(2).equals("random") : true;
+			val edgeConstVal = randomEdge ? 0.0 : Double.parse(args(2));
+			val colTypes = [Type.Long as Int, Type.Long];
 
 			val sw = Config.get().stopWatch();
 			val g = Graph.make(CSV.read(args(1), colTypes, true));
 			sw.lap("Read graph[path=" + args(1) + "]");
+			@Ifdef("PROF_IO") { Config.get().dumpProfIO("Graph Load (AlgorithmTest):"); }
+			val srcList = g.source();
+			val getSize = ()=>srcList().size();
+			val edgeList = randomEdge
+					? GraphGenerator.genRandomEdgeValue(getSize, new Random(2, 3))
+					: genConstanceValueEdges(getSize, edgeConstVal);
+			g.setEdgeAttribute("weight", edgeList);
+			sw.lap("Generate the edge weights");
 			return g;
 		}
 		else {
@@ -94,9 +125,13 @@ public abstract class AlgorithmTest extends STest {
 		throw new IllegalArgumentException("Input parameter does not have splitter flag");
 	}
 
-	public def run(args :Array[String](1)): Boolean {
+	public final def run(args :Array[String](1)): Boolean {
 		val [ graphArgs, mainArgs ] = splitArgs(args);
 		return run(mainArgs, loadGraph(graphArgs));
+	}
+	
+	private def printError[T](teamSize :Int, teamRole :Int, local :Long, result :T, reference :T) {
+	    println("Check result: error: here=" + here.id + ",pos=" + (local * teamSize + teamRole) + "(local=" + local + "),result=" + result + ",reference=" + reference);
 	}
 	
 	public def checkResult[T](result :DistMemoryChunk[T], reference :String, threshold :T)
@@ -129,6 +164,7 @@ public abstract class AlgorithmTest extends STest {
 						}
 						val diff = MathAppend.abs(result_(i) - refval_(i));
 						if(diff > threshold) {
+						    printError(teamSize, teamRole, i, result_(i), refval_(i));
 							return 1;
 						}
 					}
@@ -137,7 +173,7 @@ public abstract class AlgorithmTest extends STest {
 				(o1 :Int, o2 :Int) => o1 | o2);
 			}
 			
-			flags = team.allreduce(teamRole, flags, Team.OR);
+			flags = team.allreduce(teamRole, flags, Team.BOR);
 			
 			if((flags & 2) != 0) {
 				val shift = MathAppend.ceilLog2(teamSize);
@@ -155,6 +191,7 @@ public abstract class AlgorithmTest extends STest {
 					for(i in r) {
 						val diff = MathAppend.abs(result_(i) - recv(i));
 						if(diff > threshold) {
+						    printError(teamSize, teamRole, i, result_(i), recv(i));
 							return 1;
 						}
 					}
@@ -162,7 +199,7 @@ public abstract class AlgorithmTest extends STest {
 				},
 				(o1 :Int, o2 :Int) => o1 | o2);
 				
-				flags = team.allreduce(teamRole, flags, Team.OR);
+				flags = team.allreduce(teamRole, flags, Team.BOR);
 			}
 			
 			if(checkResult.home == here) {
@@ -220,7 +257,7 @@ public abstract class AlgorithmTest extends STest {
 				}
 			}
 			
-			error = team.allreduce(teamRole, error, Team.OR);
+			error = team.allreduce(teamRole, error, Team.BOR);
 			
 			if(checkResult.home == here) {
 				checkResult.getLocalOrCopy()() = (error == 0);

@@ -142,11 +142,7 @@ MemoryChunk<x10_byte> StringFromX10String(x10::lang::String* x10str);
 
 namespace org { namespace scalegraph { namespace util {
 
-template <typename T> SStringBuilder StringBuilderAdd_(SStringBuilder th, const T x) {
-	x10aux::throwException(x10::lang::NumberFormatException::_make(
-			x10aux::makeStringLit("Not implemented.")));
-	return th;
-}
+template <typename T> SStringBuilder StringBuilderAdd_(SStringBuilder th, const T x);
 
 template <typename T> SStringBuilder StringBuilderAdd_(SStringBuilder th, T* x) {
 	GrowableMemory<x10_byte>* buf = th->FMGL(buffer);

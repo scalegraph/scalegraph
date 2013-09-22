@@ -69,18 +69,23 @@ public class TestEdgeModify {
 				val myId = ctx.realId();
 				//remove out edge
 				val e = (myId+1)%ctx.numberOfVertices();
-				
+
 				//super step ha 0 start rashii
 				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
+				
+				for (m in messages.range()){
+					sb.add("atatakai message:"+ messages(m)+"\n");
+				}
+				
 				if(myId != 0L && (ctx.superstep() as Long)==myId){
 					sb.add(myId + ":\tRemove:\t" + e + "\n");
-					removeOutEdge(ctx,e);
+					removeOutEdge(ctx,ctx.dstId(e));
 				}
 				
 				//display current out edges
 				val OEsId = ctx.outEdgesId();
 				for(eI in OEsId){
-					sb.add(myId + "->" + eI + "\n");
+					sb.add(myId + "->" + ctx.realId(eI) + "\n");
 				}
 				
 				atomic {	//atomic ga nai to hukusuu thread de shinu
@@ -92,14 +97,14 @@ public class TestEdgeModify {
 				}else{
 					//send dummy message
 					if(myId==0L){
-						ctx.sendMessage(2,e);
-					}else{
-						ctx.sendMessage(0,e);
+						ctx.sendMessageToAllNeighbors(myId);
+					}else if(myId < ctx.superstep()){
+						ctx.sendMessageToAllNeighbors(myId);
 					}
 				}
 			},
 			(values :MemoryChunk[Long]) => MathAppend.nextPowerOf2(0L),	//returns 0 with no cost
-			(superstep :Int, aggVal :Long) => (superstep > 1000)	//tekitou
+			(superstep :Int, aggVal :Long) => (superstep > 1000)			//tekitou
 		);
 		//-----end of work
 
@@ -108,7 +113,9 @@ public class TestEdgeModify {
 		
 		val ps=team.places();
 		for(p in ps) at(ps(p)) {// ...
+			atomic{
 			Console.OUT.println(p + ":\n" + mesBuf().toString());
+			}
 		}
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));

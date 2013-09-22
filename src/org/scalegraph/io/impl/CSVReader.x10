@@ -15,9 +15,12 @@ import x10.compiler.NativeCPPOutputFile;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeRep;
 import x10.compiler.Native;
+import x10.compiler.Ifdef;
 import x10.io.File;
 import x10.io.IOException;
 import x10.util.Team;
+
+import org.scalegraph.Config;
 
 import org.scalegraph.util.SString;
 import org.scalegraph.util.MemoryChunk;
@@ -31,6 +34,7 @@ import org.scalegraph.util.tuple.Tuple2;
 
 @NativeCPPCompilationUnit("CSVHelper.cc") 
 public class CSVReader {
+	private static type IO = org.scalegraph.id.ProfilingID.IO;
 
 	@NativeCPPInclude("CSVHelper.h")
 	@NativeCPPOutputFile("CSVReader__CSVAttribute.h")
@@ -117,6 +121,8 @@ public class CSVReader {
 	public static def read(team :Team, path :SString, columnDef :Array[Int](1),
 			columnNames :Array[String](1), includeHeader :Boolean) {
 		//
+		@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME, 0);
+		@Ifdef("PROF_IO") { mtimer.start(); }
 		val nthreads = Runtime.NTHREADS;
 		val numColumns = columnDef.size;
 		var columnNamesInHeader :Array[SString](1) = null;
@@ -161,12 +167,14 @@ public class CSVReader {
 			
 			reader.close();
 		}
+		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_READ_HEADER); }
 
 		// broadcast attribute handlers
 		val bufferPLH = PlaceLocalHandle.makeFlat[Array[ReaderBuffer](1)](team.placeGroup(),
 				() => new Array[ReaderBuffer](nthreads, (i:Int) => new ReaderBuffer(attHandler)));
 		
 		val splitter = includeDQ ? new DoubleQuoatedCSVSplitter() : new LineBreakSplitter();
+		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_PREPARE); }
 		
 		// read data
 		splitter.split(team, fman, dataOffset, nthreads,
@@ -201,6 +209,8 @@ public class CSVReader {
 				++attrIndex;
 			}
 		}
+		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_MERGE_RESULT); }
+		
 		return new NamedDistData(attrNames, typeIds, attributes, null);
 	}
 }

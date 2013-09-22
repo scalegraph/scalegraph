@@ -12,6 +12,9 @@ package org.scalegraph.io.impl;
 
 import x10.util.Team;
 import x10.util.concurrent.Monitor;
+import x10.compiler.Ifdef;
+
+import org.scalegraph.Config;
 
 import org.scalegraph.test.STest;
 import org.scalegraph.util.SString;
@@ -26,6 +29,7 @@ import org.scalegraph.id.Type;
 import org.scalegraph.io.FileWriter;
 
 public class CSVWriter {
+	private static type IO = org.scalegraph.id.ProfilingID.IO;
 	/*hedder 1 line
 	 * string with double quotation 
 	 * "name1 <int>","name2 <.... namex : NamedDistData.name
@@ -47,6 +51,10 @@ public class CSVWriter {
 			val nthreads = Runtime.NTHREADS;
 			this.frontBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
 			this.backBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
+			for( i in 0..(nthreads-1)){
+				frontBuffer(i).add("");
+				backBuffer(i).add("");
+			}
 			this.fw = fw;
 			this.strClousure = strClousure;
 		}
@@ -74,6 +82,8 @@ public class CSVWriter {
 		
 		private def makeString(range :LongRange) {
 			Parallel.iter(range, (tid :Long, r :LongRange) => {
+				@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_TH_FRAME, tid);
+				@Ifdef("PROF_IO") { mtimer.start(); }
 				val buf = backBuffer(tid);
 				val numColumns = strClousure.size();
 				if(numColumns == 0L) return ;
@@ -85,30 +95,39 @@ public class CSVWriter {
 					strClousure(numColumns-1)(buf, i);
 					buf.add('\n');
 				}
+				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_TH_MAKE_STRING); }
 			});
 		}
 		
 		private def subtask() {
 			try {
+				@Ifdef("PROF_IO") val mtimer_ = Config.get().profIO().timer(IO.SUB_FRAME, 0);
+				@Ifdef("PROF_IO") { mtimer_.start(); }
 				for(tid in frontBuffer.range()) {
 					val bytes = frontBuffer(tid).result().bytes();
 					//	STest.println(here.id + " => Write " + bytes.size() + " bytes");
 					fw.write(bytes);
 					frontBuffer(tid).clear();
 				}
+				@Ifdef("PROF_IO") { mtimer_.lap(IO.SUB_WRITE); }
 			
 				notifySubtaskCompletion();
 			} catch (e :CheckedThrowable) {e.printStackTrace(); }
 		}
 		
 		public def write(numLines :Long) {
+			@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME, 0);
+			@Ifdef("PROF_IO") { mtimer.start(); }
 			val nthreads = Runtime.NTHREADS;
 			finish for(var start :Long = 0; start < numLines; start += CHUNK_SIZE * nthreads) {
 				val end = MathAppend.min(start + CHUNK_SIZE * nthreads, numLines) - 1;
 				makeString(start..end);
+				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_MAKE_STRING); }
 				cycleBuffers(1);
+				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_WRITE_WAIT); }
 				async subtask();
 			}
+			@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_LAST_WRITE_WAIT); }
 		}
 	}
 
@@ -118,6 +137,8 @@ public class CSVWriter {
 	
 	//data: all data
 	public static def write(team :Team, path :SString, data :NamedDistData, putIdFlag :Boolean){
+		@Ifdef("PROF_IO") val mtimer_ = Config.get().profIO().timer(IO.MAIN_FRAME, 0);
+		@Ifdef("PROF_IO") { mtimer_.start(); }
 		val fman = FileNameProvider.createForWrite(path,true);
 		// create directory if it is not exists.
 		fman.mkdir();
@@ -127,9 +148,12 @@ public class CSVWriter {
 		val atts = new MemoryChunk[CSVAttributeHandler](colNum,
 				(i :Long) => CSVAttributeHandler.create(typeId(i as Int), false));
 		val dmc = data.data();
+		@Ifdef("PROF_IO") { mtimer_.lap(IO.MAIN_PREPARE); }
 		
 		team.placeGroup().broadcastFlat(() => {
 			try {
+				@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME, 0);
+				@Ifdef("PROF_IO") { mtimer.start(); }
 				val teamRole = team.role()(0);
 				val teamSize = team.size();
 			
@@ -164,8 +188,10 @@ public class CSVWriter {
 				}
 			
 				val writer = new ParallelWriter(fw, makeStringClosures.raw());
+				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_PREPARE); }
 				writer.write(atts(0).localSizeOf(dmc(0)));
 				fw.close();
+				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_CLOSE); }
 			} catch (e :CheckedThrowable) {e.printStackTrace(); }
 		});
 	}
