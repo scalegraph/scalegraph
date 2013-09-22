@@ -422,11 +422,13 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         if (delta <= 0) {
             throw new UnsupportedOperationException("Delta must be a positive number");
         }
-        
         val team = g.team();
         val places = team.placeGroup();
         val transBuf = 1 << 10;
-        val vInGraph = g.numberOfVertices();
+        val N = g.numberOfVertices();
+        val numSource_ = isExactBc ? -1L: numSource;
+        val sources_ = isExactBc ? null: sources;
+        val sourceRange_ = isExactBc ? 0..(N - 1): sourceRange;
         // Represent graph as CSR
         val csr = g.createDistEdgeIndexMatrix(
                                               Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
@@ -436,15 +438,14 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val weightAttr = g.createDistAttribute[Double](csr, false, weightAttrName);
         // create local state for bc on each place
         val localState = PlaceLocalHandle.make[LocalState](places, () => {
-            return new LocalState(csr, weightAttr, transBuf, vInGraph, delta, numSource, sources, sourceRange);
+            return new LocalState(csr, weightAttr, transBuf, N, delta, numSource_, sources_, sourceRange_);
         });
         val stopWatch = Config.get().stopWatch();
         stopWatch.lap("Graph construction");
         val bc = new DistBetweennessCentralityWeighted(localState);
         bc.start();
+        
         // Normalize result
-        val N = g.numberOfVertices();
-        g.del(); // work around for perf test
         if (normalize) {
             finish for (p in places) {
                 at (p) async {
@@ -508,20 +509,25 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             for (i in 0..(numSrc - 1)) {
                 calBC(srcArray(i as Int));
             }
-        } else if (lch().sourceArray != null) {
+        } 
+        else if (lch().sourceArray != null) {
             // use sources from given array           
             for (i in 0..(lch().sourceArray.size - 1)) {
                 calBC(lch().sourceArray(i));
             }
-        } else if (lch().sourceRange.min >= 0 && lch().sourceRange.max >= 0) {
+        } 
+        else if (lch().sourceRange.min >= 0 && lch().sourceRange.max >= 0) {
             // use sources from given range
             for (i in lch().sourceRange) {
                 calBC(i);
             }
+        } 
+        else {
+            throw new IllegalArgumentException("Invalid source");
         }
         time = System.currentTimeMillis() - time;
         // print();
-        Console.OUT.println("BC time: " + time);
+        // Console.OUT.println("BC time: " + time);
     }
     
     private def clear() {
@@ -1071,14 +1077,16 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     }
         
     private def calDependency(w_mu: Double, w_delta: Double, w_sigma: Long, v: Vertex) {
+        val inst = lch();
         val locPred = OrgToLocSrc(v);
-        val numUpdates = add_and_fetch[Int](numUpdates(), locPred, 1);
-        val sigma = pathCount()(locPred);
         
         while (true) {
             // non-blocking mutual exclusion
             // increase semaphore
-            if (compare_and_swap[Long](lch().semaphore, locPred, 0, 1)) {
+            if (compare_and_swap[Long](inst.semaphore, locPred, 0, 1)) {
+                val numUpdates = add_and_fetch[Int](numUpdates(), locPred, 1);
+                val sigma = pathCount()(locPred);
+                // val tmp_w_delta = w_delta;
                 var dep: Double = 0;
                 if (lch().linearScale) {
                     dep = dependencies()(locPred) + (distance()(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
@@ -1086,20 +1094,19 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                     dep = dependencies()(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
                 }
                 dependencies()(locPred) = dep;
+                
+                if(numUpdates == successorCount()(locPred)) {
+                    if (v != lch().currentSource()) {
+                        score()(locPred) = score()(locPred) + dependencies()(locPred);
+                    }
+                    backtrackingNextQ().set(locPred);
+                }
                 while(true){
-                    if(compare_and_swap[Long](lch().semaphore, locPred, 1, 0))
+                    if(compare_and_swap[Long](inst.semaphore, locPred, 1, 0))
                         break;
                 }
                 break;
             }
         }
-        if(numUpdates == successorCount()(locPred)) {
-            if (v != lch().currentSource()) {
-                score()(locPred) = score()(locPred) + dependencies()(locPred);
-            }
-            backtrackingNextQ().set(locPred);
-        }
-        assert(successorCount()(locPred) > 0 
-               && numUpdates()(locPred) <= successorCount()(locPred));
     }
 }

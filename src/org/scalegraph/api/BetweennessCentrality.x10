@@ -107,7 +107,6 @@ public class BetweennessCentrality {
     // Wrapper for Unweighted graphs
     private static def executeUnweightedBc(inst: BetweennessCentrality, g: Graph) {
         val src = inst.source;
-        val dummy = 0..(1L);
 
         val team = g.team();
         val matrix = g.createDistEdgeIndexMatrix(
@@ -120,15 +119,14 @@ public class BetweennessCentrality {
     
     private static def executeUnweightedBc(inst: BetweennessCentrality, matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
         val src = inst.source;
-        val dummy = 0..(1L);
-
+        
         val team = matrix.dist().allTeam(); 
         return executeUnweightedBcWrap(inst, matrix, numberOfVertices);
     }
     
     private static def executeUnweightedBcWrap(inst: BetweennessCentrality, matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
         val src = inst.source;
-        val dummy = 0..(1L);
+        val dummy = -1..(-1L);
         if (inst.exactBc == true){
             return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1L, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
@@ -145,8 +143,8 @@ public class BetweennessCentrality {
     // Wrapper for Weighted graphs
     private static def executeWeightedBc(inst: BetweennessCentrality, g: Graph) {
         val src = inst.source;
-        val dummy = 0..(1L);
-
+        val dummy = -1..(-1L);
+        
         if (inst.exactBc == true){ 
             return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta,inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {

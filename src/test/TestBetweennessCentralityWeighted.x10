@@ -38,6 +38,7 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	    
 	    if (args(0).equals("high")) {
 	        val bc = new BetweennessCentrality();
+	        bc.weighted =true;
 	        result = bc.execute(g);
 	    } else if (args(0).equals("low")) {
 	        val bc = new BetweennessCentrality();
@@ -48,6 +49,7 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	        result = bc.execute(g);
 	    }  else if (args(0).equals("default")) {
 	        val bc = new BetweennessCentrality();
+	        bc.weighted =true;
 	        result = bc.execute(g);
 	    } else {
 	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
