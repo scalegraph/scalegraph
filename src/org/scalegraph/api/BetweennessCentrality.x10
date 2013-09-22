@@ -74,7 +74,7 @@ public class BetweennessCentrality {
     public static def run(g: Graph) {
         return new BetweennessCentrality().execute(g);
     }
-    
+        
     /**
      * Calculate the vertex betweenness centrality.
      * 
@@ -93,6 +93,17 @@ public class BetweennessCentrality {
         }
     }
     
+    public def execute(matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
+        if (weighted) {
+            // Weighted
+            throw new UnsupportedOperationException();
+        } else {
+            // Unweighted
+            return executeUnweightedBc(this, matrix, numberOfVertices);
+        }
+    }
+
+    
     // Wrapper for Unweighted graphs
     private static def executeUnweightedBc(inst: BetweennessCentrality, g: Graph) {
         val src = inst.source;
@@ -104,21 +115,31 @@ public class BetweennessCentrality {
                     inst.directed,
                     true); 
         val N = g.numberOfVertices();
-        if (inst.exactBc == true){
-            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, -1L, null, dummy, inst.linearScale, inst.exactBc);
-        } else if (src instanceof Long) {
-            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
-        } else if (src instanceof Array[Long]) {
-            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
-        } else if (src instanceof LongRange) {
-            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
-        } else {
-            throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
-        }
+        return executeUnweightedBcWrap(inst, matrix, N);
     }
     
-    private static def executeUnweightedBcWrap(matrix: DistSparseMatrix[Long], numberOfVertices: Long, directed: Boolean, normalize: Boolean, numSource: Long, sources: Array[Long], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
-        return DistBetweennessCentrality.run(matrix, numberOfVertices, directed, normalize, numSource, sources, sourceRange, linearScale, isExactBc);
+    private static def executeUnweightedBc(inst: BetweennessCentrality, matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
+        val src = inst.source;
+        val dummy = 0..(1L);
+
+        val team = matrix.dist().allTeam(); 
+        return executeUnweightedBcWrap(inst, matrix, numberOfVertices);
+    }
+    
+    private static def executeUnweightedBcWrap(inst: BetweennessCentrality, matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
+        val src = inst.source;
+        val dummy = 0..(1L);
+        if (inst.exactBc == true){
+            return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1L, null, dummy, inst.linearScale, inst.exactBc);
+        } else if (src instanceof Long) {
+            return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
+        } else if (src instanceof Array[Long]) {
+            return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+        } else if (src instanceof LongRange) {
+            return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
+        } else {
+            throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
+        }        
     }
     
     // Wrapper for Weighted graphs
