@@ -98,17 +98,27 @@ public class BetweennessCentrality {
         val src = inst.source;
         val dummy = 0..(1L);
 
+        val team = g.team();
+        val matrix = g.createDistEdgeIndexMatrix(
+                    Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
+                    inst.directed,
+                    true); 
+        val N = g.numberOfVertices();
         if (inst.exactBc == true){
-            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
+            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, -1L, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
-            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
+            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Array[Long]) {
-            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof LongRange) {
-            return DistBetweennessCentrality.run(g, inst.directed, inst.resultAttrName, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
+            return executeUnweightedBcWrap(matrix, N, inst.directed, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
         } else {
             throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
         }
+    }
+    
+    private static def executeUnweightedBcWrap(matrix: DistSparseMatrix[Long], numberOfVertices: Long, directed: Boolean, normalize: Boolean, numSource: Long, sources: Array[Long], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
+        return DistBetweennessCentrality.run(matrix, numberOfVertices, directed, normalize, numSource, sources, sourceRange, linearScale, isExactBc);
     }
     
     // Wrapper for Weighted graphs

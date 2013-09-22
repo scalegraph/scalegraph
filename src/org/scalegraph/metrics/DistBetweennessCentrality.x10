@@ -261,55 +261,55 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     @Native("c++", "__sync_add_and_fetch((#imc)->raw() + #index, #value)")
     private static native def add_and_fetch[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
     
-    /**
-     * Calculate exact betweenness centrality
-     * <p> 
-     * Note: Normalize factor - (N-1)*(N-2) for directed graph and (N-1)*(N-2)/2 for undirected graph
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param normalize normalize result
-     */
-    public static def calculate(g: Graph, directed: Boolean, attrName: String, normalize: Boolean): void {
-        val sourceRange = 0..(g.numberOfVertices() - 1);
-        run(g, directed, attrName, normalize, -1, null, sourceRange, false, true);
-    }
-    
-    /**
-     * Estimate betweenness centrality, the source vertices will be random selected to number of sources given
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param numSource the number of source vertices used to calculate betweenness centrality
-     * @param linearScale use linear-scaling technique
-     */
-    public static def estimate(g: Graph, directed: Boolean, attrName: String, numSource: Long, linearScale: Boolean): void {
-        run(g, directed, attrName, false, numSource, null, 0..(-1 as Long), linearScale, false);
-    }
-    
-    /**
-     * Estimate betweenness centrality
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param sources the array of source vertices to calculate betweenness centrality
-     * @param linearScale use linear-scaling technique
-     */
-    public static def estimate(g: Graph, directed: Boolean, attrName: String, sources: Array[Vertex], linearScale: Boolean): void {
-        run(g, directed, attrName, false, -1, sources, 0..(-1 as Long), linearScale, false);
-    }
-    
-    /**
-     * Estimate betweenness centrality
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param sourceRange the range of source vertex ids to calculate betweenness centrality
-     * @param linearScale use linear-scaling technique
-     */
-    public static def estimate(g: Graph, directed: Boolean, attrName: String, sourceRange: LongRange, linearScale: Boolean): void {
-        run(g, directed, attrName, false, -1, null, sourceRange, linearScale, false);
-    }
+    // /**
+    //  * Calculate exact betweenness centrality
+    //  * <p> 
+    //  * Note: Normalize factor - (N-1)*(N-2) for directed graph and (N-1)*(N-2)/2 for undirected graph
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param normalize normalize result
+    //  */
+    // public static def calculate(g: Graph, directed: Boolean, attrName: String, normalize: Boolean): void {
+    //     val sourceRange = 0..(g.numberOfVertices() - 1);
+    //     run(g, directed, attrName, normalize, -1, null, sourceRange, false, true);
+    // }
+    // 
+    // /**
+    //  * Estimate betweenness centrality, the source vertices will be random selected to number of sources given
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param numSource the number of source vertices used to calculate betweenness centrality
+    //  * @param linearScale use linear-scaling technique
+    //  */
+    // public static def estimate(g: Graph, directed: Boolean, attrName: String, numSource: Long, linearScale: Boolean): void {
+    //     run(g, directed, attrName, false, numSource, null, 0..(-1 as Long), linearScale, false);
+    // }
+    // 
+    // /**
+    //  * Estimate betweenness centrality
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param sources the array of source vertices to calculate betweenness centrality
+    //  * @param linearScale use linear-scaling technique
+    //  */
+    // public static def estimate(g: Graph, directed: Boolean, attrName: String, sources: Array[Vertex], linearScale: Boolean): void {
+    //     run(g, directed, attrName, false, -1, sources, 0..(-1 as Long), linearScale, false);
+    // }
+    // 
+    // /**
+    //  * Estimate betweenness centrality
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param sourceRange the range of source vertex ids to calculate betweenness centrality
+    //  * @param linearScale use linear-scaling technique
+    //  */
+    // public static def estimate(g: Graph, directed: Boolean, attrName: String, sourceRange: LongRange, linearScale: Boolean): void {
+    //     run(g, directed, attrName, false, -1, null, sourceRange, linearScale, false);
+    // }
     
     /**
      * Clear memory used by DistBetweennessCentrality
@@ -319,19 +319,19 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     }
 
     /* Should be used by designated API */
-    public static def run(g: Graph, directed: Boolean, attrName: String, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
-        val team = g.team();
+    public static def run(csr: DistSparseMatrix[Long], numberOfVertices: Long, directed: Boolean, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
+        val team = csr.dist().allTeam();;
         val places = team.placeGroup();
         // Represent graph as CSR
-        val csr = g.createDistEdgeIndexMatrix(
-                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
-                directed,
-                true);        
+        // val csr = g.createDistEdgeIndexMatrix(
+        //         Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
+        //         directed,
+        //         true);        
         // Create local state for BC on each place in team
         val transBufferSize = (1 << 10);
         
         // Workaround for init sources for exteral API
-        val N = g.numberOfVertices();
+        val N = numberOfVertices;
         val numSource_ = isExactBc ? -1L: numSource;
         val sources_ = isExactBc ? null: sources;
         val sourceRange_ = isExactBc ? 0..(N - 1): sourceRange;
@@ -341,7 +341,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 () => { 
                     return (new LocalState(csr,
                             transBufferSize,
-                            g.numberOfVertices(),
+                            N,
                             numSource_,
                             sources_,
                             sourceRange_,
@@ -349,7 +349,6 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                             linearScale));
                 });
         val bc = new DistBetweennessCentrality(localState);
-        g.del(); //work around
         bc.start();
         // Normalize result
        
