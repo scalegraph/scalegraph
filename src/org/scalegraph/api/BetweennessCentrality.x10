@@ -95,11 +95,20 @@ public class BetweennessCentrality {
     
     public def execute(matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
         if (weighted) {
-            // Weighted
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("For DistSparseMatrix[Long], weighted must be false");
         } else {
             // Unweighted
-            return executeUnweightedBc(this, matrix, numberOfVertices);
+            return executeUnweightedBcWrap(this, matrix, numberOfVertices);
+        }
+    }
+    
+    public def execute(matrix: DistSparseMatrix[Double], numberOfVertices: Long) {
+        if (weighted) {
+            // Weighted
+            return executeWeightedBcWrap(this, matrix, numberOfVertices);
+        } else {
+            // Unweighted
+            throw new UnsupportedOperationException("For DistSparseMatrix[Double], weighted must be true");
         }
     }
 
@@ -115,13 +124,6 @@ public class BetweennessCentrality {
                     true); 
         val N = g.numberOfVertices();
         return executeUnweightedBcWrap(inst, matrix, N);
-    }
-    
-    private static def executeUnweightedBc(inst: BetweennessCentrality, matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
-        val src = inst.source;
-        
-        val team = matrix.dist().allTeam(); 
-        return executeUnweightedBcWrap(inst, matrix, numberOfVertices);
     }
     
     private static def executeUnweightedBcWrap(inst: BetweennessCentrality, matrix: DistSparseMatrix[Long], numberOfVertices: Long) {
@@ -143,16 +145,26 @@ public class BetweennessCentrality {
     // Wrapper for Weighted graphs
     private static def executeWeightedBc(inst: BetweennessCentrality, g: Graph) {
         val src = inst.source;
+
+        val team = g.team();
+        val matrix = g.createDistSparseMatrix[Double](
+                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS), inst.weightAttrName, inst.directed, true);
+        val N = g.numberOfVertices();
+        return executeWeightedBcWrap(inst, matrix, N);
+    }
+    
+    private static def executeWeightedBcWrap(inst: BetweennessCentrality, matrix: DistSparseMatrix[Double], numberOfVertices: Long) {
+        val src = inst.source;
         val dummy = -1..(-1L);
         
         if (inst.exactBc == true){ 
-            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta,inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
-            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Array[Long]) {
-            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof LongRange) {
-            return DistBetweennessCentralityWeighted.run(g, inst.directed, inst.weightAttrName, inst.delta, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
+            return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
         } else {
             throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
         }

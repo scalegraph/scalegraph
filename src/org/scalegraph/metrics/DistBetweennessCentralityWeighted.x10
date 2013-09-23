@@ -28,6 +28,8 @@ import org.scalegraph.util.Bitmap2;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.Config;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 
 
 /**
@@ -60,10 +62,8 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private val lch: PlaceLocalHandle[LocalState];
     
     private static class LocalState {
-        val gCsr: DistSparseMatrix[Long];
-        val gWeight: DistMemoryChunk[Double];
-        val csr: SparseMatrix[Long];
-        val weight: MemoryChunk[Double];
+        val gCsr: DistSparseMatrix[Double];
+        val csr: SparseMatrix[Double];
         val distance: IndexedMemoryChunk[Double];
         val dependencies: IndexedMemoryChunk[Double];
         val score: IndexedMemoryChunk[Double];
@@ -114,8 +114,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val deltaBuf: Array[Array[ArrayList[Double]]];
         val muBuf: Array[Array[ArrayList[Double]]];
         
-        private def this (csr_: DistSparseMatrix[Long],
-                            weight_: DistMemoryChunk[Double],
+        private def this (csr_: DistSparseMatrix[Double],
                             transferBufSize: Int,
                             vInGraph: Long,
                             delta_: Int,
@@ -124,8 +123,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                             sourceRange_: LongRange) {
             gCsr = csr_;
             csr = gCsr();
-            gWeight = weight_;
-            weight = gWeight();
             BUFFER_SIZE = transferBufSize;
             numLocalVertices = gCsr.ids().numberOfLocalVertexes();
             numberOfVerticesInGraph = vInGraph;
@@ -337,9 +334,6 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
     private def successorCount() = lch().successorCount;
     
     @Inline
-    private def weight() = lch().weight;
-    
-    @Inline
     private def currentBucketQueue() 
     = lch().buckets(lch().currentBucketIndex())(lch().bucketQueuePointer());
     
@@ -408,10 +402,9 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
 //     }
     
     // Suppose to be called by API wrapper
-    public static def run(g: Graph,
+    public static def run(matrix: DistSparseMatrix[Double],
+                          numberOfVertices: Long,
                           directed: Boolean,
-                          weightAttrName: String,
-                          /*bcAttrName: String,*/
                           delta: Int,
                           normalize: Boolean,
                           numSource: Long,
@@ -422,23 +415,17 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         if (delta <= 0) {
             throw new UnsupportedOperationException("Delta must be a positive number");
         }
-        val team = g.team();
+        val team = matrix.dist().allTeam();
         val places = team.placeGroup();
         val transBuf = 1 << 10;
-        val N = g.numberOfVertices();
+        val N = numberOfVertices;
         val numSource_ = isExactBc ? -1L: numSource;
         val sources_ = isExactBc ? null: sources;
         val sourceRange_ = isExactBc ? 0..(N - 1): sourceRange;
-        // Represent graph as CSR
-        val csr = g.createDistEdgeIndexMatrix(
-                                              Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
-                                              true,
-                                              true);
-        // Construct attribute
-        val weightAttr = g.createDistAttribute[Double](csr, false, weightAttrName);
+       
         // create local state for bc on each place
         val localState = PlaceLocalHandle.make[LocalState](places, () => {
-            return new LocalState(csr, weightAttr, transBuf, N, delta, numSource_, sources_, sourceRange_);
+            return new LocalState(matrix, transBuf, N, delta, numSource_, sources_, sourceRange_);
         });
         val stopWatch = Config.get().stopWatch();
         stopWatch.lap("Graph construction");
@@ -682,7 +669,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
 
                         val vDist = distance()(localV);
                         val neighbours = csr().adjacency(localV);
-                        val neighboursWeight = csr().attribute[Double](weight(), localV);
+                        val neighboursWeight = csr().attribute(localV);
                         for (i in 0..(neighbours.size() - 1)) {
                             val localW = neighbours(i);
                             val w = LocDstToOrg(localW);
@@ -724,7 +711,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
                 val v = LocSrcToOrg(localV);
                 val vDist = distance()(localV);
                 val neighbours = csr().adjacency(localV);
-                val neighbourWeight = csr().attribute(weight(), localV);
+                val neighbourWeight = csr().attribute(localV);
                 for (i in 0..(neighbours.size() - 1)) {
                     val localW = neighbours(i);
                     val w = LocDstToOrg(localW);
