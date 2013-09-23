@@ -26,6 +26,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.api.BetweennessCentrality;
+import org.scalegraph.util.Dist2D;
 
 final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
@@ -38,20 +39,31 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	    
 	    if (args(0).equals("high")) {
 	        val bc = new BetweennessCentrality();
+	        bc.weighted =true;
 	        result = bc.execute(g);
-	    } else if (args(0).equals("low")) {
+	    } 
+	    else if (args(0).equals("low")) {
 	        val bc = new BetweennessCentrality();
 	        bc.weighted =true;
-	        bc.source = [ Long.parseLong(args(3))];
+	        bc.source = [Long.parseLong(args(3))];
 	        bc.directed = true;
 	        bc.exactBc = false;
 	        result = bc.execute(g);
-	    }  else if (args(0).equals("default")) {
+	    }
+	    else if (args(0).equals("low_exact")) {
 	        val bc = new BetweennessCentrality();
-	        result = bc.execute(g);
-	    } else {
+	        val directed = true;
+	        bc.weighted = true;
+	        bc.directed = directed;
+	        val matrix = g.createDistSparseMatrix[Double](
+	                Dist2D.make1D(g.team(), Dist2D.DISTRIBUTE_COLUMNS), bc.weightAttrName, bc.directed, true);
+	        val N = g.numberOfVertices();
+	        result = bc.execute(matrix, N);
+	    } 
+	    else {
 	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
 	    }
+	    
 	    if(args(1).equals("write")) {
 	        CSV.write(args(2), new NamedDistData(["bc" as String], [result as Any]), true);
 	        return true;
@@ -59,7 +71,8 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	    else if(args(1).equals("check")) {
 	        val reference = args(2);
 	        return checkResult[Double](result, reference, 0.001D); 
-	    }else if(args(1).equals("nowrite")) {
+	    }
+	    else if(args(1).equals("nowrite")) {
 	        return true;
 	    }
 	    else {
