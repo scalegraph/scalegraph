@@ -641,9 +641,11 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         val src = lch().currentSource();
         if (role == getVertexPlaceRole(src)) {
             relax(src, src, 0);
-            val v = LocSrcToOrg(src);
+            val v = OrgToLocSrc(src);
             // clear predecessor of root vertex
-            predecessors()(v).clear();
+            if (predecessors()(v) != null) {
+                predecessors()(v).clear();
+            }
         }
         do {
             // clear bucket queue pointer, this makes nextqueue of another buckets deterministic
