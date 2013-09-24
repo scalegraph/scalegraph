@@ -299,4 +299,5 @@ def build_test(name,x10file,workingDir,srcDir):
              #buildResult == 0 ならビルドに成功
                indentDeeper(escapeText(yamlFile.read()),2)+\
             "  ---")
+    sys.stderr.flush()
     return buildResult
