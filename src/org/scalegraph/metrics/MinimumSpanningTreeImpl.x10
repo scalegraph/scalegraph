@@ -260,6 +260,8 @@ public final class MinimumSpanningTreeImpl {
 		                // Not a root node
 		                // Console.OUT.println("----------------> Delete: " + ctx.id());
 		                ctx.setVertexShouldBeActive(false);
+		                ctx.value().edgeTable = MemoryChunk.getNull[EdgeInfo]();
+		                ctx.value().incomingEdges = MemoryChunk.getNull[EdgeInfo]();
 		                ctx.voteToHalt();
 		            } else {
 		                for (i in messages.range()) {

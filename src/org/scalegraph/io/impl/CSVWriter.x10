@@ -51,6 +51,10 @@ public class CSVWriter {
 			val nthreads = Runtime.NTHREADS;
 			this.frontBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
 			this.backBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
+			for( i in 0..(nthreads-1)){
+				frontBuffer(i).add("");
+				backBuffer(i).add("");
+			}
 			this.fw = fw;
 			this.strClousure = strClousure;
 		}
