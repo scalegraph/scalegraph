@@ -262,7 +262,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
            "Run "+name.rstrip() + "\n" + \
            "  ---\n" + \
            "  Message:\n" + \
-           indentDeeper(Message,2) + \
+           indentDeeper(Message.replace("\t","  "),2) + \
            "  ---")
     sys.stderr.flush()
     sys.stdout.flush()
