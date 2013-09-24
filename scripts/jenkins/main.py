@@ -50,7 +50,7 @@ parser.add_option("--source",action="store",
 def main():
     global opts
     global args
-    os.umask(0o001)
+    os.umask(0o022)
     if(DEBUG):
         sys.stderr.write(str(opts))
 ###-------parser_end-------------
