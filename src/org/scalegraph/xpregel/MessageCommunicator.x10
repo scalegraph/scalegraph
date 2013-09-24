@@ -186,68 +186,84 @@ final class MessageCommunicator[M] { M haszero } {
 		
 		assert (numMessages == mesOffset(numPlaces) as Long);
 
-		val mesTmp :MemoryChunk[M];
-		val idsTmp :MemoryChunk[Long];
-		if(combineEnabled) {
-			mesTmp = new MemoryChunk[M](numMessages);
-			idsTmp = new MemoryChunk[Long](numMessages);
-		}
-		else {
-			mUCSIds = new MemoryChunk[Long](numMessages);
-			mUCSMessages = new MemoryChunk[M](numMessages);
-			idsTmp = mUCSIds;
-			mesTmp = mUCSMessages;
-		}
+		val idsTmp = new MemoryChunk[Long](numMessages);
+		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
+			val pstart = mesOffset(p);
+			val plength = mesOffset(p+1) - pstart;
+			val idsLocal = idsTmp.subpart(pstart, plength);
+			var offset :Long = 0;
+			for(th in 0..(mNumThreads-1)) {
+				val src = mUCCMessages(th * numPlaces + p);
+				val size = src.dstIds.size();
+				MemoryChunk.copy(src.dstIds.raw(), 0L, idsLocal, offset, size);
+			//	src.dstIds.copyTo(idsLocal.subpart(offset, size), 0L, size);
+				offset += size;
+			}
+		});
+		for(i in mUCCMessages.range()) mUCCMessages(i).dstIds.del();
 		
+		val mesTmp = new MemoryChunk[M](numMessages);
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val pstart = mesOffset(p);
 			val plength = mesOffset(p+1) - pstart;
 			val mesLocal = mesTmp.subpart(pstart, plength);
-			val idsLocal = idsTmp.subpart(pstart, plength);
 			var offset :Long = 0;
-			
 			for(th in 0..(mNumThreads-1)) {
 				val src = mUCCMessages(th * numPlaces + p);
 				val size = src.messages.size();
 				MemoryChunk.copy(src.messages.raw(), 0L, mesLocal, offset, size);
-				MemoryChunk.copy(src.dstIds.raw(), 0L, idsLocal, offset, size);
-				
-				// clear messages
-				for(i in src.messages.range()) src.messages(i) = nullMessage;
-				src.messages.setSize(0);
-				src.dstIds.setSize(0);
-				
+				//src.messages.copyTo(mesLocal.subpart(offset, size), 0L, size);
 				offset += size;
 			}
-			if(combine != null) {
+		});
+		for(i in mUCCMessages.range()) mUCCMessages(i).messages.del();
+
+		if(combine != null) {
+			Parallel.iter(0L..(numPlaces-1), (p :Long) => {
+				val pstart = mesOffset(p);
+				val plength = mesOffset(p+1) - pstart;
+				if(plength == 0) return ; // short cut
+				
+				val mesLocal = mesTmp.subpart(pstart, plength);
+				val idsLocal = idsTmp.subpart(pstart, plength);
+				
 				// sort
 				Algorithm.sort(idsLocal, mesLocal);
 				
 				// combine
 				var resultLength: Int = 0;
 				var start: Long = 0;
-				var length: Long = 0;
-				var vid: Long = 0;
-				for(i in mesLocal.range()) {
-					if(vid != idsLocal(i)) {
-						if(length > 0) {
+				var length: Long = 1;
+				var vid: Long = idsLocal(0);
+				for(i in (1L..(idsLocal.size()-1))) {
+					if(vid == idsLocal(i)) {
+						++length;
+					}
+					else {
+						if(length > 1) {
 							mesLocal(resultLength) = combine(mesLocal.subpart(start, length));
-							idsLocal(resultLength) = vid;
-							++resultLength;
 						}
+						else {
+							assert (length == 1L);
+							mesLocal(resultLength) = mesLocal(start);
+						}
+						idsLocal(resultLength++) = vid;
 						start = i;
 						length = 1;
 						vid = idsLocal(i);
 					}
 				}
-				if(length > 0) {
+				if(length > 1) {
 					mesLocal(resultLength) = combine(mesLocal.subpart(start, length));
-					idsLocal(resultLength) = vid;
-					++resultLength;
 				}
+				else {
+					assert (length == 1L);
+					mesLocal(resultLength) = mesLocal(start);
+				}
+				idsLocal(resultLength++) = vid;
 				mUCSCount(p) = resultLength;
-			}
-		});
+			});
+		}
 
 		val numCombinedMessages :Long;
 		if(combine != null) {
@@ -277,6 +293,8 @@ final class MessageCommunicator[M] { M haszero } {
 			idsTmp.del();
 		}
 		else {
+			mUCSIds = idsTmp;
+			mUCSMessages = mesTmp;
 			numCombinedMessages = numMessages;
 		}
 		
