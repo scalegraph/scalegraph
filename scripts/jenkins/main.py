@@ -1,12 +1,11 @@
 #!/bin/env python3
-import helper
 from helper import *
 import helper
-import os
+import os,sys
 from optparse import OptionParser
 import TAP
 
-DEBUG=False
+DEBUG=True
 
 ## mpirunを実行するスクリプト
 ##
@@ -16,7 +15,7 @@ DEBUG=False
 #ModuleName    = "TeamBenchmark"
 #TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 TestWorkDir   = os.environ["prefix"]
-SrcDir= os.path.abspath(os.path.dirname(__file__))+"/../../src"
+SrcDir= os.path.abspath(os.path.dirname( __file__ ))+"/../../src"
 
 
 #-------------------------------------------------#
@@ -49,30 +48,29 @@ parser.add_option("--source",action="store",
                   dest="srcDir",default=SrcDir)
 (opts,args) = parser.parse_args()
 def main():
+
     global opts
     global args
+    if(DEBUG):
+        sys.stderr.write(str(opts))
 ###-------parser_end-------------
 
     workingDir = opts.workspace
-
-    if(DEBUG):
-        helper.printOpts(opts,args)
-    
 ##yamlからの設定の読み込み
 
 #各ファイルのビルド、テストの実行
     if(DEBUG):
-        print(opts.yamlDir+"/*.yaml is loaded")
+        sys.stderr.write(opts.yamlDir+"/*.yaml is loaded")
     yamlFiles = os.listdir( opts.yamlDir )
     if(DEBUG):
-        print(yamlFiles)
+        sys.stderr.write(str(yamlFiles))
     helper.initTap(len(yamlFiles)*2)
-    
+
     for filename in yamlFiles:
         filePref, ext = os.path.splitext(filename)
         if ext != ".yaml":
             continue
-        
+
         sandbox    = workingDir+"/"+filePref
 
         initDir(sandbox)
@@ -80,14 +78,14 @@ def main():
         attributes = helper.loadFromYaml(
             opts.yamlDir+"/"+filename,
             testcase=opts.testcase)
-    
+
         for attribute in attributes:
             attribute["node"] = opts.maxNode
-            
+
             buildresult = build_test(filePref,
                         opts.x10Dir+"/"+filePref+".x10",
                         sandbox,
-                        opts.srcDir) 
+                        opts.srcDir)
             if buildresult == 0:
                 run_test(name=filePref,
                 binName=filePref,
@@ -101,9 +99,9 @@ def main():
                         attributes=attribute,
                         describe="build failed")
                 pass
-    
+
     if(DEBUG):
-        print("DEBUG: Testcase attributes:" + str(attribute))
+        sys.stderr.write("DEBUG: Testcase attributes:" + str(attribute))
 
 if __name__ == '__main__':
     main()
