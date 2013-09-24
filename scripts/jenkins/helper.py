@@ -264,6 +264,9 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
            "  Message:\n" + \
            indentDeeper(Message,2) + \
            "  ---")
+    sys.stderr.flush()
+    sys.stdout.flush()
+
 def build_test(name,x10file,workingDir,srcDir):
     """
     @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
@@ -300,4 +303,5 @@ def build_test(name,x10file,workingDir,srcDir):
                indentDeeper(escapeText(yamlFile.read()),2)+\
             "  ---")
     sys.stderr.flush()
+    sys.stdout.flush()
     return buildResult
