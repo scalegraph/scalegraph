@@ -5,7 +5,7 @@ import os,sys
 from optparse import OptionParser
 import TAP
 
-DEBUG=True
+DEBUG = False
 
 ## mpirunを実行するスクリプト
 ##
