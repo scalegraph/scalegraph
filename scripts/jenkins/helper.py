@@ -255,19 +255,23 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
               #+"stdout: |\n"+ indentDeeper(stdout.decode(),2)
     Message = escapeText(Message)
     if isTimeOut:
-        Message = "This test case exceeds timeout.\n"+Message
+        Message = "Alert: This test case exceeds timeout.\n"+Message
     os.remove(hostDst)
 
     tap.ok(runResult == 0,
            "Run "+name.rstrip() + "\n" + \
            "  ---\n" + \
            "  Message:\n" + \
-           indentDeeper(Message,2) + \
+           indentDeeper(Message.replace("\t","  "),2) + \
            "  ---")
+    sys.stderr.flush()
+    sys.stdout.flush()
+
 def build_test(name,x10file,workingDir,srcDir):
     """
-    @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
-    @param describe  実行中のジョブの説明
+    @param name       ビルドするモジュールの名前(hoge.x10 なら hoge)
+    @param describe   実行中のジョブの説明
+    @param workingDir
     @return buildResult ビルドの終了コード
     """
     global DEBUG
@@ -300,4 +304,5 @@ def build_test(name,x10file,workingDir,srcDir):
                indentDeeper(escapeText(yamlFile.read()),2)+\
             "  ---")
     sys.stderr.flush()
+    sys.stdout.flush()
     return buildResult
