@@ -12,9 +12,10 @@
 package test;
 
 import x10.util.Team;
+import x10.compiler.Ifdef;
 
-import org.scalegraph.test.STest;
 import org.scalegraph.Config;
+import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Parallel;
@@ -27,12 +28,17 @@ import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 
-final class XPregelPageRank extends STest {
+final class XPregelPageRank extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
 		new XPregelPageRank().execute(args);
 	}
 	
 	def pagerank_opt(xpregel :XPregelGraph[Double, Double]) {
+		val sw = Config.get().stopWatch();
+		
+		xpregel.updateInEdge();
+		sw.lap("Update In Edge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
@@ -48,13 +54,16 @@ final class XPregelPageRank extends STest {
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
 			if (here.id == 0) {
-				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
 			return aggVal < 0.0001;
 		});
+		sw.lap("PageRank Main Iterate (opt)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (opt):"); }
 	}
 	
 	def pagerank_naive(xpregel :XPregelGraph[Double, Double]) {
+		val sw = Config.get().stopWatch();
 		
 		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
@@ -74,10 +83,42 @@ final class XPregelPageRank extends STest {
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
 			if (here.id == 0) {
-				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
 			return aggVal < 0.0001;
 		});
+		sw.lap("PageRank Main Iterate (naive)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (naive):"); }
+	}
+	
+	def pagerank_combine(xpregel :XPregelGraph[Double, Double]) {
+		val sw = Config.get().stopWatch();
+		
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+			val value :Double;
+			if(ctx.superstep() == 0)
+				value = 1.0 / ctx.numberOfVertices();
+			else
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+
+			ctx.aggregate(Math.abs(value - ctx.value()));
+			ctx.setValue(value);
+			
+			val next = value / ctx.outEdgesId().size();
+			val outEdges = ctx.outEdgesId();
+			for(i in outEdges.range())
+				ctx.sendMessage(outEdges(i), next);
+		},
+		(values :MemoryChunk[Double]) => MathAppend.sum(values),
+		(messages :MemoryChunk[Double]) => MathAppend.sum(messages),
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
+			}
+			return aggVal < 0.0001;
+		});
+		sw.lap("PageRank Main Iterate (combine)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (combine):"); }
 	}
 	
 	def inputTest(args:Array[String](1)) {
@@ -128,8 +169,6 @@ final class XPregelPageRank extends STest {
 		
 		val start_time = System.currentTimeMillis();
 		
-		xpregel.updateInEdge();
-		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 		
 		pagerank_opt(xpregel);
@@ -149,59 +188,54 @@ final class XPregelPageRank extends STest {
 		Console.OUT.println("Finish application");
 	}
 
-	public def run(args: Array[String](1)): Boolean {
-		val scale = Int.parse(args(0));
-		val mode = (args.size >= 2) ? Int.parse(args(1)) : 0;
-		val team = Team.WORLD;
-		val dist = Dist2D.make2D(team, 1, team.size());
-		
-		val start_read_time = System.currentTimeMillis();
-		val rnd = new Random(2, 3);
-		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
-		val rawWeight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
+	public def run(args :Array[String](1), g :Graph): Boolean {
 
-		val start_init_graph = System.currentTimeMillis();
-		val g = Graph.make(edgeList);
-		g.setEdgeAttribute[Double]("edgevalue", rawWeight);
-		val csr = g.createDistSparseMatrix[Double](dist, "edgevalue", true, true);
+		if(args.size < 3) {
+			println("Usage: [naive|opt|combine] [write|check] <path>");
+			return false;
+		}
+		
+		val sw = Config.get().stopWatch();
+		val csr = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", true, true);
+		sw.lap("createDistSparseMatrix");
 		val xpregel = XPregelGraph.make[Double, Double](csr);
 		
 		// release graph data
 		g.del();
-		edgeList.src.del();
-		edgeList.dst.del();
-		rawWeight.del();
 		
-		xpregel.setLogPrinter(Console.OUT, 0);
-		
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
-		val start_time = System.currentTimeMillis();
-		
-		xpregel.updateInEdge();
-		
-		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		xpregel.setLogPrinter(Console.ERR, 0);
 
-		if(mode == 0) pagerank_opt(xpregel);
-		else if(mode == 1) pagerank_naive(xpregel);
-		else pagerank_naive(xpregel);
-
-		val end_time = System.currentTimeMillis();
-		Console.OUT.println("Finish after = " + (end_time-start_time) + " ms");
+		if(args(0).equals("naive")) {
+			pagerank_naive(xpregel);
+		}
+		else if(args(0).equals("opt")) {
+			pagerank_opt(xpregel);
+		}
+		else if(args(0).equals("combine")) {
+			pagerank_combine(xpregel);
+		}
+		else {
+			throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+		}
 		
 		xpregel.once((ctx :VertexContext[Double, Double, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
 		
-		val pagerank = xpregel.stealOutput[Double]();
+		val result = xpregel.stealOutput[Double]();
 		
-		CSV.write("pagerank-%d", new NamedDistData(["pagerank" as String], [pagerank as Any]),true);
+		sw.lap("Retrieve output");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Retrieve Output:"); }
 		
-		Console.OUT.println("Finish application");
-		
-		return true;
+		if(args(1).equals("write")) {
+			CSV.write(args(2), new NamedDistData(["pagerank" as String], [result as Any]), true);
+			return true;
+		}
+		else if(args(1).equals("check")) {
+			return checkResult[Double](result, args(2), 0.0001);
+		}
+		else {
+			throw new IllegalArgumentException("Unknown command :" + args(1));
+		}
 	}
 }
