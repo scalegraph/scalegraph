@@ -197,7 +197,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		
 		val sw = Config.get().stopWatch();
 		val csr = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", true, true);
-		sw.lap("createDistSparseMatrix");
+		sw.lap("Graph construction");
 		val xpregel = XPregelGraph.make[Double, Double](csr);
 		
 		// release graph data
@@ -215,7 +215,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			pagerank_combine(xpregel);
 		}
 		else {
-			throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+			throw new IllegalArgumentException("Unknown version parameter :" + args(0));
 		}
 		
 		xpregel.once((ctx :VertexContext[Double, Double, Any, Any]) => {

@@ -179,7 +179,8 @@ public class CSVReader {
 		// read data
 		splitter.split(team, fman, dataOffset, nthreads,
 			(tid :Int, data :MemoryChunk[Byte]) => { bufferPLH()(tid).parse(data); });
-		
+
+		@Ifdef("PROF_IO") { mtimer.start(); }
 		var enabledColumns :Int = 0;
 		for(e in 0..(numColumns-1)) {
 			if(!attHandler(e).isSkip()) ++enabledColumns;
