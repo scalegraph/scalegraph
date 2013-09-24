@@ -4,6 +4,7 @@ import helper
 import os,sys
 from optparse import OptionParser
 import TAP
+from shutil import (rmtree)
 
 DEBUG = False
 
@@ -98,7 +99,7 @@ def main():
                         workPath=sandbox,
                         attributes=attribute,
                         describe="build failed")
-                pass
+            rmtree(sandbox)
 
     if(DEBUG):
         sys.stderr.write("DEBUG: Testcase attributes:" + str(attribute))

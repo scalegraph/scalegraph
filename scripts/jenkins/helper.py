@@ -269,8 +269,9 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
 
 def build_test(name,x10file,workingDir,srcDir):
     """
-    @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
-    @param describe  実行中のジョブの説明
+    @param name       ビルドするモジュールの名前(hoge.x10 なら hoge)
+    @param describe   実行中のジョブの説明
+    @param workingDir
     @return buildResult ビルドの終了コード
     """
     global DEBUG
