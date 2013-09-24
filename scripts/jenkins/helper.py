@@ -255,7 +255,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
               #+"stdout: |\n"+ indentDeeper(stdout.decode(),2)
     Message = escapeText(Message)
     if isTimeOut:
-        Message = "This test case exceeds timeout.\n"+Message
+        Message = "Alert: This test case exceeds timeout.\n"+Message
     os.remove(hostDst)
 
     tap.ok(runResult == 0,
