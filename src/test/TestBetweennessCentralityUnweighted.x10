@@ -60,6 +60,7 @@ final class TestBetweennessCentralityUnweighted extends AlgorithmTest {
 	                                                 Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
 	                                                 directed,
 	                                                 true); 
+	        Config.get().stopWatch().lap("Graph construction: ");
 	        val N = g.numberOfVertices(); 
 	        result = bc.execute(matrix, N);
 	    }
