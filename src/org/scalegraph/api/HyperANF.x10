@@ -11,6 +11,7 @@
 
 package org.scalegraph.api;
 
+import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
 
@@ -34,9 +35,9 @@ public class HyperANF {
 	 */
 	public var team :Team = Config.get().worldTeam();
 	/** Maximum number of iterations.
-	 * Default: 30
+	 * Default: 1000
 	 */
-	public var niter:Int = 30;
+	public var niter:Int = 1000;
 	
 	public var weights :String = "weight";
 	/*
@@ -82,6 +83,8 @@ public class HyperANF {
 
 		val team = param.team;
 		val niter = param.niter;
+		val sw = Config.get().stopWatch();
+		
 		
 		val blockLength = 3L;
 
@@ -89,6 +92,9 @@ public class HyperANF {
 //		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
 		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
 		xpregel.updateInEdge();
+		
+		sw.lap("UpdateInEdge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 //		val N:Long = graph.numberOfVertices();
 		val N:Long = xpregel.size();
@@ -106,7 +112,6 @@ public class HyperANF {
 		 * 		0 : initialize each node value(MemoryChunk)
 		 * 		0~ : recieve messages , change my value and send my value to adjacent nodes.
 		 */
-		
 		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
@@ -139,10 +144,14 @@ public class HyperANF {
 					}
 
 					if (here.id == 0 && ctx.id() == 0L) {
-						Console.OUT.println("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
+						sw.lap("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
+					}
+					for(i in ctx.outEdgesId().range() ) {
+						ctx.sendMessage(ctx.outEdgesId()(i), counterB);
+						
 					}
 					
-					ctx.sendMessageToAllNeighbors(counterB);
+//					ctx.sendMessageToAllNeighbors(counterB);
 					
 					val retval = calcSize(counterB,alpha);
 					//			Console.OUT.println("retval"  + ctx.realId() + " " + retval);
@@ -151,20 +160,45 @@ public class HyperANF {
 					
 				},
 				(values :MemoryChunk[Double]) => MathAppend.sum(values),
+				(values : MemoryChunk[MemoryChunk[Byte]]) =>{
+					if(values.size()==0L) {
+						val ret:MemoryChunk[Byte] = new MemoryChunk[Byte]((M as Long)) ;
+						for(i in ret.range()) ret(i) = 0L;
+						return ret;
+					}
+					val ret = values(0);
+					for(i in values.range()) {
+						for(j in ret.range()) {
+							ret(j) = MathAppend.max(ret(j), values(i)(j));
+						}
+					}
+					return ret;
+					
+				},
 				(superstep :Int, aggVal :Double) => {
 					if(results.home==here) {
 						val md:MemoryChunk[Double] = results()();
 						md(superstep) = aggVal;
 						results()() = md;
+						if(superstep>5) {
+							val	a = md(superstep-1) + 1.0;
+							val b = md(superstep) + 1.0;
+							if(MathAppend.abs(a/b - 1.0) < 0.001)
+								return true;
+						}
 					}
 					return superstep > niter;
-				});
+				}
+				);
+		/*
 		var iter:Int=0;
 		while(iter<niter) {
 			Console.OUT.println( (iter+1) + " "+ results()()(iter));
 			iter++;
-		}
-		
+		}*/
+
+		sw.lap("Retrieve output");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Retrieve Output:"); }
 		return results()();
 		
 	}	
