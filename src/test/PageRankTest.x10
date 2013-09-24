@@ -38,6 +38,7 @@ final class PageRankTest extends AlgorithmTest {
     				Config.get().distXPregel(), "weight", true, true);
     		// delete the graph object in order to reduce the memory consumption
     		g.del();
+    		Config.get().stopWatch().lap("Graph construction: ");
     		result = org.scalegraph.api.PageRank.run(matrix);
     	}
     	else {
