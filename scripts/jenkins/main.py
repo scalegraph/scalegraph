@@ -16,8 +16,7 @@ DEBUG=False
 #ModuleName    = "TeamBenchmark"
 #TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 TestWorkDir   = os.environ["prefix"]
-SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
-
+SrcDir= os.path.abspath(os.path.dirname(__file__))+"/../../src"
 
 
 #-------------------------------------------------#
@@ -25,32 +24,33 @@ SrcDir        = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 ## --mpi {MPI} mpich,mvapich,openmpiのいずれかを指定
 ## -t {TESTCASE} でテストケースの指定.デフォルトは TESTCASE=small
 #-------parser_begin--------#
-
+usage = "Usage: # runTest {TESTCASE}"
+parser = OptionParser(usage=usage)
+parser.add_option("-t","--test",action="store",default="small",
+                  type="string",
+                  help="Test case to run",dest="testcase")
+parser.add_option("-n",action="store",default="4",
+                  type="int",
+                  help="number of nodes",dest="maxNode")
+parser.add_option("--mpi",action="store",
+                  default="mvapich",type="string",
+                  dest="mpi",help="mpi to run tests",
+                  metavar="MPI")
+parser.add_option("--yamlDir",action="store",dest="yamlDir",
+                  default="./tests",
+                  metavar="yamlDir")
+parser.add_option("--x10dir",action="store",dest="x10Dir",
+                  default=SrcDir+"/test",
+                  help="Test file directory")
+parser.add_option("--workspace",action="store",dest="workspace",
+                  default=TestWorkDir,
+                  help="directory to build and to run test")
+parser.add_option("--source",action="store",
+                  dest="srcDir",default=SrcDir)
+(opts,args) = parser.parse_args()
 def main():
-    usage = "Usage: # runTest {TESTCASE}"
-    parser = OptionParser(usage=usage)
-    parser.add_option("-t","--test",action="store",default="small",
-                    type="string",
-                    help="Test case to run",dest="testcase")
-    parser.add_option("-n",action="store",default="4",
-                      type="int",
-                      help="number of nodes",dest="maxNode")
-    parser.add_option("--mpi",action="store",
-                    default="mvapich",type="string",
-                    dest="mpi",help="mpi to run tests",
-                    metavar="MPI")
-    parser.add_option("--yamlDir",action="store",dest="yamlDir",
-                    default="./tests",
-                    metavar="yamlDir")
-    parser.add_option("--x10dir",action="store",dest="x10Dir",
-                    default="../../src/test",
-                    help="Test file directory")
-    parser.add_option("--workspace",action="store",dest="workspace",
-                    default=TestWorkDir,
-                    help="directory to build and to run test")
-    parser.add_option("--source",action="store",
-                      dest="srcDir",default=SrcDir)
-    (opts,args) = parser.parse_args()
+    global opts
+    global args
 ###-------parser_end-------------
 
     workingDir = opts.workspace
@@ -66,7 +66,7 @@ def main():
     yamlFiles = os.listdir( opts.yamlDir )
     if(DEBUG):
         print(yamlFiles)
-    helper.initTap(len(yamlFiles))
+    helper.initTap(len(yamlFiles)*2)
     
     for filename in yamlFiles:
         filePref, ext = os.path.splitext(filename)

@@ -2,6 +2,7 @@
 import subprocess as SProc
 import yaml,re
 import contextlib
+import tempfile
 from os import path
 import os
 import tempfile as tmp
@@ -17,6 +18,9 @@ tap=None
 
 #TestWorkDir= os.environ["HOME"]+"/Develop/ScaleGraph/scripts/jenkins/workspace"
 #SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
+
+def escapeStr(str):
+    str.replace("\"","\\\"")
 
 def indentDeeper(str,n=1):
     """
@@ -41,7 +45,7 @@ def check_env():
             return False
     return True
         
-def genHostFile(file,dest,numHosts,duplicate):
+def genHostFile(filepath,destpath,numHosts,duplicate):
     """
     mpirunを実行する際に使用するHostFileを file から読み込み, dest に生成する.
     @param file       使用できるノードのいちらんが書かれたファイルへのPath
@@ -49,15 +53,20 @@ def genHostFile(file,dest,numHosts,duplicate):
     @param numHosts   使用するホストノードの数
     @param duplicates 1nodeあたりのPlace数
     """
-    file = os.path.expandvars(file)
-    dest = os.path.expandvars(dest)
-    with open(file) as file:
+    filepath = os.path.expandvars(filepath)
+    destpath = os.path.expandvars(destpath)
+    try:
+        if os.path.exists(destpath):
+            os.remove(destpath)
+    except OSError:
+        return
+    with open(filepath) as file:
         hosts = file.readlines()
     newhosts=[]
     for n in range(numHosts):
         for _ in range(duplicate):
             newhosts.append(hosts[n])
-    with open(dest,'w') as file:
+    with open(destpath,'w') as file:
         for host in newhosts:
             file.write(host)
     
@@ -65,7 +74,7 @@ def isValidAttr(attr):
     
     if not isinstance(attr,dict):
         if(DEBUG):
-            print("attr:"+attr+"\n"+"type:"+str(type(attr)))
+            sys.stderr.write("attr:"+attr+"\n"+"type:"+str(type(attr)))
         return False
     
     param = ["args","thread","gcproc","place","duplicate"]
@@ -124,7 +133,7 @@ def initDir(workdir):
     dirs = ["/bin","/log","/output","/results"]
     for directory in dirs:
         if not path.isdir(workdir+directory):
-            os.makedirs(workdir+directory)
+            os.makedirs(workdir+directory,exist_ok=True)
 
 
 def initTap(testNum):
@@ -148,19 +157,6 @@ def x10outToYaml(src,dst):
         sed = stack.enter_context(SProc.Popen(["sed","-e",r"s/^.*\/workspace\/src\(\/.*\)$/\1/"],stdin=cat.stdout,stdout=SProc.PIPE))
         SProc.call([x10out2yaml],stdin=sed.stdout,stdout=outFile)
 
-"""
-def run_test_dummy(name,describe,mpi,attribute):
-    if DEBUG:
-        print("-------------------------------")
-        print("run_test_dummy method")
-        print("args:")
-        print("    moduleName:"+name)
-        print("    describe:"+describe)
-        print("    mpi:"+mpi)
-        print("    attribute"+str(attribute))
-        print("-------------------------------")
-"""
-
 def fail_run_test(name,binName,attributes,workPath,describe):
     tap.ok(0,"running "+binName+" failure."+describe,skip=True)
     
@@ -172,7 +168,9 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     """
     global DEBUG
     if isValidAttr(attributes) == False:
-        tap.ok(0, name+".yaml is invalid testfile.")
+        tap.ok(0, name+".yaml is invalid testfile. # SKIP True\n"+\
+                "  ---\n  ---")
+        
         return
     if "name" not in attributes:
         attributes["name"] = name
@@ -200,7 +198,6 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         sys.stderr.write("hostDst:"+hostDst+"\n")
     
     os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
-
     genHostFile(hostSrc,hostDst,
                 numHosts  =attributes["node"],
                 duplicate =attributes["duplicate"] )
@@ -242,17 +239,20 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         isTimeOut=True
         stdout, stderr = mpirunProc.communicate()
     runResult = mpirunProc.poll()
-    Message = "name:"  + name           + "\n" + \
-              "stderr:\n"+ indentDeeper(stderr.decode(),2)+ "\n" + \
-              "stdout:\n"+ indentDeeper(stdout.decode(),2)
+    Message = "name: "  + name           + "\n" + \
+              "stderr: |\n"+ indentDeeper(stderr.decode())+ "\n"
+              #+"stdout: |\n"+ indentDeeper(stdout.decode(),2)
+    Message=escapeStr(Message)
     if isTimeOut:
         Message="This test case exceeds timeout.\n"+Message
+    os.remove(hostDst)
+    
     tap.ok(runResult == 0,
-           "Run "+name + "\n" + \
+           "Run "+name.rstrip() + "\n" + \
            "  ---\n" + \
            "  Message:\n" + \
            indentDeeper(Message,2) + \
-           "  ---\n")
+           "  ---")
 
 def build_test_dummy(name,workingDir="./"):
     if DEBUG:
@@ -280,20 +280,20 @@ def build_test(name,x10file,workingDir,srcDir):
     X10CXX = "x10c++"
     buildCmd = [X10CXX, "-cxx-prearg", "-I"+srcDir+"/../include", "-cxx-prearg","-g", "-x10rt", "mpi",
                 "-sourcepath",srcDir, "-o", bindir + name, x10file]
-    if(DEBUG):print("build command:"+str(buildCmd))
+    if(True):
+        sys.stderr.write("build command:"+str(buildCmd) + "\n")
     logFile = open(logdir+"buildlog-"+name+".log",'w')
     errFile = open(outFileName,'w')
 
     buildResult = SProc.call(buildCmd,stdout=logFile,stderr=errFile)
     x10outToYaml(outFileName,yamlFileName)
     errors = SProc.check_output(["tail","-n1",outFileName])
+    
     with open(yamlFileName) as yamlFile:
-        tap.ok(buildResult == 0,"Building "+name+".x10 "+
-           errors.decode()+indentDeeper(yamlFile.read())) #buildResult == 0 ならビルドに成功
-    #print("   ---")
-    """
-    with open(yamlFileName) as yamlFile:
-        for line in yamlFile.readlines():
-            print("    "+line,end="")
-    """
+        tap.ok(buildResult == 0,
+            "Building "+name+".x10\n"+\
+            "  ---\n"+\
+             #buildResult == 0 ならビルドに成功
+            indentDeeper(escapeStr(yamlFile.read()))+\
+            "  ---")
     return buildResult
