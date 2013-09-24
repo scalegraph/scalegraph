@@ -20,11 +20,12 @@ mkdir -p $LIBPATH/lib
 
 echo LIBPATH:$LIBPATH
 
+
 ARPAC=/usr/global/x10/arpack/libarpack_LINUX.a
 PARPAC=/usr/global/x10/arpack/libarpack_LINUX.a
 
-LIBS="-cxx-postargt $(PARPACK) -cxx-postarg $(ARPACK)"
+LIBS="-cxx-postarg ${PARPACK} -cxx-postarg ${ARPACK}"
 
 
 files=`find $SG_PREFIX/src/org | grep .x10$`
-x10c++ $LIBS -x10rt mpi -buildx10lib $LIBPATH -o libScaleGrpaph -d $LIBPATH/include $files 
+x10c++ $LIBS -x10rt mpi -buildx10lib $LIBPATH -o libScaleGrpaph -d $LIBPATH/include $files
