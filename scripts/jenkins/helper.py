@@ -20,16 +20,19 @@ tap=None
 #SrcDir=os.environ["HOME"]+"/Develop/ScaleGraph/src"
 
 def escapeText(text):
+    """
+    textのスラッシュをエスケープします
+    """
     text.replace("\"","\\\"")
     return text
 
-def indentDeeper(str,n=1):
+def indentDeeper(text, n=1):
     """
-
+    strをnだけ深いインデントにします
     """
-    lines=str.splitlines()
-    retStr=""
-    delimiter=""
+    lines     = text.splitlines()
+    retStr    = ""
+    delimiter = ""
     for _ in range(n):
         delimiter=delimiter+"  "
     for line in lines:
@@ -261,16 +264,6 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
            "  Message:\n" + \
            indentDeeper(Message,2) + \
            "  ---")
-
-def build_test_dummy(name,workingDir="./"):
-    if DEBUG:
-        sys.stderr.write("----------------------------\n\
-                    build_test_dummy() is called\n\
-                    args:")
-        sys.stderr.write("    moduleName:"+name)
-        sys.stderr.write("    workingDir:"+workingDir)
-        sys.stderr.write("----------------------------")
-
 def build_test(name,x10file,workingDir,srcDir):
     """
     @param name      ビルドするモジュールの名前(hoge.x10 なら hoge)
@@ -302,7 +295,8 @@ def build_test(name,x10file,workingDir,srcDir):
         tap.ok(buildResult == 0,
             "Building "+name+".x10\n"+\
             "  ---\n"+\
+            "  Message: |\n" + \
              #buildResult == 0 ならビルドに成功
-               indentDeeper(escapeText(yamlFile.read()))+\
+               indentDeeper(escapeText(yamlFile.read()),2)+\
             "  ---")
     return buildResult
