@@ -163,7 +163,7 @@ public class HyperANF {
 				(values : MemoryChunk[MemoryChunk[Byte]]) =>{
 					if(values.size()==0L) {
 						val ret:MemoryChunk[Byte] = new MemoryChunk[Byte]((M as Long)) ;
-						for(i in ret.range()) ret(i) = 0L;
+						for(i in ret.range()) ret(i) = (0 as Byte);
 						return ret;
 					}
 					val ret = values(0);
