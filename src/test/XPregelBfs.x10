@@ -10,8 +10,10 @@
  */
 package test;
 
-import org.scalegraph.test.STest;
+import x10.compiler.Ifdef;
+
 import org.scalegraph.Config;
+import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
@@ -22,13 +24,18 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 
-final class XPregelBfs extends STest {
+final class XPregelBfs extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
 		new XPregelBfs().execute(args);
 	}
 	
 	def bfs_debug(xpregel :XPregelGraph[Long, Byte]) {
-		Console.OUT.println("bfs_debug");
+		val sw = Config.get().stopWatch();
+		
+		xpregel.updateInEdge();
+		sw.lap("Update In Edge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
+		
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0) {
@@ -74,10 +81,17 @@ final class XPregelBfs extends STest {
 			}
 			return false;
 		});
+		sw.lap("BFS Main Iterate (debug)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (debug):"); }
 	}
 	
 	def bfs_opt(xpregel :XPregelGraph[Long, Byte]) {
-		Console.OUT.println("bfs_opt");
+		val sw = Config.get().stopWatch();
+		
+		xpregel.updateInEdge();
+		sw.lap("Update In Edge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
+		
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0) {
@@ -99,14 +113,16 @@ final class XPregelBfs extends STest {
 		null, // combiner
 		(superstep :Int, aggVal :Byte) => {
 			if (here.id == 0) {
-				println("BFS XPregel ITERATE");
+				sw.lap("BFS at superstep " + superstep + " = " + aggVal + " ");
 			}
 			return false;
 		});
+		sw.lap("BFS Main Iterate (opt)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (opt):"); }
 	}
 	
 	def bfs_naive(xpregel :XPregelGraph[Long, Byte]) {
-		Console.OUT.println("bfs_naive");
+		val sw = Config.get().stopWatch();
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0) {
@@ -131,53 +147,100 @@ final class XPregelBfs extends STest {
 		null, // combiner
 		(superstep :Int, aggVal :Byte) => {
 			if (here.id == 0) {
-				println("BFS XPregel ITERATE");
+				sw.lap("BFS at superstep " + superstep + " = " + aggVal + " ");
 			}
 			return false;
 		});
+		sw.lap("BFS Main Iterate (naive)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (naive):"); }
+	}
+	
+	def bfs_combine(xpregel :XPregelGraph[Long, Byte]) {
+		val sw = Config.get().stopWatch();
+		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
+			val pred :Long;
+			if(ctx.superstep() == 0) {
+				ctx.setValue(-1L);
+				ctx.voteToHalt();
+				if(ctx.realId() != 0L) return ;
+				pred = ctx.realId();
+			}
+			else {
+				if(ctx.value() != -1L) {
+					return ;
+				}
+				pred = messages(0);
+			}
+			ctx.setValue(pred);
+			
+			val outEdges = ctx.outEdgesId();
+			for(i in outEdges.range())
+				ctx.sendMessage(outEdges(i), ctx.realId());
+		},
+		null, // aggregator
+		(messages :MemoryChunk[Long]) => messages(0),
+		(superstep :Int, aggVal :Byte) => {
+			if (here.id == 0) {
+				sw.lap("BFS at superstep " + superstep + " = " + aggVal + " ");
+			}
+			return false;
+		});
+		sw.lap("BFS Main Iterate (combine)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (combine):"); }
 	}
 
-	public def run(args: Array[String](1)): Boolean {
-		val scale = Int.parse(args(0));
-		val mode = (args.size >= 2) ? Int.parse(args(1)) : 0;
-		val start_read_time = System.currentTimeMillis();
-		val rnd = new Random(2, 3);
-		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
-		//val rawWeight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
+	public def run(args :Array[String](1), g :Graph): Boolean {
 
-		val start_init_graph = System.currentTimeMillis();
-		val g = Graph.make(edgeList);
-		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
+		if(args.size < 3) {
+			println("Usage: [naive|opt|combin|debug] [write|check] <path>");
+			return false;
+		}
+		val sw = Config.get().stopWatch();
+		val numEdges = g.numberOfEdges();
+		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), false, true);
+		sw.lap("Graph construction");
 		val xpregel = new XPregelGraph[Long, Byte](edgeIndexMatrix);
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
+		
+		// release graph data
+		g.del();
 
-		xpregel.setLogPrinter(Console.OUT, 0);
-		
-		val start_time = System.currentTimeMillis();
-		
-		xpregel.updateInEdge();
-		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		xpregel.setLogPrinter(Console.ERR, 0);
 
-		if(mode == 0) bfs_opt(xpregel);
-		else if(mode == 1) bfs_debug(xpregel);
-		else bfs_naive(xpregel);
+		if(args(0).equals("naive")) {
+			bfs_naive(xpregel);
+		}
+		else if(args(0).equals("opt")) {
+			bfs_opt(xpregel);
+		}
+		else if(args(0).equals("combine")) {
+			bfs_combine(xpregel);
+		}
+		else if(args(0).equals("debug")) {
+			bfs_debug(xpregel);
+		}
+		else {
+			throw new IllegalArgumentException("Unknown version parameter :" + args(0));
+		}
 		
-		val end_time = System.currentTimeMillis();
-		
-		val bfs_time = end_time - start_time;
-		val gteps = (1L << scale) * 16.0 / bfs_time / 1000000000.0;
-		Console.OUT.println("Finish after = " + bfs_time + " ms (" + gteps + " GTEPS)");
+		bufferedPrintln("# of edges: " + numEdges);
 
 		xpregel.once((ctx :VertexContext[Long, Byte, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
-		val pred = xpregel.stealOutput[Long]();
-		CSV.write("pred-%d", new NamedDistData(["bfs pred" as String], [pred as Any]),true);
+		val result = xpregel.stealOutput[Long]();
 		
-		Console.OUT.println("Finish application");
-		return true;
+		sw.lap("Retrieve output");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Retrieve Output:"); }
+		
+		if(args(1).equals("write")) {
+			CSV.write(args(2), new NamedDistData(["bfstree" as String], [result as Any]), true);
+			return true;
+		}
+		else if(args(1).equals("check")) {
+			return checkResult[Long](result, args(2), 0L);
+		}
+		else {
+			throw new IllegalArgumentException("Unknown command :" + args(1));
+		}
 	}
 }

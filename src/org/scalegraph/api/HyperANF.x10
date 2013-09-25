@@ -78,21 +78,20 @@ public class HyperANF {
 	}
 	
 	
-	private static def execute(param :HyperANF, graph:Graph, matrix :DistSparseMatrix[Double]) {
+	private static def execute(param :HyperANF, matrix :DistSparseMatrix[Double]) {
 
 		val team = param.team;
 		val niter = param.niter;
 		
 		val blockLength = 3L;
 
-		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
-		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
-		val edgeValue = graph.createDistAttribute[Double](csr, false, "weight");
-		
-		
+//		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+//		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
+		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
 		xpregel.updateInEdge();
 		
-		val N:Long = graph.numberOfVertices();
+//		val N:Long = graph.numberOfVertices();
+		val N:Long = xpregel.size();
 		val B = 7;
 		val M = 1<<B;
 
@@ -173,10 +172,8 @@ public class HyperANF {
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
-	public def execute(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double]{
-		//= execute(this, matrix);
-		throw new UnsupportedOperationException();
-	}
+	public def execute(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double] = execute(this, matrix);
+	
 	
 	/** Run the calculation of HyperANF.
 	 * @param g The graph object. 
@@ -187,7 +184,7 @@ public class HyperANF {
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, true, true);
-		return execute(this,g,matrix);	
+		return execute(matrix);	
 	}
 
 	// The algorithm interface also needs two helper methods like this.
@@ -204,9 +201,7 @@ public class HyperANF {
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
-	public static def run(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double]{
-		throw new UnsupportedOperationException();
-		//new StronglyConnectedComponent().execute(matrix);
-	}
+	public static def run(matrix :DistSparseMatrix[Double]) :MemoryChunk[Double] = 
+		new HyperANF().execute(matrix);
 
 }

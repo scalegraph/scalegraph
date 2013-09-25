@@ -16,6 +16,7 @@ import x10.util.Team;
 import x10.util.ArrayList;
 import x10.util.HashMap;
 
+import org.scalegraph.Config;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MathAppend;
@@ -30,6 +31,10 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph.VertexType;
 import org.scalegraph.graph.EdgeList;
+import x10.compiler.Ifdef;
+import x10.compiler.Uninitialized;
+import org.scalegraph.util.ProfilingDB;
+import org.scalegraph.util.StopWatch;
 
 public final class MinimumSpanningTreeImpl {
         
@@ -79,13 +84,16 @@ public final class MinimumSpanningTreeImpl {
             w = w_;
         }
     }
-	
+        
 	public static def run(csr: DistSparseMatrix[Double]): Graph {
 	    val team = csr.dist().allTeam();
 	    val xpregel = XPregelGraph.make[VertexValue, Double](csr);
 		
-		xpregel.updateInEdge();
+	//	xpregel.updateInEdge();
 		
+		val sw = Config.get().stopWatch();
+		sw.start();
+
 		// Phase I: Create edge table
 		xpregel.iterate[EdgeInfo,Double]((ctx :VertexContext[VertexValue, Double, EdgeInfo, Double], messages :MemoryChunk[EdgeInfo]) => {
 		    
@@ -106,15 +114,18 @@ public final class MinimumSpanningTreeImpl {
 		    }
 		    ctx.voteToHalt();
 		},
-		(values :MemoryChunk[Double]) => {0D},
+		null,
 		(superstep :Int, aggVal :Double) => {
-			return false;
+			return true;
 		});
+
+		sw.lap("Create Edge Table");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Create Edge Table"); }
 		
 		var loop: Long = 0;
 		val numCom: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
 		do {
-		    
+		    val loop_ = loop;
 		    Console.OUT.println("\t\tLoop: " + loop);
 		    
 		    // Select minimum edge
@@ -171,11 +182,15 @@ public final class MinimumSpanningTreeImpl {
 		            ctx.voteToHalt();
 		        }
 		    },
-		    (values :MemoryChunk[Double]) => {0D},
+		    null,
 		    (superstep :Int, aggVal :Double) => {
-		        return false;
+		        if (here.id == 0) {
+		            sw.lap("Loop: " + loop_ + ": " + (superstep == 0 ? "Find minimum edge" : "Select root"));
+		        }
+		        return superstep == 1;
 		    });
-		    
+
+		    @Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Select edge"); }
 		    
 		    // Connect components
 		    xpregel.iterate[Long,Double]((ctx :VertexContext[VertexValue, Double, Long, Double], messages :MemoryChunk[Long]) => {
@@ -215,15 +230,18 @@ public final class MinimumSpanningTreeImpl {
 		        // Console.OUT.println("\t\t" + ctx.id() + ": minimumRoot-> " + minimumRoot);
 		        ctx.voteToHalt();
 		    },
-		    (values :MemoryChunk[Double]) => {0D},
+		    null,
 		    (superstep :Int, aggVal :Double) => {
+		        if (here.id == 0) {
+		            sw.lap("Loop: " + loop_ + ": " + "Connect components at " + superstep);
+		        }
 		        return false;
 		    });
-		    
+
+		    @Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Connect components"); }
 		    
 		    // Pointer Jumping & Gathering
 		    xpregel.iterate[EdgeInfo,Long]((ctx :VertexContext[VertexValue, Double, EdgeInfo, Long], messages :MemoryChunk[EdgeInfo]) => {
-		        
 		        val v = ctx.value();
 		        if (ctx.superstep() == 0) {
 		            
@@ -260,6 +278,8 @@ public final class MinimumSpanningTreeImpl {
 		                // Not a root node
 		                // Console.OUT.println("----------------> Delete: " + ctx.id());
 		                ctx.setVertexShouldBeActive(false);
+		                ctx.value().edgeTable = MemoryChunk.getNull[EdgeInfo]();
+		                ctx.value().incomingEdges = MemoryChunk.getNull[EdgeInfo]();
 		                ctx.voteToHalt();
 		            } else {
 		                for (i in messages.range()) {
@@ -279,13 +299,21 @@ public final class MinimumSpanningTreeImpl {
 		            numCom()() = aggVal;
 		            Console.OUT.println("\t\tAggr: " + aggVal);
 		        }
+		        if (here.id == 0) {
+		            sw.lap("Loop: " + loop_ + ": " + "Pointer Jumping & Gathering at " + superstep);
+		        }
 		        return false;
 		    }); 
+
+		    @Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Pointer Jumping & Gathering at "); }
+		    
 		    ++loop;
 		} while (numCom()() > 0);
 
 		val outSrc = xpregel.stealOutput[Long](0);
 		val outDst = xpregel.stealOutput[Long](1);
+		
+		sw.lap("Finished computing MST");
 		
 		// Create Graph with selected edges
 		return Graph.make(EdgeList(outSrc, outDst));

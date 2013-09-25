@@ -22,10 +22,13 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.EdgeList;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.io.impl.CSVWriter;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.MathAppend;
+import org.scalegraph.util.SString;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.tuple.Tuple2;
@@ -59,12 +62,18 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		//sw.next("output");
 		
 		//DistributedReader.write(outdir + "/outvec-%d.txt", result);
+		//val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
+		//CSVWriter.write(team, outputPath, namedDistData, true);
 		
-		//sw.next("validation");
+		sw.next("normalized cut");
 		
 		//val W = g.createDistSparseMatrix[Double](dist, "weight", false, false);
 		//val ncut = normalizedCut(W, result, numCluster);
 		//Console.OUT.println("ncut = " + ncut);
+		
+		sw.next("validation");
+		
+		checkResult[Int](result, outputPath, 0);
 		
 		sw.end();
 		sw.print();
@@ -169,26 +178,6 @@ final class SpectralClusteringTest extends AlgorithmTest {
 	
 	static def printIdStruct(ids:org.scalegraph.graph.id.IdStruct) : void {
 		Console.OUT.println("[" + ids.lgl + ", " + ids.lgc + ", " + ids.lgr + "]");
-	}
-	
-	static def split[T](team : Team, dmc : DistMemoryChunk[T]) : Tuple2[DistMemoryChunk[T], DistMemoryChunk[T]] {
-		val src = new DistMemoryChunk[T](team.placeGroup(), () => {
-			val dmc_ = dmc();
-			val mc = new MemoryChunk[T](dmc_.size() / 2);
-			for(i in 0..(mc.size() - 1)) {
-				mc(i) = dmc_(i * 2);
-			}
-			mc
-		});
-		val dst = new DistMemoryChunk[T](team.placeGroup(), () => {
-			val dmc_ = dmc();
-			val mc = new MemoryChunk[T](dmc_.size() / 2);
-			for(i in 0..(mc.size() - 1)) {
-				mc(i) = dmc_(i * 2 + 1);
-			}
-			mc
-		});
-		return Tuple2[DistMemoryChunk[T], DistMemoryChunk[T]](src, dst);
 	}
 }
 

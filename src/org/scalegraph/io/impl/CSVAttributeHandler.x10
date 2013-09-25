@@ -168,6 +168,12 @@ public class CSVAttributeHandler {
 			val typedOutBuf = outBuf as GrowableMemory[SString];
 			nativeParseElements(elemPtrs, lines, typedOutBuf, doubleQuoated);
 		}
+		public def makeStringClosure(any : Any) :(sb :SStringBuilder, idx :Long) => void {
+			val dmc = any as DistMemoryChunk[SString];
+			val mc = dmc();
+			return (sb :SStringBuilder, idx :Long) => { sb.add('\"'); sb.add(mc(idx)); sb.add('\"'); };
+		}
+		
 	}
 	
 	public static def create(typeId :Int, doubleQuoated :Boolean) :CSVAttributeHandler {

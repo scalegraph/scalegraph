@@ -110,7 +110,8 @@ public:
 					next = ptr + 1;
 					return ;
 				}
-				if(*ptr >= 0x20) {
+//				if(*ptr >= 0x20) {
+				if(*ptr >= 0x2d) {
 					corrupted = true;
 				}
 			}
@@ -443,7 +444,8 @@ template <> x10_double strtot<x10_double>(const char* str, char **endptr) {
 template <> x10_char strtot<x10_char>(const char* str, char **endptr) {
 	x10_int r = strtol(str, endptr, 16);
 	if(r != (x10_short) r) errno = ERANGE;
-	return x10_char(r);
+	//to do (utf-8)
+	return x10_char(str[0]);
 }
 
 template <typename T>
@@ -463,6 +465,7 @@ void CSVParseElements(x10_byte** elemPtrs, int lines, GrowableMemory<T>* outBuf)
 			}
 			if(*endptr != '\0') {
 				printf("Error: CSV Parser: Format error.\n");
+				printf("endprt:%c",*endptr);
 			}
 		}
 	}

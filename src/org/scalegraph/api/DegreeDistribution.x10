@@ -107,7 +107,7 @@ final public class DegreeDistribution {
         val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
         sw.lap("Graph construction");
         val result = run[Long](columnDistGraph);
-        sw.lap("Degree distribution calculation");
+        sw.lap("Degree distribution calculation (mode = " + m +")");
         
         // delete graph
         columnDistGraph.del();
@@ -118,7 +118,7 @@ final public class DegreeDistribution {
     
     // Interface between API and Impl
     @Inline
-    private static def run[T](matrix :DistSparseMatrix[T]): DistMemoryChunk[Long] {
+    public static def run[T](matrix :DistSparseMatrix[T]): DistMemoryChunk[Long] {
         return DegreeDistImpl.degreeDistribution[T](matrix);
     }
 }
