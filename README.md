@@ -19,6 +19,7 @@
 * degree distribution
 * bitmap structure
 * DistributedReader.read() accepts type parameter
+
 ### SX10
 * Add FINISH_NONE annotation used for enclosing nested "at" statement (i.e., "at" statement within "at" statement)
 * Team.WORLD initialized only on the FIRST_PLACE
