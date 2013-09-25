@@ -8,20 +8,23 @@
  * 
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
+#include <x10aux/config.h>
 
+#include <x10/lang/String.h>
+#include <x10/io/FileNotFoundException.h>
+#include <x10/io/IOException.h>
+#include <x10/lang/IllegalArgumentException.h>
+
+#include <org/scalegraph/util/SString.h>
+#include <org/scalegraph/util/MemoryChunk.h>
+
+#include <org/scalegraph/io/NativeFile.h>
 
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
-#include <x10aux/config.h>
-
-#include <x10/io/FileNotFoundException.h>
-#include <x10/io/IOException.h>
-#include <x10/lang/IllegalArgumentException.h>
-
-#include "org/scalegraph/io/NativeFile.h"
+#include <errno.h>
 
 namespace org { namespace scalegraph { namespace io {
 
@@ -30,13 +33,13 @@ using ::x10::io::FileNotFoundException;
 using ::x10::io::IOException;
 using ::x10::lang::IllegalArgumentException;
 
-NativeFile NativeFile::_make(x10::lang::String* name, int  fileMode, int fileAccess) {
+NativeFile NativeFile::_make(org::scalegraph::util::SString name, int  fileMode, int fileAccess) {
 	NativeFile ret;
 	ret._constructor(name, fileMode, fileAccess);
 	return ret;
 }
 
-void NativeFile::_constructor (x10::lang::String* name, int  fileMode, int fileAccess) {
+void NativeFile::_constructor (org::scalegraph::util::SString name, int  fileMode, int fileAccess) {
 	int flags = 0;
 	switch(fileAccess) {
 	case 0: // Read
@@ -73,9 +76,10 @@ void NativeFile::_constructor (x10::lang::String* name, int  fileMode, int fileA
 	default:
 		x10aux::throwException(IllegalArgumentException::_make(String::Lit("FileMode is out of range.")));
 	}
-	FMGL(fd) = ::open(name->c_str(), flags, 0666);
+	FMGL(fd) = ::open((char*)name->c_str(), flags, 0666);
 	if (FMGL(fd) == -1)
-		x10aux::throwException(FileNotFoundException::_make(name));
+		x10aux::throwException(FileNotFoundException::_make(String::__plus(
+				String::__plus(name->toString(), x10aux::makeStringLit(" -> ERRNO: ")), (x10_int)errno)));
 }
 
 void NativeFile::close() {

@@ -14,27 +14,40 @@ package test;
 import x10.util.Team;
 import x10.util.Timer;
 
+import org.scalegraph.test.STest;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.blas.GIMV;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.DistSparseMatrix;
-import org.scalegraph.graph.Attribute;
-import org.scalegraph.generator.GraphGenerator;
-import org.scalegraph.gimv.GIMV;
+import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.fileread.DistributedReader;
 
-public class GIMVPageRank {
+final class GIMVPageRank extends STest {
+	public static def main(args: Array[String](1)) {
+		new GIMVPageRank().execute(args);
+	}
+
+	public def run(args: Array[String](1)): Boolean {
+		val par = [8 , 14, 18];
+		
+		for (i in 0..(par.size - 1)) {
+			entry(par(i));
+		}
+		
+		return true;
+	}
 
 	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
 
 		Console.OUT.println("Generating edge list ...");
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd, team);
-		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
+		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
 
 		Console.OUT.println("Creating graph object ...");
 
@@ -57,8 +70,8 @@ public class GIMVPageRank {
 
 		val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS);
 		// directed, outer
-		val columnDistGraph = g.constructDistSparseMatrix(distColumn, true, true);
-		val columnDistWeight = g.constructDistAttribute[Double](columnDistGraph, false, "weight");
+		val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, true, true);
+		val columnDistWeight = g.createDistAttribute[Double](columnDistGraph, false, "weight");
 
 		Console.OUT.println("Normalizing weights ...");
 
@@ -92,7 +105,7 @@ public class GIMVPageRank {
 	 * @param weight Edge weights
 	 * @param n The number of vertices in the graph.
 	 */
-	public static def pagerank(g :DistSparseMatrix, weight :DistMemoryChunk[Double], n :Long) {
+	public static def pagerank(g :DistSparseMatrix[Long], weight :DistMemoryChunk[Double], n :Long) {
 		val team = g.dist().allTeam();
 		val c = 0.85;
 		val map = (mij :Double , vj :Double) => c * mij * vj;
@@ -114,9 +127,8 @@ public class GIMVPageRank {
 		return vector;
 	}
 
-	public static def main(args: Array[String](1)) {
+	public def entry(scale: Int) {
 		val team = Team.WORLD;
-		val scale = Int.parse(args(0));
 		val g = generate_graph(scale, team, true);
 
 		// normalize weight //
@@ -125,8 +137,8 @@ public class GIMVPageRank {
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 
 		// directed, inner edge
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
-		val weight = g.constructDistAttribute[Double](csr, false, "normalized_weight");
+		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
+		val weight = g.createDistAttribute[Double](csr, false, "normalized_weight");
 
 		val vector = pagerank(csr, weight, g.numberOfVertices());
 
@@ -134,7 +146,7 @@ public class GIMVPageRank {
 
 		val att_names = g.getVertexAttribute[Long]("name");
 		val att_pagerank = g.getVertexAttribute[Double]("pagerank");
-		DistributedReader.write("output-%d.txt", team, att_names, att_pagerank);
+		DistributedReader.write("output-%d.txt", att_names, att_pagerank);
 
 		Console.OUT.println("Complete!!!");
 	}

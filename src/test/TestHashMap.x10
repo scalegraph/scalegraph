@@ -16,25 +16,25 @@ import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
-import org.scalegraph.util.LongIndexedMemoryChunk;
+
+import org.scalegraph.test.STest;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.StopWatch;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.HashMap;
 
-public class TestHashMap {
-    val n : Int;
-    val ne : Int;
+final class TestHashMap extends STest {
+	public static def main(args: Array[String](1)) {
+		new TestHashMap().execute(args);
+	}
+	
+    var n : Int;
+    var ne : Int;
 
     static nTest = 1;
 
     val test = false;
-
-    def this(n : Int, m : Int) {
-    	this.n = (n > 0) ? n :  2000000;
-    	this.ne = (m > 0) ?  m : 400000;
-    }
 
     def benchParPut() {
         Console.OUT.printf("%d, %d\n", n, ne);
@@ -237,10 +237,10 @@ public class TestHashMap {
             ks(i) = l;
             vs(i) = l;
         }
-        sw.start();
+ //       sw.start();
         t.put(ks, vs);
-        sw.stop();
-        sw.print("run5");
+//        sw.stop();
+ //       sw.print("run5");
 
         for (i in 0..(e - 1)) {
             ks(i) = r.nextLong();
@@ -256,19 +256,20 @@ public class TestHashMap {
         }
     }
 
-    public static def main(args:Array[String](1)) {
-        val n = (args.size > 0) ? Int.parse(args(0)) : -1;
-        val m = (args.size > 0) ? Int.parse(args(1)) : -1;
+    public def run(args: Array[String](1)): Boolean {
+    	n = (args.size > 0) ? Int.parse(args(0)) : -1;
+    	ne = (args.size > 0) ? Int.parse(args(1)) : -1;
+        
+        benchSeqPut();
+        benchParPut();
+        benchGet();
 
-        val test = new TestHashMap(n, m);
-        test.benchSeqPut();
-        test.benchParPut();
-        test.benchGet();
-
-        test.run3();
-        test.run4();
-        test.run5();
-        test.runNewKeys();
-        test.benchNewKeys();
+        run3();
+        run4();
+        run5();
+        runNewKeys();
+        benchNewKeys();
+        
+        return true;
     }
 }

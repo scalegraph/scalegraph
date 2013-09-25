@@ -25,9 +25,9 @@ import x10.util.Team;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
@@ -51,11 +51,11 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     private val lgc: Int;
     private val lgr: Int;
     private val role: Int;
-    private val localGraph: SparseMatrix;
+    private val localGraph: SparseMatrix[Long];
     
     public static class LocalState {
         // 1D CSR graph
-        val _distSparseMatrix: DistSparseMatrix;
+        val _distSparseMatrix: DistSparseMatrix[Long];
         
         val _source: Cell[Vertex];
         val _queues: IndexedMemoryChunk[Bitmap2];
@@ -83,7 +83,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         
         val _handler: LsBFSHandler;
         
-        protected def this(dsm: DistSparseMatrix,
+        protected def this(dsm: DistSparseMatrix[Long],
                            buffSize: Int,
                            h: LsBFSHandler,
                            src: Long) {
@@ -166,7 +166,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
      * @param h handler for handling event when visit a node
      * @param source source vertex 
      */
-    public static def make(csr: DistSparseMatrix, h: LsBFSHandler, source: Vertex) {
+    public static def make(csr: DistSparseMatrix[Long], h: LsBFSHandler, source: Vertex) {
         val team = csr.dist().allTeam();
         val places = team.placeGroup();
         // Create local state for LsBfs on each place in team

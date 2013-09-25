@@ -11,22 +11,24 @@
 
 package test;
 
-
 import x10.util.Team;
 
+import org.scalegraph.test.STest;
+import org.scalegraph.Config;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.id.Type;
+import org.scalegraph.io.CSV;
 import org.scalegraph.graph.Graph;
-
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
-
-
 import org.scalegraph.util.random.Random;
 
-
-public class HyperANF_Pregel {
+final class HyperANF_Pregel extends STest {
+	public static def main(args: Array[String](1)) {
+		new HyperANF_Pregel().execute(args);
+	}
+	
 	public static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
 		var Z:Double = 0.0;
 		val M:Double = counter.size();
@@ -58,44 +60,27 @@ public class HyperANF_Pregel {
 		
 	}
 	
-	
-	
-	public static def main(args:Array[String](1)) {
-		val team = Team.WORLD;	
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					1.0
-			);
-		};
+	public def run(args: Array[String](1)): Boolean {
 		
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
+		val g = Graph.make(CSV.read(args(0), 
+				[Type.Long as Int, Type.Long, Type.None],
+				["source", "target", "weight"]));
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
 		
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
 		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
+		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](
+				g.createDistSparseMatrix[Double](Config.get().dist1d(), "weight", true, true));
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
-
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](team, csr);
-		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
-		xpregel.initEdgeValue[Double](edgeValue, (value : Double) => value);
 		
 		val start_time = System.currentTimeMillis();
 		
 		xpregel.updateInEdge();
-		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
+		
+		val niter = 30;
 		
 		val N:Long = g.numberOfVertices();
 		val B = 7;
@@ -105,57 +90,71 @@ public class HyperANF_Pregel {
 		if(B==5) alpha = 0.697;
 		else if(B==6) alpha = 0.769;
 		else alpha = 0.7213 / (1.00+1.073/M);
+		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
-		
-//‰Šú‰»‚³‚ê‚Ä‚¢‚È‚¢‚¯‚Ç‘åä•vH
-			val counter = ctx.value() ;
-			if(ctx.superstep()==0) {
-				//initŒn‚É‚±‚Ì‚ ‚½‚è‚Ìˆ—‚ª‚È‚©‚Á‚½‚Í‚¸‚È‚Ì‚Å’Ç‰Á
-//				counter = new MemoryChunk[Byte](M);
-				for(i in counter.range()) counter(i) = 0;
-				
-				val rand = new Random(ctx.realId(ctx.id()), 1000);
-				val pos = rand.nextLong()%M;
-				var num:Long = rand.nextLong()+1;
-				var cnt:Byte = 0;
-				while(num%2==0L) {
-					num /= 2;
-					cnt = cnt+1;
-				}
-				counter(pos) =  cnt;
-				
-			}
-			else {
-//				counter = ctx.value();
-				//maxim massages
-				for(i in messages.range()) {
-					for(j in counter.range()) {
-						counter(j) = MathAppend.max(messages(i)(j) , counter(j));
-					}
-				}
-				
-			}
+					bufferedPrintln("V[" + ctx.realId() + "] " + messages.size());
 
-			if (here.id == 0 && ctx.id() == 0L) {
-				Console.OUT.println("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
-			}
-			
-			ctx.sendMessageToAllNeighbors(counter);
-			
-			val retval = calcSize(counter,alpha);
-			
-			ctx.aggregate(retval);
-		},
+					var counterB:MemoryChunk[Byte];
+					if(ctx.superstep()==0) {
+						val counterA = new MemoryChunk[Byte](M);
+						for(i in counterA.range()) counterA(i) = 0;
+						val rand = new Random(ctx.realId(ctx.id()), 1000);
+						val pos = rand.nextLong()%M;
+						var num:Long = rand.nextLong()+1;
+						var cnt:Byte = 0;
+						while(num%2==0L) {
+							num /= 2;
+							cnt = cnt+1;
+						}
+						counterA(pos) =  cnt;
+						counterB = counterA;
+					}
+					else {
+						val counterA = ctx.value();
+						//maxim massages
+						for(i in messages.range()) {
+							for(j in counterA.range()) {
+								counterA(j) = MathAppend.max(messages(i)(j) , counterA(j));
+							}
+						}
+						counterB =counterA;
+
+					}
+
+					if (here.id == 0 && ctx.id() == 0L) {
+						Console.OUT.println("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
+					}
+					
+					ctx.sendMessageToAllNeighbors(counterB);
+					
+					val retval = calcSize(counterB,alpha);
+					//			Console.OUT.println("retval"  + ctx.realId() + " " + retval);
+					ctx.aggregate(retval);
+					ctx.setValue(counterB);
+					
+				},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
-		(superstep :Int, aggVal :Double) => (superstep >= 30) );
-		
+		(superstep :Int, aggVal :Double) => {
+			flush();
+			
+			if(results.home==here) {
+				val md:MemoryChunk[Double] = results()();
+				md(superstep) = aggVal;
+				results()() = md;
+			}
+			return superstep >= niter;
+		});
+		var iter:Int=0;
+		while(iter<niter) {
+				Console.OUT.println( (iter+1) + " "+ results()()(iter));
+				iter++;
+		}
+	
 		val end_time = System.currentTimeMillis();
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));
-		Console.OUT.println("Finish application");	
+		Console.OUT.println("Finish application");
+		return true;
 	}
 }
-
-
-

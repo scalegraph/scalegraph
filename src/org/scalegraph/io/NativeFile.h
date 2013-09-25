@@ -13,9 +13,17 @@
 #define __ORG_SCALEGRAPH_IO_NATIVEFILE_H
 
 #include <x10rt.h>
-#include <x10/lang/String.h>
 
-#include "org/scalegraph/util/MemoryChunk.h"
+
+#define X10_LANG_STRING_H_NODEPS
+#include <x10/lang/String.h>
+#undef X10_LANG_STRING_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
+#include <org/scalegraph/util/SString.h>
+#undef ORG_SCALEGRAPH_UTIL_SSTRING_H_NODEPS
+#define ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_H_NODEPS
+#include <org/scalegraph/util/MemoryChunk.h>
+#undef ORG_SCALEGRAPH_UTIL_MEMORYCHUNK_H_NODEPS
 
 namespace org { namespace scalegraph { namespace io {
 
@@ -29,8 +37,8 @@ public:
 	explicit NativeFile(int fd_) : FMGL(fd)(fd_) { }
 	NativeFile() : FMGL(fd)(-1) { }
 
-	static NativeFile _make(x10::lang::String* name, int  fileMode, int fileAccess);
-	void _constructor (x10::lang::String* name, int  fileMode, int fileAccess);
+	static NativeFile _make(org::scalegraph::util::SString name, int  fileMode, int fileAccess);
+	void _constructor (org::scalegraph::util::SString name, int  fileMode, int fileAccess);
 
 	NativeFile* operator->() { return this; }
 

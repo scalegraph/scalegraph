@@ -1,0 +1,8 @@
+/temp/Error.x10:20: Could not find root
+/temp/Error.x10:20: Could not find field or local variable "root".
+/temp/Error.x10:5-386: Public type must be declared in .x10 file.    
+     	 Type: test.Test    
+     	 .x10 file: Test
+/temp/Error.x10:20: Local variable must be initialized before the class declaration.    
+     	 Local variable: root
+4 errors.

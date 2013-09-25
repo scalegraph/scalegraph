@@ -12,18 +12,26 @@
 package test;
 
 import x10.util.Team;
+import x10.util.Timer;
 import x10.compiler.Native;
 
-//import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.test.STest;
+import org.scalegraph.Config;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
+import org.scalegraph.util.random.Random;
 import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
 
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class SCCDebug {
+final class SCCDebug extends STest {
+	public static def main(args: Array[String](1)) {
+		new SCCDebug().execute(args);
+	}
+	
 	private static struct SCCVertex {
 		val leaderId:Long; 
 		val front:Boolean; 
@@ -46,6 +54,7 @@ public class SCCDebug {
 
 		@Native("c++", "(#this)->FMGL(dir) = #v")
 		native def setDir(v :Boolean) :void;
+
 	}
 
 	private static struct MessageB {
@@ -68,33 +77,57 @@ public class SCCDebug {
 		}
 	}
 	
-	public static def main(args:Array[String](1)) {
+	public static def generate_graph(scale :Int, team :Team, useTranslator :Boolean) : Graph{self.vertexType==Graph.VertexType.Long} {
+
+	    Console.OUT.println("Generating edge list ...");
+	    val rnd = new Random(2, 3);
+	    val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+	    val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+
+	    Console.OUT.println("Creating graph object ...");
+
+	    val g = new Graph(team, Graph.VertexType.Long, useTranslator);
+	    val start = Timer.nanoTime();
+	    g.addEdges(edgelist);
+	    Console.OUT.printf("addEdges: time = %g\n", (Timer.nanoTime() - start));
+	    g.setEdgeAttribute[Double]("weight", weigh);
+
+	    // check results
+	    Console.OUT.println("# of Verteices: " + g.numberOfVertices() + ", # of Edges: " + g.numberOfEdges());
+
+	    return g;
+	}
+
+	public def run(args :Array[String](1)): Boolean {
 		val team = Team.WORLD;	
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					1.0
-			);
-		};
+		// val inputFormat = (s:String) => {
+		// 	val elements = s.split(",");
+		// 	return new Tuple3[Long,Long,Double](
+		// 			Long.parse(elements(0)),
+		// 			Long.parse(elements(1)),
+		// 			1.0
+		// 	);
+		// };
+		// 
+		// val start_read_time = System.currentTimeMillis();
+		// val graphData = DistributedReader.read(team,args,inputFormat);
+		// val end_read_time = System.currentTimeMillis();
+		// Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
+		// 
+		// val edgeList = graphData.get1();
+		// val weigh = graphData.get2();
+		// val g = new Graph(team,Graph.VertexType.Long,false);
+		// val start_init_graph = System.currentTimeMillis();
+		// g.addEdges(edgeList.raw(team.placeGroup()));
+		// g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
+		// val end_init_graph = System.currentTimeMillis();
+		// Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
+		val scale = 14;
+		val g = generate_graph(scale, team, true);
 		
-		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(team,args,inputFormat);
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-		
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
-		
-		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[SCCVertex, Long](team, csr);
+//		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
+		val xpregel = XPregelGraph.make[SCCVertex, Long](
+				g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true));
 //		val edgeValue = g.constructDistAttribute[Double](csr, false, "edgevalue");
 		val start_time = System.currentTimeMillis();
 		xpregel.updateInEdge();
@@ -220,41 +253,18 @@ public class SCCDebug {
 					val newInfo = new SCCVertex(messages(0).id ,false, false, ctx.id());
 					ctx.setValue(newInfo);
 					ctx.setVertexShouldBeActive(true);
-				/*	
-					val mes = new MessageB(true, true, ctx.value().leaderId);
-					for(i in ctx.outEdgesId().range()) 
-						ctx.sendMessage(ctx.outEdgesId()(i), mes);
-					for(i in ctx.inEdgesId().range())
-						ctx.sendMessage(ctx.inEdgesId()(i),mes);
-				*/
 				}
-				
-				//最も影響が大きそうな、隣に同じ辺がないようなものをどうにか取り除く処理を行う
-				//BFS処理を行う
-				
-				// if(ctx.superstep()==3 && !ctx.value().front && !ctx.value().back) {
-					// var hasEdge:Boolean = false;
-					// for(i in messages.range()) {
-						// if(messages(i).id == ctx.value().leaderId)
-							// hasEdge = true;
-					// }
-					// //!hasEdgeが実行される <=> ctx.revive()されている頂点 で同じleaderの隣接点なし<=> 
-					// 次生きていていて隣接点はない
-					// if(!hasEdge) {
-						// val newInfo = new SCCVertex(ctx.id(), true, true, -1L);
-						// ctx.setValue(newInfo);
-					// }
-					// ctx.voteToHalt();
-				// } 
-				
+
 				 
 			},
 			//aggregateは多分使わないので適当なことを書いた
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
 			//終了条件は、最終的には全部のセルが止まった状態になればよい
 			(superstep :Int, aggVal :Long) => (superstep >= 2) );
+
 		
 			//PhaseC : 連結成分が異なるところを分けるための処理
+
 			xpregel.iterate[MessageC, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageC, Long ], messages :MemoryChunk[MessageC] ) => {
 				
@@ -292,5 +302,7 @@ public class SCCDebug {
 			
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");	
+		
+		return true;
 	}	
 }	

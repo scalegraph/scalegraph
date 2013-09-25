@@ -15,34 +15,51 @@ import x10.io.File;
 import x10.util.Team;
 import x10.util.Timer;
 
+import org.scalegraph.test.STest;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.*;
-
 import org.scalegraph.fileread.DistributedReader;
-
 import org.scalegraph.io.GraphHeader;
 import org.scalegraph.io.NamedDistData;
-// import org.scalegraph.io.Import;
 import org.scalegraph.io.fbio.FBIOSupport;
 import org.scalegraph.io.fbio.AttributeHandler;
 
-public class TestBinaryIO {
+final class TestBinaryIO extends STest {
+	public static def main(args: Array[String](1)) {
+		new TestBinaryIO().execute(args);
+	}
 	
-	public static def main(args : Array[String](1)) {
-		if(args(0).equals("read")) {
-			read(args, false);
-		} else if(args(0).equals("readtest")) {
-			read(args, true);
-		} else if(args(0).equals("write")) {
-			write(args);
-		} else if(args(0).equals("writetest")) {
-			writeTestData(args);
-		} else if(args(0).equals("import")) {
-			importFromEdgeList(args);
-		} else {
-			throw new IllegalArgumentException();
-		}
+    public static def entry(args : Array[String](1)) {
+        if(args(0).equals("read")) {
+            read(args, false);
+        } else if(args(0).equals("readtest")) {
+            read(args, true);
+        } else if(args(0).equals("write")) {
+            write(args);
+        } else if(args(0).equals("writetest")) {
+            writeTestData(args);
+        } else if(args(0).equals("import")) {
+            importFromEdgeList(args);
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+    
+    public def run(args :Array[String](1)): Boolean {
+	    Console.OUT.println("\nTest Reading");
+	    val p1 = ["read","/nfs/data1/ogata/scalegraph/kronecker", "4"];
+	    entry(p1);
+	    
+	    Console.OUT.println("\nTest Writing");
+	    val p2 = ["write","/nfs/data0/testdata/RMAT_SCALE_20", "/nfs/data0/testdata/write_temp/f1", "true"];
+	    entry(p2);
+	    
+	    Console.OUT.println("\nTest importing");
+	    val p3 = ["import","/nfs/data0/testdata/RMAT_SCALE_20", "/nfs/data0/testdata/write_temp/", " ", "2097152", "true"];
+	    entry(p3);
+	    	    
+	    return true;
 	}
 	
 	
@@ -82,7 +99,7 @@ public class TestBinaryIO {
 			fileList = new Array[String](1, readFileName);
 		}
 		
-		val tuple2 = DistributedReader.read(team, fileList, (line:String) => {
+		val tuple2 = DistributedReader.read(fileList, (line:String) => {
 			val list = line.split(" ");
 			Tuple3[Long, Long, Double](Long.parse(list(0)), Long.parse(list(1)), 1.0)
 		});

@@ -11,14 +11,16 @@
 
 package org.scalegraph.xpregel;
 
+import x10.compiler.Ifdef;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.util.Parallel;
+import org.scalegraph.Config;
 
-class EdgeProvider [E] {E haszero} {
-	// modified out edges
+class EdgeProvider [E]/* {E haszero} */{
+	private static type XP = org.scalegraph.id.ProfilingID.XPregel; 
 	// srcid, offset
 	val mDiffOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();
 	val mDiffVertex :GrowableMemory[Long] = new GrowableMemory[Long]();
@@ -26,7 +28,6 @@ class EdgeProvider [E] {E haszero} {
 	
 	var mEdgeChanged :Boolean = false;
 	var mDiffStartOffset :Long = 0;
-	
 	var mOutOffset :MemoryChunk[Long];
 	var mOutVertex :MemoryChunk[Long];
 	var mOutValue :MemoryChunk[E];
@@ -44,7 +45,8 @@ class EdgeProvider [E] {E haszero} {
 		mInValue = inEdge.value;
 	}
 	
-	static def updateOutEdge[E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) {E haszero} {
+	static def updateOutEdge[E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) /*{E haszero}*/ {
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		var changed :Boolean = false;
 		for(i in list.range()) {
 			if(list(i).mDiffOffset.size() > 0) {
@@ -55,16 +57,16 @@ class EdgeProvider [E] {E haszero} {
 		
 		val numThreads = Runtime.NTHREADS;
 		val numVertexes = ids.numberOfLocalVertexes();
-		val offsetPerThread = new MemoryChunk[Long](numThreads + 1, 0L);
+		val offsetPerThread = new MemoryChunk[Long](numThreads + 1, 0);
+		offsetPerThread(0) = 0L;
+		
 		val outOffset = outEdge.offsets;
 		
-		Parallel.iter(0..(numVertexes-1), (tid :Long, r :LongRange) => {
+		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
-			var diffIndex :Long = 0;
-			var numEdges :Long = 0;
-			
-			e.mDiffOffset.add(new Tuple2[Long, Long](0, e.mDiffVertex.size()));
-			
+			var diffIndex :Long = 0L;
+			var numEdges :Long = 0L;
+			e.mDiffOffset.add(new Tuple2[Long, Long](-1L, e.mDiffVertex.size()));
 			val diffOffset = e.mDiffOffset.raw();
 			
 			for(srcid in r) {
@@ -88,8 +90,9 @@ class EdgeProvider [E] {E haszero} {
 		val newVertex = new MemoryChunk[Long](newNumEdges);
 		val newValue = new MemoryChunk[E](newNumEdges);
 		newOffset(0) = 0L;
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_1); }
 		
-		Parallel.iter(0..(numVertexes-1), (tid :Long, r :LongRange) => {
+		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
 			var diffIndex :Long = 0;
 			var offset :Long = offsetPerThread(tid);
@@ -97,7 +100,7 @@ class EdgeProvider [E] {E haszero} {
 			val diffOffset = e.mDiffOffset.raw();
 			val diffVertex = e.mDiffVertex.raw();
 			val diffValue = e.mDiffValue.raw();
-			val outOffset = e.mOutOffset;
+		//	val outOffset = e.mOutOffset;
 			val outVertex = e.mOutVertex;
 			val outValue = e.mOutValue;
 			
@@ -110,22 +113,36 @@ class EdgeProvider [E] {E haszero} {
 					offset += length;
 					++diffIndex;
 				}
-				else {
-					val start = outOffset(diffIndex);
-					val length = outOffset(diffIndex + 1) - start;
+				else{
+					val start = outOffset(srcid);
+					val length = outOffset(srcid + 1) - start;
 					MemoryChunk.copy(outVertex, start, newVertex, offset, length);
 					MemoryChunk.copy(outValue, start, newValue, offset, length);
 					offset += length;
 				}
 				newOffset(srcid + 1) = offset;
 			}
+			e.mOutOffset = newOffset;
+			e.mOutVertex = newVertex;
+			e.mOutValue = newValue;
 			
 			assert newOffset(r.max + 1) == offsetPerThread(tid + 1);
+
 		});
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_2); }
 
 		outEdge.offsets = newOffset;
 		outEdge.vertexes = newVertex;
 		outEdge.value = newValue;
+		
+		for(tid in 0..(numThreads-1)) {
+			val e = list(tid);
+			e.mDiffOffset.clear();
+			e.mDiffVertex.clear();
+			e.mDiffValue.clear();
+			e.mDiffStartOffset = 0L;
+			e.mEdgeChanged = false;
+		}
 	}
 	
 	def fixModifiedEdges(srcid :Long) {
@@ -147,6 +164,8 @@ class EdgeProvider [E] {E haszero} {
 			val start = mOutOffset(srcid);
 			val length = mOutOffset(srcid + 1) - start;
 			return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
+					//kono sansyou no shikata wo surunara WorkerPlacegraph no mOutEdge:GraphEdge[E] wo
+					//each thread ni copy shita mono wo sansyou sureba iikiga suru
 					mOutVertex.subpart(start, length),
 					mOutValue.subpart(start, length));
 		}
@@ -187,6 +206,7 @@ class EdgeProvider [E] {E haszero} {
 	def inEdgesValue(srcid :Long) {
 		val start = mInOffset(srcid);
 		val length = mInOffset(srcid + 1) - start;
+//		Console.OUT.println("inEdgeValueRange"+start+" "+length);
 		return mInValue.subpart(start, length);
 	}
 	

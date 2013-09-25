@@ -18,6 +18,8 @@ import org.scalegraph.util.Bitmap;
 
 /**
  * Provides XPregel framework service for compute kernels. <br>
+ * This object is available only in the compute kernel.
+ * All public methods are thread-safe. <br>
  * The vertex id is processed in the mangled format,
  * we call <i>dst id format</i>, for optimization. You can get
  * the real vertex id with realId() method.
@@ -27,13 +29,13 @@ import org.scalegraph.util.Bitmap;
  * M: Message value type
  * A: Aggreator value type
  */
-public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A haszero } {
+public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
 
 	// messages
-	val mEOCMessages :MemoryChunk[MessageBuffer[M]];
+	val mUCCMessages :MemoryChunk[MessageBuffer[M]];
 	
 	// aggregate values
 	var mAggregatedValue :A;
@@ -41,15 +43,19 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 
 	var mSrcid :Long;
 	
+	// Output
+	val mOut :MemoryChunk[GrowableMemory[Int]];
+	
 	// statictics
 	var mNumActiveVertexes :Long = 0L;
-	var mVOSInputCount :Long = 0L;
+	var mBCSInputCount :Long = 0L;
 	
 	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
 		mWorker = worker;
 		mCtx = ctx;
 		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
-		mEOCMessages = mCtx.messageBuffer(tid);
+		mUCCMessages = mCtx.messageBuffer(tid);
+		mOut = worker.outBuffer(tid);
 	}
 	
 	/**
@@ -60,27 +66,27 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	/**
 	 * get the vertex id
 	 */
-	public def id() = mCtx.mStoD(mSrcid);
+	public def id() = mWorker.mStoD(mSrcid);
 	
 	/**
 	 * get real vertex id
 	 */
-	public def realId() = mCtx.mStoV(mSrcid);
+	public def realId() = mWorker.mStoV(mSrcid);
 
 	/**
 	 * get the minimum vertex id of the region assigned to the current place
 	 */
-	public def placeBaseVertexId() = mCtx.mStoD(0L);
+	public def placeBaseVertexId() = mWorker.mStoD(0L);
 	
 	/**
 	 * get real vertex id from dst id
 	 */
-	public def realId(id :Long) = mCtx.mDtoV(id);
+	public def realId(id :Long) = mWorker.mDtoV(id);
 	
 	/**
 	 * get dst id from read vertex id
 	 */
-	public def dstId(realId :Long) = mCtx.mVtoD(realId);
+	public def dstId(realId :Long) = mWorker.mVtoD(realId);
 	
 	/**
 	 * get the number of vertices of the graph
@@ -163,7 +169,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	public def sendMessage(id :Long, mes :M) {
 		val dstPlace = mCtx.mDtoV.c(id);
 		val srcId = mCtx.mDtoS(id);
-		val mesBuf = mEOCMessages(dstPlace);
+		val mesBuf = mUCCMessages(dstPlace);
 		mesBuf.messages.add(mes);
 		mesBuf.dstIds.add(srcId);
 	}
@@ -176,7 +182,7 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 		for(i in id.range()) {
 			val dstPlace = mCtx.mDtoV.c(id(i));
 			val srcId = mCtx.mDtoS(id(i));
-			val mesBuf = mEOCMessages(dstPlace);
+			val mesBuf = mUCCMessages(dstPlace);
 			mesBuf.messages.add(mes(i));
 			mesBuf.dstIds.add(srcId);
 		}
@@ -190,9 +196,9 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 */
 	public def sendMessageToAllNeighbors(mes :M) {
 		// TODO: handle multiple messages
-		++mVOSInputCount;
-		mCtx.mVOCHasMessage.set(mSrcid);
-		mCtx.mVOCMessages(mSrcid) = mes;
+		++mBCSInputCount;
+		mCtx.mBCCHasMessage.set(mSrcid);
+		mCtx.mBCCMessages(mSrcid) = mes;
 	}
 	
 	/**
@@ -220,6 +226,23 @@ public class VertexContext[V, E, M, A] {V haszero, E haszero, M haszero, A hasze
 	 * get the halted flag for the current vertex
 	 */
 	public def isHalted() = mWorker.mVertexActive(mSrcid);
+	
+	/**
+	 * This is equivalent to the call output(0, value).
+	 */
+	public def output[T](value :T) { output(0, value); }
+	
+	/**
+	 * Output the value with the specified slot.
+	 * @param index The slot which the value will be sent to.
+	 * @param value The output value.
+	 */
+	public def output[T](index :Int, value :T) {
+		// TODO: ensure the value type is same
+		assert (index < WorkerPlaceGraph.MAX_OUTPUT_NUMBER);
+		val outbuf = WorkerPlaceGraph.castTo[T](mOut(index));
+		outbuf.add(value);
+	}
 }
 
 

@@ -13,10 +13,14 @@ package org.scalegraph.graph.id;
 
 /**
  * ID Converter method collection for 2D distributions.
+ * 
+ * V : Real Vertex ID
+ * S : Source form ID
+ * D : Destination form ID
  */
-public class Twod {
+public final class Twod {
 	/** Vertex ID to Source ID Converter */
-	public static struct VtoS {
+	public static final struct VtoS {
 		val lgl :Int;
 		val lgsize :Int;
 		val rmask :Long;
@@ -34,7 +38,7 @@ public class Twod {
 	}
 
 	/** Vertex ID to Destination ID Converter */
-	public static struct VtoD {
+	public static final struct VtoD {
 		val lgr :Int;
 		val lgl :Int;
 		val lgsize :Int;
@@ -54,7 +58,7 @@ public class Twod {
 	}
 
 	/** Source ID to Vertex ID Converter */
-	public static struct StoV {
+	public static final struct StoV {
 		val cshifted :Long;
 		val lgl :Int;
 		val lgsize :Int;
@@ -74,7 +78,7 @@ public class Twod {
 	}
 
 	/** Source ID to Destination ID Converter */
-	public static struct StoD {
+	public static final struct StoD {
 		val cshiftedto :Long;
 		val lmask :Long;
 		
@@ -91,7 +95,7 @@ public class Twod {
 	}
 
 	/** Destination ID to Vertex ID Converter */
-	public static struct DtoV {
+	public static final struct DtoV {
 		val r :Int;
 		val lgr :Int;
 		val lgl :Int;
@@ -112,7 +116,7 @@ public class Twod {
 	}
 
 	/** Destination ID to Source ID Converter */
-	public static struct DtoS {
+	public static final struct DtoS {
 		val rshifted :Long;
 		val lmask :Long;
 		

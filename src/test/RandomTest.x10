@@ -11,20 +11,25 @@
 
 package test;
 
+import org.scalegraph.test.STest;
 import org.scalegraph.util.random.Random;
 
-public class RandomTest {
-
+class RandomTest extends STest {
 	public static def main(args: Array[String](1)) {
-		val t1 = new Random(1, 2);
+		new RandomTest().execute(args);
+	}
+	
+	public def run(args :Array[String](1)): Boolean {
+	    val t1 = new Random(1, 2);
 
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
-		Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    Console.OUT.println(t1.nextInt());
+	    return true;
 	}
 }

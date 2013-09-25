@@ -26,13 +26,15 @@ import x10.util.Team;
 
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.DistSparseMatrix;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.graph.SparseMatrix;
+import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Bitmap2;
+import org.scalegraph.Config;
+import x10.util.concurrent.AtomicDouble;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -54,11 +56,11 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     private val lgc: Int;
     private val lgr: Int;
     private val role: Int;
-    private val localGraph: SparseMatrix;
+    private val localGraph: SparseMatrix[Long];
     
     public static class LocalState {
         // 1D CSR graph
-        val _distSparseMatrix: DistSparseMatrix;
+        val _distSparseMatrix: DistSparseMatrix[Long];
         
         val _currentSource: Cell[Vertex];
         val _queues: IndexedMemoryChunk[Bitmap2];
@@ -119,9 +121,9 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _succBuf: Array[Array[ArrayList[Vertex]]];
         val _deltaBuf: Array[Array[ArrayList[Double]]];
         val _sigmaBuf: Array[Array[ArrayList[Long]]];
-        val _muBuf: Array[Array[ArrayList[Long]]];                
+        val _muBuf: Array[Array[ArrayList[Long]]];
         
-        protected def this(dsm: DistSparseMatrix,
+        protected def this(dsm: DistSparseMatrix[Long],
                            buffSize: Int,
                            nAllVerticesInG: Long,
                            nSrc: Long,
@@ -259,55 +261,55 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     @Native("c++", "__sync_add_and_fetch((#imc)->raw() + #index, #value)")
     private static native def add_and_fetch[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
     
-    /**
-     * Calculate exact betweenness centrality
-     * <p> 
-     * Note: Normalize factor - (N-1)*(N-2) for directed graph and (N-1)*(N-2)/2 for undirected graph
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param normalize normalize result
-     */
-    public static def calculate(g: Graph, directed: Boolean, attrName: String, normalize: Boolean): void {
-        val sourceRange = 0..(g.numberOfVertices() - 1);
-        run(g, directed, attrName, normalize, -1, null, sourceRange, false, true);
-    }
-    
-    /**
-     * Estimate betweenness centrality, the source vertices will be random selected to number of sources given
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param numSource the number of source vertices used to calculate betweenness centrality
-     * @param linearScale use linear-scaling technique
-     */
-    public static def estimate(g: Graph, directed: Boolean, attrName: String, numSource: Long, linearScale: Boolean): void {
-        run(g, directed, attrName, false, numSource, null, 0..(-1 as Long), linearScale, false);
-    }
-    
-    /**
-     * Estimate betweenness centrality
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param sources the array of source vertices to calculate betweenness centrality
-     * @param linearScale use linear-scaling technique
-     */
-    public static def estimate(g: Graph, directed: Boolean, attrName: String, sources: Array[Vertex], linearScale: Boolean): void {
-        run(g, directed, attrName, false, -1, sources, 0..(-1 as Long), linearScale, false);
-    }
-    
-    /**
-     * Estimate betweenness centrality
-     * @param g A graph to compute betweenness centrality
-     * @param directed how to treat directness of the graph, true - directed, false - directed
-     * @param attrName name of graph attribute to store betweenness centraltiy score
-     * @param sourceRange the range of source vertex ids to calculate betweenness centrality
-     * @param linearScale use linear-scaling technique
-     */
-    public static def estimate(g: Graph, directed: Boolean, attrName: String, sourceRange: LongRange, linearScale: Boolean): void {
-        run(g, directed, attrName, false, -1, null, sourceRange, linearScale, false);
-    }
+    // /**
+    //  * Calculate exact betweenness centrality
+    //  * <p> 
+    //  * Note: Normalize factor - (N-1)*(N-2) for directed graph and (N-1)*(N-2)/2 for undirected graph
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param normalize normalize result
+    //  */
+    // public static def calculate(g: Graph, directed: Boolean, attrName: String, normalize: Boolean): void {
+    //     val sourceRange = 0..(g.numberOfVertices() - 1);
+    //     run(g, directed, attrName, normalize, -1, null, sourceRange, false, true);
+    // }
+    // 
+    // /**
+    //  * Estimate betweenness centrality, the source vertices will be random selected to number of sources given
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param numSource the number of source vertices used to calculate betweenness centrality
+    //  * @param linearScale use linear-scaling technique
+    //  */
+    // public static def estimate(g: Graph, directed: Boolean, attrName: String, numSource: Long, linearScale: Boolean): void {
+    //     run(g, directed, attrName, false, numSource, null, 0..(-1 as Long), linearScale, false);
+    // }
+    // 
+    // /**
+    //  * Estimate betweenness centrality
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param sources the array of source vertices to calculate betweenness centrality
+    //  * @param linearScale use linear-scaling technique
+    //  */
+    // public static def estimate(g: Graph, directed: Boolean, attrName: String, sources: Array[Vertex], linearScale: Boolean): void {
+    //     run(g, directed, attrName, false, -1, sources, 0..(-1 as Long), linearScale, false);
+    // }
+    // 
+    // /**
+    //  * Estimate betweenness centrality
+    //  * @param g A graph to compute betweenness centrality
+    //  * @param directed how to treat directness of the graph, true - directed, false - directed
+    //  * @param attrName name of graph attribute to store betweenness centraltiy score
+    //  * @param sourceRange the range of source vertex ids to calculate betweenness centrality
+    //  * @param linearScale use linear-scaling technique
+    //  */
+    // public static def estimate(g: Graph, directed: Boolean, attrName: String, sourceRange: LongRange, linearScale: Boolean): void {
+    //     run(g, directed, attrName, false, -1, null, sourceRange, linearScale, false);
+    // }
     
     /**
      * Clear memory used by DistBetweennessCentrality
@@ -316,31 +318,40 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         // TODO: clear all reference
     }
 
-    private static def run(g: Graph, directed: Boolean, attrName: String, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
-        val team = g.team();
+    /* Should be used by designated API */
+    public static def run(csr: DistSparseMatrix[Long], numberOfVertices: Long, directed: Boolean, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
+        val team = csr.dist().allTeam();;
         val places = team.placeGroup();
         // Represent graph as CSR
-        val csr = g.constructDistSparseMatrix(
-                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
-                directed,
-                true);        
+        // val csr = g.createDistEdgeIndexMatrix(
+        //         Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
+        //         directed,
+        //         true);        
         // Create local state for BC on each place in team
         val transBufferSize = (1 << 10);
+        
+        // Workaround for init sources for exteral API
+        val N = numberOfVertices;
+        val numSource_ = isExactBc ? -1L: numSource;
+        val sources_ = isExactBc ? null: sources;
+        val sourceRange_ = isExactBc ? 0..(N - 1): sourceRange;
+        val stopWatch = Config.get().stopWatch();
+        stopWatch.lap("Graph construction");
         val localState = PlaceLocalHandle.make[LocalState](places, 
                 () => { 
                     return (new LocalState(csr,
                             transBufferSize,
-                            g.numberOfVertices(),
-                            numSource,
-                            sources,
-                            sourceRange,
+                            N,
+                            numSource_,
+                            sources_,
+                            sourceRange_,
                             normalize,
                             linearScale));
                 });
         val bc = new DistBetweennessCentrality(localState);
         bc.start();
         // Normalize result
-        val N = g.numberOfVertices();
+       
         if (normalize) {
             finish for (p in places) {
                 at (p) async {
@@ -371,18 +382,20 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 r(i) = localState()._score(i);
             return r;
         });
-        g.setVertexAttribute[Double](attrName, result);
-        //TODO: Remove this line for release
-        // bc.write("dat");
-        // This is workaround for creating vertex attribute for graph,
-        // This problem should be fixed by vertex translator or graph class
-        val vertexIds = new DistMemoryChunk[Long](places, () => {
-            val id = new MemoryChunk[Long](localState()._score.length());
-            for (i in 0..(id.size() -1))
-                id(i) = bc.LocSrcToOrg(i);
-            return id;
-        });
-        g.setVertexAttribute[Long]("name", vertexIds);
+        // g.setVertexAttribute[Double](attrName, result);
+        // //TODO: Remove this line for release
+        // // bc.write("dat");
+        // // This is workaround for creating vertex attribute for graph,
+        // // This problem should be fixed by vertex translator or graph class
+        // val vertexIds = new DistMemoryChunk[Long](places, () => {
+        //     val id = new MemoryChunk[Long](localState()._score.length());
+        //     for (i in 0..(id.size() -1))
+        //         id(i) = bc.LocSrcToOrg(i);
+        //     return id;
+        // });
+        // g.setVertexAttribute[Long]("name", vertexIds);
+        stopWatch.lap("Betweenness centrality calculation");
+        return result;
     }
     
     private def start() {
@@ -724,6 +737,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                         && lch()._predMap(i).size() > 0
                         && lch()._successorCount(i) == 0L) {
                     backtrackingNextQ().set(i);
+                    // lch().debugLeafNode.getAndIncrement();
                 } 
             }
         };
@@ -808,26 +822,27 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     }
     
     private def calDependency(w_mu: Long, w_delta: Double, w_sigma: Long, v: Vertex) {
+        val inst = lch();
         val locPred = OrgToLocSrc(v);
-        val numUpdates = add_and_fetch[Long](lch()._numUpdate, locPred, 1L);
-        val sigma = lch()._pathCount(locPred) as Double;
+        val l = inst._dependenciesLock(locPred);
+        l.lock();
+        val numUpdates = add_and_fetch[Long](inst._numUpdate, locPred, 1L);
+        val sigma = inst._pathCount(locPred) as Double;
         
-        lch()._dependenciesLock(locPred).lock();
         var dep: Double = 0;
         if (lch()._linearScale) {
-            dep = lch()._dependencies(locPred) + (lch()._distanceMap(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
+            dep = inst._dependencies(locPred) + (inst._distanceMap(locPred) as Double / w_mu) * (sigma / w_sigma as Double) * (1 + w_delta);
         } else {
-            dep = lch()._dependencies(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
+            dep = inst._dependencies(locPred) + ((sigma as Double)/ w_sigma ) * (1 + w_delta);
         }
-        lch()._dependencies(locPred) = dep;
-        lch()._dependenciesLock(locPred).unlock();
-        
-        if(numUpdates == lch()._successorCount(locPred)) {
-            if (LocSrcToOrg(locPred) != lch()._currentSource())
-                lch()._score(locPred) = lch()._score(locPred) + lch()._dependencies(locPred);
+        inst._dependencies(locPred) = dep;
+       
+        if(numUpdates == inst._successorCount(locPred)) {
+            if (LocSrcToOrg(locPred) != inst._currentSource()) {
+                inst._score(locPred) += dep;
+            }
             backtrackingNextQ().set(locPred);
         }
-        assert(lch()._successorCount(locPred) > 0 
-               && lch()._numUpdate(locPred) <= lch()._successorCount(locPred));
+       l.unlock();
     }
 }
