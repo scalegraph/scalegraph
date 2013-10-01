@@ -3,6 +3,6 @@ small:
     args: file $prefix/graph/Amazon0601-0.txt - write $prefix/temp/SCC1.txt $prefix/temp/SCC2.txt 1594
     thread: 4
     gcproc: 2
-    process: 8
+    place: 8
     duplicate: 2
-    timeout: 10
+    timeout: 30

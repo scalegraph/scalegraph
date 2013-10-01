@@ -54,13 +54,13 @@ public class DistBetweennessCentralityUnweightedExample {
         }
         val team = Team.WORLD;
 
-        // Load data
-        val g = Graph.make(SimpleText.read(args(0), inputFormat), true);
+        // Load data using SimpleText to read edge list format graph
+        val g = Graph.make(SimpleText.read(args(0), inputFormat), false);
         
-        // DistBetweennessCentrality.calculate(g, true, "bc", false);
-        val bc = BetweennessCentrality.run(g);
-        val attrVertexId = g.getVertexAttribute[Long]("name");
-        // val attrBc = g.getVertexAttribute[Double]("bc");
-        DistributedReader.write("output-%d.txt", attrVertexId, bc);
+        // Call API
+        val result = BetweennessCentrality.run(g);
+        
+        // Write result as CSV file
+        CSV.write("bc%d", new NamedDistData(["bc" as String], [result as Any]), true);
     }
 }
