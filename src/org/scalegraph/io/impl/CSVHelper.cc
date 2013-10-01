@@ -68,13 +68,14 @@ public:
 				next = ptr + 1;
 				return ;
 			}
-			if(*ptr >= 0x20) {
+			if((unsigned int)(*ptr) >= 0x20) {
 				break;
 			}
 		}
 
 		if(*ptr == '"') { // double quotation
 			doubleQuoated = true;
+
 			start = ++ptr;
 			// search double quotation
 			for( ; ; ++ptr) {
@@ -441,11 +442,45 @@ template <> x10_double strtot<x10_double>(const char* str, char **endptr) {
 	x10_double r = strtod(str, endptr);
 	return r;
 }
+
+#define UTF8_DECODE_CHAR(ch, bytes, index) \
+	x10_char ch; \
+	int b0 = bytes[index++]; \
+	if((b0 & 0x80) == 0x00) { \
+		ch.v = b0; \
+	} \
+	else if((b0 & 0xE0) == 0xC0) { \
+		int b1 = bytes[index++]; \
+		ch.v =(((b0 & 0x1F) << 6) | \
+			((b1 & 0x3F)     )); \
+	} \
+	else if((b0 & 0xF0) == 0xE0) { \
+		int b1 = bytes[index++]; \
+		int b2 = bytes[index++]; \
+		ch.v =(((b0 & 0x0F) << 12) | \
+			((b1 & 0x3F) <<  6) | \
+			((b2 & 0x3F)     )); \
+	} \
+	else { \
+		int b1 = bytes[index++]; \
+		int b2 = bytes[index++]; \
+		int b3 = bytes[index++]; \
+		ch.v =(((b0 & 0x08) << 18) | \
+			((b1 & 0x3F) << 12) | \
+			((b2 & 0x3F) <<  6) | \
+			((b3 & 0x3F)     )); \
+	}
 template <> x10_char strtot<x10_char>(const char* str, char **endptr) {
-	x10_int r = strtol(str, endptr, 16);
-	if(r != (x10_short) r) errno = ERANGE;
+	int i=0;
+	UTF8_DECODE_CHAR(ch, str, i);
+	*endptr=(char*)( (void*)&str[i]);
+	//**endptr='\0';
+	return ch;
+	//x10_int r = strtol(str, endptr, 16);
+	//if(r != (x10_short) r) errno = ERANGE;
 	//to do (utf-8)
-	return x10_char(str[0]);
+	//return x10_char(r);
+	//return x10_char(str[0]);
 }
 
 template <typename T>
@@ -510,6 +545,8 @@ void CSVParseStringElements(x10_byte** elemPtrs, int lines, GrowableMemory<SStri
 			else {
 				len = strlen((char*)ptrs[i]);
 				strbuf = x10aux::alloc<x10_byte>(len+1);
+				//printf("ptrs[i]:%s\n",(char*)ptrs[i]);
+				//strbuf[len]='\0';
 				memcpy(strbuf, ptrs[i], len+1);
 			}
 			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(strbuf, strbuf, len) };
