@@ -9,13 +9,13 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package example;
+package test;
 
 import x10.util.Team;
 import x10.util.Timer;
 import x10.compiler.Pragma;
 
-public class PlaceLocalHandleExample {
+public class TestPlaceLocalHandle {
 	private static def message (str:String) : void {
 		Console.OUT.println("" + Timer.milliTime() + ":osc: " + here + "(" + Runtime.workerId() + ")" + str);
 		Console.OUT.flush();

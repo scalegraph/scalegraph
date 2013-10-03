@@ -9,14 +9,15 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package example;
+package test;
+
 import x10.util.ArrayUtils;
 import x10.util.Team;
 import x10.util.Random;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MemoryChunk;
 
-public final class ParallelExample {
+public final class TestParallel {
   //Sort example method
   static def sortExample(): void{
     Console.OUT.println("Sort Test");
