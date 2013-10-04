@@ -17,12 +17,12 @@ import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 
-final class TestSort extends sx10Test {
+final class TestSort extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestSort().execute(args);
 	}

@@ -11,14 +11,18 @@
 
 package org.scalegraph.xpregel;
 
+import x10.compiler.Ifdef;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.util.Bitmap;
+import org.scalegraph.Config;
 
 class EdgeProvider [E]/* {E haszero} */{
+	private static type XP = org.scalegraph.id.ProfilingID.XPregel; 
 	// srcid, offset
 	val mDiffOffset :GrowableMemory[Tuple2[Long, Long]] = new GrowableMemory[Tuple2[Long, Long]]();
 	val mDiffVertex :GrowableMemory[Long] = new GrowableMemory[Long]();
@@ -45,6 +49,7 @@ class EdgeProvider [E]/* {E haszero} */{
 	}
 	
 	static def updateOutEdge[E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) /*{E haszero}*/ {
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		var changed :Boolean = false;
 		for(i in list.range()) {
 			if(list(i).mDiffOffset.size() > 0) {
@@ -88,7 +93,9 @@ class EdgeProvider [E]/* {E haszero} */{
 		val newVertex = new MemoryChunk[Long](newNumEdges);
 		val newValue = new MemoryChunk[E](newNumEdges);
 		newOffset(0) = 0L;
-
+		
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_1); }
+		
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
 			var diffIndex :Long = 0;
@@ -126,6 +133,7 @@ class EdgeProvider [E]/* {E haszero} */{
 			assert newOffset(r.max + 1) == offsetPerThread(tid + 1);
 
 		});
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_2); }
 
 		outEdge.offsets = newOffset;
 		outEdge.vertexes = newVertex;

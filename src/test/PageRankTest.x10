@@ -8,46 +8,52 @@
  * 
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-
 package test;
 
-import x10.util.Team;
-
-import org.scalegraph.harness.sx10Test;
-import org.scalegraph.util.*;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
+import org.scalegraph.Config;
+import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.io.CSV;
+import org.scalegraph.util.DistMemoryChunk;
 
-final class PageRankTest extends sx10Test {
+final class PageRankTest extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
 		new PageRankTest().execute(args);
 	}
     
-    public def run(args :Array[String](1)): Boolean {
-		val team = Team.WORLD;
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				1.0
-			);
-		};
-		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(args,inputFormat);
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-	
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
+    public def run(args :Array[String](1), g :Graph): Boolean {
+    	
+    	if(args.size < 3) {
+    		println("Usage: [high|low] [write|check] <path>");
+    		return false;
+    	}
 		
-		val g = Graph.make(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("weight", weigh.raw(team.placeGroup()));		
+    	val result :DistMemoryChunk[Double];
+    	if(args(0).equals("high")) {
+    		result = org.scalegraph.api.PageRank.run(g);
+    	}
+    	else if(args(0).equals("low")) {
+    		val matrix = g.createDistSparseMatrix[Double](
+    				Config.get().distXPregel(), "weight", true, true);
+    		// delete the graph object in order to reduce the memory consumption
+    		g.del();
+    		Config.get().stopWatch().lap("Graph construction: ");
+    		result = org.scalegraph.api.PageRank.run(matrix);
+    	}
+    	else {
+    		throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+    	}
 		
-		val result = org.scalegraph.api.PageRank.run(g);
-		
-		DistributedReader.write("pagerank-%d", team, result);
-		return true;
+		if(args(1).equals("write")) {
+			CSV.write(args(2), new NamedDistData(["pagerank" as String], [result as Any]), true);
+			return true;
+		}
+		else if(args(1).equals("check")) {
+			return checkResult(result, args(2), 0.0001);
+		}
+		else {
+			throw new IllegalArgumentException("Unknown command :" + args(1));
+		}
 	}
 }

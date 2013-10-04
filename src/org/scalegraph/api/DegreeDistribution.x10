@@ -15,8 +15,9 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.metrics.DegreeDistImpl;
 import org.scalegraph.util.Dist2D;
-import org.scalegraph.util.DistGrowableMemory;
+import org.scalegraph.util.DistMemoryChunk;
 import x10.compiler.Inline;
+import org.scalegraph.Config;
 
 
 /**
@@ -41,7 +42,7 @@ final public class DegreeDistribution {
     /** Run the calculation of degree distribution.
      * @param g The graph object.
      */
-    public def execute(g :Graph): DistGrowableMemory[Long] {
+    public def execute(g :Graph): DistMemoryChunk[Long] {
         return execute(this, g);
     }
     
@@ -71,7 +72,7 @@ final public class DegreeDistribution {
      * For example let the team size equal to 8, the local index of the MemoryChunk is 4, and the MemoryChunk is on the machine that has the role number equal to 3, 
      * so the local memory pointed by this local index will store the number of the vertices that has the degree eqaul to 35. 
      */
-    public static def run(g :Graph): DistGrowableMemory[Long] {
+    public static def run(g :Graph): DistMemoryChunk[Long] {
         return new DegreeDistribution().execute(g);
     }
     
@@ -89,22 +90,24 @@ final public class DegreeDistribution {
      * <p><b>Note:</b> 
      * This method is prone to incorrect result if the matrix is created with invalid parameters. We encourage users to use run(g: Graph, mode: Int) instead of this method.
      */
-    public static def run(matrix :DistSparseMatrix[Double]): DistGrowableMemory[Long] {
+    public static def run(matrix :DistSparseMatrix[Double]): DistMemoryChunk[Long] {
         return run[Double](matrix);
     }
     
-    private static def execute(inst: DegreeDistribution, g :Graph): DistGrowableMemory[Long] {
+    private static def execute(inst: DegreeDistribution, g :Graph): DistMemoryChunk[Long] {
         val m = inst.mode;
         if (m < 0 || m > 2) {
             throw new IllegalArgumentException("The mode argument must be DegreeDistribution.IN_DEGREE, DegreeDistribution.OUT_DEGREE or DegreeDistribution.INOUT_DEGREE");
         }
-        
+        val sw = Config.get().stopWatch();
         val team = g.team();
         val outerOrInner = (m == IN_DEGREE) ? false: true;
         val directed = (m == INOUT_DEGREE) ? false: true;
         val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
         val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
+        sw.lap("Graph construction");
         val result = run[Long](columnDistGraph);
+        sw.lap("Degree distribution calculation (mode = " + m +")");
         
         // delete graph
         columnDistGraph.del();
@@ -115,7 +118,7 @@ final public class DegreeDistribution {
     
     // Interface between API and Impl
     @Inline
-    private static def run[T](matrix :DistSparseMatrix[T]): DistGrowableMemory[Long] {
+    public static def run[T](matrix :DistSparseMatrix[T]): DistMemoryChunk[Long] {
         return DegreeDistImpl.degreeDistribution[T](matrix);
     }
 }

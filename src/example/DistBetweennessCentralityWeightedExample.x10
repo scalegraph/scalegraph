@@ -11,26 +11,15 @@
 
 package example;
 
-import x10.compiler.Inline;
 import x10.util.Team;
-import x10.util.ArrayList;
-import x10.util.concurrent.AtomicLong;
-import x10.io.SerialData;
-import x10.io.File;
-import x10.io.FileReader;
-import x10.io.IOException;
 
-import org.scalegraph.util.Dist2D;
-import org.scalegraph.util.Parallel;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.blas.DistSparseMatrix;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.blas.SparseMatrix;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.metrics.DistBetweennessCentrality;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.metrics.DistBetweennessCentralityWeighted;
 import org.scalegraph.api.BetweennessCentrality;
+import org.scalegraph.graph.Graph;
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.tuple.Tuple3;
 
 public class DistBetweennessCentralityWeightedExample {
     
@@ -48,31 +37,22 @@ public class DistBetweennessCentralityWeightedExample {
             Console.OUT.println("Please enter file name");
             return;
         }
-        val team = Team.WORLD;
-        val fileList = new Array[String](1);
-        fileList(0) = args(0); 
         
-        // Load data
-        val rawData = DistributedReader.read(fileList, inputFormat);
-        
-        // Create graph
-        val edgeList = rawData.get1();
-        val weightList = rawData.get2();
-        
-        val g = new Graph(team, Graph.VertexType.Long, true);
-        g.addEdges(edgeList.raw(team.placeGroup()));
-        g.setEdgeAttribute[Double]("weight", weightList.raw(team.placeGroup()));
-        Console.OUT.println("Start BC");
-        
+        // Load data using SimpleText to read edgelist format file
+        val g = Graph.make(SimpleText.read(args(0), inputFormat), false);
+                
         // Create API instnace, since we would like to specify parameters
         val bc = new BetweennessCentrality();
         bc.directed = true;
         bc.weighted = true;
-        bc.source = 1L;
-        val score = bc.execute(g);
+        bc.exactBc = false;
+        bc.source = 0L;
+        
+        // Call API
+        val result = bc.execute(g);
+        
+        // Write result in CSV format
+        CSV.write("bc-%d", new NamedDistData(["bc" as String], [result as Any]), true);
 
-        val attrVertexId = g.getVertexAttribute[Long]("name");
-        // val attrBc = g.getVertexAttribute[Double]("bc");
-        DistributedReader.write("output-%d.txt", attrVertexId, score);
     }
 }

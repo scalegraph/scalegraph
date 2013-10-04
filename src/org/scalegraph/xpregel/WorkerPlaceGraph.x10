@@ -13,7 +13,9 @@ package org.scalegraph.xpregel;
 
 import x10.util.Team;
 import x10.util.ArrayList;
-import x10.util.concurrent.AtomicLong;
+import x10.compiler.Ifdef;
+
+import org.scalegraph.Config;
 
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
@@ -22,6 +24,7 @@ import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.util.Bitmap;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.util.ProfilingDB;
 
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.SparseMatrix;
@@ -35,6 +38,7 @@ import x10.io.Printer;
 
 final class WorkerPlaceGraph[V,E] {
 	static val MAX_OUTPUT_NUMBER = 8;
+	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 	
 	val mTeam :Team2;
 	val mIds :IdStruct;
@@ -110,39 +114,47 @@ final class WorkerPlaceGraph[V,E] {
 	}
 	
 	public def updateInEdge() {
-		//kono naka de broadcast ha dekinai
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		//place goto ni S,D ha kotonaru noni douyatte kyuusyuu site iruno?
-		
-		
 		mNeedsAllUpdateInEdge = 0 < mTeam.allreduce[Long](mNeedsAllUpdateInEdge?1:0,Team.ADD) ? true : false;
 		
 		if(mNeedsAllUpdateInEdge){
+			@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+			@Ifdef("PROF_XP") { mtimer.start(); }
+			val numThreads = Runtime.NTHREADS;
 			val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
 			val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
+			
 			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
+				@Ifdef("PROF_XP") { thtimer.start(); }
 				val UCCMessages = mesComm.messageBuffer(tid);
 				val offset = mOutEdge.offsets;
 				val id = mOutEdge.vertexes;
 				for(vid in r) {
 					val vid_ = StoD(vid);
 					for(i in offset(vid)..(offset(vid + 1) - 1)) {
-						val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));	//D no aru column
-						mesBuf.messages.add(vid_);								//message ni S wo D ni shitayatu wo ireru
-						mesBuf.dstIds.add(mesComm.mDtoS(id(i)));				//okurisaki ni D wo S ni shitayatu wo ireteru
+						val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
+						mesBuf.messages.add(vid_);
+						mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 					}
 				}
+				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COMPUTE); }
 			});
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 			
 			mesComm.preProcess();
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PRE_PROCESS); }
 			mesComm.process(null, true, false);
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PROCESS); }
 			mesComm.exchangeMessages(true, false);
-	
+
 			mInEdge.offsets = mesComm.mUCROffset;
 			mInEdge.vertexes = mesComm.mUCRMessages;
 			mesComm.mUCROffset = new MemoryChunk[Long]();
 			mesComm.mUCRMessages = new MemoryChunk[Long]();
-			mesComm.del();	//TODO tosika kakarete inai
+			mesComm.del();
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 		}else{
 			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == srcId with AR
 			assert(mWDiffInSrcWithAR(0).size() == mWDiffInDst(0).size());
@@ -338,12 +350,17 @@ final class WorkerPlaceGraph[V,E] {
 	}
 	
 	public def updateInEdgeWithValue() {E haszero} {
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP") { mtimer.start(); }
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
 		
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+			@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
+			@Ifdef("PROF_XP") { thtimer.start(); }
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
@@ -356,10 +373,14 @@ final class WorkerPlaceGraph[V,E] {
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
 			}
+			@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COMPUTE); }
 		});
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 
 		mesComm.preProcess();
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PRE_PROCESS); }
 		mesComm.process(null, true, false);
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PROCESS); }
 		mesComm.exchangeMessages(true, false);
 		
 		val numEdges = mesComm.mUCRMessages.size();
@@ -378,17 +399,21 @@ final class WorkerPlaceGraph[V,E] {
 		
 		mesComm.mUCROffset = new MemoryChunk[Long]();
 		mesComm.del();
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 	}
 	
 	// src will be destroyed
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],
 			aggregator :(MemoryChunk[A])=>A) :A
 	{
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		val root = (team.base.role()(0) == 0);
 		src(0) = aggregator(src);
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_AGGREGATE_COMPUTE); }
 		team.gather(0, src.subpart(0, 1), buffer);
 		if(root) buffer(0) = aggregator(buffer);
 		team.bcast(0, root ? buffer.subpart(0, 1) : buffer, src.subpart(0, 1));
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_AGGREGATE_COMM); }
 		return src(0);
 	}
 	
@@ -408,10 +433,12 @@ final class WorkerPlaceGraph[V,E] {
 			ectx :MessageCommunicator[M], stt :MemoryChunk[Long], enableStatistics :Boolean,
 			combiner :(messages:MemoryChunk[M]) => M) { M haszero } :Boolean
 	{
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		val recvStt = stt.subpart(STT_MAX, STT_MAX);
 		
 		// compute the number of messages to determin communication strategy
 		val [ numActive, numRawMessages, numVertexMessages ] = ectx.preProcess();
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PRE_PROCESS); }
 		
 		stt(STT_ACTIVE_VERTEX) = numActive;
 		stt(STT_RAW_MESSAGE) = numRawMessages;
@@ -419,6 +446,7 @@ final class WorkerPlaceGraph[V,E] {
 		
 		// aggregate statistics to determin communication strategy
 		team.allreduce(stt.subpart(0, STT_PRE), recvStt.subpart(0, STT_PRE), Team.ADD);
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_ALLGATHER_1); }
 
 		if(recvStt(STT_END_COUNT) > 0) {
 			// terminate
@@ -435,6 +463,7 @@ final class WorkerPlaceGraph[V,E] {
 		// merge messages and combine if combiner is provided
 		val [  numCombinedMessages, numTransferedVertexMessages ]
 				= ectx.process(combiner, recvStt(STT_RAW_MESSAGE) > 0, recvStt(STT_VERTEX_MESSAGE) > 0);
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_PROCESS); }
 		
 		stt(STT_COMBINED_MESSAGE) = numCombinedMessages;
 		stt(STT_VERTEX_TRANSFERED_MESSAGE) = numTransferedVertexMessages;
@@ -443,6 +472,7 @@ final class WorkerPlaceGraph[V,E] {
 		// This communication can be omitted !
 		if(enableStatistics)
 			team.allreduce(stt.subpart(STT_PRE, STT_POST), recvStt.subpart(STT_PRE, STT_POST), Team.ADD);
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_ALLGATHER_2); }
 		
 		return false;
 	}
@@ -462,13 +492,16 @@ final class WorkerPlaceGraph[V,E] {
 			combiner :(MemoryChunk[M]) => M,
 			end :(Int,A)=>Boolean) { M haszero, A haszero }
 	{
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP") { mtimer.start(); }
+		
 		val root = (mTeam.base.role()(0) == 0);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mIds, numThreads);
 		val vctxs = new MemoryChunk[VertexContext[V, E, M, A]](numThreads,
 				(i :Long) => new VertexContext[V, E, M, A](this, ectx, i));
-		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads,
+		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads as Long,
 				(i:Long) => vctxs(i).mEdgeProvider);
 		val intermedAggregateValue = new MemoryChunk[A](numThreads);
 		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
@@ -484,15 +517,20 @@ final class WorkerPlaceGraph[V,E] {
 		MemoryChunk.copy(mVertexShouldBeActive.raw(), 0L,
 				vertexActvieBitmap, 0L, vertexActvieBitmap.size());
 		
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
+		
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
-			
+
+			@Ifdef("PROF_XP") { mtimer.start(); }
 			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 				val vc = vctxs(tid);
 				val ep = vc.mEdgeProvider;
 				val mesTempBuffer :GrowableMemory[M] = new GrowableMemory[M]();
 				var numProcessed :Long = 0L;
-				
+
+				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
+				@Ifdef("PROF_XP") { thtimer.start(); }
 				for(srcid in r) {
 					vc.mSrcid = srcid;
 					val mes = ectx.message(srcid, mesTempBuffer);
@@ -504,17 +542,21 @@ final class WorkerPlaceGraph[V,E] {
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
+				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COMPUTE); }
 				if(aggregator != null) {
 					intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
 				}
+				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_AGGREGATE); }
 				vc.mAggregateValue.clear();
 				vc.mNumActiveVertexes = numProcessed;
 			});
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 			
 			// gather statistics
 			for(th in 0..(numThreads-1)) {
 				ectx.sqweezeMessage(vctxs(th));
 			}
+			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_SQWEEZMES); }
 			
 			// update out edges
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
@@ -565,6 +607,9 @@ final class WorkerPlaceGraph[V,E] {
 	public def stealOutput[T](index :Int) :MemoryChunk[T] {
 		if(index > MAX_OUTPUT_NUMBER)
 			throw new ArrayIndexOutOfBoundsException();
+
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP") { mtimer.start(); }
 		
 		var length :Long = 0L;
 		for(i in 0..(numThreads-1)) {
@@ -582,12 +627,16 @@ final class WorkerPlaceGraph[V,E] {
 				// If it is not, all method call to typed_buf
 				// will invoke the method of GrowableMemory<int> 
 				// through its virtual function table.
+				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, i);
+				@Ifdef("PROF_XP") { thtimer.start(); }
 				val typed_buf = castTo[T](buf);
 				MemoryChunk.copy(typed_buf.raw(), 0L, outMem, offset_, src_len);
 				typed_buf.clear();
+				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COPY_OUT); }
 			}
 			offset += src_len;
 		}
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_TH_COPY_OUT); }
 		
 		return outMem;
 	}

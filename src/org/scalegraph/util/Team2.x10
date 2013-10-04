@@ -54,7 +54,7 @@ public final struct Team2 {
 
 	private static def nativeScatterv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_scatterv(id, role, root, src->pointer(), src_offs, src_counts->pointer(), dst->pointer(), dst_count, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_scatterv(id, role, root, src->pointer(), src_offs->pointer(), src_counts->pointer(), dst->pointer(), dst_count, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
@@ -142,6 +142,8 @@ public final struct Team2 {
 			return wrapPointer(mc.raw());
 	}
 	
+	private static def nullChunk[T]() = MemoryChunk[T]();
+	
 	/** This is equivalent to MPI_scatter
 	 * @param root The rank of the place that 
 	 */
@@ -151,7 +153,41 @@ public final struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeScatter[T](base.id(), role, root, src, dst, dst.size() as Int);
+			if (Serialization.needToSerialize[T]()) {
+				if (role == root) {
+					val places = size();
+                    val count = dst.size() as Int;
+					val src_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
+					val src_counts = new MemoryChunk[Int](places, (i :Long) => count);
+					val ser_offs = new MemoryChunk[Int](places);
+					val ser_counts = new MemoryChunk[Int](places);
+					val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
+					val deser_counts = new MemoryChunk[Int](1);
+					finish nativeScatter[Int](base.id(), role, root, ser_counts, deser_counts, 1);
+					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					finish nativeScatterv[Byte](base.id(), role, root, ser_src, ser_offs, ser_counts, deser_dst, deser_counts(0));
+					Serialization.deserialize(dst, 0, count, deser_dst, 0, deser_counts(0));
+					src_offs.del();
+					src_counts.del();
+					ser_offs.del();
+					ser_counts.del();
+					ser_src.del();
+					deser_counts.del();
+					deser_dst.del();
+				}
+				else {
+					val deser_counts = new MemoryChunk[Int](1);
+					finish nativeScatter[Int](base.id(), role, root, nullChunk[Int](), deser_counts, 1);
+					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					finish nativeScatterv[Byte](base.id(), role, root, nullChunk[Byte](), nullChunk[Int](), nullChunk[Int](), deser_dst, deser_counts(0));
+					Serialization.deserialize(dst, 0, dst.size() as Int, deser_dst, 0, deser_counts(0));
+					deser_counts.del();
+					deser_dst.del();
+				}
+			}
+			else {
+				finish nativeScatter[T](base.id(), role, root, src, dst, dst.size() as Int);
+			}
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
@@ -166,7 +202,36 @@ public final struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeScatterv[T](base.id(), role, root, src, src_offs, src_counts, dst, dst.size() as Int);
+			if (Serialization.needToSerialize[T]()) {
+				if (role == root) {
+					val places = size();
+					val ser_offs = new MemoryChunk[Int](places);
+					val ser_counts = new MemoryChunk[Int](places);
+					val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
+					val deser_counts = new MemoryChunk[Int](1);
+					finish nativeScatter[Int](base.id(), role, root, ser_counts, deser_counts, 1);
+					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					finish nativeScatterv[Byte](base.id(), role, root, ser_src, ser_offs, ser_counts, deser_dst, deser_counts(0));
+					Serialization.deserialize(dst, 0, dst.size() as Int, deser_dst, 0, deser_counts(0));
+					ser_offs.del();
+					ser_counts.del();
+					ser_src.del();
+					deser_counts.del();
+					deser_dst.del();
+				}
+				else {
+					val deser_counts = new MemoryChunk[Int](1);
+					finish nativeScatter[Int](base.id(), role, root, nullChunk[Int](), deser_counts, 1);
+					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					finish nativeScatterv[Byte](base.id(), role, root, nullChunk[Byte](), nullChunk[Int](), nullChunk[Int](), deser_dst, deser_counts(0));
+					Serialization.deserialize(dst, 0, dst.size() as Int, deser_dst, 0, deser_counts(0));
+					deser_counts.del();
+					deser_dst.del();
+				}
+			}
+			else {
+				finish nativeScatterv[T](base.id(), role, root, src, src_offs, src_counts, dst, dst.size() as Int);
+			}
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
@@ -198,8 +263,44 @@ public final struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeGather[T](base.id(), role, root, src, dst, src.size() as Int);
-		}
+            if (Serialization.needToSerialize[T]()) {
+                if (role == root) {
+                    val places = size();
+                    val count = src.size() as Int;
+                    val ser_src = Serialization.serialize(src, 0, count);
+                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val deser_counts = new MemoryChunk[Int](places);
+			    	finish nativeGather[Int](base.id(), role, root, ser_counts, deser_counts, 1);
+                    val deser_offs = new MemoryChunk[Int](places+1);
+                    deser_offs(0) = 0;
+                    for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
+                    val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                    finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
+                    val dst_counts = new MemoryChunk[Int](places, (i:Long)=>count);
+                    val dst_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
+                    Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
+                    ser_src.del();
+                    ser_counts.del();
+                    deser_counts.del();
+                    deser_offs.del();
+                    deser_dst.del();
+                    dst_counts.del();
+                    dst_offs.del();
+                }
+                else {
+                    val count = src.size() as Int;
+                    val ser_src = Serialization.serialize(src, 0, count);
+                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+	    			finish nativeGather[Int](base.id(), role, root, ser_counts, nullChunk[Int](), 1);
+                    finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), nullChunk[Byte](), nullChunk[Int](), nullChunk[Int]());
+                    ser_src.del();
+                    ser_counts.del();
+                }
+            }
+            else {
+			    finish nativeGather[T](base.id(), role, root, src, dst, src.size() as Int);
+		    }
+        }
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
 			val dstp = dst.raw();
@@ -211,7 +312,37 @@ public final struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeGatherv[T](base.id(), role, root, src, src.size() as Int, dst, dst_offs, dst_counts);
+            if (Serialization.needToSerialize[T]()) {
+                if (role == root) {
+                    val places = size();
+                    val ser_src = Serialization.serialize(src, 0, src.size() as Int);
+                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val deser_counts = new MemoryChunk[Int](places);
+			    	finish nativeGather[Int](base.id(), role, root, ser_counts, deser_counts, 1);
+                    val deser_offs = new MemoryChunk[Int](places+1);
+                    deser_offs(0) = 0;
+                    for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
+                    val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                    finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
+                    Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
+                    ser_src.del();
+                    ser_counts.del();
+                    deser_counts.del();
+                    deser_offs.del();
+                    deser_dst.del();
+                }
+                else {
+                    val ser_src = Serialization.serialize(src, 0, src.size() as Int);
+                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+	    			finish nativeGather[Int](base.id(), role, root, ser_counts, nullChunk[Int](), 1);
+                    finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), nullChunk[Byte](), nullChunk[Int](), nullChunk[Int]());
+                    ser_src.del();
+                    ser_counts.del();
+                }
+            }
+            else {
+			    finish nativeGather[T](base.id(), role, root, src, dst, src.size() as Int);
+		    }
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
@@ -252,7 +383,36 @@ public final struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeBcast[T](base.id(), role, root, src, dst, dst.size() as Int);
+            if (Serialization.needToSerialize[T]()) {
+                if (role == root) {
+                    val places = size();
+                    val count = dst.size() as Int;
+                    val ser_src = Serialization.serialize(src, 0, count);
+                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val deser_counts = new MemoryChunk[Int](1);
+                    finish nativeBcast[Int](base.id(), role, root, ser_counts, deser_counts, 1);
+                    val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+                    finish nativeBcast[Byte](base.id(), role, root, ser_src, deser_dst, deser_counts(0));
+                    Serialization.deserialize(dst, 0, count, deser_dst, 0, deser_counts(0));
+                    ser_src.del();
+                    ser_counts.del();
+                    deser_counts.del();
+                    deser_dst.del();
+                }
+                else {
+                    val count = dst.size() as Int;
+                    val deser_counts = new MemoryChunk[Int](1);
+                    finish nativeBcast[Int](base.id(), role, root, nullChunk[Int](), deser_counts, 1);
+                    val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+                    finish nativeBcast[Byte](base.id(), role, root, nullChunk[Byte](), deser_dst, deser_counts(0));
+                    Serialization.deserialize(dst, 0, count, deser_dst, 0, deser_counts(0));
+                    deser_counts.del();
+                    deser_dst.del();
+                }
+            }
+            else {
+			    finish nativeBcast[T](base.id(), role, root, src, dst, dst.size() as Int);
+            }
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
@@ -267,7 +427,32 @@ public final struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeAllgather[T](base.id(), role, src, dst, src.size() as Int);
+            if (Serialization.needToSerialize[T]()) {
+                val places = size();
+                val count = src.size() as Int;
+                val ser_src = Serialization.serialize(src, 0, count);
+                val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+                val deser_counts = new MemoryChunk[Int](places);
+                finish nativeAllgather[Int](base.id(), role, ser_counts, deser_counts, 1);
+                val deser_offs = new MemoryChunk[Int](places + 1);
+                deser_offs(0) = 0;
+                for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
+                val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                finish nativeAllgatherv[Byte](base.id(), role, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
+                val dst_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
+                val dst_counts = new MemoryChunk[Int](places, (i:Long)=>count);
+                Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
+                ser_src.del();
+                ser_counts.del();
+                deser_counts.del();
+                deser_offs.del();
+                deser_dst.del();
+                dst_offs.del();
+                dst_counts.del();
+            }
+            else {
+                finish nativeAllgather[T](base.id(), role, src, dst, src.size() as Int);
+            }
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
@@ -280,7 +465,28 @@ public final struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeAllgatherv[T](base.id(), role, src, src.size() as Int, dst, dst_offs, dst_counts);
+            if (Serialization.needToSerialize[T]()) {
+                val places = size();
+                val src_count = src.size() as Int;
+                val ser_src = Serialization.serialize(src, 0, src_count);
+                val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+                val deser_counts = new MemoryChunk[Int](places);
+                finish nativeAllgather[Int](base.id(), role, ser_counts, deser_counts, 1);
+                val deser_offs = new MemoryChunk[Int](places + 1);
+                deser_offs(0) = 0;
+                for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
+                val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                finish nativeAllgatherv[Byte](base.id(), role, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
+                Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
+                ser_src.del();
+                ser_counts.del();
+                deser_counts.del();
+                deser_offs.del();
+                deser_dst.del();
+            }
+            else {
+			    finish nativeAllgatherv[T](base.id(), role, src, src.size() as Int, dst, dst_offs, dst_counts);
+            }
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
@@ -312,7 +518,40 @@ public final struct Team2 {
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
 		@Ifdef("__CPP__") {
-			finish nativeAlltoall[T](base.id(), role, src, dst, (src.size() / base.size()) as Int);
+			if (Serialization.needToSerialize[T]()) {
+				val places = size();
+                val count = (src.size() / places) as Int;
+				val src_counts = new MemoryChunk[Int](places, (i:Long)=>count);
+				val src_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
+				val ser_offs = new MemoryChunk[Int](places);
+				val ser_counts = new MemoryChunk[Int](places);
+				val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
+				val deser_counts = new MemoryChunk[Int](places);
+				finish nativeAlltoall[Int](base.id(), role, ser_counts, deser_counts, 1);
+				val deser_offs = new MemoryChunk[Int](places + 1);
+				deser_offs(0) = 0;
+				for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
+				val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+				finish nativeAlltoallv[Byte](base.id(), role, ser_src, ser_offs, ser_counts, deser_dst, deser_offs, deser_counts);
+				val dst_counts = new MemoryChunk[Int](places, (i:Long)=>count);
+				val dst_offs = new MemoryChunk[Int](places + 1);
+				dst_offs(0) = 0;
+				for (i in 0..(places-1)) dst_offs(i+1) = dst_counts(i) + dst_offs(i);
+				Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
+                src_counts.del();
+                src_offs.del();
+                ser_counts.del();
+                ser_offs.del();
+                ser_src.del();
+                deser_counts.del();
+                deser_offs.del();
+                deser_dst.del();
+                dst_counts.del();
+                dst_offs.del();
+			}
+			else {
+				finish nativeAlltoall(base.id(), role, src, dst, (src.size() / base.size()) as Int);
+			}
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
@@ -325,7 +564,28 @@ public final struct Team2 {
 		val role = base.role()(0);
 		
 		@Ifdef("__CPP__") {
-			finish nativeAlltoallv[T](base.id(), role, src, src_offs, src_counts, dst, dst_offs, dst_counts);
+			if (Serialization.needToSerialize[T]()) {
+				val places = size();
+				val ser_offs = new MemoryChunk[Int](places);
+				val ser_counts = new MemoryChunk[Int](places);
+				val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
+				val deser_counts = new MemoryChunk[Int](places);
+				finish nativeAlltoall[Int](base.id(), role, ser_counts, deser_counts, 1);
+				val deser_offs = new MemoryChunk[Int](places + 1);
+				countOffsets(deser_counts, deser_offs, 0);
+				val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+				finish nativeAlltoallv[Byte](base.id(), role, ser_src, ser_offs, ser_counts, deser_dst, deser_offs, deser_counts);
+				Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
+                ser_counts.del();
+                ser_offs.del();
+                ser_src.del();
+                deser_counts.del();
+                deser_offs.del();
+                deser_dst.del();
+			}
+			else {
+				finish nativeAlltoallv(base.id(), role, src, src_offs, src_counts, dst, dst_offs, dst_counts);
+			}
 		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();

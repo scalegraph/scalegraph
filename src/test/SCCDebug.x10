@@ -15,7 +15,7 @@ import x10.util.Team;
 import x10.util.Timer;
 import x10.compiler.Native;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 import org.scalegraph.Config;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
@@ -27,7 +27,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-final class SCCDebug extends sx10Test {
+final class SCCDebug extends STest {
 	public static def main(args: Array[String](1)) {
 		new SCCDebug().execute(args);
 	}

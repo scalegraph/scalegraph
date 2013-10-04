@@ -13,6 +13,9 @@ package example;
 
 import x10.util.Team;
 
+import org.scalegraph.io.SimpleText;
+import org.scalegraph.io.CSV;
+import org.scalegraph.io.NamedDistData;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
@@ -34,18 +37,9 @@ public class MinimumSpanningTreeExample {
 			);
 		};
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(args,inputFormat);
+		val g = Graph.make(SimpleText.read(args(0), inputFormat));
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-	
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("weight",weigh.raw(team.placeGroup()));
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		
 		val result = MinimumSpanningTree.run(g);
 		// DistributedReader.write("out-%d", team, result.first, result.second);

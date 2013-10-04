@@ -10,9 +10,9 @@
  */
 package test;
 
-import org.scalegraph.harness.sx10Test;
+import org.scalegraph.test.STest;
 
-final class HarnessTest extends sx10Test {
+final class HarnessTest extends STest {
 	public static def main(args: Array[String](1)) {
 		new HarnessTest().execute(args);
 	}

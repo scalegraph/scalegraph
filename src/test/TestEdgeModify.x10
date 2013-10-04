@@ -2,8 +2,11 @@ package test;
 
 import x10.util.Team;
 import x10.compiler.Native;
+import x10.util.StringBuilder;
 
-//import org.scalegraph.concurrent.Dist2D;
+import org.scalegraph.Config;
+import org.scalegraph.id.Type;
+import org.scalegraph.io.CSV;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
@@ -11,7 +14,6 @@ import org.scalegraph.graph.Graph;
 
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
-import x10.util.StringBuilder;
 
 /*
  *   1
@@ -28,42 +30,20 @@ public class TestEdgeModify {
 		Console.OUT.println("initialize team");	
 		val team = Team.WORLD;
 		
-		
-		//-----define format
-		Console.OUT.println("define team,format");
-		val inputFormat = (s:String) => {
-			val elements = s.split(",");
-			return new Tuple3[Long,Long,Double](
-					Long.parse(elements(0)),
-					Long.parse(elements(1)),
-					1.0
-			);
-		};
-		
-		//-----read data
+		//-----read data, make graph, init graph
 		Console.OUT.println("read data");
 		val start_read_time = System.currentTimeMillis();
-		val graphData = DistributedReader.read(args,inputFormat);
+		val g = Graph.make(CSV.read(args(0), 
+				[Type.Long as Int, Type.Long, Type.None, Type.Double],
+				["source", "target", "weight"]));
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" [ms]");
-
-		//-----make graph
-		val edgeList = graphData.get1();
-		val weigh = graphData.get2();
-		val g = new Graph(team,Graph.VertexType.Long,false);
-		
-		//-----init graph
-		Console.OUT.println("init graph");
-		val start_init_graph = System.currentTimeMillis();
-		g.addEdges(edgeList.raw(team.placeGroup()));
-		g.setEdgeAttribute[Double]("edgevalue",weigh.raw(team.placeGroup()));
-		val end_init_graph = System.currentTimeMillis();
-		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + " [ms]");
 		
 		//-----init xpregel
 		Console.OUT.println("init xpregal");
-		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
-		val xpregel = new XPregelGraph[Long, Long](csr);
+		val xpregel = new XPregelGraph[Long, Long](
+				g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true));
+
 		
 		val start_time = System.currentTimeMillis();
 		
@@ -90,18 +70,23 @@ public class TestEdgeModify {
 				val myId = ctx.realId();
 				//remove out edge
 				val e = (myId+1)%ctx.numberOfVertices();
-				
+
 				//super step ha 0 start rashii
 				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
+				
+				for (m in messages.range()){
+					sb.add("atatakai message:"+ messages(m)+"\n");
+				}
+				
 				if(myId != 0L && (ctx.superstep() as Long)==myId){
 					sb.add(myId + ":\tRemove:\t" + e + "\n");
-					removeOutEdge(ctx,e);
+					removeOutEdge(ctx,ctx.dstId(e));
 				}
 				
 				//display current out edges
 				val OEsId = ctx.outEdgesId();
 				for(eI in OEsId){
-					sb.add(myId + "->" + eI + "\n");
+					sb.add(myId + "->" + ctx.realId(eI) + "\n");
 				}
 				
 				atomic {	//atomic ga nai to hukusuu thread de shinu
@@ -113,9 +98,9 @@ public class TestEdgeModify {
 				}else{
 					//send dummy message
 					if(myId==0L){
-						ctx.sendMessage(2,e);
-					}else{
-						ctx.sendMessage(0,e);
+						ctx.sendMessageToAllNeighbors(myId);
+					}else if(myId < ctx.superstep()){
+						ctx.sendMessageToAllNeighbors(myId);
 					}
 				}
 			},
@@ -129,7 +114,9 @@ public class TestEdgeModify {
 		
 		val ps=team.places();
 		for(p in ps) at(ps(p)) {// ...
+			atomic{
 			Console.OUT.println(p + ":\n" + mesBuf().toString());
+			}
 		}
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));

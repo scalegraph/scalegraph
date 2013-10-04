@@ -19,7 +19,7 @@
 #include <org/scalegraph/io/FileReader.h>
 
 #include <org/scalegraph/util/MemoryChunkData.h>
-#include <org/scalegraph/io/impl/CSVReader__ReaderBuffer.h>
+#include <org/scalegraph/util/tuple/Tuple2.h>
 
 #include <org/scalegraph/io/impl/CSVHelper.h>
 
@@ -68,13 +68,14 @@ public:
 				next = ptr + 1;
 				return ;
 			}
-			if(*ptr >= 0x20) {
+			if((unsigned int)(*ptr) >= 0x20) {
 				break;
 			}
 		}
 
 		if(*ptr == '"') { // double quotation
 			doubleQuoated = true;
+
 			start = ++ptr;
 			// search double quotation
 			for( ; ; ++ptr) {
@@ -110,7 +111,8 @@ public:
 					next = ptr + 1;
 					return ;
 				}
-				if(*ptr >= 0x20) {
+//				if(*ptr >= 0x20) {
+				if(*ptr >= 0x2d) {
 					corrupted = true;
 				}
 			}
@@ -165,7 +167,7 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 		x10_byte* attNameEnd = trimSpace(p.end, attName);
 		x10_byte* typeName = NULL;
 		x10_byte* typeNameEnd = NULL;
-		x10_byte* ptr = attName;
+		ptr = attName;
 		// search "<"
 		for( ; ; ++ptr) {
 			if(ptr == p.end) {
@@ -196,6 +198,7 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 		NativeCSVAttribute att = { (typeName != NULL), p.doubleQuoated, attNameMC, typeNameMC };
 		attrs.push_back(att);
 
+		ptr = p.next;
 		if(p.lastElement) break;
 	}
 	if(attrs.size() == 0) {
@@ -207,6 +210,44 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 NativeCSVHeader* readCSVHeader(SString headerLine) {
 	return new (x10aux::alloc<NativeCSVHeader>()) NativeCSVHeader(
 			headerLine.FMGL(content).pointer(), headerLine.size());
+}
+
+x10_long LineNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
+{
+	x10_byte* start = data->pointer();
+	x10_byte* end = start + data->size();
+	x10_byte* ptr = start + offset;
+	for( ; ; ++ptr) {
+		if(ptr == end) {
+			return end - start;
+		}
+		if(*ptr == '\n') {
+			return ptr + 1 - start;
+		}
+	}
+}
+
+Tuple2<x10_long, x10_long> LineEndAndNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
+{
+	x10_byte* start = data->pointer();
+	x10_byte* end = start + data->size();
+	x10_byte* ptr = start + offset;
+	bool cr = false;
+	for( ; ; ++ptr) {
+		if(ptr == end) {
+			return Tuple2<x10_long, x10_long>::_make(
+					end - (cr ? 1 : 0) - start,
+					end - start);
+		}
+		if(*ptr == '\r') {
+			cr = true;
+		}
+		if(*ptr == '\n') {
+			return Tuple2<x10_long, x10_long>::_make(
+					ptr - (cr ? 1 : 0) - start,
+					ptr + 1 - start);
+		}
+	}
 }
 
 x10_long DQCSVNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
@@ -292,15 +333,13 @@ restart:
 	return buf->raw();
 }
 
-x10_long CSVReaderParseChunk(CSVReader__ReaderBuffer* th, MemoryChunk<x10_byte> data) {
+Tuple2<x10_long, x10_long> CSVReaderParseChunk(MemoryChunk<x10_byte> data, int stride, int numElems, x10_byte** out) {
 	CSVParser p;
 
-	int stride = th->FMGL(stride);
-	int numElems = th->FMGL(numElems);
 	x10_byte* start = data->pointer();
 	x10_byte* ptr = start;
 	x10_byte* end = start + data->size();
-	x10_byte** out = th->FMGL(elemPtrs);
+//	x10_byte** out = th->FMGL(elemPtrs);
 
 	if(numElems == 0) {
 		x10aux::throwException(x10::lang::IllegalArgumentException::_make(String::Lit(
@@ -341,8 +380,7 @@ x10_long CSVReaderParseChunk(CSVReader__ReaderBuffer* th, MemoryChunk<x10_byte> 
 		}
 	}
 
-	th->FMGL(lines) = numOutLines;
-	return ptr - start;
+	return Tuple2<x10_long, x10_long>::_make(ptr - start, numOutLines);
 }
 
 template <typename T> T strtot(const char* str, char **endptr);
@@ -404,10 +442,45 @@ template <> x10_double strtot<x10_double>(const char* str, char **endptr) {
 	x10_double r = strtod(str, endptr);
 	return r;
 }
+
+#define UTF8_DECODE_CHAR(ch, bytes, index) \
+	x10_char ch; \
+	int b0 = bytes[index++]; \
+	if((b0 & 0x80) == 0x00) { \
+		ch.v = b0; \
+	} \
+	else if((b0 & 0xE0) == 0xC0) { \
+		int b1 = bytes[index++]; \
+		ch.v =(((b0 & 0x1F) << 6) | \
+			((b1 & 0x3F)     )); \
+	} \
+	else if((b0 & 0xF0) == 0xE0) { \
+		int b1 = bytes[index++]; \
+		int b2 = bytes[index++]; \
+		ch.v =(((b0 & 0x0F) << 12) | \
+			((b1 & 0x3F) <<  6) | \
+			((b2 & 0x3F)     )); \
+	} \
+	else { \
+		int b1 = bytes[index++]; \
+		int b2 = bytes[index++]; \
+		int b3 = bytes[index++]; \
+		ch.v =(((b0 & 0x08) << 18) | \
+			((b1 & 0x3F) << 12) | \
+			((b2 & 0x3F) <<  6) | \
+			((b3 & 0x3F)     )); \
+	}
 template <> x10_char strtot<x10_char>(const char* str, char **endptr) {
-	x10_int r = strtol(str, endptr, 16);
-	if(r != (x10_short) r) errno = ERANGE;
-	return x10_char(r);
+	int i=0;
+	UTF8_DECODE_CHAR(ch, str, i);
+	*endptr=(char*)( (void*)&str[i]);
+	//**endptr='\0';
+	return ch;
+	//x10_int r = strtol(str, endptr, 16);
+	//if(r != (x10_short) r) errno = ERANGE;
+	//to do (utf-8)
+	//return x10_char(r);
+	//return x10_char(str[0]);
 }
 
 template <typename T>
@@ -427,6 +500,7 @@ void CSVParseElements(x10_byte** elemPtrs, int lines, GrowableMemory<T>* outBuf)
 			}
 			if(*endptr != '\0') {
 				printf("Error: CSV Parser: Format error.\n");
+				printf("endprt:%c",*endptr);
 			}
 		}
 	}
@@ -471,6 +545,8 @@ void CSVParseStringElements(x10_byte** elemPtrs, int lines, GrowableMemory<SStri
 			else {
 				len = strlen((char*)ptrs[i]);
 				strbuf = x10aux::alloc<x10_byte>(len+1);
+				//printf("ptrs[i]:%s\n",(char*)ptrs[i]);
+				//strbuf[len]='\0';
 				memcpy(strbuf, ptrs[i], len+1);
 			}
 			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(strbuf, strbuf, len) };
