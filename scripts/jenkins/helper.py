@@ -243,7 +243,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     mpirunProc = SProc.Popen(runCmd,
                              stdout=SProc.PIPE,
                              stderr=SProc.PIPE)
-    sys.stderr.write("run command: " ".join(runCmd))
+    sys.stderr.write("run command:"+ " ".join(runCmd))
     try:
         stdout, stderr = mpirunProc.communicate(None, timeOut )
     except SProc.TimeoutExpired:
@@ -304,6 +304,6 @@ def build_test(name,x10file,workingDir,srcDir):
              #buildResult == 0 ならビルドに成功
                indentDeeper(escapeText(yamlFile.read()),2)+\
             "  ---")
-    sys.stderr.flush()
+    sys.stderr.femlush()
     sys.stdout.flush()
     return buildResult
