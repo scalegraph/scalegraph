@@ -90,8 +90,8 @@ struct BlockInfo {
 
 @NativeCPPInclude("NativeSupport.h")
 @NativeCPPOutputFile("Attributes.h")
-@NativeRep("c++", "std::vector<org::scalegraph::io::fbio::NativeAttribute>*",
-					"std::vector<org::scalegraph::io::fbio::NativeAttribute>*", null)
+@NativeRep("c++", "::scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*",
+					"::scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*", null)
 struct Attributes {
 	@Native("c++", "(#this)->size()")
 	public native def numAttributes() : Int;
