@@ -58,7 +58,7 @@ class EdgeProvider [E]/* {E haszero} */{
 		val offsetPerThread = new MemoryChunk[Long](numThreads + 1, 0);
 		offsetPerThread(0) = 0L;
 		
-		val GoutOffset = outEdge.offsets;
+		val outOffset = outEdge.offsets;
 		
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
@@ -73,7 +73,7 @@ class EdgeProvider [E]/* {E haszero} */{
 					++diffIndex;
 				}
 				else {
-					numEdges += GoutOffset(srcid + 1) - GoutOffset(srcid);
+					numEdges += outOffset(srcid + 1) - outOffset(srcid);
 				}
 			}
 			offsetPerThread(tid + 1) = numEdges;
@@ -88,7 +88,7 @@ class EdgeProvider [E]/* {E haszero} */{
 		val newVertex = new MemoryChunk[Long](newNumEdges);
 		val newValue = new MemoryChunk[E](newNumEdges);
 		newOffset(0) = 0L;
-		
+
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
 			var diffIndex :Long = 0;
@@ -97,7 +97,7 @@ class EdgeProvider [E]/* {E haszero} */{
 			val diffOffset = e.mDiffOffset.raw();
 			val diffVertex = e.mDiffVertex.raw();
 			val diffValue = e.mDiffValue.raw();
-			val outOffset = e.mOutOffset;		//modified
+		//	val outOffset = e.mOutOffset;		//modified
 			val outVertex = e.mOutVertex;
 			val outValue = e.mOutValue;
 			

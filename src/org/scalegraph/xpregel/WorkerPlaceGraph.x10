@@ -144,23 +144,27 @@ final class WorkerPlaceGraph[V,E] {
 			mesComm.mUCRMessages = new MemoryChunk[Long]();
 			mesComm.del();	//TODO tosika kakarete inai
 		}else{
-			val allInEdgeNum = getDiffInDstSize();
-			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == srcId
+			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == srcId with AR
 			assert(mWDiffInSrcWithAR(0).size() == mWDiffInDst(0).size());
-			
+			val allInEdgeNum = getDiffInDstSize();
+			val mask = VertexContext.INEDGE_ADDBIT;
 			val teamNum = mTeam.size();
-			//each place ni sonzai suru data suu wo shiraberu
+			val numVertexes = mIds.numberOfLocalVertexes();
+			
 			val diffInEdgeOffset = new MemoryChunk[Int](teamNum);
 			val diffInEdgeData = new MemoryChunk[Tuple2[Long,Long]](allInEdgeNum);
 			val diffInEdgeCount = new MemoryChunk[Int](teamNum);
+			
 			for (i in mWDiffInDst.range())
 			for (j in mWDiffInDst(i).range()){
 				diffInEdgeCount(mDtoS.c(mWDiffInDst(i)(j)))++;	//data suu ++
-				mWDiffInSrcWithAR(i)(j) =  mStoV(mWDiffInSrcWithAR(i)(j));	//tsuide
+				mWDiffInSrcWithAR(i)(j) = 
+					(mStoD(mWDiffInSrcWithAR(i)(j) & ~mask)) | (mWDiffInSrcWithAR(i)(j) & mask);	//tsuide
 			}
-			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == vId		(kokokara)
+			
+			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == dstId with AR
 			diffInEdgeOffset(0) = 0;
-			for(i in 0L..(diffInEdgeOffset.size()-1L)){
+			for(i in 0L..(diffInEdgeOffset.size() - 2L)){
 				diffInEdgeOffset(i + 1) += diffInEdgeOffset(i)+diffInEdgeCount(i);
 				diffInEdgeCount(i) = 0;
 			}
@@ -168,37 +172,160 @@ final class WorkerPlaceGraph[V,E] {
 			
 			for (i in mWDiffInDst.range())
 			for (j in mWDiffInDst(i).range()){
-				val index = mDtoS.c(mWDiffInDst(i)(j));
+				val index = mDtoS.c(mWDiffInDst(i)(j));									//serch place num
 				diffInEdgeData(diffInEdgeOffset(index) + diffInEdgeCount(index)++)
 					= new Tuple2(mWDiffInDst(i)(j),mWDiffInSrcWithAR(i)(j));
 			}
-			/*
-			 * TODO: diffInDst wo key to shite diffInDst,diffInSrc wo
-			 * 		sorezore stable sort suru
-			 */
+			
+			//diffInSrc wo key toshite sort
+			val t_diffInEdgeData = new MemoryChunk[Tuple2[Long,Long]](allInEdgeNum);
+			Parallel.iter(diffInEdgeOffset.range(), (tid :Long, r :LongRange) => {
+				for(i in r){
+					recursiveMergeSort[Tuple2[Long,Long]](
+						diffInEdgeData,		t_diffInEdgeData,
+						diffInEdgeOffset(i),
+						((i!=r.max) ? (diffInEdgeOffset(i+1)) as Long : (diffInEdgeData.size()-1L)) - diffInEdgeOffset(i),
+						(arg:MemoryChunk[Tuple2[Long,Long]],index:Long) => {
+							return arg(index).get2();
+					});
+				}
+			});
+			t_diffInEdgeData.del();
 
-			val recvCount = new MemoryChunk[Int](teamNum);
-			val recvOffset = new MemoryChunk[Int](teamNum + 1);
+			val recvCount = new MemoryChunk[Int](teamNum+1);
 			mTeam.alltoall(diffInEdgeCount,recvCount);
-			recvOffset(0) = 0;
 			for(i in recvCount.range()) {
-				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
+				recvCount(i+1) += recvCount(i);		//discard recvCount
 			}
-			val recvSize = recvOffset(teamNum);
+			val recvSize = recvCount(teamNum);	//index!!
+			
 			val dstDIEO = new MemoryChunk[Int](teamNum);
 			val dstDIED = new MemoryChunk[Tuple2[Long,Long]](recvSize);
 			val dstDIEC = new MemoryChunk[Int](teamNum);
-			mTeam.alltoallv[Tuple2[Long,Long]](diffInEdgeData, diffInEdgeOffset, diffInEdgeCount, dstDIED, dstDIEO,dstDIEC);
-
+			mTeam.alltoallv[Tuple2[Long,Long]](diffInEdgeData, diffInEdgeOffset, diffInEdgeCount, dstDIED, dstDIEO, dstDIEC);
+			
+			val dstDIE = new MemoryChunk[Tuple3[Long,Long,Boolean]](recvSize+1);	//+1
+			dstDIE(recvSize) = new Tuple3[Long,Long,Boolean](-1,-1,true);
 			for(off in dstDIEO.range())
 			for(cnt in 0..dstDIEC(off)){
-				dstDIED(dstDIEO(off)+cnt) 
-					= new Tuple2(dstDIED(dstDIEO(off)+cnt).val1, mVtoD(dstDIED(dstDIEO(off)+cnt).val2));
+				dstDIE(dstDIEO(off)+cnt) 
+					= new Tuple3[Long,Long,Boolean](
+							mDtoS(dstDIED(dstDIEO(off)+cnt).val1),			//koko de DtoS
+							dstDIED(dstDIEO(off)+cnt).val2 & ~mask,
+							(dstDIED(dstDIEO(off)+cnt).val2 & mask) != 0L);	//class ni shitahou ga iikamo NE
 			}
-			/* TODO: sort!!!!!*/
+			/* 
+			 * TODO:DIED.get1() wo key to shite sort
+			 */
+			val t_dstDIE = new MemoryChunk[Tuple3[Long,Long,Boolean]](recvSize);
+			//toriaezu single thread
+			recursiveMergeSort[Tuple3[Long,Long,Boolean]](
+				dstDIE,	t_dstDIE,
+				0L,		dstDIE.size(),
+				(arg:MemoryChunk[Tuple3[Long,Long,Boolean]],index:Long) => {
+					return arg(index).get1();
+			});
+			t_dstDIE.del();
 			
-			//update outedge no youryou de owari
+			var length :Long = 0L;
+			var cOffIndex :Long = 0L;	//New no hou mo kore de kaneteru
+			var cDstIndex :Long = 0L;
+			var cNewDstIndex :Long = 0L;
+
+			//hairetu nagasa motomeru
+			for(i in 0..(dstDIE.size()-1)){	//+1 shitearu node -1
+				if((dstDIE(i).get1() == dstDIE(i+1).get1()) &&
+						(dstDIE(i).get2() == dstDIE(i+1).get2()))
+					continue;
+				
+				length = 0L;
+				while(cOffIndex < dstDIE(i).get1())
+					++cOffIndex;
+				length = mInEdge.offsets(cOffIndex) - cDstIndex;
+				
+				while(cDstIndex+length < mInEdge.vertexes.size()-1 && 				//yomeru
+						mInEdge.vertexes(cDstIndex + length) < dstDIE(i).get2())
+					length++;
+				
+				cDstIndex += length;
+				cNewDstIndex += length;
+				if(dstDIE(i).get3())
+					cNewDstIndex++;
+				
+				if(mInEdge.vertexes(cDstIndex) == dstDIE(i).get2()){
+					cDstIndex++;
+					while(cOffIndex<=numVertexes &&
+							mInEdge.offsets(cOffIndex+1)<cDstIndex)
+						++cOffIndex;
+				}
+			}
+			val IEVertexes = new MemoryChunk[Long](cNewDstIndex+1);
 			
+			cOffIndex = 0L;
+			cDstIndex = 0L;
+			cNewDstIndex = 0L;
+			/* 
+			 * mInEdge.offsets = mesComm.mUCROffset;
+			 * mInEdge.vertexes = mesComm.mUCRMessages;
+			 */
+			mInEdge.offsets(0) = 0L;
+			for(i in 0..(dstDIE.size()-1)){	//+1 shitearu node -1
+				if((dstDIE(i).get1() == dstDIE(i+1).get1()) &&
+					(dstDIE(i).get2() == dstDIE(i+1).get2()))
+					continue;
+				length = 0L;
+				while(cOffIndex < dstDIE(i).get1()){
+					length = mInEdge.offsets(++cOffIndex) - cDstIndex;
+					mInEdge.offsets(cOffIndex) = cDstIndex + length;	//set offsets
+				}
+				while(cDstIndex+length < mInEdge.vertexes.size()-1 && 				//yomeru
+						mInEdge.vertexes(cDstIndex + length) < dstDIE(i).get2()){
+					length++;
+				}
+				MemoryChunk.copy(mInEdge.vertexes, cDstIndex, IEVertexes, cNewDstIndex, length);
+				cDstIndex += length;
+				cNewDstIndex += length;
+				if(dstDIE(i).get3()){
+					//add
+					/*
+					 * cOffIndex		huyasu kamo kamo
+					 * cDstIndex		huyasu kamo
+					 * cNewDstIndex	huyasu
+					 */
+					IEVertexes(cNewDstIndex++) = dstDIE(i).get2();
+				}else{
+					//remove
+					/*
+					 * cOffIndex		huyasu kamko
+					 * cDstIndex		hutuu huyasu (nakereba huyasanai) 
+					 * cNewDstIndex	sonomama
+					 */
+					//yarukoto nai?
+				}
+				
+				if(mInEdge.vertexes(cDstIndex) == dstDIE(i).get2()){
+					//add taisyou ga sudeni atta => fuyasu
+					//remove taisyou ga atta => fuyasu
+					//TODO: kangae naosu
+					//cDstIndex ha sukunakarazu fuyasu
+					//cOffset ha hitsuyou ga areba fuyasu
+					cDstIndex++;
+					while(cOffIndex<=numVertexes &&
+							mInEdge.offsets(cOffIndex+1)<cDstIndex){
+						mInEdge.offsets(++cOffIndex) = cDstIndex;
+					}
+				}
+			}
+			//sabun tekiyou kokode owari. ato ha henkou nashi no bun wo copy suru
+			//copy vertexes
+			MemoryChunk.copy(mInEdge.vertexes, cDstIndex+1, IEVertexes, cNewDstIndex+1, mInEdge.vertexes.size()-cDstIndex);
+			mInEdge.vertexes.del();
+			mInEdge.vertexes = IEVertexes;
+			//copy offsets
+			val diffOff = cNewDstIndex - cDstIndex;
+			for (i in (cOffIndex+1)..numVertexes){	//tyouten suu +1 made tyanto koushin siteiru
+				mInEdge.offsets(i) = mInEdge.offsets(i) + diffOff;
+			}
 		}
 		
 		//!!!!!kanarazu koko wo toosu!!!!!
@@ -471,6 +598,33 @@ final class WorkerPlaceGraph[V,E] {
 			l += mWDiffInDst(i).size();
 		}
 		return l;
+	}
+	
+	private static def recursiveMergeSort[T](
+			sArg :MemoryChunk[T],
+			tmpArg :MemoryChunk[T],
+			left :Long,
+			length :Long,
+			getVal :(arg:MemoryChunk[T],index:Long) => Long){	//osoraku getVal ha inline tenkai sareru ...
+		//alltoall de okurareta junban ha hozon sareteiru rasii
+		//toriaezu...
+		if(length<2)
+			return;
+		val m :Long = length >> 1;
+		val n :Long = length - m;
+		recursiveMergeSort[T](sArg,tmpArg,left,m,getVal);
+		recursiveMergeSort[T](sArg,tmpArg,left+m,n,getVal);
+		var i :Long = left;
+		var j :Long = left + m;
+		var k :Long = left;
+		while (i<(left+m) && j<(left+m+n)){	//left+m toka ha cache ni nokoru kamo
+			if(left+m+n <= j || (i < left+m && getVal(sArg,i) <= getVal(sArg,j))){
+				tmpArg(k++) = sArg(i++);	//j ga hanigai nara matigai naku koko wo tooru
+			}else{
+				tmpArg(k++) = sArg(j++);	//i ga hanigai nara matigai naku koko wo tooru
+			}
+		}
+		MemoryChunk.copy(tmpArg, left, sArg, left, length);
 	}
 	
 }
