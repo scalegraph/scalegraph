@@ -14,13 +14,13 @@ package org.scalegraph.util;
 import x10.compiler.Inline;
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
-import x10.compiler.NativeCPPInclude;
+import x10.compiler.NativeCPPOutputFile;
 import x10.compiler.Ifdef;
 import x10.compiler.Ifndef;
 
 import x10.util.IndexedMemoryChunk;
 
-@NativeCPPInclude("MemoryPointer.h")
+@NativeCPPOutputFile("MemoryPointer.h")
 
 /** The pointer representation for MemoryChunk. Using this representation directly is unsafe on the C++ backend.
  */

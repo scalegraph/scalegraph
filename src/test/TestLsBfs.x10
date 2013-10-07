@@ -14,8 +14,8 @@ package test;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
 
-import org.scalegraph.harness.sx10Test;
-import org.scalegraph.harness.*;
+import org.scalegraph.test.STest;
+import org.scalegraph.io.SimpleText;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.LsBfsVisitor;
 import org.scalegraph.fileread.DistributedReader;
@@ -25,12 +25,10 @@ import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.Bitmap2;
 import org.scalegraph.graph.id.OnedC;
 
-final class TestLsBfs extends sx10Test {
+final class TestLsBfs extends STest {
 	public static def main(args: Array[String](1)) {
 		new TestLsBfs().execute(args);
 	}
-    
-    val inputFile: Array[String] = new Array[String](1, (Int) => "/nfs/data0/testdata/RMAT_SCALE_8");
     
     public static class LocalState {
         val localVertices: Long;
@@ -62,14 +60,9 @@ final class TestLsBfs extends sx10Test {
         
         val team = Team.WORLD;
         
-        // Load data
-        val rawData = DistributedReader.read(inputFile, inputFormat);
-        // Create graph
-        val edgeList = rawData.get1();
-        val weightList = rawData.get2();
-        
-        val g = new Graph(team, Graph.VertexType.Long, false);
-        g.addEdges(edgeList.raw(team.placeGroup()));
+        // Load data, Create graph
+        val g = Graph.make(SimpleText.read(
+        		"/nfs/data0/testdata/RMAT_SCALE_8", inputFormat));
         
         // Create dist sparse matrix
         val csr = g.createDistEdgeIndexMatrix(

@@ -1,6 +1,7 @@
 package org.scalegraph.api;
 
 import x10.util.Team;
+import x10.compiler.Ifdef;
 
 import org.scalegraph.Config;
 import org.scalegraph.util.MemoryChunk;
@@ -68,6 +69,7 @@ public final class PageRank {
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, true);
+		Config.get().stopWatch().lap("Graph construction");
 		return execute(matrix);
 	}
 	
@@ -86,10 +88,14 @@ public final class PageRank {
 		val damping = param.damping;
 		val eps = param.eps;
 		val niter = param.niter;
+		val sw = Config.get().stopWatch();
 		
 		// compute PageRank
-		val xpgraph = XPregelGraph.make[Double, Double](team, matrix);
+		val xpgraph = XPregelGraph.make[Double, Double](matrix);
 		xpgraph.updateInEdge();
+		
+		sw.lap("UpdateInEdge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		xpgraph.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
@@ -105,16 +111,22 @@ public final class PageRank {
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
 			if (here.id == 0) {
-				Console.OUT.println("Large PageRank at superstep " + superstep + " = " + aggVal);
+				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
 			return (superstep >= niter || aggVal < eps);
 		});
+
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate:"); }
 		
 		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
+		val result = xpgraph.stealOutput[Double]();
 		
-		return xpgraph.stealOutput[Double]();
+		sw.lap("Retrieve output");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Retrieve Output:"); }
+		
+		return result;
 	}
 
 	// The algorithm interface also needs two helper methods like this.

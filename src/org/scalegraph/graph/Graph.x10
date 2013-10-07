@@ -35,11 +35,16 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.SparseMatrix;
+import org.scalegraph.util.SString;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.io.ID;
+import org.scalegraph.id.Type;
 
 /** Raw graph object. The instances of this class are pinned to a particular place because moving this instance to another place is not worth.
  */
 @Pinned public final class Graph(vertexType :Int) {
 	static type EDGE = Tuple2[Long,Long];
+	static type VT_PLH = PlaceLocalHandle[VertexTranslatorBase];
 	
     private team :Team;
     private graphAttributes = new HashMap[String, Any]();
@@ -47,18 +52,19 @@ import org.scalegraph.blas.SparseMatrix;
 	private edgeAttributes = new HashMap[String, Any]();
 	
 	//private vertexTranslator :PlaceLocalHandle[vertexTranslator[T]];
-	private vertexTranslator :Any;
-	private edgeList :DistGrowableMemory[Long];
+	private vertexTranslator :PlaceLocalHandle[VertexTranslatorBase];
+	private srcList :DistMemoryChunk[Long];
+	private dstList :DistMemoryChunk[Long];
 	
 	private var numberOfVertices :Long = 0L;
 	private var numberOfEdges :Long = 0L;
 	
-	/** Vertex ID type. Currently, String ID type is not supported.
+	/** Vertex ID type.
 	 */
 	public static class VertexType {
-		public static val Long = Attribute.ID.Long;
-		public static val Double = Attribute.ID.Double;
-	//	public static val String = Attribute.ID.String;
+		public static val Long = Type.Long;
+		public static val Double = Type.Double;
+		public static val String = Type.String;
 	}
 
 	/** Returns the number of vertices or the maximum ID number if translation is not used.
@@ -70,18 +76,23 @@ import org.scalegraph.blas.SparseMatrix;
 	public def numberOfEdges() = numberOfEdges;
 	
 	public def team() = team;
+	
+	public def source() = srcList;
+	
+	public def target() = dstList;
 
 	private static def createVertexTranslator[T](team :Team) {T haszero}
 	{
-		// currently support only this situation
-		if(team != Team.WORLD)
-			throw new IllegalArgumentException("Please, input Team.WORLD as the team parameter.");
-
-		val vertexNames = DistGrowableMemory[T](team.placeGroup());
-		val vertexNameAtt = new Attribute(vertexNames);
-		val vertexTranslator = PlaceLocalHandle.makeFlat[VertexTranslator[T]](
-				team.placeGroup(), ()=>new VertexTranslator[T](team, vertexNames()));
-		return Tuple2[Any, Any](vertexNameAtt, vertexTranslator as Any);
+		val vertexNames = DistMemoryChunk[T](team.placeGroup(), ()=>new MemoryChunk[T]());
+		val vertexTranslator = PlaceLocalHandle.makeFlat[VertexTranslatorBase](
+				team.placeGroup(), ()=>new VertexTranslator.HashTranslator[T](team, vertexNames));
+		return Tuple2[Any, VT_PLH](vertexNames, vertexTranslator);
+	}
+	
+	private static def createConverter(team :Team, create :() => VertexTranslatorBase) {
+		return new Tuple2[Any, VT_PLH](null,
+				PlaceLocalHandle.makeFlat[VertexTranslatorBase](
+						team.placeGroup(), create));
 	}
 	
 	/** 
@@ -93,141 +104,202 @@ import org.scalegraph.blas.SparseMatrix;
 	 */
 	public def this(team_ :Team, vertexType_ :Int, useTranslator :Boolean) {
 		property(vertexType_);
-		team = team_;
-		edgeList = new DistGrowableMemory[Long](team_.placeGroup());
+
+		// currently support only this situation
+		if(!team_.equals(Team.WORLD))
+			throw new IllegalArgumentException("Please, input Team.WORLD as the team parameter.");
 		
-		var translator :Tuple2[Any, Any] =
-			Tuple2[Any, Any](null, null);
+		team = team_;
+		srcList = new DistMemoryChunk[Long](team_.placeGroup(), ()=>new MemoryChunk[Long]());
+		dstList = new DistMemoryChunk[Long](team_.placeGroup(), ()=>new MemoryChunk[Long]());
+		
+		val translator :Tuple2[Any, VT_PLH];
 		switch(vertexType) {
 		case VertexType.Long:
 			if(useTranslator)
-				translator = createVertexTranslator[Long](team);
+				translator = createVertexTranslator[Long](team_);
+			else
+				translator = createConverter(team, () => new VertexTranslator.NoTraslator(team_));
 			break;
 		case VertexType.Double:
 			if(useTranslator)
 				translator = createVertexTranslator[Double](team);
+			else
+				translator = createConverter(team, () => 
+						new VertexTranslator.ArithmeticTranslator[Double](team_));
 			break;
-	//	case VertexType.String:
-	//		if(useTranslator)
-	//			translator = createVertexTranslator[String](team);
-	//		break;
+		case VertexType.String:
+			if(useTranslator)
+				translator = createVertexTranslator[SString](team);
+			else
+				throw new IllegalArgumentException();
+			break;
 		default:
 			throw new IllegalArgumentException("Edge type not supported");
 		}
-		
+
 		vertexTranslator = translator.get2();
-		if(vertexTranslator != null) {
+		if(useTranslator) {
 			val vertexNameAtt = translator.get1();
 			vertexAttributes.put("name", vertexNameAtt);
 		}
 	}
 	
-	public static def make(edges :DistMemoryChunk[Long]) {
+	public static def make(edgeData :NamedDistData) 
+		= make(edgeData, null, false);
+	
+	public static def make(edgeData :NamedDistData, renumbering :Boolean) 
+		= make(edgeData, null, renumbering);
+	
+	public static def make(edgeData :NamedDistData, vertexData :NamedDistData, renumbering :Boolean) {
+		val srcIdx = edgeData.nameToIndex(ID.NAME_SOURCE);
+		val dstIdx = edgeData.nameToIndex(ID.NAME_TARGET);
+		val vertexType = edgeData.typeId()(srcIdx);
+		assert(vertexType == edgeData.typeId()(dstIdx));
+		val g = new Graph(Config.get().worldTeam(), vertexType, renumbering);
+		val src = edgeData.data()(srcIdx);
+		val dst = edgeData.data()(dstIdx);
+		switch(vertexType) {
+		case Type.Long:
+			g.addEdges(EdgeList[Long](src as DistMemoryChunk[Long], dst as DistMemoryChunk[Long]));
+			break;
+		case Type.Double:
+			g.addEdges(EdgeList[Double](src as DistMemoryChunk[Double], dst as DistMemoryChunk[Double]));
+			break;
+		case Type.String:
+			g.addEdges(EdgeList[SString](src as DistMemoryChunk[SString], dst as DistMemoryChunk[SString]));
+			break;
+		default:
+			throw new IllegalOperationException("Not supported edge type");
+		}
+		for([i] in edgeData.data()) {
+			if(i == srcIdx || i == dstIdx) continue;
+			val proxy = AttributeProxy.make(edgeData.typeId()(i));
+			val name = edgeData.name()(i);
+			val data = edgeData.data()(i);
+			proxy.setEdgeAttribute(g, name, data);
+		}
+		if(vertexData != null) {
+			for([i] in vertexData.data()) {
+				val proxy = AttributeProxy.make(vertexData.typeId()(i));
+				val name = vertexData.name()(i);
+				val data = vertexData.data()(i);
+				proxy.setVertexAttribute(g, name, data);
+			}
+		}
+		return g;
+	}
+	
+	public static def make(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
 		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def make(edges :DistMemoryChunk[Double]) {
+	public static def make(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,false);
 		g.addEdges(edges);
 		return g;
 	}
-	/*
-	public static def make(edges :DistMemoryChunk[String]) {
-		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,false);
-		g.addEdges(edges);
-		return g;
-	}
-	*/
-	public static def makeWithTranslator(edges :DistMemoryChunk[Long]) {
+	
+	public static def makeWithTranslator(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,true);
 		g.addEdges(edges);
 		return g;
 	}
 	
-	public static def makeWithTranslator(edges :DistMemoryChunk[Double]) {
+	public static def makeWithTranslator(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,true);
 		g.addEdges(edges);
 		return g;
 	}
-	/*
-	 * public static def makeWithTranslator(edges :DistMemoryChunk[String]) {
-	 * val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
-	 * g.addEdges(edges);
-	 * return g;
-	 * }
-	 */
+	
+	public static def makeWithTranslator(edges :EdgeList[SString]) {
+		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
+		g.addEdges(edges);
+		return g;
+	}
 	
 	private def getOrCreateAttribute[T](vertexOrEdge :boolean, name :String,
-			throwAlreadyExist :boolean) {T haszero} :Attribute[T]
+			throwAlreadyExist :boolean) {T haszero} :DistMemoryChunk[T]
 	{
 		val attributes = vertexOrEdge ? vertexAttributes : edgeAttributes;
 		val att = attributes.getOrElse(name, null);
 		if(att != null) {
 			if(throwAlreadyExist) throw new IllegalOperationException("key already exists");
-			return att as Attribute[T];
+			return att as DistMemoryChunk[T];
 		}
-		val newAtt = new Attribute(new DistGrowableMemory[T](team.placeGroup()));
+		val newAtt = new DistMemoryChunk[T](team.placeGroup(), ()=>new MemoryChunk[T]());
 		attributes.put(name, newAtt);
 		return newAtt;
+	}
+			
+	private def setAttribute[T](vertexOrEdge :boolean, name :String, attType :Int, attValues :DistMemoryChunk[T]) {T haszero}
+	{
+		val attributes = vertexOrEdge ? vertexAttributes : edgeAttributes;
+		attributes.put(name, attValues);
 	}
 	
 	/** Returns the vertex attribute.
 	 * @param name The name of the attribute.
 	 */
 	public def getVertexAttribute[T](name :String) {T haszero} =
-		vertexAttributes.getOrThrow(name) as Attribute[T];
+		vertexAttributes.getOrThrow(name) as DistMemoryChunk[T];
 		
 	/** Returns the edge attribute.
 	 * @param name The name of the attribute.
 	 */
 	public def getEdgeAttribute[T](name :String) {T haszero} =
-		edgeAttributes.getOrThrow(name) as Attribute[T];
+		edgeAttributes.getOrThrow(name) as DistMemoryChunk[T];
 	
 	private static def innerAddEdges(team_ :Team, maxVertexID :Long,
-			ref :GlobalRef[Graph], edgeList_ :GrowableMemory[Long], translated :MemoryChunk[Long])
+			ref :GlobalRef[Graph],
+			srcList :DistMemoryChunk[Long], dstList :DistMemoryChunk[Long],
+			tlSrcs :MemoryChunk[Long], tlDsts :MemoryChunk[Long])
 	{
-		val globalMaxVertexID = team_.allreduce(team_.role()(0), maxVertexID, Team.MAX);
-		val globalNumOfEdges = team_.allreduce(team_.role()(0), translated.size() / 2, Team.ADD);
+		assert (srcList().size() == dstList().size());
+		assert (tlSrcs.size() == tlDsts.size());
+
+		val srcList_ = srcList();
+		val dstList_ = dstList();
+		
+		val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size(), Team.ADD);
 		if(here == ref.home) {
 			val g = ref.getLocalOrCopy();
-			g.numberOfVertices = Math.max(globalMaxVertexID + 1, g.numberOfVertices);
+			g.numberOfVertices = Math.max(maxVertexID + 1, g.numberOfVertices);
 			g.numberOfEdges += globalNumOfEdges;
 		}
 		
-		if(edgeList_.size() == 0L)
-			edgeList_.setMemory(translated);
-		else
-			edgeList_.add(translated);
+		if(srcList_.size() == 0L) {
+			srcList() = tlSrcs;
+			dstList() = tlDsts;
+		}
+		else {
+			if(here == ref.home) {
+				Console.OUT.println("WARNING: AddEdges if invoked while there are existing edges on the Graph object. This operation is slow.");
+			}
+			val allocator = new GrowableMemory[Long]();
+			allocator.setMemory(srcList_); allocator.add(tlSrcs); srcList() = allocator.raw();
+			allocator.setMemory(dstList_); allocator.add(tlDsts); dstList() = allocator.raw();
+		}
 	}
 	
-	/** Set/Add edges to this instance.
-	 * @param edges The distributed memory that contains edges.
-	 */
-	public def addEdges(edges :DistMemoryChunk[Long]) {
+	private def genericAddEdges[T](srcs :DistMemoryChunk[T], dsts :DistMemoryChunk[T]) { T haszero } {
 		val vt_ = vertexTranslator;
 		val team_ = team;
 		val ref = GlobalRef[Graph](this);
-		val edgeList_ = edgeList;
+		val srcList_ = srcList;
+		val dstList_ = dstList;
 		
 		team.placeGroup().broadcastFlat(()=> {
 			try {
-				var translated :MemoryChunk[Long];
-				var maxVertexID :Long = 0;
-				if(vt_ != null) {
-					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Long]])();
-					translated = new MemoryChunk[Long](edges().size());
-					vtt_.translateWithAll(edges(), translated, true);
-					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.role()(0);
-				}
-				else {
-					val edges_ = edges();
-					maxVertexID = Parallel.reduce[Long](edges_.range(),
-							(i:Long,t:Long)=>Math.max(edges_(i),t), (u:Long,v:Long)=>Math.max(u,v));
-					translated = edges_;
-				}
-				innerAddEdges(team_, maxVertexID, ref, edgeList_(), translated);
+				assert (srcs().size() == dsts().size());
+				
+				val vtt_ = vt_() as VertexTranslator[T];
+				val tlSrcs = vtt_.translateWithAll(srcs(), true);
+				val tlDsts = vtt_.translateWithAll(dsts(), true);
+				
+				innerAddEdges(team_, vtt_.maxVertexID(), ref, srcList_, dstList_, tlSrcs, tlDsts);
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();
@@ -235,88 +307,124 @@ import org.scalegraph.blas.SparseMatrix;
 		});
 	}
 	
+	private def vertexTypeString() {
+		switch(vertexType) {
+		case VertexType.Long: return "Long";
+		case VertexType.Double: return "Double";
+		case VertexType.String: return "String";
+		default: return "Not supported type";
+		}
+	}
+			
 	/** Set/Add edges to this instance.
 	 * @param edges The distributed memory that contains edges.
 	 */
-	public def addEdges(edges :DistMemoryChunk[Double]) {
-		val vt_ = vertexTranslator;
-		val team_ = team;
-		val ref = GlobalRef[Graph](this);
-		val edgeList_ = edgeList;
-		
-		team.placeGroup().broadcastFlat(()=> {
-			try {
-				val edges_ = edges();
-				val translated = new MemoryChunk[Long](edges_.size());
-				var maxVertexID :Long = 0;
-				if(vt_ != null) {
-					val vtt_ = (vt_ as PlaceLocalHandle[VertexTranslator[Double]])();
-					vtt_.translateWithAll(edges_, translated, true);
-					maxVertexID = (vtt_.size() - 1) * team_.size() + team_.role()(0);
-				}
-				else {
-					maxVertexID = Parallel.reduce[Long](translated.range(),
-							(i:Long,t:Long)=> {
-								translated(i) = edges_(i) as Long;
-								return Math.max(translated(i),t);
-							}, (u:Long,v:Long)=>Math.max(u,v));
-				}
-				innerAddEdges(team_, maxVertexID, ref, edgeList_(), translated);
-			}
-			catch(e : CheckedThrowable) {
-				e.printStackTrace();
-			}
-		});
+	public def addEdges(edges :EdgeList[Long]) {
+		if(vertexType != VertexType.Long)
+			throw new IllegalOperationException("Vertex type does not match. "
+					+ vertexTypeString() + " type is expected but the input is Long");
+		genericAddEdges(edges.src, edges.dst);
 	}
-	/* currently not supported
-	public def addEdges(edges :DistMemoryChunk[String]) {
-		internalAddEdges(VertexTranslator.putAndTranslate(
-				vertexTranslator as PlaceLocalHandle[VertexTranslator[String]], edges));
+	
+	/** Set/Add edges to this instance.
+	 * @param edges The distributed memory that contains edges.
+	 */
+	public def addEdges(edges :EdgeList[Double]) {
+		if(vertexType != VertexType.Double)
+			throw new IllegalOperationException("Vertex type does not match. "
+					+ vertexTypeString() + " type is expected but the input is Long");
+		genericAddEdges(edges.src, edges.dst);
 	}
-	*/
+	
+	/** Set/Add edges to this instance.
+	 * @param edges The distributed memory that contains edges.
+	 */
+	public def addEdges(edges :EdgeList[SString]) {
+		if(vertexType != VertexType.String)
+			throw new IllegalOperationException("Vertex type does not match. "
+					+ vertexTypeString() + " type is expected but the input is Long");
+		genericAddEdges(edges.src, edges.dst);
+	}
 
 	/* Translates vertex IDs. When you are using translator and you want to add vertex attributes with [ID, value] pair,
 	 * you have to use this method before adding attributes.
 	 * @param key Input data for translation
 	 * @param ids 
 	 */
-	public def translateVertexIds[T](key :DistMemoryChunk[T], ids :DistMemoryChunk[Long]) {T haszero} {
-		VertexTranslator.translate[T](vertexTranslator as PlaceLocalHandle[VertexTranslator[T]],
-				key, ids, false);
+	public def translateVertexIds[T](key :DistMemoryChunk[T]) {T haszero} {
+		return VertexTranslator.translate[T](vertexTranslator, key, false);
 	}
 	
 	private def internalSetAttributeValues[T](vertexOrEdge :Boolean, name :String, indexes : () => MemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
 		val att = getOrCreateAttribute[T](vertexOrEdge, name, false);
 		val team_ = team;
 		
-		val edgeList_ = edgeList;
+		val srcList_ = srcList;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
-				val att_ = att.values()();
+				val att_ :MemoryChunk[T];
 				if(vertexOrEdge) {
 					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
-					att_.setSize(actualLocalVertices);
+					att_ = new MemoryChunk[T](actualLocalVertices);
 				}
 				else {
-					att_.setSize(edgeList_().size());
+					att_ = new MemoryChunk[T](srcList_().size());
 				}
 				
 				val mask = team_.size() - 1;
 				val shift = MathAppend.log2(team_.size()) as Int;
 				val indexes_ = indexes();
 				val values_ = values();
-				Remote.put(team_, att_.raw(), indexes_.range(),
+				Remote.put(team_, att_, indexes_.range(),
 						(index:Long, put:(Int, Long,  T)=>void)=> {
 					val dstRole = indexes_(index) & mask;
 					val dstIdx = indexes_(index) >> shift;
 					put(dstRole as Int, dstIdx, values_(index));
 				});
+				
+				att() = att_;
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();
 			}
+		});
+	}
+
+	private def internalRetrieveAttributeValues[T](vertexOrEdge :Boolean, indexes : () => MemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
+		val team_ = team;
+		
+		val srcList_ = srcList;
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		
+		return DistMemoryChunk[T](team_.placeGroup(), () => {
+			var att_ :MemoryChunk[T] = new MemoryChunk[T]();
+			try {
+				if(vertexOrEdge) {
+					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
+					att_ = new MemoryChunk[T](actualLocalVertices);
+				}
+				else {
+					att_ = new MemoryChunk[T](srcList_().size());
+				}
+				
+				val mask = team_.size() - 1;
+				val shift = MathAppend.log2(team_.size()) as Int;
+				val indexes_ = indexes();
+				val values_ = values();
+				Remote.put(team_, att_, indexes_.range(),
+						(index:Long, put:(Int, Long,  T)=>void)=> {
+							val dstRole = indexes_(index) & mask;
+							val dstIdx = indexes_(index) >> shift;
+							put(dstRole as Int, dstIdx, values_(index));
+						});
+				
+			}
+			catch(e : CheckedThrowable) {
+				e.printStackTrace();
+			}
+			return att_;
 		});
 	}
 	
@@ -326,14 +434,13 @@ import org.scalegraph.blas.SparseMatrix;
 	 * @param values The attribute values.
 	 */
 	public def setEdgeAttribute[T](name :String, values :DistMemoryChunk[T]) {T haszero} {
-		val attValues = getOrCreateAttribute[T](false, name, false).values();
-		val edgeList_ = edgeList;
+		val srcList_ = srcList;
 		team.placeGroup().broadcastFlat(() => {
-			val numEdges = edgeList_().size() / 2;
+			val numEdges = srcList_().size();
 			if(numEdges != values().size())
 				throw new IllegalArgumentException("The number of attribute values is not match the number of edges");
-			attValues().setMemory(values());
 		});
+		edgeAttributes.put(name, values);
 	}
 	
 	/** Set edge attribute values with edge indexes.
@@ -353,17 +460,25 @@ import org.scalegraph.blas.SparseMatrix;
 	 * for each attribute values.
 	 * @param values The attribute values.
 	 */
-	public def setEdgeAttribute[T](name :String, sparseMatrix : DistSparseMatrix[Long], values :DistMemoryChunk[T]) {T haszero} {
-		internalSetAttributeValues(false, name, ()=>sparseMatrix().values, values);
+	public def setEdgeAttribute[T](name :String, distEdgeIndexMatrix : DistSparseMatrix[Long], values :DistMemoryChunk[T]) {T haszero} {
+		internalSetAttributeValues(false, name, ()=>distEdgeIndexMatrix().values, values);
+	}
+	
+	public def retrieveEdgeAttribute[T](indexes :DistMemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
+		return internalRetrieveAttributeValues(false, ()=>indexes(), values);
+	}
+	
+	public def retrieveEdgeAttribute[T](distEdgeIndexMatrix :DistSparseMatrix[Long], values :DistMemoryChunk[T]) {T haszero} {
+		return internalRetrieveAttributeValues(false, ()=>distEdgeIndexMatrix().values, values);
 	}
 	
 	private static struct VertexInfo {
-		val vertexTranslator : Any;
+		val vertexTranslator : PlaceLocalHandle[VertexTranslatorBase];
 		val vertexType : Int;
 		val numberOfPlaces : Int;
 		val numberOfVertices : Long;
 		
-		public def this(vertexTranslator :Any, vertexType :Int, numberOfVertices :Long, numberOfPlaces :Int) {
+		public def this(vertexTranslator :PlaceLocalHandle[VertexTranslatorBase], vertexType :Int, numberOfVertices :Long, numberOfPlaces :Int) {
 			this.vertexTranslator = vertexTranslator;
 			this.vertexType = vertexType;
 			this.numberOfVertices = numberOfVertices;
@@ -372,18 +487,9 @@ import org.scalegraph.blas.SparseMatrix;
 	}
 	
 	private static def getLocalNumberOfVertices(vi :VertexInfo, role :Int) :Long {
-		val vt_ = vi.vertexTranslator;
-		if(vt_ != null) {
-			switch(vi.vertexType) {
-			case VertexType.Long:
-				return (vt_ as PlaceLocalHandle[VertexTranslator[Long]])().size();
-			case VertexType.Double:
-				return (vt_ as PlaceLocalHandle[VertexTranslator[Double]])().size();
-		//	case VertexType.String:
-		//		return (vt_ as PlaceLocalHandle[VertexTranslator[String]])().size();
-			default:
-				throw new IllegalArgumentException();
-			}
+		val vt_ = vi.vertexTranslator();
+		if(vt_.isTranslator()) {
+			return vt_.sizeOfDictionary();
 		}
 		else {
 			val g = vi.numberOfVertices;
@@ -401,7 +507,6 @@ import org.scalegraph.blas.SparseMatrix;
 	public def setVertexAttribute[T](name :String, values :DistMemoryChunk[T]) {T haszero}
 	{
 		val team_ = team;
-		val attValues = getOrCreateAttribute[T](true, name, false).values();
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		team_.placeGroup().broadcastFlat(() => {
@@ -410,13 +515,13 @@ import org.scalegraph.blas.SparseMatrix;
 				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
 				if(actualLocalVertices > values_.size())
 					throw new IllegalArgumentException("The number of attribute values is not match the number of vertices");
-				
-				attValues().setMemory(values_.subpart(0, actualLocalVertices));
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();
 			}
 		});
+
+		vertexAttributes.put(name, values);
 	}
 	
 	/** Set vertex attribute values with vertex IDs.
@@ -445,6 +550,10 @@ import org.scalegraph.blas.SparseMatrix;
 		setVertexAttribute[T](name, sparseMatrix, values, 0);
 	}
 	
+	public def retrieveVertexAttribute[T](ids :DistMemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
+		return internalRetrieveAttributeValues(true, ()=>ids(), values);
+	}
+	
 	/** Set vertex attribute values with vertex IDs.
 	 * The attributes that the values are not provided will be filled with default values.
 	 * If the same attribute values are exist, overwrite the values.
@@ -455,7 +564,7 @@ import org.scalegraph.blas.SparseMatrix;
 	public def setVertexAttribute[T](name :String, sparseMatrix :DistSparseMatrix[Long],
 			values :DistMemoryChunk[T], z :Int) {T haszero}
 	{
-		val attValues = getOrCreateAttribute[T](true, name, false).values();
+		val attValues = getOrCreateAttribute[T](true, name, false);
 		val team_ = team;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
@@ -464,9 +573,11 @@ import org.scalegraph.blas.SparseMatrix;
 				val roleInGraph = team_.role()(0);
 				val sizeOfGraph = team_.size();
 				val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
-				val att_ = attValues();
 				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
-				att_.setSize(actualLocalVertices);
+				if(attValues().size() == 0L) {
+					attValues() = new MemoryChunk[T](actualLocalVertices);
+				}
+				val att_ = attValues();
 				
 				val setter = (i :Long, v :T) => {
 					if(i < actualLocalVertices) att_(i) = v;
@@ -505,12 +616,14 @@ import org.scalegraph.blas.SparseMatrix;
 	 */
 	public def createDistEdgeIndexMatrix(dist2d :Dist2D, directed :Boolean, outerOrInner :Boolean) {
 		val team_ = team;
-		val edgelist_ = edgeList;
+		val srcList_ = srcList;
+		val dstList_ = dstList;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		return new DistSparseMatrix(dist2d, () => {
 			val scatterGather = new DistScatterGather(team_);
-			val edgelist__ = edgelist_();
+			val srcList__ = srcList_();
+			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
 					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
 			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
@@ -521,19 +634,19 @@ import org.scalegraph.blas.SparseMatrix;
 			val rmask = (1L << ids.lgr) - 1;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
 			
-			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
+			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 					}
 				}
 				else {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
 					}
@@ -546,7 +659,7 @@ import org.scalegraph.blas.SparseMatrix;
 			val sendSrcV = new MemoryChunk[Long](sendCount);
 			val sendDstV = new MemoryChunk[Long](sendCount);
 			val sendValues = new MemoryChunk[Long](sendCount);
-			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
+			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				/*
 				 * for(i in r) {
@@ -565,8 +678,8 @@ import org.scalegraph.blas.SparseMatrix;
 				 */
 				if(directed) {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
@@ -575,8 +688,8 @@ import org.scalegraph.blas.SparseMatrix;
 				}
 				else {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
@@ -598,13 +711,15 @@ import org.scalegraph.blas.SparseMatrix;
 	public def createDistSparseMatrix[T](dist2d :Dist2D, name :String, directed :Boolean, outerOrInner :Boolean) { T haszero }
 	{
 		val team_ = team;
-		val edgelist_ = edgeList;
+		val srcList_ = srcList;
+		val dstList_ = dstList;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		val att = getEdgeAttribute[T](name);
 
 		return new DistSparseMatrix(dist2d, () => {
 			val scatterGather = new DistScatterGather(team_);
-			val edgelist__ = edgelist_();
+			val srcList__ = srcList_();
+			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
 					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
 			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
@@ -625,21 +740,21 @@ import org.scalegraph.blas.SparseMatrix;
 			*/
 			val rmask = (1L << ids.lgr) - 1;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
-			val att_ = att.values()().raw();
-			
-			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
+			val att_ = att();
+
+			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 					}
 				}
 				else {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
 					}
@@ -650,7 +765,7 @@ import org.scalegraph.blas.SparseMatrix;
 			val sendSrcV = new MemoryChunk[Long](sendCount);
 			val sendDstV = new MemoryChunk[Long](sendCount);
 			val sendValues = new MemoryChunk[T](sendCount);
-			Parallel.iter(0..(edgelist__.size()/2 - 1), (tid:Long, r:LongRange) => {
+			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				/*
 				for(i in r) {
@@ -669,8 +784,8 @@ import org.scalegraph.blas.SparseMatrix;
 				*/
 				if(directed) {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
@@ -679,8 +794,8 @@ import org.scalegraph.blas.SparseMatrix;
 				}
 				else {
 					for(i in r) {
-						val v0 = edgelist__(i*2 + 0);
-						val v1 = edgelist__(i*2 + 1);
+						val v0 = srcList__(i);
+						val v1 = dstList__(i);
 						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
@@ -736,26 +851,28 @@ import org.scalegraph.blas.SparseMatrix;
 	public def createSimpleEdgeIndexMatrix(place :Place, directed :Boolean, outerOrInner :Boolean) {
 		// return GlobalRef[SparseMatrix]...
 		val team_ = team;
-		val edgelist_ = edgeList;
+		val srcList_ = srcList;
+		val dstList_ = dstList;
 		val root = team_.role(place)(0);
 		// too complex ...
 		val ret = GlobalRef[Cell[GlobalRef[Cell[SparseMatrix[Long]]]]](
 				new Cell[GlobalRef[Cell[SparseMatrix[Long]]]](Zero.get[GlobalRef[Cell[SparseMatrix[Long]]]]()));
 		team_.placeGroup().broadcastFlat(() => {
 			try {
-				val edgelist__ = edgelist_();
-				val numEdges = edgelist__.size() / 2;
+				val srcList__ = srcList_();
+				val dstList__ = dstList_();
+				val numEdges = srcList__.size();
 				val sendCount = directed ? numEdges : numEdges * 2;
 				val sendSrcV = new MemoryChunk[Long](sendCount);
 				val sendDstV = new MemoryChunk[Long](sendCount);
 				val sendIndexes = new MemoryChunk[Long](sendCount);
 				val teamSize = team_.size();
 				val teamRank = team_.role()(0);
-				Parallel.iter(0..(numEdges - 1), (tid:Long, r:LongRange) => {
+				Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 					if(directed) {
 						for(i in r) {
-							val v0 = edgelist__(i*2 + 0);
-							val v1 = edgelist__(i*2 + 1);
+							val v0 = srcList__(i);
+							val v1 = dstList__(i);
 							sendSrcV(i) = v0;
 							sendDstV(i) = v1;
 							sendIndexes(i) = i * teamSize + teamRank;
@@ -763,8 +880,8 @@ import org.scalegraph.blas.SparseMatrix;
 					}
 					else {
 						for(i in r) {
-							val v0 = edgelist__(i*2 + 0);
-							val v1 = edgelist__(i*2 + 1);
+							val v0 = srcList__(i);
+							val v1 = dstList__(i);
 							sendSrcV(i*2 + 0) = v0;
 							sendDstV(i*2 + 0) = v1;
 							sendIndexes(i*2 + 0) = i * teamSize + teamRank;
@@ -827,10 +944,8 @@ import org.scalegraph.blas.SparseMatrix;
 	public def createDistAttribute[T](edgeIndexMatrix :DistSparseMatrix[Long], vertexOrEdge :boolean, name :String) {T haszero} {
 		val team_ = team;
 		val att = vertexOrEdge ? getVertexAttribute[T](name) : getEdgeAttribute[T](name);
-		
-		val edgeList_ = edgeList;
+
 		val verticesPerPlace = numberOfVertices / team.size();
-		val vt_ = vertexTranslator;
 		val vertexType_ = vertexType;
 		
 		return new DistMemoryChunk[T](team_.placeGroup(), () => {
@@ -846,7 +961,7 @@ import org.scalegraph.blas.SparseMatrix;
 					val localsize = 1L << edgeIndexMatrix.ids().lgl;
 					
 					val distAtt = new MemoryChunk[T](localsize);
-					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(),
+					Remote.get(team_, att(), distAtt, distAtt.range(),
 							(i :Long, get:(Long, Int, Long)=>void) => {
 						val rr = i * sizeOfDist + roleInDist;
 						val dstRole = rr & (sizeOfGraph - 1);
@@ -860,7 +975,7 @@ import org.scalegraph.blas.SparseMatrix;
 					val rankMask = (1L << shift) - 1;
 					val edgeIndexes = edgeIndexMatrix().values;
 					val distAtt = new MemoryChunk[T](edgeIndexes.size());
-					Remote.get(team_, att.values()().raw(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
+					Remote.get(team_, att(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
 						val index = edgeIndexes(i);
 						get(i, (index & rankMask) as Int, index >> shift);
 					});
@@ -891,7 +1006,8 @@ import org.scalegraph.blas.SparseMatrix;
 	/** Delete Graph and related objects.
 	 */
 	public def del() {
-		val edgeList_ = edgeList;
+		val srcList_ = srcList;
+		val dstList_ = dstList;
 		val attlist = new ArrayList[Any]();
 		
 		for(key in vertexAttributes.keySet())
@@ -901,27 +1017,28 @@ import org.scalegraph.blas.SparseMatrix;
 		
 		team.placeGroup().broadcastFlat(()=> {
 			try {
-				edgeList_.del();
+				srcList_.del();
+				dstList_.del();
 				
 				for(att in attlist) {
-					if(att instanceof Attribute[Byte])
-						(att as Attribute[Byte]).values().del();
-					else if(att instanceof Attribute[Short])
-						(att as Attribute[Short]).values().del();
-					else if(att instanceof Attribute[Int])
-						(att as Attribute[Int]).values().del();
-					else if(att instanceof Attribute[Long])
-						(att as Attribute[Long]).values().del();
-					else if(att instanceof Attribute[Float])
-						(att as Attribute[Float]).values().del();
-					else if(att instanceof Attribute[Double])
-						(att as Attribute[Double]).values().del();
-					else if(att instanceof Attribute[Char])
-						(att as Attribute[Char]).values().del();
-					else if(att instanceof Attribute[String])
-						(att as Attribute[String]).values().del();
-					else if(att instanceof Attribute[Boolean])
-						(att as Attribute[Boolean]).values().del();
+					if(att instanceof DistMemoryChunk[Byte])
+						(att as DistMemoryChunk[Byte]).del();
+					else if(att instanceof DistMemoryChunk[Short])
+						(att as DistMemoryChunk[Short]).del();
+					else if(att instanceof DistMemoryChunk[Int])
+						(att as DistMemoryChunk[Int]).del();
+					else if(att instanceof DistMemoryChunk[Long])
+						(att as DistMemoryChunk[Long]).del();
+					else if(att instanceof DistMemoryChunk[Float])
+						(att as DistMemoryChunk[Float]).del();
+					else if(att instanceof DistMemoryChunk[Double])
+						(att as DistMemoryChunk[Double]).del();
+					else if(att instanceof DistMemoryChunk[Char])
+						(att as DistMemoryChunk[Char]).del();
+					else if(att instanceof DistMemoryChunk[String])
+						(att as DistMemoryChunk[String]).del();
+					else if(att instanceof DistMemoryChunk[Boolean])
+						(att as DistMemoryChunk[Boolean]).del();
 					else
 						throw new UnsupportedOperationException("Type: " + att.typeName());
 				}

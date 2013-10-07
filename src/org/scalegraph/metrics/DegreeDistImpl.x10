@@ -14,11 +14,12 @@ package org.scalegraph.metrics;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.MemoryChunk;
-import org.scalegraph.util.DistGrowableMemory;
+import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.DistScatterGather;
 import org.scalegraph.util.Parallel;
 import x10.util.Team;
 import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.util.GrowableMemory;
 
 /**
  * Calculate degree distribution. This class is intended for interal use only.
@@ -30,9 +31,8 @@ public final class DegreeDistImpl {
     
 	public static def degreeDistribution[T](columnDistGraph: DistSparseMatrix[T]) {
 	    val team = columnDistGraph.dist().allTeam();
-		val result = new DistGrowableMemory[Long](team.placeGroup());
 		
-		team.placeGroup().broadcastFlat(() => {
+		return new DistMemoryChunk[Long](team.placeGroup(), () => {
 			val teamSize = team.size();
 			val m = columnDistGraph();
 			val ids = columnDistGraph.ids();
@@ -57,8 +57,9 @@ public final class DegreeDistImpl {
 			});
 
 			val recv = scatterGather.scatter(requests);
-			result().setSize(columnDistGraph.ids().numberOfLocalVertexes());
-			val result_ = result().raw();
+			val result = new GrowableMemory[Long]();
+			result.setSize(columnDistGraph.ids().numberOfLocalVertexes());
+			val result_ = result.raw();
 			Parallel.iter(recv.range(), (tid :Long, r :LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				for(i in r) {
@@ -74,10 +75,10 @@ public final class DegreeDistImpl {
 					break;
 				}
 			}
-			result().setSize(team.allreduce(team.role()(0), resultSize, Team.MAX));
-			result().shrink(0);
+			result.setSize(team.allreduce(team.role()(0), resultSize, Team.MAX));
+			result.shrink(0);
+			
+			return result.raw();
 		});
-		
-		return result;
 	}
 }

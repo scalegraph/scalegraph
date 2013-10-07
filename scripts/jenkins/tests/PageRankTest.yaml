@@ -1,0 +1,8 @@
+small:
+  - name: PageRank test
+    args: rmat 14 - low write $prefix/temp/pagerank
+    thread: 4
+    gcproc: 2
+    place: 8
+    duplicate: 2
+    timeout: 120
