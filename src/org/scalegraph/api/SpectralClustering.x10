@@ -11,8 +11,11 @@
 
 package org.scalegraph.api;
 
+import org.scalegraph.Config;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.community.SpectralClusteringImpl;
+import org.scalegraph.io.ID;
 import org.scalegraph.util.DistMemoryChunk;
 
 
@@ -20,6 +23,10 @@ import org.scalegraph.util.DistMemoryChunk;
  * Calculate spectral clustering
  */
 final public class SpectralClustering {
+	
+	val config = Config.get();
+	val team = config.worldTeam();
+	val dist = config.dist2d();
 	
 	// default options
 	var numCluster:Int = 2;         // number of clusters
@@ -37,23 +44,20 @@ final public class SpectralClustering {
 	}
 	
 	public def execute(g : Graph) : DistMemoryChunk[Int] {
-		return execute(g, "weight");
+		val w = g.createDistSparseMatrix[Double](dist, ID.NAME_WEIGHT, false, false);
+		return execute(w);
 	}
 	
-	public def execute(g : Graph, attrName : String) : DistMemoryChunk[Int] {
-		return SpectralClusteringImpl.run(g, attrName, numCluster, tolerance, maxitr, threshold);
+	public def execute(w : DistSparseMatrix[Double]) : DistMemoryChunk[Int] {
+		return SpectralClusteringImpl.run(w, numCluster, tolerance, maxitr, threshold);
 	}
 	
 	public static def run(g : Graph) {
 		return new SpectralClustering().execute(g);
 	}
 	
-	public static def run(g : Graph, attrName : String) {
-		return new SpectralClustering().execute(g, attrName);
-	}
-	
-	public static def run(g : Graph, attrName : String, numCluster : Int,
+	public static def run(w : DistSparseMatrix[Double], numCluster : Int,
 			tolerance : Double, maxitr : Int, threshold : Double) {
-		return new SpectralClustering(numCluster, tolerance, maxitr, threshold).execute(g, attrName);
+		return new SpectralClustering(numCluster, tolerance, maxitr, threshold).execute(w);
 	}
 }

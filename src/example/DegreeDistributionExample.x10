@@ -11,20 +11,14 @@
 
 package example;
 
-import x10.util.Team;
 import x10.io.File;
-import x10.io.FileReader;
-import x10.io.IOException;
+import x10.util.Team;
 
 import org.scalegraph.io.SimpleText;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.api.DegreeDistribution;
 
 
@@ -57,6 +51,7 @@ public final class DegreeDistributionExample {
         // Load data
         val g = Graph.make(SimpleText.read(args(0), inputFormat));
         
+        // Create API instance
         val degreeDist = new DegreeDistribution();
         
         // In-degree calculation
