@@ -28,6 +28,7 @@ import org.scalegraph.util.SStringBuilder;
 
 
 @NativeCPPInclude("CSVHelper.h")
+@NativeCPPCompilationUnit("CSVHelper.cc") 
 public class CSVAttributeHandler {
 	@Native("c++", "org::scalegraph::io::impl::H_CHUNK_SIZE")
 	public static val H_CHUNK_SIZE :Long = 256;
