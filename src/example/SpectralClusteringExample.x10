@@ -7,16 +7,29 @@ import x10.util.Team;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.Config;
+
 
 public final class SpectralClusteringExample {
 
     public static def main(args: Array[String]) {
         
-        val team = Team.WORLD;
+        val config = Config.get();
+        val team = config.worldTeam();
+        val dist = config.dist2d();
+        val weightAttr = "weight";
+        
+        // the number of cluster
         val numCluster = 2;
-        val tolerance = 0.5;
-        val maxitr = 32;
-        val threshold = 0.8;
+        
+        // tolerance
+        val tolerance = 0.01;
+        
+        // max iteration
+        val maxitr = 1000;
+        
+        // thread
+        val threshold = 0.001;
         val outputPath = "sc-%d";
                 
         val scale = 10;
@@ -26,9 +39,10 @@ public final class SpectralClusteringExample {
         val g = Graph.make(edgeList);
         
         val weight = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
-        g.setEdgeAttribute[Double]("weight", weight);
+        g.setEdgeAttribute[Double](weightAttr, weight);
         
-        val result = SpectralClustering.run(g, "weight", numCluster, tolerance, maxitr, threshold);
+        val W = g.createDistSparseMatrix[Double](dist, weightAttr, false, false);
+        val result = SpectralClustering.run(W, numCluster, tolerance, maxitr, threshold);
         
         val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
         CSVWriter.write(team, outputPath, namedDistData, true);
