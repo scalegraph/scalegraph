@@ -15,9 +15,6 @@ import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 
-import org.scalegraph.test.STest;
-import org.scalegraph.io.SimpleText;
-import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
@@ -27,6 +24,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.api.BetweennessCentrality;
 import org.scalegraph.util.Dist2D;
+import org.scalegraph.io.CSV;
 
 final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
