@@ -1,0 +1,15 @@
+small:
+  - name: In- and out-degree calculation (high)
+    args: file $prefix/degree_dist/w-scale20 - high check $prefix/degree_dist/RMAT_20_INOUTDEG
+    thread: 4
+    gcproc: 2
+    place: 8
+    duplicate: 2
+    timeout: 120
+  - name: In- and out-degree calculation (low)
+    args: file $prefix/degree_dist/w-scale20 - low check $prefix/degree_dist/RMAT_20_INOUTDEG
+    thread: 4
+    gcproc: 2
+    place: 8
+    duplicate: 2
+    timeout: 120

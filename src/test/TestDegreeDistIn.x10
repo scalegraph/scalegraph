@@ -11,23 +11,16 @@
 package test;
 
 import x10.util.Team;
-import x10.io.File;
-import x10.io.FileReader;
-import x10.io.IOException;
 
-import org.scalegraph.test.STest;
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.api.DegreeDistribution;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.Config;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.blas.SparseMatrix;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.api.DegreeDistribution;
 import org.scalegraph.test.AlgorithmTest;
+import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Dist2D;
-import org.scalegraph.Config;
 
 final class TestDegreeDistIn extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
@@ -57,18 +50,18 @@ final class TestDegreeDistIn extends AlgorithmTest {
 	        sw.lap("Degree distribution calculation");
 	    }
 	    else {
-	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+	        throw new IllegalArgumentException("Unknown level parameter :" + op1);
 	    }
 	    
 	    if(op2.equals("write")) {
-	        CSV.write(args(2), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
+	        CSV.write(op3, new NamedDistData(["indeg" as String], [indegResult as Any]), true);
 	        return true;
 	    }
 	    else if(op2.equals("check")) {
 	        return checkResult[Long](indegResult, op3, 0L);
 	    }
 	    else {
-	        throw new IllegalArgumentException("Unknown command :" + args(0));
+	        throw new IllegalArgumentException("Unknown command :" + op2);
 	    }
 	}
 }
