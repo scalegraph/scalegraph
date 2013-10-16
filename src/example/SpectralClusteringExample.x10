@@ -32,18 +32,22 @@ public final class SpectralClusteringExample {
         val threshold = 0.001;
         val outputPath = "sc-%d";
                 
+        // Generate RMAT graph
         val scale = 10;
         val edgeFactor = 8;
         val rnd = new Random(2, 3);
         val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
         val g = Graph.make(edgeList);
         
+        // Generate edge weight
         val weight = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
         g.setEdgeAttribute[Double](weightAttr, weight);
         
+        // Call API
         val W = g.createDistSparseMatrix[Double](dist, weightAttr, false, false);
         val result = SpectralClustering.run(W, numCluster, tolerance, maxitr, threshold);
         
+        // Write output
         val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
         CSVWriter.write(team, outputPath, namedDistData, true);
     }
