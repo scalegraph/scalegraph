@@ -2,7 +2,7 @@
 from helper import *
 from optparse import OptionParser
 import os,TAP
-
+from shutil import (rmtree)
 usage = "Usage: # run_yaml [options] {YAMLFILE}"
 
 #-------------------------------------------------#
@@ -46,8 +46,8 @@ else:
     filepath=yamlfiles[0]
     filename=os.path.basename(filepath)
 
-initTap(len(yamlfiles)*2)    
-    
+initTap(len(yamlfiles)*2)
+
 fPrefix, ext = os.path.splitext(filename)
 if ext != ".yaml":
     sys.stderr.write("file suffix is not \".yaml\"")
@@ -61,6 +61,7 @@ if opts.bin == None:
     buildResult = build_test(fPrefix,opts.x10Dir+"/"+fPrefix+".x10",sandbox,opts.srcDir)
     if buildResult != 0:
         sys.stderr.write("biuld failed.")
+        rmtree(sandbox)
         sys.exit(1)
 
 for testcase in yamldata:
@@ -71,3 +72,4 @@ for testcase in yamldata:
              workPath=sandbox,
              mpi=opts.mpi,
              attributes=testcase)
+    rmtree(sandbox)
