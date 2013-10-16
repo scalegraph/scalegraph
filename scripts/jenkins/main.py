@@ -87,19 +87,19 @@ def main():
                         opts.x10Dir+"/"+filePref+".x10",
                         sandbox,
                         opts.srcDir)
-            if buildresult == 0:
-                run_test(name=filePref,
-                binName=filePref,
-                workPath=sandbox,
-                mpi=opts.mpi,
-                attributes=attribute)
-            else:
-                fail_run_test(name = filePref,
-                        binName=filePref,
-                        workPath=sandbox,
-                        attributes=attribute,
-                        describe="build failed")
-            rmtree(sandbox)
+        if buildresult == 0:
+            helper.run_test(name=filePref,
+                            binName=filePref,
+                            workPath=sandbox,
+                            mpi=opts.mpi,
+                            attributes=attribute)
+        else:
+            helper.fail_run_test(name = filePref,
+                            binName=filePref,
+                            workPath=sandbox,
+                            attributes=attribute,
+                            describe="build failed")
+        rmtree(sandbox)
 
     if(DEBUG):
         sys.stderr.write("DEBUG: Testcase attributes:" + str(attribute))
