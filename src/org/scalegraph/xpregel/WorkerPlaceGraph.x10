@@ -357,7 +357,7 @@ final class WorkerPlaceGraph[V,E] {
 			
 			//-----directionOptimization
 			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
-			if(0L < numAllBCSCount  && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/20)){	//TODO: modify /20
+			if(0L < numAllBCSCount && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/50)){	//TODO: modify /20
 				val BCbmp=ectx.mBCCHasMessage;
 				foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 					val vc = vctxs(tid);
@@ -366,18 +366,18 @@ final class WorkerPlaceGraph[V,E] {
 							vc.mSrcid = dosrcid;
 							val OEsId = vc.outEdgesId();
 							val tempmes=ectx.mBCCMessages(dosrcid);
-							atomic{Console.OUT.println("\ttempmes="+tempmes+", outEdgesIdNum="+OEsId.size());}
 							for(eI in OEsId){
 								vc.sendMessage(eI, tempmes);
 							}
 						}
 					}
-					ectx.mBCCHasMessage.clear(false);
 				});
+				ectx.mBCCHasMessage.clear(false);
+				ectx.mBCCMessages.del();
+				ectx.mBCCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
 				ectx.mBCSInputCount=0L;
 			}
 			//-----
-			
 			
 			// aggregate
 			val aggVal = (aggregator != null)
@@ -387,9 +387,6 @@ final class WorkerPlaceGraph[V,E] {
 			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
 
-			//"gather statistics" was here(modoshita)
-			
-			//
 			val terminate = gatherInformation(mTeam, ectx, statistics, mEnableStatistics, combiner);
 
 			if(here.id() == 0 && mLogPrinter != null) {
