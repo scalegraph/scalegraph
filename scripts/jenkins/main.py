@@ -88,18 +88,18 @@ def main():
                         sandbox,
                         opts.srcDir)
             if buildresult == 0:
-                run_test(name=filePref,
-                binName=filePref,
-                workPath=sandbox,
-                mpi=opts.mpi,
-                attributes=attribute)
+                helper.run_test(name=filePref,
+                                binName=filePref,
+                                workPath=sandbox,
+                                mpi=opts.mpi,
+                                attributes=attribute)
             else:
-                fail_run_test(name = filePref,
-                        binName=filePref,
-                        workPath=sandbox,
-                        attributes=attribute,
-                        describe="build failed")
-            rmtree(sandbox)
+                helper.fail_run_test(name = filePref,
+                                     binName=filePref,
+                                     workPath=sandbox,
+                                     attributes=attribute,
+                                     describe="build failed")
+        rmtree(sandbox)
 
     if(DEBUG):
         sys.stderr.write("DEBUG: Testcase attributes:" + str(attribute))

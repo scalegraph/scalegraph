@@ -1,0 +1,15 @@
+small:
+  - name: Unweighted BC (high)
+    args: file $prefix/bc/powergrid.csv - high check $prefix/bc/powergrid.bc.exact.csv
+    thread: 4
+    gcproc: 2
+    place: 8
+    duplicate: 2
+    timeout: 120
+  - name: Unweighted BC (low)
+    args: file $prefix/bc/powergrid.csv - low_exact check $prefix/bc/powergrid.bc.exact.csv
+    thread: 4
+    gcproc: 2
+    place: 8
+    duplicate: 2
+    timeout: 120

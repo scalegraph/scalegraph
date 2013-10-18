@@ -22,6 +22,7 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.EdgeList;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.io.ID;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.impl.CSVWriter;
 import org.scalegraph.util.Dist2D;
@@ -55,9 +56,14 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		Console.OUT.println("edges    = " + g.numberOfEdges());
 		
 		val sw = new MyStopWatch();
-		sw.start("spectral clustering");
+		sw.start("create dist sparse matrix");
 		
-		val result = SpectralClustering.run(g, "weight", numCluster, tolerance, maxitr, threshold);
+		val W = g.createDistSparseMatrix[Double](dist, ID.NAME_WEIGHT, false, false);
+		g.del();
+		
+		sw.next("spectral clustering");
+		
+		val result = SpectralClustering.run(W, numCluster, tolerance, maxitr, threshold);
 		
 		//sw.next("output");
 		
@@ -67,7 +73,6 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		
 		sw.next("normalized cut");
 		
-		val W = g.createDistSparseMatrix[Double](dist, "weight", false, false);
 		val ncut = normalizedCut(W, result, numCluster);
 		Console.OUT.println("ncut = " + ncut);
 		
@@ -142,6 +147,7 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		Console.OUT.println(assoc);
 		var ncut:Double = 0.0;
 		for(i in 0..(numberOfClusters - 1)) {
+			if(cut(i) == 0L && assoc(i) == 0L) continue;
 			ncut += cut(i) as Double / assoc(i);
 		}
 		

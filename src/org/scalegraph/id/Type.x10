@@ -68,7 +68,7 @@ public final class Type {
 			return Type.ULong;
 		if(dmc instanceof DistMemoryChunk[Char])
 			return Type.Char;
-		if(dmc instanceof DistMemoryChunk[String])
+		if(dmc instanceof DistMemoryChunk[SString])
 			return Type.String;
 		else
 			throw new Exception("invalid data type");
