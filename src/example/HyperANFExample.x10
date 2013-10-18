@@ -1,6 +1,5 @@
 package example;
 
-import org.scalegraph.api.SpectralClustering;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.impl.CSVWriter;
 import x10.util.Team;
@@ -21,7 +20,7 @@ public final class HyperANFExample {
         val team = config.worldTeam();
         val dist = config.dist2d();
         val weightAttr = "weight";
-        val outpath = "hyperanf";
+        val outpath = "out_hyperanf";
         
         // Generate RMAT graph
         val scale = 10;
