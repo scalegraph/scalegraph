@@ -1,13 +1,14 @@
 package example;
 
-import org.scalegraph.api.SpectralClustering;
-import org.scalegraph.io.NamedDistData;
-import org.scalegraph.io.impl.CSVWriter;
 import x10.util.Team;
-import org.scalegraph.graph.GraphGenerator;
-import org.scalegraph.util.random.Random;
-import org.scalegraph.graph.Graph;
+
+import org.scalegraph.api.SpectralClustering;
 import org.scalegraph.Config;
+import org.scalegraph.graph.Graph;
+import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.io.impl.CSVWriter;
+import org.scalegraph.io.NamedDistData;
+import org.scalegraph.util.random.Random;
 
 
 public final class SpectralClusteringExample {
