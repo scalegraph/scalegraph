@@ -11,6 +11,7 @@
 
 package org.scalegraph.api;
 
+import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
 
@@ -34,9 +35,9 @@ public class HyperANF {
 	 */
 	public var team :Team = Config.get().worldTeam();
 	/** Maximum number of iterations.
-	 * Default: 30
+	 * Default: 1000
 	 */
-	public var niter:Int = 30;
+	public var niter:Int = 1000;
 	
 	public var weights :String = "weight";
 	/*
@@ -82,13 +83,19 @@ public class HyperANF {
 
 		val team = param.team;
 		val niter = param.niter;
+		val sw = Config.get().stopWatch();
+		
 		
 		val blockLength = 3L;
 
 //		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 //		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
 		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
+		xpregel.setLogPrinter(Console.ERR, 0);
 		xpregel.updateInEdge();
+		
+		sw.lap("UpdateInEdge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 //		val N:Long = graph.numberOfVertices();
 		val N:Long = xpregel.size();
@@ -106,65 +113,90 @@ public class HyperANF {
 		 * 		0 : initialize each node value(MemoryChunk)
 		 * 		0~ : recieve messages , change my value and send my value to adjacent nodes.
 		 */
-		
 		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
-		xpregel.iterate[MemoryChunk[Byte],Double](
-				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
+		val compute :(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => void
+		 = (ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
 
-					var counterB:MemoryChunk[Byte];
-					if(ctx.superstep()==0) {
-						val counterA = new MemoryChunk[Byte](M);
-						for(i in counterA.range()) counterA(i) = 0;
-						val rand = new Random(ctx.realId(ctx.id()), 1000);
-						val pos = rand.nextLong()%M;
-						var num:Long = rand.nextLong()+1;
-						var cnt:Byte = 0;
-						while(num%2==0L) {
-							num /= 2;
-							cnt = cnt+1;
-						}
-						counterA(pos) =  cnt;
-						counterB = counterA;
-					}
-					else {
-						val counterA = ctx.value();
-						//maxim massages
-						for(i in messages.range()) {
-							for(j in counterA.range()) {
-								counterA(j) = MathAppend.max(messages(i)(j) , counterA(j));
-							}
-						}
-						counterB =counterA;
+			 var counterB:MemoryChunk[Byte];
+			 if(ctx.superstep()==0) {
+				 val counterA = new MemoryChunk[Byte](M);
+				 for(i in counterA.range()) counterA(i) = 0;
+				 val rand = new Random(ctx.realId(ctx.id()), 1000);
+				 val pos = rand.nextLong()%M;
+				 var num:Long = rand.nextLong()+1;
+				 var cnt:Byte = 0;
+				 while(num%2==0L) {
+					 num /= 2;
+					 cnt = cnt+1;
+				 }
+				 counterA(pos) =  cnt;
+				 counterB = counterA;
+			 }
+			 else {
+				 val counterA = ctx.value();
+				 //maxim massages
+				 for(i in messages.range()) {
+					 for(j in counterA.range()) {
+						 counterA(j) = MathAppend.max(messages(i)(j) , counterA(j));
+					 }
+				 }
+				 counterB =counterA;
 
-					}
+			 }
 
-					if (here.id == 0 && ctx.id() == 0L) {
-						Console.OUT.println("Neighborhood function at superstep " + ctx.superstep() + " = " + ctx.aggregatedValue());
+			 for(i in ctx.outEdgesId().range() ) {
+				 ctx.sendMessage(ctx.outEdgesId()(i), counterB);
+				 
+			 }
+			 
+			 //					ctx.sendMessageToAllNeighbors(counterB);
+			 
+			 val retval = calcSize(counterB,alpha);
+			 //			Console.OUT.println("retval"  + ctx.realId() + " " + retval);
+			 ctx.aggregate(retval);
+			 ctx.setValue(counterB);
+			 
+		 };
+		val aggregator :(values :MemoryChunk[Double]) => Double
+		  = (values :MemoryChunk[Double]) => MathAppend.sum(values);
+		val combiner :(values : MemoryChunk[MemoryChunk[Byte]]) => MemoryChunk[Byte] =
+			(values : MemoryChunk[MemoryChunk[Byte]]) =>{
+				if(values.size()==0L) {
+					val ret:MemoryChunk[Byte] = new MemoryChunk[Byte]((M as Long)) ;
+					for(i in ret.range()) ret(i) = (0 as Byte);
+					return ret;
+				}
+				val ret = values(0);
+				for(i in values.range()) {
+					for(j in ret.range()) {
+						ret(j) = MathAppend.max(ret(j), values(i)(j));
 					}
-					
-					ctx.sendMessageToAllNeighbors(counterB);
-					
-					val retval = calcSize(counterB,alpha);
-					//			Console.OUT.println("retval"  + ctx.realId() + " " + retval);
-					ctx.aggregate(retval);
-					ctx.setValue(counterB);
-					
-				},
-				(values :MemoryChunk[Double]) => MathAppend.sum(values),
-				(superstep :Int, aggVal :Double) => {
-					if(results.home==here) {
-						val md:MemoryChunk[Double] = results()();
-						md(superstep) = aggVal;
-						results()() = md;
+				}
+				return ret;
+				
+			};
+		val end :(superstep :Int, aggVal :Double) => Boolean =
+			(superstep :Int, aggVal :Double) => {
+				if(results.home==here) {
+					val md:MemoryChunk[Double] = results()();
+					md(superstep) = aggVal;
+					results()() = md;
+					if(superstep>5) {
+						val	a = md(superstep-1) + 1.0;
+						val b = md(superstep) + 1.0;
+						if(MathAppend.abs(a/b - 1.0) < 0.001)
+							return true;
 					}
-					return superstep > niter;
-				});
-		var iter:Int=0;
-		while(iter<niter) {
-			Console.OUT.println( (iter+1) + " "+ results()()(iter));
-			iter++;
-		}
-		
+				}
+				if(here.id == 0) {
+					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
+				}
+				
+				return superstep > niter;
+			};
+		xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
+		sw.lap("Main iterate");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Main iterate:"); }
 		return results()();
 		
 	}	
