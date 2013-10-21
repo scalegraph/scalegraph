@@ -1,16 +1,14 @@
 package example;
 
-import org.scalegraph.io.NamedDistData;
-import org.scalegraph.io.impl.CSVWriter;
 import x10.util.Team;
-import org.scalegraph.graph.GraphGenerator;
-import org.scalegraph.util.random.Random;
-import org.scalegraph.graph.Graph;
+
 import org.scalegraph.Config;
-import org.scalegraph.util.SStringBuilder;
+import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.graph.Graph;
 import org.scalegraph.io.FileWriter;
 import org.scalegraph.io.FileMode;
-
+import org.scalegraph.util.random.Random;
+import org.scalegraph.util.SStringBuilder;
 
 public final class HyperANFExample {
 
@@ -37,8 +35,6 @@ public final class HyperANFExample {
         val result = org.scalegraph.api.HyperANF.run(g);
         
         // Write output
-        // val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
-        // CSVWriter.write(team, outputPath, namedDistData, true);
         val sb = new SStringBuilder();
         for(i in result.range()) {
             sb.add(result(i)).add("\n");

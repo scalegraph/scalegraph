@@ -15,9 +15,8 @@ import x10.util.Team;
 
 import org.scalegraph.Config;
 import org.scalegraph.io.SimpleText;
-import org.scalegraph.io.CSV;
-import org.scalegraph.util.tuple.*;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.DeltaSteppingVisitor;
 
 public class DeltaSteppingVisitorExample {

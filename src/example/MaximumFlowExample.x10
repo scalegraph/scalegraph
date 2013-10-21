@@ -1,16 +1,11 @@
 package example;
 
-import org.scalegraph.io.NamedDistData;
-import org.scalegraph.io.impl.CSVWriter;
 import x10.util.Team;
+
 import org.scalegraph.graph.GraphGenerator;
-import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.Config;
-import org.scalegraph.util.SStringBuilder;
-import org.scalegraph.io.FileWriter;
-import org.scalegraph.io.FileMode;
-
+import org.scalegraph.util.random.Random;
 
 public final class MaximumFlowExample {
 
