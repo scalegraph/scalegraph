@@ -38,7 +38,7 @@ public final class MaximumFlowExample {
         api.weights = "weight";
         
         // Call api
-        val result = api.run(g);
+        val result = api.execute(g);
         
         // Show result
         Console.OUT.println("Maximum Flow is "+ result.maxFlow);

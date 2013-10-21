@@ -37,7 +37,7 @@ public final class PageRankExample {
         pr.eps = 0.001;
         pr.niter = 15;
         
-        val result = pr.run(g);
+        val result = pr.execute(g);
         
         // Write output
         val namedDistData = new NamedDistData(["pr_result" as String], [result as Any]);
