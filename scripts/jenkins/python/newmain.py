@@ -14,7 +14,7 @@ DEBUG = False
 #TestFileDir   = os.environ["HOME"]+"/Develop/ScaleGraph/src"
 TestWorkDir   = os.environ["prefix"]
 src_dir = os.path.join(os.path.abspath(os.path.dirname( __file__ )),
-                       "/../../../src")
+                       "../../../src")
 
 #-------------------------------------------------#
 ##引数を設定.-hオプションでhelpが見られる
