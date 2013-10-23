@@ -44,8 +44,6 @@ parser.add_option("--source",action="store",
                   dest="srcDir",default=SrcDir)
 (opts,args) = parser.parse_args()
 
-global opts
-global args
 os.umask(0o001)
 if(DEBUG):
     sys.stderr.write(str(opts))
