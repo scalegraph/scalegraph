@@ -97,33 +97,33 @@ def getMPISettings(mpi,attr):
     @return (env,args) (環境変数のディクショナリ,mpiへの引数)
     """
     # mpirunへの引数
-    args=os.path.expandvars(attr["args"]).split()
+    args = os.path.expandvars(attr["args"]).split()
     # 環境変数
-    env={}
+    env = {}
     env["X10_NTHREADS"] = str(attr["thread"])
     env["GC_PROCS"]     = str(attr["gcproc"])
     if mpi == "mvapich":
         # TSUBAME2.0にはInfiniBandのホストアダプタが2個あるが、
         # デフォルトだと1個しか使ってくれないので、これを指定する。
-        env["MV2_NUM_HCAS"]="2"
-        env["MV2_ENABLE_AFFINITY"]="0"
+        env["MV2_NUM_HCAS"] =  "2"
+        env["MV2_ENABLE_AFFINITY"] = "0"
     elif mpi == "openmpi":
-        return (env,args)
+        return (env, args)
     else:
         print("please specify mpi.")
-    return (env,args)
+    return (env, args)
 
-def loadFromYaml(filename,testcase="small"):
+def loadFromYaml(filename, testcase="small"):
     """
     @param filename 読み込むファイル名
     @param testcase テストケースの名前
     """
     with open(filename) as file :
-        loadedData=yaml.load(file.read())
+        loadedData = yaml.load(file.read())
     if testcase in loadedData:
-        attribute=loadedData[testcase]
+        attribute = loadedData[testcase]
     elif 'small' in loadedData:
-        attribute=loadedData["small"]
+        attribute = loadedData["small"]
     else:
         print("No valid test case in " + filename)
     return attribute
@@ -133,10 +133,10 @@ def initDir(workdir):
     """
     ディレクトリの初期化をする。
     """
-    dirs = ["/bin","/log","/output","/results"]
+    dirs = ["/bin", "/log", "/output", "/results"]
     for directory in dirs:
         if not path.isdir(workdir+directory):
-            os.makedirs(workdir+directory,exist_ok=True)
+            os.makedirs(workdir+directory, exist_ok=True)
 
 
 def initTap(testNum):
@@ -146,7 +146,7 @@ def initTap(testNum):
     global tap
     tap  = TAP.Builder.create(testNum)
 
-def x10outToYaml(src,dst):
+def x10outToYaml(src, dst):
     """
     @param src 入力ファイルパス
     @param dst 出力先のファイルパス
@@ -166,7 +166,7 @@ def x10outToYaml(src,dst):
                         stdout=SProc.PIPE))
         SProc.call([x10out2yaml], stdin = sed.stdout, stdout=outFile)
 
-def fail_run_test(name,binName,attributes,workPath,describe):
+def fail_run_test(name, binName, attributes, workPath, describe):
     tap.ok(0,"running "+binName+" failure."+describe,skip=True)
 
 def run_test(name,binName,attributes,workPath,mpi="mvapich"):
