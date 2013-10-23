@@ -94,7 +94,7 @@ for filename in yamlFiles:
                             workPath=sandbox,
                             attributes=attribute,
                             describe="build failed")
-        rmtree(sandbox)
+    rmtree(sandbox)
 
     if(DEBUG):
         sys.stderr.write("DEBUG: Testcase attributes:" + str(attribute))
