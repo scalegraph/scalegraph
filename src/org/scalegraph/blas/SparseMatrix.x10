@@ -68,7 +68,7 @@ public final struct SparseMatrix[T] {
 			}
 		});
 
-		val offsetLength = 1L << (ids.lgl + (!ids.transpose ? ids.lgr : ids.lgc));
+		val offsetLength = 1L << (ids.lgl + (ids.transpose ? ids.lgr : ids.lgc));
 
 		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
 		val origin = new MemoryChunk[Long](srcV.size());
