@@ -101,10 +101,10 @@ final public class DegreeDistribution {
         }
         val sw = Config.get().stopWatch();
         val team = g.team();
-        val outerOrInner = (m == IN_DEGREE) ? false: true;
+        val transpose = (m == IN_DEGREE) ? true: false;
         val directed = (m == INOUT_DEGREE) ? false: true;
-        val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
-        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
+        val distColumn = Dist2D.make1D(team, !transpose ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
+        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, transpose);
         sw.lap("Graph construction");
         val result = run[Long](columnDistGraph);
         sw.lap("Degree distribution calculation (mode = " + m +")");

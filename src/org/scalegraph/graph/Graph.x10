@@ -614,7 +614,7 @@ import org.scalegraph.id.Type;
 	 * @param directed Directed graph or undirected graph. If false (undirected graph), all edges are duplicated to connect with each direction.
 	 * @param outerOrInner Constructs outer edges (true) or inner edges (false). This flag is valuable only for directed graph.
 	 */
-	public def createDistEdgeIndexMatrix(dist2d :Dist2D, directed :Boolean, outerOrInner :Boolean) {
+	public def createDistEdgeIndexMatrix(dist2d :Dist2D, directed :Boolean, transpose :Boolean) {
 		val team_ = team;
 		val srcList_ = srcList;
 		val dstList_ = dstList;
@@ -625,7 +625,7 @@ import org.scalegraph.id.Type;
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
-					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
+					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for([i] in places) {
@@ -708,7 +708,7 @@ import org.scalegraph.id.Type;
 		});
 	}
 	
-	public def createDistSparseMatrix[T](dist2d :Dist2D, name :String, directed :Boolean, outerOrInner :Boolean) { T haszero }
+	public def createDistSparseMatrix[T](dist2d :Dist2D, name :String, directed :Boolean, transpose :Boolean) { T haszero }
 	{
 		val team_ = team;
 		val srcList_ = srcList;
@@ -721,7 +721,7 @@ import org.scalegraph.id.Type;
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
-					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
+					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for([i] in places) {
@@ -848,7 +848,7 @@ import org.scalegraph.id.Type;
 	 * @param directed Directed graph or undirected graph. If false (undirected graph), all edges are duplicated to connect with each direction.
 	 * @outerOrInner Constructs outer edges (true) or inner edges (false). This flag is worth only for directed graph.
 	 */
-	public def createSimpleEdgeIndexMatrix(place :Place, directed :Boolean, outerOrInner :Boolean) {
+	public def createSimpleEdgeIndexMatrix(place :Place, directed :Boolean, transpose :Boolean) {
 		// return GlobalRef[SparseMatrix]...
 		val team_ = team;
 		val srcList_ = srcList;
@@ -911,7 +911,7 @@ import org.scalegraph.id.Type;
 					team2.gatherv(root, sendIndexes, recvIndexes, counts, offsets);
 					
 					val lgl = MathAppend.ceilLog2(numberOfVertices);
-					val sparseMatrix = new SparseMatrix[Long](recvSrcV, recvDstV, recvIndexes, lgl, outerOrInner);
+					val sparseMatrix = new SparseMatrix[Long](recvSrcV, recvDstV, recvIndexes, lgl, transpose);
 					
 					// write result
 					val ref = new GlobalRef[Cell[SparseMatrix[Long]]](new Cell[SparseMatrix[Long]](sparseMatrix));

@@ -68,7 +68,7 @@ public final class PageRank {
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), weights, directed, true);
+				Config.get().distXPregel(), weights, directed, false);
 		Config.get().stopWatch().lap("Graph construction");
 		return execute(matrix);
 	}

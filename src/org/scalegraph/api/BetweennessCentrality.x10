@@ -121,7 +121,7 @@ public class BetweennessCentrality {
         val matrix = g.createDistEdgeIndexMatrix(
                     Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
                     inst.directed,
-                    true); 
+                    false); 
         val N = g.numberOfVertices();
         return executeUnweightedBcWrap(inst, matrix, N);
     }
@@ -148,7 +148,7 @@ public class BetweennessCentrality {
 
         val team = g.team();
         val matrix = g.createDistSparseMatrix[Double](
-                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS), inst.weightAttrName, inst.directed, true);
+                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS), inst.weightAttrName, inst.directed, false);
         val N = g.numberOfVertices();
         return executeWeightedBcWrap(inst, matrix, N);
     }

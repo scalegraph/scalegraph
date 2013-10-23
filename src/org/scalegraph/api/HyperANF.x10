@@ -215,7 +215,7 @@ public class HyperANF {
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), weights, true, true);
+				Config.get().distXPregel(), weights, true, false);
 		return execute(matrix);	
 	}
 
