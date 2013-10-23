@@ -21,28 +21,28 @@ SrcDir= os.path.abspath(os.path.dirname( __file__ ))+"/../../src"
 #-------parser_begin--------#
 
 parser = OptionParser(usage="Usage: # runTest {TESTCASE}")
-parser.add_option("-t","--test",action="store",default="small",
+parser.add_option("-t", "--test", action="store", default="small",
                   type="string",
                   help="Test case to run",dest="testcase")
-parser.add_option("-n",action="store",default="4",
+parser.add_option("-n", action="store", default="4",
                   type="int",
                   help="number of nodes",dest="maxNode")
-parser.add_option("--mpi",action="store",
+parser.add_option("--mpi", action="store",
                   default="mvapich",type="string",
                   dest="mpi",help="mpi to run tests",
                   metavar="MPI")
-parser.add_option("--yamlDir",action="store",dest="yamlDir",
+parser.add_option("--yamlDir", action="store", dest="yamlDir",
                   default="./tests",
                   metavar="yamlDir")
-parser.add_option("--x10dir",action="store",dest="x10Dir",
+parser.add_option("--x10dir", action="store", dest="x10Dir",
                   default=SrcDir+"/test",
                   help="Test file directory")
-parser.add_option("--workspace",action="store",dest="workspace",
+parser.add_option("--workspace", action="store", dest="workspace",
                   default=TestWorkDir,
                   help="directory to build and to run test")
-parser.add_option("--source",action="store",
+parser.add_option("--source", action="store",
                   dest="srcDir",default=SrcDir)
-(opts,args) = parser.parse_args()
+(opts, args) = parser.parse_args()
 
 global opts
 global args

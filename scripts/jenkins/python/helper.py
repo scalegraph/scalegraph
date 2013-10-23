@@ -9,10 +9,10 @@ import tempfile as tmp
 import TAP
 import sys
 # pylint: disable-msg=C0103
-DEBUG=False
+DEBUG = False
 
-tap=None
-##kriiyamaのテスト用の変数
+tap = None
+##kiriponのテスト用の変数
 #ModuleName="TeamBenchmark"
 #TestFile=os.environ["HOME"]+"/Develop/ScaleGraph/src/test/"+ModuleName+".x10"
 
@@ -34,7 +34,7 @@ def indentDeeper(text, n=1):
     retStr    = ""
     delimiter = ""
     for _ in range(n):
-        delimiter=delimiter+"  "
+        delimiter = delimiter+"  "
     for line in lines:
         retStr = retStr + delimiter +line +"\n"
     return retStr
@@ -136,7 +136,8 @@ def initDir(workdir):
     dirs = ["/bin", "/log", "/output", "/results"]
     for directory in dirs:
         if not path.isdir(workdir+directory):
-            os.makedirs(workdir+directory, exist_ok=True)
+            newpath = os.path.join(workdir , directory)
+            os.makedirs(newpath, exist_ok=True)
 
 
 def initTap(testNum):
@@ -184,30 +185,33 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if "name" not in attributes:
         attributes["name"] = name
     if "duplicate" not in attributes:
-        attributes["duplicate"]="2"
+        attributes["duplicate"] = "2"
     if "thread" not in attributes:
-        attributes["thread"]=str(24 // int(attributes["duplicate"]) )
+        attributes["thread"] = str(24 // int(attributes["duplicate"]) )
     if "gcproc" not in attributes:
-        attributes["gcproc"]=str( int(attributes["thread"]) // 2)
+        attributes["gcproc"] = str( int(attributes["thread"]) // 2)
     if "place" not in attributes:
-        attributes["place"] = str( int(attributes["node"]) * int(attributes["duplicate"]))
+        attributes["place"] = \
+                str( int(attributes["node"]) * int(attributes["duplicate"]))
 
 
-    (env,args) = getMPISettings(mpi,attributes)
+    (env, args) = getMPISettings(mpi, attributes)
 
     if(DEBUG):
         print("    env :"+str(env))
         print("    args:"+str(args))
 
-    if(DEBUG):sys.stderr.write("generating hostfile.")
+    if(DEBUG):
+        sys.stderr.write("generating hostfile.")
     hostSrc = os.path.expandvars("$prefix/hosts.txt")
-    hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
+    hostDstDir = tempfile.mkdtemp(prefix=(os.path.expandvars("$prefix")))
+    hostDst = os.path.join(hostDstDir,"hosts.txt")
     if(DEBUG):
         sys.stderr.write("hostSrc:"+hostSrc+"\n")
         sys.stderr.write("hostDst:"+hostDst+"\n")
 
-    os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
-    genHostFile(hostSrc,hostDst,
+    os.makedirs(os.path. expandvars("$prefix/py_temp"), exist_ok=True)
+    genHostFile(hostSrc, hostDst,
                 numHosts  =attributes["node"],
                 duplicate =attributes["duplicate"] )
 
@@ -215,8 +219,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     #---argument settings--------------------#
     numPlace = str(attributes["place"])
     hostFile   = hostDst
-    binPath    = workPath+"/bin/"+binName
-    args = list(map(os.path.expandvars,args))
+    binPath    = os.path.join(workPath, "bin", binName)
+    args = list(map(os.path.expandvars, args))
     stdout = tmp.TemporaryFile()
     stderr = tmp.TemporaryFile()
     timeOut = None
@@ -245,7 +249,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
                              stderr=SProc.PIPE)
     sys.stderr.write("run command:"+ " ".join(runCmd))
     try:
-        stdout, stderr = mpirunProc.communicate(None, timeOut )
+        (stdout, stderr) = mpirunProc.communicate(None, timeOut )
     except SProc.TimeoutExpired:
         mpirunProc.kill()
         isTimeOut = True
@@ -268,7 +272,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     sys.stderr.flush()
     sys.stdout.flush()
 
-def build_test(name,x10file,workingDir,srcDir):
+def build_test(name, x10file, workingDir, srcDir):
     """
     @param name       ビルドするモジュールの名前(hoge.x10 なら hoge)
     @param describe   実行中のジョブの説明
