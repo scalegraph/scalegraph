@@ -25,6 +25,7 @@ def escapeText(text):
     """
     a = text.replace("\"","\\\"")
     b = a.replace(":", r"\:")
+
     return b
 
 def indentDeeper(text, n=1):
@@ -134,7 +135,7 @@ def initDir(workdir):
     """
     ディレクトリの初期化をする。
     """
-    dirs = ["/bin", "/log", "/output", "/results"]
+    dirs = ["bin", "log", "output", "results"]
     for directory in dirs:
         if not path.isdir(workdir+directory):
             newpath = os.path.join(workdir , directory)
@@ -257,9 +258,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         stdout, stderr = mpirunProc.communicate()
     runResult = mpirunProc.poll()
     Message = "name: "  + name           + "\n" + \
-              "stderr: |\n" + indentDeeper( stderr.decode() )+ "\n"
+              "stderr: |\n" + indentDeeper( escapeText(stderr.decode()) )+ "\n"
               #+"stdout: |\n"+ indentDeeper(stdout.decode(),2)
-    Message = escapeText(Message)
     if isTimeOut:
         Message = "Alert: This test case exceeds timeout.\n"+Message
     os.remove(hostDst)
