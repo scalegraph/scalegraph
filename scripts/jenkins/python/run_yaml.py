@@ -11,7 +11,7 @@ if "prefix" in os.environ:
     TestWorkDir   = os.environ["prefix"]
 else:
     TestWorkDir   = os.environ["prefix"] = "/nfs/data0/scalegraph/autotest"
-SrcDir            = os.path.abspath(os.path.dirname(__file__))+"/../../src"
+SrcDir            = os.path.abspath(os.path.dirname(__file__))+"/../../../src"
 #-------------------------------------------------#
 
 parser = OptionParser(usage=usage)
