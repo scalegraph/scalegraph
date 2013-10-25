@@ -138,9 +138,9 @@ final public class SpectralClusteringImpl {
 			
 			var iter:Int = 0;
 			while(true) {
-				if(role == 0 && iter % 1 == 0) {
-					Console.OUT.println("iter = " + iter);
-				}
+				//if(role == 0 && iter % 100 == 0) {
+				//	Console.OUT.println("iter = " + iter);
+				//}
 				iter++;
 				
 				ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
@@ -150,8 +150,6 @@ final public class SpectralClusteringImpl {
 				if(role == 0 && info != 0) {
 					ARPACK.printError("pdsaupd", info);
 				}
-				
-				if(role == 0) Console.OUT.println("after ARPACK: " + iter);
 				
 				if(ido == -1 || ido == 1) {
 					// y <- OP(x)
