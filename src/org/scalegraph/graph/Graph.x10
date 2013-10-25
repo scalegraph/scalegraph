@@ -748,15 +748,15 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
 					}
 				}
 				else {
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
+						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 					}
 				}
 			});
@@ -786,7 +786,7 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						val off0 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
 						sendValues(off0) = att_(i);
@@ -796,11 +796,11 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						val off0 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
 						sendValues(off0) = att_(i);
-						val off1 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
+						val off1 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						sendSrcV(off1) = v1;
 						sendDstV(off1) = v0;
 						sendValues(off1) = att_(i);
@@ -823,22 +823,12 @@ import org.scalegraph.id.Type;
 					Console.OUT.println("sendValues = " + sendValues);
 				}
 				team.barrier(team.role()(0));
-			}
-			*/
+			}*/
+			
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
-			/*
-			for(p in team.placeGroup()) {
-				if(here == p) {
-					Console.OUT.println(here);
-					Console.OUT.println("recvSrcV = " + recvSrcV);
-					Console.OUT.println("recvDstV = " + recvDstV);
-					Console.OUT.println("recvValues = " + recvValues);
-				}
-				team.barrier(team.role()(0));
-			}
-			*/
+			
 			return new Tuple2[IdStruct, SparseMatrix[T]](ids, new SparseMatrix(recvSrcV, recvDstV, recvValues, ids));
 		});
 	}

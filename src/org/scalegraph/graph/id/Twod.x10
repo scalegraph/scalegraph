@@ -20,7 +20,7 @@ package org.scalegraph.graph.id;
  */
 public final class Twod {
 	/** Vertex ID to Source ID Converter */
-	public static final struct VtoS {
+	public static final struct VtoD {
 		val lgl :Int;
 		val lgsize :Int;
 		val rmask :Long;
@@ -38,7 +38,7 @@ public final class Twod {
 	}
 
 	/** Vertex ID to Destination ID Converter */
-	public static final struct VtoD {
+	public static final struct VtoS {
 		val lgr :Int;
 		val lgl :Int;
 		val lgsize :Int;
@@ -58,7 +58,7 @@ public final class Twod {
 	}
 
 	/** Source ID to Vertex ID Converter */
-	public static final struct StoV {
+	public static final struct DtoV {
 		val cshifted :Long;
 		val lgl :Int;
 		val lgsize :Int;
@@ -78,7 +78,7 @@ public final class Twod {
 	}
 
 	/** Source ID to Destination ID Converter */
-	public static final struct StoD {
+	public static final struct DtoS {
 		val cshiftedto :Long;
 		val lmask :Long;
 		
@@ -95,7 +95,7 @@ public final class Twod {
 	}
 
 	/** Destination ID to Vertex ID Converter */
-	public static final struct DtoV {
+	public static final struct StoV {
 		val r :Int;
 		val lgr :Int;
 		val lgl :Int;
@@ -116,7 +116,7 @@ public final class Twod {
 	}
 
 	/** Destination ID to Source ID Converter */
-	public static final struct DtoS {
+	public static final struct StoD {
 		val rshifted :Long;
 		val lmask :Long;
 		

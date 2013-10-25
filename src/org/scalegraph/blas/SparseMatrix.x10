@@ -79,7 +79,7 @@ public final struct SparseMatrix[T] {
 		// if gathering inner edges, origin is destination and target is source.
 
 		if(!ids.transpose)
-			Parallel.sort(ids.lgl + ids.lgr, srcV, dstV, values, origin, target, values_);
+			Parallel.sort(ids.lgl + ids.lgc, srcV, dstV, values, origin, target, values_);
 		else
 			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
 		
