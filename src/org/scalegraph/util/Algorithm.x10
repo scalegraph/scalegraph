@@ -19,6 +19,16 @@ import org.scalegraph.util.MemoryChunk;
 @NativeCPPInclude("NativeAlgorithm.h")
 public final class Algorithm {
 	
+    public static def sort[I](index :MemoryChunk[I]) {
+        sortWithLt(index);
+    }
+    
+    @Native("c++", "org::scalegraph::util::sort1((#index)->pointer(), (#index)->size())")
+    public static native def sortWithLt[I](index :MemoryChunk[I]) :void;
+    
+    @Native("c++", "org::scalegraph::util::sort1((#index)->pointer(), (#index)->size(), std::greater<#I>())")
+    public static native def sortWithGt[I](index :MemoryChunk[I]) :void;
+    
 	public static def sort[I, V](index :MemoryChunk[I], value :MemoryChunk[V]) {
 		sortWithLt(index, value);
 	}
