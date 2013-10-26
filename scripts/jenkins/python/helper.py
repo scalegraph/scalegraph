@@ -23,10 +23,10 @@ def escapeText(text):
     """
     textのスラッシュをエスケープします
     """
-    a = text.replace("\"","\\\"")
-    b = a.replace(":", r"\:")
-
-    return b
+    return text.replace("\"", "\\\""). \
+        replace(":", r"\:"). \
+        replace("[", r"\["). \
+        replace("]", r"\]")
 
 def indentDeeper(text, n=1):
     """
@@ -212,7 +212,8 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
         sys.stderr.write("hostSrc:"+hostSrc+"\n")
         sys.stderr.write("hostDst:"+hostDst+"\n")
 
-    os.makedirs(os.path. expandvars("$prefix/py_temp"), exist_ok=True)
+    os.makedirs(os.path.expandvars("$prefix/py_temp"),
+                exist_ok=True)
     genHostFile(hostSrc, hostDst,
                 numHosts  =attributes["node"],
                 duplicate =attributes["duplicate"] )
@@ -222,7 +223,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     numPlace = str(attributes["place"])
     hostFile   = hostDst
     binPath    = os.path.join(workPath, "bin", binName)
-    args = list(map(os.path.expandvars, args))
+    args = list( map( os.path.expandvars, args))
     stdout = tmp.TemporaryFile()
     stderr = tmp.TemporaryFile()
     timeOut = None
