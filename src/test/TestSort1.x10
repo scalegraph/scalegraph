@@ -41,6 +41,9 @@ final class TestSort1 extends STest {
         
         val sortedLt = orgM.clone();
         val sortedGt = orgM.clone(); 
+        
+        // Sorted 1
+        Console.OUT.println("Sort 1");
         org.scalegraph.util.Algorithm.sort(sortedLt);
         org.scalegraph.util.Algorithm.sortWithGt(sortedGt);
         
@@ -48,10 +51,20 @@ final class TestSort1 extends STest {
             Console.OUT.println(orgM(i) + ":" + sortedLt(i)+ ":" + sortedGt(i));
         }
         Console.OUT.println();
+        
+        // Sort 2
+        Console.OUT.println("Sort 2");
+        val sorted2Gt = orgM.clone();
+        val sorted2Value = orgM.clone();
+        org.scalegraph.util.Algorithm.sortWithGt(sorted2Gt, sorted2Value);
+        for (i in orgM.range()) {
+            Console.OUT.println(orgM(i) + ":" + sorted2Gt(i)+ ":" + sorted2Value(i));
+        }
+        Console.OUT.println();
     }
 
     public def run(args: Array[String](1)): Boolean {
-        val n = 1 << 8;
+        val n = 1 << 5;
         runtest(n);
         
         return true;

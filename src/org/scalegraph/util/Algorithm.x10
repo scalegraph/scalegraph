@@ -36,7 +36,7 @@ public final class Algorithm {
 	@Native("c++", "org::scalegraph::util::sort2((#index)->pointer(), (#value)->pointer(), (#index)->size())")
 	public static native def sortWithLt[I, V](index :MemoryChunk[I], value :MemoryChunk[V]) :void;
 
-	@Native("c++", "org::scalegraph::util::sort2((#index)->pointer(), (#value)->pointer(), (#index)->size()), std::greater<I>()")
+	@Native("c++", "org::scalegraph::util::sort2((#index)->pointer(), (#value)->pointer(), (#index)->size(), std::greater<#I>())")
 	public static native def sortWithGt[I, V](index :MemoryChunk[I], value :MemoryChunk[V]) :void;
 	
 	public static def sort[I, V1, V2](index :MemoryChunk[I], value1 :MemoryChunk[V1], value2 :MemoryChunk[V2]) {
@@ -46,7 +46,7 @@ public final class Algorithm {
 	@Native("c++", "org::scalegraph::util::sort3((#index)->pointer(), (#value1)->pointer(), (#value2)->pointer(), (#index)->size())")
 	public static native def sortWithLt[I, V1, V2](index :MemoryChunk[I], value1 :MemoryChunk[V1], value2 :MemoryChunk[V2]) :void;
 
-	@Native("c++", "org::scalegraph::util::sort3((#index)->pointer(), (#value1)->pointer(), (#value2)->pointer(), (#index)->size()), std::greater<I>()")
+	@Native("c++", "org::scalegraph::util::sort3((#index)->pointer(), (#value1)->pointer(), (#value2)->pointer(), (#index)->size(), std::greater<#I>())")
 	public static native def sortWithGt[I, V1, V2](index :MemoryChunk[I], value1 :MemoryChunk[V1], value2 :MemoryChunk[V2]) :void;
 	
 	public static def reduce[T](range :LongRange, func :(Long) => T) { T <: Arithmetic[T] } {
