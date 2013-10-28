@@ -1,7 +1,7 @@
 ARPACK		= arpack96.tar.gz patch.tar.gz parpack96.tar.gz ppatch.tar.gz
 PAR_METIS	= parmetis-4.0.3.tar.gz
 PAR_METIS_FOLDER = $(SG_PREFIX)/$(patsubst %.tar.gz,%, $(PAR_METIS))
-DLIBS		= lib/libarpack_LINUX.a lib/libparpack_MPI-LINUX.a lib/libparmetis.so
+DLIBS		= lib/libarpack_LINUX.a lib/libparpack_MPI-LINUX.a lib/libparmetis.so lib/libparmetis.so
 SG_PREFIX	= $(CURDIR)
 .SUFFIXES	= .tar.gz
 TMPDIR		= $(PWD)/tmp
@@ -28,6 +28,10 @@ buildParmetis: $(PAR_METIS)
 	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1
 	make -C $(PAR_METIS_FOLDER) --environment-overrides
 	make -C $(PAR_METIS_FOLDER) --environment-overrides install
+	
+	sed  -i "s/#define IDXTYPEWIDTH 32/#define IDXTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
+	sed  -i "s/#define REALTYPEWIDTH 32/#define REALTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
+	
 	ln -sf  $(SG_PREFIX)/metis/include/parmetis.h  $(SG_PREFIX)/include/parmetis.h
 	ln -sf  $(PAR_METIS_FOLDER)/metis/include/metis.h  $(SG_PREFIX)/include/metis.h
 	ln -sf  $(SG_PREFIX)/metis/lib/libparmetis.so  $(SG_PREFIX)/lib/libparmetis.so
