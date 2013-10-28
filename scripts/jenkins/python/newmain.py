@@ -71,7 +71,7 @@ for dirpath , dirnames, filenames in os.walk(src_dir):
         fpfx = os.path.splitext(yamlfile)[0]
         yamlfilepath = os.path.join(dirpath, yamlfile)
         x10filepath  = os.path.join(dirpath, fpfx+".x10")
-        tmpdir = tempfile.TemporaryDirectory()
+        tmpdir = tempfile.TemporaryDirectory(dir=os.path.expandvars("$prefix"))
         sandbox = tmpdir.name
         #sys.stderr.write("create temporary directory:"+sandbox)
         helper.initDir(sandbox)
@@ -106,3 +106,4 @@ for dirpath , dirnames, filenames in os.walk(src_dir):
             if(DEBUG):
                 sys.stderr.write("DEBUG: Testcase attributes:" + str(attribute))
         tmpdir.cleanup()
+    sys.stderr.write("All Test Finished.\n")
