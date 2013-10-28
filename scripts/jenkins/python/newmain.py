@@ -106,4 +106,4 @@ for dirpath , dirnames, filenames in os.walk(src_dir):
             if(DEBUG):
                 sys.stderr.write("DEBUG: Testcase attributes:" + str(attribute))
         tmpdir.cleanup()
-    sys.stderr.write("All Test Finished.\n")
+sys.stderr.write("All Test Finished.\n")
