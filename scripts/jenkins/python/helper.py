@@ -9,10 +9,10 @@ import tempfile as tmp
 import TAP
 import sys
 # pylint: disable-msg=C0103
-DEBUG=False
+DEBUG = False
 
-tap=None
-##kriiyamaのテスト用の変数
+tap = None
+##kiriponのテスト用の変数
 #ModuleName="TeamBenchmark"
 #TestFile=os.environ["HOME"]+"/Develop/ScaleGraph/src/test/"+ModuleName+".x10"
 
@@ -23,8 +23,10 @@ def escapeText(text):
     """
     textのスラッシュをエスケープします
     """
-    text.replace("\"","\\\"")
-    return text
+    return text.replace("\"", "\\\""). \
+        replace(":", r"\:"). \
+        replace("[", r"\["). \
+        replace("]", r"\]")
 
 def indentDeeper(text, n=1):
     """
@@ -34,7 +36,7 @@ def indentDeeper(text, n=1):
     retStr    = ""
     delimiter = ""
     for _ in range(n):
-        delimiter=delimiter+"  "
+        delimiter = delimiter+"  "
     for line in lines:
         retStr = retStr + delimiter +line +"\n"
     return retStr
@@ -75,13 +77,11 @@ def genHostFile(filepath,destpath,numHosts,duplicate):
             file.write(host)
 
 def isValidAttr(attr):
-
     if not isinstance(attr,dict):
         if(DEBUG):
             sys.stderr.write("attr:"+attr+"\n"+"type:"+str(type(attr)))
         return False
-
-    param = ["args","thread","gcproc","place","duplicate"]
+    param = ["args", "thread", "gcproc", "place", "duplicate"]
     for x in param:
         if x in attr:
             continue
@@ -89,7 +89,7 @@ def isValidAttr(attr):
             return False
     return True
 
-def getMPISettings(mpi,attr):
+def getMPISettings(mpi, attr):
     """
     @param mpi        使用するmpiの種類
     @param attr  yamlから読み取ったtestcaseごとの特徴
@@ -133,10 +133,11 @@ def initDir(workdir):
     """
     ディレクトリの初期化をする。
     """
-    dirs = ["/bin", "/log", "/output", "/results"]
+    dirs = ["bin", "log", "output", "results"]
     for directory in dirs:
         if not path.isdir(workdir+directory):
-            os.makedirs(workdir+directory, exist_ok=True)
+            newpath = os.path.join(workdir , directory)
+            os.makedirs(newpath, exist_ok=True)
 
 
 def initTap(testNum):
@@ -167,9 +168,12 @@ def x10outToYaml(src, dst):
         SProc.call([x10out2yaml], stdin = sed.stdout, stdout=outFile)
 
 def fail_run_test(name, binName, attributes, workPath, describe):
-    tap.ok(0,"running "+binName+" failure."+describe,skip=True)
+    """
+    テストの失敗を報告します。
+    """
+    tap.ok(0, "running "+binName+" failure."+describe, skip = True)
 
-def run_test(name,binName,attributes,workPath,mpi="mvapich"):
+def run_test(name, binName, attributes, workPath, mpi = "mvapich"):
     """
     @param name       runするモジュールの名前
     @param attributes テストパラメータ
@@ -184,39 +188,39 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     if "name" not in attributes:
         attributes["name"] = name
     if "duplicate" not in attributes:
-        attributes["duplicate"]="2"
+        attributes["duplicate"] = "2"
     if "thread" not in attributes:
-        attributes["thread"]=str(24 // int(attributes["duplicate"]) )
+        attributes["thread"] = str(24 // int(attributes["duplicate"]) )
     if "gcproc" not in attributes:
-        attributes["gcproc"]=str( int(attributes["thread"]) // 2)
+        attributes["gcproc"] = str( int(attributes["thread"]) // 2)
     if "place" not in attributes:
-        attributes["place"] = str( int(attributes["node"]) * int(attributes["duplicate"]))
+        attributes["place"] = \
+                str( int(attributes["node"]) * int(attributes["duplicate"]))
 
 
-    (env,args) = getMPISettings(mpi,attributes)
+    (env, args) = getMPISettings(mpi, attributes)
 
     if(DEBUG):
         print("    env :"+str(env))
         print("    args:"+str(args))
 
-    if(DEBUG):sys.stderr.write("generating hostfile.")
+    if(DEBUG):
+        sys.stderr.write("generating hostfile.")
     hostSrc = os.path.expandvars("$prefix/hosts.txt")
-    hostDst = os.path.expandvars("$prefix/py_temp/hosts.txt")
+    hostDstDir = tempfile.mkdtemp(dir=(os.path.expandvars("$prefix")))
+    hostDst = os.path.join(hostDstDir,"hosts.txt")
     if(DEBUG):
         sys.stderr.write("hostSrc:"+hostSrc+"\n")
         sys.stderr.write("hostDst:"+hostDst+"\n")
-
-    os.makedirs(os.path.expandvars("$prefix/py_temp"),exist_ok=True)
-    genHostFile(hostSrc,hostDst,
+    genHostFile(hostSrc, hostDst,
                 numHosts  =attributes["node"],
                 duplicate =attributes["duplicate"] )
-
 
     #---argument settings--------------------#
     numPlace = str(attributes["place"])
     hostFile   = hostDst
-    binPath    = workPath+"/bin/"+binName
-    args = list(map(os.path.expandvars,args))
+    binPath    = os.path.join(workPath, "bin", binName)
+    args = list( map( os.path.expandvars, args))
     stdout = tmp.TemporaryFile()
     stderr = tmp.TemporaryFile()
     timeOut = None
@@ -225,9 +229,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     else:
         timeOut = None
     #----------------------------------------#
-
     for k in env:
-
         os.environ[k] = env[k]
 
     runCmd = [
@@ -245,16 +247,15 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
                              stderr=SProc.PIPE)
     sys.stderr.write("run command:"+ " ".join(runCmd))
     try:
-        stdout, stderr = mpirunProc.communicate(None, timeOut )
+        (stdout, stderr) = mpirunProc.communicate(None, timeOut )
     except SProc.TimeoutExpired:
         mpirunProc.kill()
         isTimeOut = True
         stdout, stderr = mpirunProc.communicate()
     runResult = mpirunProc.poll()
     Message = "name: "  + name           + "\n" + \
-              "stderr: |\n" + indentDeeper( stderr.decode() )+ "\n"
+              "stderr: |\n" + indentDeeper( escapeText(stderr.decode()) )+ "\n"
               #+"stdout: |\n"+ indentDeeper(stdout.decode(),2)
-    Message = escapeText(Message)
     if isTimeOut:
         Message = "Alert: This test case exceeds timeout.\n"+Message
     os.remove(hostDst)
@@ -268,7 +269,7 @@ def run_test(name,binName,attributes,workPath,mpi="mvapich"):
     sys.stderr.flush()
     sys.stdout.flush()
 
-def build_test(name,x10file,workingDir,srcDir):
+def build_test(name, x10file, workingDir, srcDir):
     """
     @param name       ビルドするモジュールの名前(hoge.x10 なら hoge)
     @param describe   実行中のジョブの説明
@@ -279,9 +280,9 @@ def build_test(name,x10file,workingDir,srcDir):
     bindir = workingDir + "/bin/"
     logdir = workingDir + "/log/"
 
-    outputdir = workingDir + "/output/"
-    outFileName = outputdir + "output-build-" + name + ".txt"
-    yamlFileName = outputdir + "output-build-" + name + ".yaml"
+    outputdir = os.path.join(workingDir ,"output")
+    outFileName = os.path.join(outputdir, "output-build-"+name+".txt")
+    yamlFileName = os.path.join(outputdir, "output-build-" + name + ".yaml")
 
     X10CXX = "x10c++"
     buildCmd = [X10CXX, "-cxx-prearg", "-I" + srcDir + "/../include",
@@ -291,11 +292,11 @@ def build_test(name,x10file,workingDir,srcDir):
         sys.stderr.write("build command:"+str(buildCmd) + "\n")
     logFile = open(logdir+"buildlog-"+name+".log",'w')
     errFile = open(outFileName,'w')
-
     buildResult = SProc.call(buildCmd, stdout =logFile, stderr =errFile)
     x10outToYaml(outFileName, yamlFileName)
     errors = SProc.check_output(["tail", "-n1", outFileName])
-
+    if(DEBUG):
+        sys.stderr.write(errors)
     with open(yamlFileName) as yamlFile:
         tap.ok(buildResult == 0,
             "Building "+name+".x10\n"+\
