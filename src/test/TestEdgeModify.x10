@@ -75,7 +75,7 @@ public class TestEdgeModify {
 				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
 				
 				for (m in messages.range()){
-					sb.add("atatakai message:"+ messages(m)+"\n");
+					sb.add("message:"+ messages(m)+"\n");
 				}
 				
 				if(myId != 0L && (ctx.superstep() as Long)==myId){

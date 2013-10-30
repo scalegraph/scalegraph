@@ -8,9 +8,12 @@ import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.Config;
+import org.scalegraph.util.SStringBuilder;
+import org.scalegraph.io.FileWriter;
+import org.scalegraph.io.FileMode;
 
 
-public final class SpectralClusteringExample {
+public final class HyperANFExample {
 
     public static def main(args: Array[String]) {
         
@@ -18,20 +21,8 @@ public final class SpectralClusteringExample {
         val team = config.worldTeam();
         val dist = config.dist2d();
         val weightAttr = "weight";
+        val outpath = "hyperanf";
         
-        // the number of cluster
-        val numCluster = 2;
-        
-        // tolerance
-        val tolerance = 0.01;
-        
-        // max iteration
-        val maxitr = 1000;
-        
-        // thread
-        val threshold = 0.001;
-        val outputPath = "sc-%d";
-                
         // Generate RMAT graph
         val scale = 10;
         val edgeFactor = 8;
@@ -44,11 +35,17 @@ public final class SpectralClusteringExample {
         g.setEdgeAttribute[Double](weightAttr, weight);
         
         // Call API
-        val W = g.createDistSparseMatrix[Double](dist, weightAttr, false, false);
-        val result = SpectralClustering.run(W, numCluster, tolerance, maxitr, threshold);
+        val result = org.scalegraph.api.HyperANF.run(g);
         
         // Write output
-        val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
-        CSVWriter.write(team, outputPath, namedDistData, true);
+        // val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
+        // CSVWriter.write(team, outputPath, namedDistData, true);
+        val sb = new SStringBuilder();
+        for(i in result.range()) {
+            sb.add(result(i)).add("\n");
+        }
+        val fw = new FileWriter(outpath, FileMode.Create);
+        fw.write(sb.result().bytes());
+        fw.close();
     }
 }

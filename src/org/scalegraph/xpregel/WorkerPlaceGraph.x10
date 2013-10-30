@@ -539,12 +539,37 @@ final class WorkerPlaceGraph[V,E] {
 			
 			// gather statistics
 			for(th in 0..(numThreads-1)) {
+				//first message process is here 
 				ectx.sqweezeMessage(vctxs(th));
 			}
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_SQWEEZMES); }
-			
 			// update out edges
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
+			
+			
+			//-----directionOptimization
+			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
+			if(0L < numAllBCSCount && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/50)){	//TODO: modify /20
+				val BCbmp=ectx.mBCCHasMessage;
+				foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+					val vc = vctxs(tid);
+					for (dosrcid in r){
+						if(BCbmp(dosrcid)){
+							vc.mSrcid = dosrcid;
+							val OEsId = vc.outEdgesId();
+							val tempmes=ectx.mBCCMessages(dosrcid);
+							for(eI in OEsId){
+								vc.sendMessage(eI, tempmes);
+							}
+						}
+					}
+				});
+				ectx.mBCCHasMessage.clear(false);
+				ectx.mBCCMessages.del();
+				ectx.mBCCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
+				ectx.mBCSInputCount=0L;
+			}
+			//-----
 			
 			// aggregate
 			val aggVal = (aggregator != null)
@@ -554,7 +579,6 @@ final class WorkerPlaceGraph[V,E] {
 			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
 
-			//
 			val terminate = gatherInformation(mTeam, ectx, statistics, mEnableStatistics, combiner);
 
 			if(here.id() == 0 && mLogPrinter != null) {
