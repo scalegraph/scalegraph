@@ -8,7 +8,7 @@ TMPDIR		= $(PWD)/tmp
 
 LIBS		= -cxx-postarg -larpack_LINUX -cxx-postarg -lparpack_MPI-LINUX -cxx-postarg -lparmetis -cxx-prearg -L$(SG_PREFIX)/lib -cxx-prearg -I$(SG_PREFIX)/include
 LIBPATH		= $(SG_PREFIX)/x10lib
-X10FILES	= $(shell find $(SG_PREFIX)/src/org | grep .x10$)
+X10FILES	= $(shell find $(SG_PREFIX)/src/org -name '*.x10')
 
 all: makelib
 
