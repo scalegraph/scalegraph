@@ -15,9 +15,8 @@ import x10.util.Team;
 
 import org.scalegraph.Config;
 import org.scalegraph.io.SimpleText;
-import org.scalegraph.io.CSV;
-import org.scalegraph.util.tuple.*;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.DeltaSteppingVisitor;
 
 public class DeltaSteppingVisitorExample {
@@ -37,7 +36,7 @@ public class DeltaSteppingVisitorExample {
             return;
         }
         
-        // Load data
+        // Load data from edge list file
         val g = Graph.make(SimpleText.read(args(0), inputFormat));
         
         Console.OUT.println("Start delta-stepping");
@@ -49,12 +48,14 @@ public class DeltaSteppingVisitorExample {
                                               true);
         // Construct attribute
         val weightAttr = g.createDistAttribute[Double](csr, false, "weight");
+        
         // Run delta stepping
         val source = 0L;
         val delta = 1;
         val handler = (v: Long, pred: Long, isFirstVisit: Boolean, dist: Double) => { 
             Console.OUT.println(pred + " " + v + " " + dist);
             };
+            
         val v = DeltaSteppingVisitor.make(csr, weightAttr, source, delta, handler);
         v.run();
     }

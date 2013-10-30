@@ -13,35 +13,41 @@ package example;
 
 import x10.util.Team;
 
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.api.MinimumSpanningTree;
+import org.scalegraph.Config;
+import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.graph.Graph;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.util.*;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.xpregel.VertexContext;
-import org.scalegraph.xpregel.XPregelGraph;
-import org.scalegraph.api.MinimumSpanningTree;
+import org.scalegraph.util.random.Random;
 
 public class MinimumSpanningTreeExample {
 	
 	public static def main(args:Array[String](1)) {
-		val team = Team.WORLD;
-		val inputFormat = (s:String) => {
-			val elements = s.split(" ");
-			return new Tuple3[Long,Long,Double](
-				Long.parse(elements(0)),
-				Long.parse(elements(1)),
-				Double.parse(elements(2))
-			);
-		};
-		val start_read_time = System.currentTimeMillis();
-		val g = Graph.make(SimpleText.read(args(0), inputFormat));
-		val end_read_time = System.currentTimeMillis();
-		Console.OUT.println("Read File: "+(end_read_time-start_read_time)+" millis");
-		
+	    
+	    val config = Config.get();
+	    val team = config.worldTeam();
+	    val dist = config.dist2d();
+	    val weightAttr = "weight";
+	    val outpath = "mst-%d";
+	    
+	    // Generate RMAT graph
+	    val scale = 10;
+	    val edgeFactor = 8;
+	    val rnd = new Random(2, 3);
+	    val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
+	    val g = Graph.make(edgeList);
+	    
+	    // Generate edge weight
+	    val weight = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
+	    g.setEdgeAttribute[Double](weightAttr, weight);
 		val result = MinimumSpanningTree.run(g);
-		// DistributedReader.write("out-%d", team, result.first, result.second);
+		
+		// Get selected edges
+		val sources = result.source();
+		val target = result.target();
+		
+		// Write edges
+		CSV.write(outpath, new NamedDistData(["source" as String, "target"], [sources as Any, target as Any]), false);
 	}
 }

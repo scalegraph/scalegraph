@@ -7,29 +7,10 @@
 
  (C) Copyright ScaleGraph Team 2011-2013.
 
-#Release 2.0b
-## Features and Improvements
-### ScaleGraph
-* new xpregel
-* graph generators (RMAT generator and Erdös-Renyi generator)
-* fast binary io package
-* multiple recursive random number generator
-* betweenness centrality for weighted graph
-* delta-stepping visitor
-* degree distribution
-* bitmap structure
-* DistributedReader.read() accepts type parameter
+#ScaleGraph
+ScaleGraph is a graph library based on the highly productive X10 programming language. The goal of ScaleGraph is to provide large-scale graph analysis algorithms and efficient distributed computing framework for graph analysts  and for algorithm developers, respectively
 
-### SX10
-* Add FINISH_NONE annotation used for enclosing nested "at" statement (i.e., "at" statement within "at" statement)
-* Team.WORLD initialized only on the FIRST_PLACE
-* Add new PlaceLocalHandle constructor accepting PlaceGroup, init_here and init_there
-* File__Native::list() returns sorted file list
+See http://scalegraph.sourceforge.net/web/ for details.
 
-
-## Bug Fixes
-* [ScaleGraph] ArrayIndexOutOfBound when calling DistBetweennessCentrality.calculate
-* [ScaleGraph] Fix bug in degree distribution
-* [SX10] Fix memory leaks when allocating a large chunk of memory
-
-There is a bug in degree distribution that generates wrong result when run on multiple places
+##Update history
+Update history can be found from [ChangeLog](https://github.com/scalegraph/scalegraph/blob/master/ChangeLog.md)

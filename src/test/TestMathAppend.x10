@@ -9,15 +9,24 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package example;
+package test;
 
-import x10.util.Team;
-import x10.util.Timer;
+import x10.util.Random;
 
-import org.scalegraph.util.Remote;
+import org.scalegraph.util.*;
 
-public class RemoteExample {
-	public static def main(args:Array[String](1)) : void{
-		// TODO: create this example
+public class TestMathAppend {
+	private static def message (str:String) : void {
+		Console.OUT.println("IdConvEx: " + str);
+	}
+	
+	static def testCeilLog2() {
+		val n = 10;
+		for (i in 0..n) {
+			message("i: " + i + ", ceilLog2(i): " + MathAppend.ceilLog2(i));
+		}
+	}
+	public static def main(argv: Array[String](1)) {
+		testCeilLog2();
 	}
 }

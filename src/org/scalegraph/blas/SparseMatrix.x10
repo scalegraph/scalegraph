@@ -92,7 +92,7 @@ public final struct SparseMatrix[T] {
 			for(i in r) {
 				val off = offsets_(i);
 				val len = offsets_(i+1) - off;
-				Algorithm.sort(target.subpart(off, len), values.subpart(off, len));
+				Algorithm.sort(target.subpart(off, len), values_.subpart(off, len));
 			}
 		});
 

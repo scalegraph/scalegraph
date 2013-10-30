@@ -34,7 +34,7 @@ final public class SpectralClusteringImpl {
 	
 	private def this() {}
 	
-	public static def run(g : Graph, attrName : String, numCluster : Int,
+	public static def run(W : DistSparseMatrix[Double], numCluster : Int,
 			tolerance : Double, maxitr : Int, threshold : Double): DistMemoryChunk[Int] {
 		val config = Config.get();
 		val team = config.worldTeam();
@@ -47,7 +47,6 @@ final public class SpectralClusteringImpl {
 		val sw = new MyStopWatch();
 		sw.start("create affinity matrix");
 		
-		val W = g.createDistSparseMatrix[Double](dist, attrName, false, false);
 		val N = W.ids().numberOfLocalVertexes2N();
 		val D = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](N, (Long) => 1.0));
 		BLAS.mult[Double](1.0, W, true, D, 0.0, D);

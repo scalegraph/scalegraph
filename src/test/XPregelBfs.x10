@@ -29,7 +29,7 @@ final class XPregelBfs extends AlgorithmTest {
 		new XPregelBfs().execute(args);
 	}
 	
-	def bfs_debug(xpregel :XPregelGraph[Long, Byte]) {
+	def bfs_debug(xpregel :XPregelGraph[Long, Byte], root :Long) {
 		val sw = Config.get().stopWatch();
 		
 		xpregel.updateInEdge();
@@ -41,7 +41,7 @@ final class XPregelBfs extends AlgorithmTest {
 			if(ctx.superstep() == 0) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
-				if(ctx.realId() != 0L) return ;
+				if(ctx.realId() != root) return ;
 				pred = ctx.realId();
 				
 				// debug print
@@ -85,7 +85,7 @@ final class XPregelBfs extends AlgorithmTest {
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (debug):"); }
 	}
 	
-	def bfs_opt(xpregel :XPregelGraph[Long, Byte]) {
+	def bfs_opt(xpregel :XPregelGraph[Long, Byte], root :Long) {
 		val sw = Config.get().stopWatch();
 		
 		xpregel.updateInEdge();
@@ -97,7 +97,7 @@ final class XPregelBfs extends AlgorithmTest {
 			if(ctx.superstep() == 0) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
-				if(ctx.realId() != 0L) return ;
+				if(ctx.realId() != root) return ;
 				pred = ctx.realId();
 			}
 			else {
@@ -121,14 +121,14 @@ final class XPregelBfs extends AlgorithmTest {
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (opt):"); }
 	}
 	
-	def bfs_naive(xpregel :XPregelGraph[Long, Byte]) {
+	def bfs_naive(xpregel :XPregelGraph[Long, Byte], root :Long) {
 		val sw = Config.get().stopWatch();
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
-				if(ctx.realId() != 0L) return ;
+				if(ctx.realId() != root) return ;
 				pred = ctx.realId();
 			}
 			else {
@@ -155,14 +155,14 @@ final class XPregelBfs extends AlgorithmTest {
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (naive):"); }
 	}
 	
-	def bfs_combine(xpregel :XPregelGraph[Long, Byte]) {
+	def bfs_combine(xpregel :XPregelGraph[Long, Byte], root :Long) {
 		val sw = Config.get().stopWatch();
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
-				if(ctx.realId() != 0L) return ;
+				if(ctx.realId() != root) return ;
 				pred = ctx.realId();
 			}
 			else {
@@ -197,6 +197,7 @@ final class XPregelBfs extends AlgorithmTest {
 		}
 		val sw = Config.get().stopWatch();
 		val numEdges = g.numberOfEdges();
+		val root = g.source()()(0);
 		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), false, true);
 		sw.lap("Graph construction");
 		val xpregel = new XPregelGraph[Long, Byte](edgeIndexMatrix);
@@ -207,22 +208,22 @@ final class XPregelBfs extends AlgorithmTest {
 		xpregel.setLogPrinter(Console.ERR, 0);
 
 		if(args(0).equals("naive")) {
-			bfs_naive(xpregel);
+			bfs_naive(xpregel, root);
 		}
 		else if(args(0).equals("opt")) {
-			bfs_opt(xpregel);
+			bfs_opt(xpregel, root);
 		}
 		else if(args(0).equals("combine")) {
-			bfs_combine(xpregel);
+			bfs_combine(xpregel, root);
 		}
 		else if(args(0).equals("debug")) {
-			bfs_debug(xpregel);
+			bfs_debug(xpregel, root);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown version parameter :" + args(0));
 		}
 		
-		bufferedPrintln("# of edges: " + numEdges);
+		bufferedPrintln("Root: " + root + ", # of edges: " + numEdges);
 
 		xpregel.once((ctx :VertexContext[Long, Byte, Any, Any]) => {
 			ctx.output(ctx.value());

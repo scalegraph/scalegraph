@@ -11,6 +11,7 @@
 
 package org.scalegraph.api;
 
+import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
 
@@ -198,7 +199,7 @@ final public class MaxFlow {
     		adjVertex(id) = adjV;
     	}
     }
-    private static def execute(param:MaxFlow, g:Graph, matrix:DistSparseMatrix[Double]): Result {
+    private static def execute(param:MaxFlow, matrix:DistSparseMatrix[Long], edgeValue :DistMemoryChunk[Double]): Result {
 
     	// define parameters as local values
     	val team = param.team;
@@ -207,14 +208,14 @@ final public class MaxFlow {
     	val weights = param.weights;
     	val recursionLimit = param.recursionLimit;
     	val eps = param.eps;
+    	val sw = Config.get().stopWatch();
     	
-    	val csr = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+    	sw.lap("UpdateInEdge");
+    	@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
     	
     	
-    	val xpregel = new XPregelGraph[MFVertex, MFEdge](csr);
-    	val edgeValue = g.createDistAttribute[Double](csr, false, "weight");
+    	val xpregel = new XPregelGraph[MFVertex, MFEdge](matrix);
     	
-
     	team.placeGroup().broadcastFlat(() => {
     		val src = edgeValue();
     		val dst = xpregel.edgeValues();
@@ -369,7 +370,7 @@ final public class MaxFlow {
     						ctx.setVertexShouldBeActive(ctx.value().excess > eps);
     						
     						if(ctx.realId() == sinkVertexId) {
-    							Console.OUT.println("                              CURRENT FLOW"  + ctx.value().excess);
+    							sw.lap("CURRENT FLOW     " + currentRecursion + "    "  + ctx.value().excess);
     							if(flowNum.home==here) {
     								flowNum()() = ctx.value().excess;
     							}
@@ -554,27 +555,29 @@ final public class MaxFlow {
     		}
     	}	
     	
-    	
-    	
 //    	val flows = g.retrieveEdgeAttribute[Long](csr, output);
     	val result = new Result(flowNum()());
+
+    	sw.lap("Retrieve output");
+    	@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("MaxFlow Retrieve Output:"); }
     
     	return result;
     }
 
 
    
-    public def execute(matrix :DistSparseMatrix[Long], dm:DistMemoryChunk[Double]): Result {
-        throw new UnsupportedOperationException();
+    public def execute(matrix :DistSparseMatrix[Long], edgeValue :DistMemoryChunk[Double]): Result {
+    	return execute(this, matrix, edgeValue);
     }
     
     public def execute(g :Graph):Result {
     	// Since graph object has its own team, we shold use graph's one.
     	this.team = g.team();	
-    	val matrix = g.createDistSparseMatrix[Double](
-    			Config.get().distXPregel(), weights, true, true);
-    	return execute(this,g,  matrix);
-//    	throw new UnsupportedOperationException();
+    	val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
+    	val edgeValue = g.createDistAttribute[Double](matrix, false, "weight");
+    	val result = execute(this, matrix, edgeValue);
+    	// result.? = g.retrieveEdgeAttribute(matrix, result.?);
+    	return result;
     }
     
     
@@ -583,7 +586,7 @@ final public class MaxFlow {
     }
     
     public static def run(matrix :DistSparseMatrix[Long] ,dm:DistMemoryChunk[Double]): Result {
-        throw new UnsupportedOperationException();
+        return  new MaxFlow().execute(matrix, dm);
     }
     
 }

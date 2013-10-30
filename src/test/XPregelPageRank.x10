@@ -56,7 +56,36 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return aggVal < 0.0001;
+			return aggVal < 0.001;
+		});
+		sw.lap("PageRank Main Iterate (opt)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (opt):"); }
+	}
+	
+	def pagerank_opt_it30(xpregel :XPregelGraph[Double, Double]) {
+		val sw = Config.get().stopWatch();
+		
+		xpregel.updateInEdge();
+		sw.lap("Update In Edge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
+		
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+			val value :Double;
+			if(ctx.superstep() == 0)
+				value = 1.0 / ctx.numberOfVertices();
+			else
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+
+			ctx.aggregate(Math.abs(value - ctx.value()));
+			ctx.setValue(value);
+			ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
+		},
+		(values :MemoryChunk[Double]) => MathAppend.sum(values),
+		(superstep :Int, aggVal :Double) => {
+			if (here.id == 0) {
+				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
+			}
+			return superstep == 29;
 		});
 		sw.lap("PageRank Main Iterate (opt)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (opt):"); }
@@ -85,7 +114,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return aggVal < 0.0001;
+			return aggVal < 0.001;
 		});
 		sw.lap("PageRank Main Iterate (naive)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (naive):"); }
@@ -115,7 +144,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return aggVal < 0.0001;
+			return aggVal < 0.001;
 		});
 		sw.lap("PageRank Main Iterate (combine)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (combine):"); }
@@ -213,6 +242,9 @@ final class XPregelPageRank extends AlgorithmTest {
 		}
 		else if(args(0).equals("combine")) {
 			pagerank_combine(xpregel);
+		}
+		else if(args(0).equals("it30")) {
+			pagerank_opt_it30(xpregel);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown version parameter :" + args(0));

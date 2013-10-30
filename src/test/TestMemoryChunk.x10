@@ -9,14 +9,14 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package example;
+package test;
 
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.*;
 import x10.util.Timer;
 import x10.util.Random;
 
-public class MemoryChunkExample {
+public class TestMemoryChunk {
 	private static def printTime(start :Long) {
 		Console.OUT.println("Time: " + ((Timer.nanoTime() - start) / 1000000.0) + " ms");
 	}

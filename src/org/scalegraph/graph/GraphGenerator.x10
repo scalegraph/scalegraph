@@ -57,7 +57,34 @@ public final class GraphGenerator {
 	public static def genTree(scale :Int)
 	: EdgeList[Long]
 	{
-		throw new UnsupportedOperationException();
+	    val team = Config.get().worldTeam();
+	    val numVertices = 1L << scale;
+	    val numEdges = numVertices;
+	    val teamSize = team.size();
+	    val numLocalEdges = numEdges / teamSize;
+	    
+	    // last place has edges less than another place by 1
+	    val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	            () => new MemoryChunk[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
+	    val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	            () => new MemoryChunk[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
+	    
+	    team.placeGroup().broadcastFlat(() => {
+	        val srcMem_ = srcMemory();
+	        val dstMem_ = dstMemory();
+	        val role = team.role()(0);
+	        val indexOffset = here.id == 0 ? 1: 0;
+	        
+	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
+	        for (i in srcMem_.range()) {
+	            val src = teamSize * (i + indexOffset) + role;
+	            val dst = src / 2;
+	            srcMem_(i) = src;
+	            dstMem_(i) = dst;
+	        }
+	    });
+	    
+	    return EdgeList(srcMemory, dstMemory);
 	}
 	
 	/** Generates an Erdos-Renyi random graph. */

@@ -115,8 +115,8 @@ template <typename T> void writePrimitives(NativeFile nf,
 				String::Lit("error while writing file...")));
 }
 
-void readStrings(NativeFile nf, String **array, long numElements, long numBytes);
-long writeStrings(NativeFile nf, String **array, long numElements, long numBytes);
+void readStrings(NativeFile nf, String *array, long numElements, long numBytes);
+long writeStrings(NativeFile nf, String *array, long numElements, long numBytes);
 
 }}}} // namespace org { namespace scalegraph { namespace io { namespace fbio {
 
