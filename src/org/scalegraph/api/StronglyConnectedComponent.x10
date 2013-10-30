@@ -1,5 +1,6 @@
 package org.scalegraph.api;
 
+
 import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
