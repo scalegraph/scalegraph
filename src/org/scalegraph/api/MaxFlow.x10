@@ -573,7 +573,7 @@ final public class MaxFlow {
     public def execute(g :Graph):Result {
     	// Since graph object has its own team, we shold use graph's one.
     	this.team = g.team();	
-    	val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, false);
+    	val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
     	val edgeValue = g.createDistAttribute[Double](matrix, false, "weight");
     	val result = execute(this, matrix, edgeValue);
     	// result.? = g.retrieveEdgeAttribute(matrix, result.?);

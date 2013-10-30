@@ -119,10 +119,10 @@ public final struct SparseMatrix[T] {
 		val target = new MemoryChunk[Long](srcV.size());
 		val values_ = new MemoryChunk[T](srcV.size());
 
-		if(!transpose)
+		//if(!transpose)
 			Parallel.sort(lgl, srcV, dstV, values, origin, target, values_);
-		else
-			Parallel.sort(lgl, dstV, srcV, values, origin, target, values_);
+		//else
+		//	Parallel.sort(lgl, dstV, srcV, values, origin, target, values_);
 		
 		Parallel.makeOffset(origin, offsets_);
 

@@ -239,8 +239,14 @@ public final struct Dist2D {
      * @param outerOrInner Whether outer edge or inner edge (true: outer, false: inner)
      */
     public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, transpose :Boolean) {
-    	val R = R();
-    	val C = C();
+    	var R:Int, C:Int;
+    	if(!transpose) {
+	    	R = R();
+	    	C = C();
+    	} else {
+    		R = C();
+    		C = R();
+    	}
     	val size = R * C;
     	val avgNumberOfLocalVertices = (numberOfVertices + size - 1) / size;
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))

@@ -103,7 +103,8 @@ final public class DegreeDistribution {
         val team = g.team();
         val transpose = (m == IN_DEGREE) ? true: false;
         val directed = (m == INOUT_DEGREE) ? false: true;
-        val distColumn = Dist2D.make1D(team, !transpose ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
+        //val distColumn = Dist2D.make1D(team, !transpose ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
+        val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_ROWS);
         val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, transpose);
         sw.lap("Graph construction");
         val result = run[Long](columnDistGraph);
