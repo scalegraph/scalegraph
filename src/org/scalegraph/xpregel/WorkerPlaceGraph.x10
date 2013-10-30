@@ -17,6 +17,7 @@ import x10.compiler.Ifdef;
 
 import org.scalegraph.Config;
 
+import org.scalegraph.util.Algorithm;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.Tuple2;
@@ -117,6 +118,7 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		mNeedsAllUpdateInEdge = 0 < mTeam.allreduce[Long](mNeedsAllUpdateInEdge?1:0,Team.ADD) ? true : false;
 		
+		@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
 		if(mNeedsAllUpdateInEdge){
 			@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 			@Ifdef("PROF_XP") { mtimer.start(); }
@@ -189,20 +191,10 @@ final class WorkerPlaceGraph[V,E] {
 					= new Tuple2(mWDiffInDst(i)(j),mWDiffInSrcWithAR(i)(j));
 			}
 			
-			//diffInSrc wo key toshite sort
-			val t_diffInEdgeData = new MemoryChunk[Tuple2[Long,Long]](allInEdgeNum);
-			Parallel.iter(diffInEdgeOffset.range(), (tid :Long, r :LongRange) => {
-				for(i in r){
-					recursiveMergeSort[Tuple2[Long,Long]](
-						diffInEdgeData,		t_diffInEdgeData,
-						diffInEdgeOffset(i),
-						((i!=r.max) ? (diffInEdgeOffset(i+1)) as Long : (diffInEdgeData.size()-1L)) - diffInEdgeOffset(i),
-						(arg:MemoryChunk[Tuple2[Long,Long]],index:Long) => {
-							return arg(index).get2();
-					});
-				}
-			});
-			t_diffInEdgeData.del();
+			/* 
+			 * TODO:diffInEdgeData.get2() wo key to shite sort
+			 */
+			Algorithm.stableSortTupleKey2(diffInEdgeData);
 
 			val recvCount = new MemoryChunk[Int](teamNum+1);
 			mTeam.alltoall(diffInEdgeCount,recvCount);
@@ -229,15 +221,7 @@ final class WorkerPlaceGraph[V,E] {
 			/* 
 			 * TODO:DIED.get1() wo key to shite sort
 			 */
-			val t_dstDIE = new MemoryChunk[Tuple3[Long,Long,Boolean]](recvSize);
-			//toriaezu single thread
-			recursiveMergeSort[Tuple3[Long,Long,Boolean]](
-				dstDIE,	t_dstDIE,
-				0L,		dstDIE.size(),
-				(arg:MemoryChunk[Tuple3[Long,Long,Boolean]],index:Long) => {
-					return arg(index).get1();
-			});
-			t_dstDIE.del();
+			Algorithm.stableSortTupleKey1(dstDIE);
 			
 			var length :Long = 0L;
 			var cOffIndex :Long = 0L;	//New no hou mo kore de kaneteru
@@ -347,6 +331,7 @@ final class WorkerPlaceGraph[V,E] {
 			mWDiffInSrcWithAR(i).clear();
 		}
 		mNeedsAllUpdateInEdge = false;
+		@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
 	}
 	
 	public def updateInEdgeWithValue() {E haszero} {

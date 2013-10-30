@@ -15,9 +15,17 @@ import x10.compiler.Native;
 import x10.compiler.NativeCPPInclude;
 
 import org.scalegraph.util.MemoryChunk;
+import org.scalegraph.util.tuple.Tuple2;
+import org.scalegraph.util.tuple.Tuple3;
 
 @NativeCPPInclude("NativeAlgorithm.h")
 public final class Algorithm {
+	
+	@Native("c++", "org::scalegraph::util::StableSort_TupleK2<#T >((#data)->pointer(), (#data)->size())")
+	public static native def stableSortTupleKey2[T](data :MemoryChunk[T]) :void;
+	
+	@Native("c++", "org::scalegraph::util::StableSort_TupleK1<#T >((#data)->pointer(), (#data)->size())")
+	public static native def stableSortTupleKey1[T](data :MemoryChunk[T]) :void;
 	
 	public static def sort[I, V](index :MemoryChunk[I], value :MemoryChunk[V]) {
 		sortWithLt(index, value);

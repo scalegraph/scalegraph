@@ -120,8 +120,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val start = mUCROffset(srcid);
 			val length = mUCROffset(srcid + 1) - start;
 			return mUCRMessages.subpart(start, length);
-		}
-		else if(mBCREnabled) {
+		} else if(mBCREnabled) {
 			// broadcast messages
 			val bmp = mBCRHasMessage;
 			val offset = mBCROffset;
