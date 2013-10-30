@@ -60,18 +60,22 @@ public final class OnedC {
 		}
 		
 		public operator this(id :Long) :Long = (id << lgc) | c;
+		public def c(id :Long) :Int = c;
 	}
 
 	/** Destination ID to Source ID Converter */
 	public static final struct DtoS {
+		val c :Int;
 		val cshifted :Long;
 		
 		public def this(ids :IdStruct, c :Int) {
 			val lgl = ids.lgl;
+			this.c = c;
 			cshifted = (c as Long) << lgl;
 		}
 		
 		public operator this(id :Long) :Long = id | cshifted;
+		public def c(id :Long) :Int = c;
 	}
 
 	/** Source ID to Vertex ID Converter */
