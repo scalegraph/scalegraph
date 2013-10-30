@@ -1,6 +1,6 @@
 small:
   - name: SCC test
-    args: file $prefix/graph/Amazon0601-0.txt - write $prefix/temp/SCC1.txt $prefix/temp/SCC2.txt 1594
+    args: file $prefix/graph/Amazon0601-0.txt - low write $prefix/temp/SCC1.txt $prefix/temp/SCC2.txt
     thread: 4
     gcproc: 2
     place: 8
