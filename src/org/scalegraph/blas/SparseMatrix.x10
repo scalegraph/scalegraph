@@ -82,7 +82,10 @@ public final struct SparseMatrix[T] {
 			Parallel.sort(ids.lgl + ids.lgr, srcV, dstV, values, origin, target, values_);
 		else
 			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
-		
+		srcV.del();
+		dstV.del();
+		values.del();
+		origin.del();
 		Parallel.makeOffset(origin, offsets_);
 
 		Parallel.iter(0L..(offsetLength-1), (tid :Long, r :LongRange) => {
@@ -95,7 +98,7 @@ public final struct SparseMatrix[T] {
 
 		this.offsets = offsets_;
 		this.vertexes = target;
-		this.values = values;
+		this.values = values_;
 	}
 
 	/** Constructs non-distributed sparse matrix.
