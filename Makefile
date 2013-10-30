@@ -28,10 +28,10 @@ buildParmetis: $(PAR_METIS)
 	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1
 	make -C $(PAR_METIS_FOLDER) --environment-overrides
 	make -C $(PAR_METIS_FOLDER) --environment-overrides install
-	
+
 	sed  -i "s/#define IDXTYPEWIDTH 32/#define IDXTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
 	sed  -i "s/#define REALTYPEWIDTH 32/#define REALTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
-	
+
 	ln -sf  $(SG_PREFIX)/metis/include/parmetis.h  $(SG_PREFIX)/include/parmetis.h
 	ln -sf  $(PAR_METIS_FOLDER)/metis/include/metis.h  $(SG_PREFIX)/include/metis.h
 	ln -sf  $(SG_PREFIX)/metis/lib/libparmetis.so  $(SG_PREFIX)/lib/libparmetis.so
@@ -42,7 +42,7 @@ clean:
 	rm -r ARPACK
 	rm -r x10lib
 	rm -fr metis
-	rm -fr $(PAR_METIS_FOLDER) 
+	rm -fr $(PAR_METIS_FOLDER)
 .tar.gz:
 	echo $*
 	tar xvf $*.tar.gz
@@ -50,15 +50,15 @@ clean:
 $(ARPACK): %:
 	curl -O http://www.caam.rice.edu/software/ARPACK/SRC/$@
 	tar xvf $@
-	
+
 $(PAR_METIS):
 	curl -O http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/$@
 	tar xvf $@
-	
+
 
 makelib: x10lib/ScaleGraph.jar
 
 x10lib/ScaleGraph.jar: $(DLIBS)
 	@ mkdir -p x10lib/lib
 	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(LIBPATH) -o ScaleGraph -d $(LIBPATH)/include $(X10FILES)
-	jar cvf $(LIBPATH)/ScaleGraph.jar $(X10FILES)
+	cd src && jar cvf $(LIBPATH)/ScaleGraph.jar {org,x10}
