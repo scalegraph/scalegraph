@@ -24,13 +24,16 @@ buildDlib: $(ARPACK)
 
 buildParmetis: $(PAR_METIS)
 	mkdir -p $(SG_PREFIX)/metis
+
+	sed  -i "s/#define IDXTYPEWIDTH 32/#define IDXTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
+	sed  -i "s/#define REALTYPEWIDTH 32/#define REALTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
+
+	echo "int main () {return 0;}" | $(CC) -x c -Wno-unused-but-set-variable - ; [  $$? -eq 1 ] && grep -rl   '\-Wno-unused-but-set-variable' $(PAR_METIS_FOLDER) | xargs sed  -i "s/-Wno-unused-but-set-variable//g"
+
 	make -C $(PAR_METIS_FOLDER) --environment-overrides clean
 	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1
 	make -C $(PAR_METIS_FOLDER) --environment-overrides
 	make -C $(PAR_METIS_FOLDER) --environment-overrides install
-	
-	sed  -i "s/#define IDXTYPEWIDTH 32/#define IDXTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
-	sed  -i "s/#define REALTYPEWIDTH 32/#define REALTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
 	
 	ln -sf  $(SG_PREFIX)/metis/include/parmetis.h  $(SG_PREFIX)/include/parmetis.h
 	ln -sf  $(PAR_METIS_FOLDER)/metis/include/metis.h  $(SG_PREFIX)/include/metis.h
