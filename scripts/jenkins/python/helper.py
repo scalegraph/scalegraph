@@ -24,9 +24,9 @@ def escapeText(text):
     textのスラッシュをエスケープします
     """
     return text.replace("\"", "\\\""). \
-        replace(":", r"\:"). \
-        replace("[", r"\["). \
-        replace("]", r"\]")
+        replace(":", ":"). \
+        replace("[", "()"). \
+        replace("]", ")")
 
 def indentDeeper(text, n=1):
     """

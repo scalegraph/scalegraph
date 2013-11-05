@@ -8,7 +8,7 @@ TMPDIR		= $(PWD)/tmp
 
 LIBS		= -cxx-postarg -larpack_LINUX -cxx-postarg -lparpack_MPI-LINUX -cxx-postarg -lparmetis -cxx-prearg -L$(SG_PREFIX)/lib -cxx-prearg -I$(SG_PREFIX)/include
 LIBPATH		= $(SG_PREFIX)/x10lib
-X10FILES	= $(shell find $(SG_PREFIX)/src/org | grep .x10$)
+X10FILES	= $(shell find $(SG_PREFIX)/src/org -name '*.x10')
 
 all: makelib
 
@@ -45,7 +45,7 @@ clean:
 	rm -r ARPACK
 	rm -r x10lib
 	rm -fr metis
-	rm -fr $(PAR_METIS_FOLDER) 
+	rm -fr $(PAR_METIS_FOLDER)
 .tar.gz:
 	echo $*
 	tar xvf $*.tar.gz
@@ -53,15 +53,15 @@ clean:
 $(ARPACK): %:
 	curl -O http://www.caam.rice.edu/software/ARPACK/SRC/$@
 	tar xvf $@
-	
+
 $(PAR_METIS):
 	curl -O http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/$@
 	tar xvf $@
-	
+
 
 makelib: x10lib/ScaleGraph.jar
 
 x10lib/ScaleGraph.jar: $(DLIBS)
 	@ mkdir -p x10lib/lib
 	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(LIBPATH) -o ScaleGraph -d $(LIBPATH)/include $(X10FILES)
-	jar cvf $(LIBPATH)/ScaleGraph.jar $(X10FILES)
+	cd src && jar cvf $(LIBPATH)/ScaleGraph.jar {org,x10}
