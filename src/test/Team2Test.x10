@@ -108,6 +108,25 @@ final class Team2Test extends STest {
 			}
 		}
 	}
+	
+	static def testalltoallvString() : void{
+	    val team = Team2(Team.WORLD);
+	    val team_size = team.size();
+	    message("alltoallv Test");
+	    finish for (p in Place.places()) async at (p) {
+	        val role = here.id;
+	        val src = new MemoryChunk[String]((role + 1 + role + team_size ) * team_size / 2 , (i:Long)=> "String");
+	        val src_counts = new MemoryChunk[Int](team_size, (i:Long)=> role + 1 + i as Int );
+	        team.barrier(role);
+	        val recv = team.alltoallv[String](src, src_counts);
+	        for (i in recv.get2().range()) {
+	            message(here + ": alltoallv: dst_counts( " + i + " ) = " + recv.get2()(i));
+	        }
+	        for (i in recv.get1().range()) {
+	            message(here + ": alltoallv: dst( " + i + " ) = " + recv.get1()(i));
+	        }
+	    }
+	}
 
 	public def run(args :Array[String](1)): Boolean {
 		
@@ -117,6 +136,7 @@ final class Team2Test extends STest {
 		//testgatherv();
 		//testallgatherv();
 		testalltoallv();
+		testalltoallvString();
 		
 		message("Finish!");
 		

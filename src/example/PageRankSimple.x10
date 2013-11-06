@@ -48,7 +48,7 @@ public class PageRankSimple {
             }
         },
         (values :MemoryChunk[Double]) => MathAppend.sum(values),
-        // stop computation if more than 30 steps or quadratic error less than 0.0001
+        // stop computation if it is more than 30 steps or quadratic error is less than 0.0001
         (superstep :Int, aggVal :Double) => (superstep >= 30 || aggVal < 0.0001));
     }
 }

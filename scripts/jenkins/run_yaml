@@ -12,4 +12,4 @@ else
     export prefix=/nfs/data0/scalegraph/autotest
 fi
 
-exec ./main.py
+exec ./python/run_yaml.py $*

@@ -11,15 +11,14 @@
 
 package example;
 
-import x10.io.File;
 import x10.util.Team;
 
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.api.DegreeDistribution;
+import org.scalegraph.graph.Graph;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.graph.Graph;
+import org.scalegraph.io.SimpleText;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.api.DegreeDistribution;
 
 
 public final class DegreeDistributionExample {

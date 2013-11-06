@@ -344,7 +344,11 @@ final class WorkerPlaceGraph[V,E] {
 				vc.mNumActiveVertexes = numProcessed;
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
-			
+		
+			ectx.mUCRMessages.del();
+			ectx.mBCROffset.del();
+			ectx.mBCRMessages.del();
+			ectx.mUCROffset.del();
 			// gather statistics
 			for(th in 0..(numThreads-1)) {
 				//first message process is here 
