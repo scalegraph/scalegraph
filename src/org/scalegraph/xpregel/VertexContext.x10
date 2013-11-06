@@ -141,7 +141,7 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 */
 	public def setOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
 		//TODO: uwaaaaaaaaaaaaaaaaaaaa
-		mWorker.mNeedsAllUpdateInEdge=true;	//atode henkou yotei
+		mWorker.mNeedsAllUpdateInEdge=true;	//modify later
 		mEdgeProvider.setOutEdges(id, value);
 	}
 	

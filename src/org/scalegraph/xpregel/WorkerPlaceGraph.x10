@@ -116,9 +116,9 @@ final class WorkerPlaceGraph[V,E] {
 	
 	public def updateInEdge() {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		mNeedsAllUpdateInEdge = 0 < mTeam.allreduce[Long](mNeedsAllUpdateInEdge?1:0,Team.ADD) ? true : false;
-		
 		@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
+		mNeedsAllUpdateInEdge = 0 < mTeam.allreduce[Int](mNeedsAllUpdateInEdge?1:0,Team.ADD);
+		Console.OUT.println("in update inEdge! mNeedsAllUpdateInEdge:"+mNeedsAllUpdateInEdge);
 		if(mNeedsAllUpdateInEdge){
 			@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 			@Ifdef("PROF_XP") { mtimer.start(); }
