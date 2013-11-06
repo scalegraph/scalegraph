@@ -58,6 +58,7 @@ public final class OnedR {
 		}
 		
 		public operator this(id :Long) :Long = ((id & lmask) << lgr) | (id >> lgl);
+		public def r(id :Long) :Int = (id >> lgl) as Int;
 	}
 
 	/** Destination ID to Source ID Converter */

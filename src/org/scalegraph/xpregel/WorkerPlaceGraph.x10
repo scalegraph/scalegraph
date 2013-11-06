@@ -118,7 +118,7 @@ final class WorkerPlaceGraph[V,E] {
 			for(vid in r) {
 				val vid_ = StoD(vid);
 				for(i in offset(vid)..(offset(vid + 1) - 1)) {
-					val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
+					val mesBuf = UCCMessages(mesComm.mDtoV.r(id(i)));
 					mesBuf.messages.add(vid_);
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
@@ -160,7 +160,7 @@ final class WorkerPlaceGraph[V,E] {
 			for(vid in r) {
 				val vid_ = StoD(vid);
 				for(i in offset(vid)..(offset(vid + 1) - 1)) {
-					val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
+					val mesBuf = UCCMessages(mesComm.mDtoV.r(id(i)));
 					mesBuf.messages.add(Tuple2[Long, E](vid_, value(i)));
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
