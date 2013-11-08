@@ -38,7 +38,7 @@ final class StronglyConnectedComponentTest extends AlgorithmTest{
 		else if(args(0).equals("low")) {
 //			val matrix = g.createDistSparseMatrix[Long](Config.get().distXPregel(), "weight", true, true);
 
-			val matrix = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+			val matrix = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, false);
 
 			// delete the graph object in order to reduce the memory consumption
 			g.del();

@@ -437,7 +437,7 @@ public final class StronglyConnectedComponent {
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, true);
 */
-		val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
+		val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, false);
 		return execute(this, matrix);		 
 	}
 
