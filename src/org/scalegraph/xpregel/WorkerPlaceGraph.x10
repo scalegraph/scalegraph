@@ -345,10 +345,8 @@ final class WorkerPlaceGraph[V,E] {
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 		
-			ectx.mUCRMessages.del();
-			ectx.mBCROffset.del();
-			ectx.mBCRMessages.del();
-			ectx.mUCROffset.del();
+			ectx.deleteMessages();
+			
 			// gather statistics
 			for(th in 0..(numThreads-1)) {
 				ectx.sqweezeMessage(vctxs(th));
