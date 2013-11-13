@@ -14,6 +14,7 @@ package org.scalegraph.api;
 import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
+import x10.compiler.NativeCPPInclude;
 
 import org.scalegraph.Config;
 import org.scalegraph.util.*;
@@ -26,7 +27,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.blas.DistSparseMatrix;
 
-
+@NativeCPPInclude("HyperANF_Natives.h")
 public class HyperANF {
 	
 	/** The team that provides place group the calculation will take on.
@@ -47,7 +48,38 @@ public class HyperANF {
 	 * 
 	 */
 	
-	public static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
+	private static struct MesHANF {
+		val b0:Byte, b1:Byte, b2:Byte, b3:Byte;
+		val b4:Byte, b5:Byte, b6:Byte, b7:Byte;
+		val b8:Byte, b9:Byte, ba:Byte, bb:Byte;
+		val bc:Byte, bd:Byte, be:Byte, bf:Byte;
+		def this(mc:MemoryChunk[Byte]) {
+//			if(mc.size()!=16L) return;
+			b0 = mc( 0); b1 = mc( 1); b2 = mc( 2); b3 = mc( 3);
+			b4 = mc( 4); b5 = mc( 5); b6 = mc( 6); b7 = mc( 7);
+			b8 = mc( 8); b9 = mc( 9); ba = mc(10); bb = mc(11);
+			bc = mc(12); bd = mc(13); be = mc(14); bf = mc(15);
+		}
+		
+	}
+	private static def retMC(mes:MesHANF) {
+		val mc = new MemoryChunk[Byte](16);
+		mc( 0) = mes.b0; mc( 1) = mes.b1; mc( 2) = mes.b2; mc( 3) = mes.b3;
+		mc( 4) = mes.b4; mc( 5) = mes.b5; mc( 6) = mes.b6; mc( 7) = mes.b7;
+		mc( 8) = mes.b8; mc( 9) = mes.b9; mc(10) = mes.ba; mc(11) = mes.bb;
+		mc(12) = mes.bc; mc(13) = mes.bd; mc(14) = mes.be; mc(15) = mes.bf;
+		return mc;
+	}
+
+
+	// TODO
+	// messageを作るところに新しい関数を作る
+	// @Nativeを最初に書いて
+	// 中身でx10の処理を書いて
+	// 
+	//
+	
+	private static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
 		var Z:Double = 0.0;
 		val M:Double = counter.size();
 		for(i in counter.range()) {
@@ -78,7 +110,13 @@ public class HyperANF {
 		
 	}
 	
-	
+	@Native("c++", "org::scalegraph::api::hyperANF_update_counter((#counter)->pointer(), (x10_byte*)((#mes)->pointer() + #offset))")
+	private static def update(counter: MemoryChunk[Byte] , mes:MemoryChunk[MesHANF], offset : Long) :void {
+		val counterC = retMC(mes(offset));
+		for(j in counterC.range()) {
+			counter(j) = MathAppend.max(counterC(j) , counter(j));
+		}
+	}
 	private static def execute(param :HyperANF, matrix :DistSparseMatrix[Double]) {
 
 		val team = param.team;
@@ -107,6 +145,8 @@ public class HyperANF {
 		else if(B==6) alpha = 0.769;
 		else alpha = 0.7213 / (1.00+1.073/M);
 		
+		val base = 16;
+		val loop = M / base;
 		/*
 		 *  
 		 * in superstep 
@@ -114,51 +154,48 @@ public class HyperANF {
 		 * 		0~ : recieve messages , change my value and send my value to adjacent nodes.
 		 */
 		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
-		val compute :(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => void
-		 = (ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
+		val compute :(ctx :VertexContext[MemoryChunk[Byte], Double, MesHANF, Double], messages :MemoryChunk[MesHANF]) => void
+		 = (ctx :VertexContext[MemoryChunk[Byte], Double, MesHANF, Double], messages :MemoryChunk[MesHANF]) => {
 
-			 var counterB:MemoryChunk[Byte];
+//			 var counterB:MemoryChunk[Byte];
 			 if(ctx.superstep()==0) {
 				 val counterA = new MemoryChunk[Byte](M);
 				 for(i in counterA.range()) counterA(i) = 0;
 				 val rand = new Random(ctx.realId(ctx.id()), 1000);
 				 val pos = rand.nextLong()%M;
 				 var num:Long = rand.nextLong()+1;
-				 var cnt:Byte = 0;
+				 var cnt:Byte = 1;
 				 while(num%2==0L) {
 					 num /= 2;
 					 cnt = cnt+1;
 				 }
 				 counterA(pos) =  cnt;
-				 counterB = counterA;
+				 ctx.setValue(counterA);
 			 }
+			 
 			 else {
-				 val counterA = ctx.value();
+				 val startPos = base * ((ctx.superstep()-1) % loop ) ; // ctx.superstep()>=1
+				 val counterA = ctx.value().subpart(startPos, 16);
 				 //maxim massages
+				 if(ctx.id()==0L) sw.lap("hoge"+startPos);
 				 for(i in messages.range()) {
-					 for(j in counterA.range()) {
-						 counterA(j) = MathAppend.max(messages(i)(j) , counterA(j));
-					 }
+					 update(counterA, messages, i);
 				 }
-				 counterB =counterA;
-
 			 }
-
-			 for(i in ctx.outEdgesId().range() ) {
-				 ctx.sendMessage(ctx.outEdgesId()(i), counterB);
-				 
-			 }
+			 val startPos = base * (ctx.superstep() % loop);
+			val mes =new MesHANF( ctx.value().subpart(startPos, base) );
+			/*
+			 for(i in ctx.outEdgesId().range() ) 
+				 ctx.sendMessage(ctx.outEdgesId()(i), mes);
+			*/
+			 ctx.sendMessageToAllNeighbors(mes);
 			 
-			 //					ctx.sendMessageToAllNeighbors(counterB);
-			 
-			 val retval = calcSize(counterB,alpha);
-			 //			Console.OUT.println("retval"  + ctx.realId() + " " + retval);
+			 val retval = (ctx.superstep()%loop==0) ? calcSize(/*counterB*/ ctx.value(),alpha) : 0.0;
 			 ctx.aggregate(retval);
-			 ctx.setValue(counterB);
-			 
 		 };
 		val aggregator :(values :MemoryChunk[Double]) => Double
 		  = (values :MemoryChunk[Double]) => MathAppend.sum(values);
+		  /*
 		val combiner :(values : MemoryChunk[MemoryChunk[Byte]]) => MemoryChunk[Byte] =
 			(values : MemoryChunk[MemoryChunk[Byte]]) =>{
 				if(values.size()==0L) {
@@ -175,15 +212,18 @@ public class HyperANF {
 				return ret;
 				
 			};
+		   */
 		val end :(superstep :Int, aggVal :Double) => Boolean =
 			(superstep :Int, aggVal :Double) => {
 				if(results.home==here) {
+					if(superstep%loop!=0) return false;
+					val index = superstep / loop;
 					val md:MemoryChunk[Double] = results()();
-					md(superstep) = aggVal;
+					md(index) = aggVal;
 					results()() = md;
 					if(superstep>5) {
-						val	a = md(superstep-1) + 1.0;
-						val b = md(superstep) + 1.0;
+						val	a = md(index-1) + 1.0;
+						val b = md(index) + 1.0;
 						if(MathAppend.abs(a/b - 1.0) < 0.001)
 							return true;
 					}
@@ -194,7 +234,8 @@ public class HyperANF {
 				
 				return superstep > niter;
 			};
-		xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
+		//xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
+		xpregel.iterate[MesHANF,Double](compute, aggregator, end);
 		sw.lap("Main iterate");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Main iterate:"); }
 		return results()();
