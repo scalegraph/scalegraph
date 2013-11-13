@@ -17,6 +17,6 @@ Update history can be found from [ChangeLog](https://github.com/scalegraph/scale
 
 ##Build
 
-% git clone https://github.com/scalegraph/scalegraph.git
-% cd scalegraph
-% make
+    % git clone https://github.com/scalegraph/scalegraph.git
+    % cd scalegraph
+    % make
