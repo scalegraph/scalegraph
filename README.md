@@ -20,3 +20,7 @@ Update history can be found from [ChangeLog](https://github.com/scalegraph/scale
     % git clone https://github.com/scalegraph/scalegraph.git
     % cd scalegraph
     % make
+
+##Usage
+    % mkdir example
+    % x10c++ -x10lib /path/to/scalegraph/x10lib/ScaleGraph.properties /path/to/scalegraph/src/test/PageRankTest.x10
