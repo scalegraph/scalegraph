@@ -24,9 +24,7 @@ buildDlib: $(ARPACK)
 
 buildParmetis: $(PAR_METIS)
 	mkdir -p $(SG_PREFIX)/metis
-
-	sed  -i "s/#define IDXTYPEWIDTH 32/#define IDXTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
-	sed  -i "s/#define REALTYPEWIDTH 32/#define REALTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
+	patch  $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
 
 	echo "int main () {return 0;}" | $(CC) -x c -Wno-unused-but-set-variable - ; [  $$? -eq 1 ] && grep -rl   '\-Wno-unused-but-set-variable' $(PAR_METIS_FOLDER) | xargs --no-run-if-empty sed  -i "s/-Wno-unused-but-set-variable//g"
 
