@@ -19,8 +19,8 @@ package org.scalegraph.graph.id;
  * D : Destination form ID
  */
 public final class Twod {
-	/** Vertex ID to Source ID Converter */
-	public static final struct VtoS {
+	/** Vertex ID to Destination ID Converter */
+	public static final struct VtoD {
 		val lgl :Int;
 		val lgsize :Int;
 		val rmask :Long;
@@ -37,8 +37,8 @@ public final class Twod {
 		public operator this(id :Long) :Long = ((id & rmask) << lgl) | (id >> lgsize);
 	}
 
-	/** Vertex ID to Destination ID Converter */
-	public static final struct VtoD {
+	/** Vertex ID to Source ID Converter */
+	public static final struct VtoS {
 		val lgr :Int;
 		val lgl :Int;
 		val lgsize :Int;
@@ -57,8 +57,8 @@ public final class Twod {
 		public operator this(id :Long) :Long = (((id & cmask) >> lgr) << lgl) | (id >> lgsize);
 	}
 
-	/** Source ID to Vertex ID Converter */
-	public static final struct StoV {
+	/** Destination ID to Vertex ID Converter */
+	public static final struct DtoV {
 		val cshifted :Long;
 		val lgl :Int;
 		val lgsize :Int;
@@ -77,8 +77,8 @@ public final class Twod {
 		public operator this(id :Long) :Long = ((id & lmask) << lgsize) | cshifted | (id >> lgl);
 	}
 
-	/** Source ID to Destination ID Converter */
-	public static final struct StoD {
+	/** Destination ID to Source ID Converter */
+	public static final struct DtoS {
 		val cshiftedto :Long;
 		val lmask :Long;
 		
@@ -94,8 +94,8 @@ public final class Twod {
 		public operator this(id :Long) :Long = (id & lmask) | cshiftedto;
 	}
 
-	/** Destination ID to Vertex ID Converter */
-	public static final struct DtoV {
+	/** Source ID to Vertex ID Converter */
+	public static final struct StoV {
 		val r :Int;
 		val lgr :Int;
 		val lgl :Int;
@@ -115,8 +115,8 @@ public final class Twod {
 		public operator this(id :Long) :Long = ((id & lmask) << lgsize) | ((id >> lgl) << lgr) | (r as Long);
 	}
 
-	/** Destination ID to Source ID Converter */
-	public static final struct DtoS {
+	/** Source ID to Destination ID Converter */
+	public static final struct StoD {
 		val rshifted :Long;
 		val lmask :Long;
 		

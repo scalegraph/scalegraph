@@ -49,14 +49,14 @@ final public class SpectralClusteringImpl {
 		
 		val N = W.ids().numberOfLocalVertexes2N();
 		val D = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](N, (Long) => 1.0));
-		BLAS.mult[Double](1.0, W, true, D, 0.0, D);
+		BLAS.mult[Double](1.0, W, false, D, 0.0, D);
 		team.placeGroup().broadcastFlat(() => {
 			val vec_ = D();
 			Parallel.iter(vec_.range(), (tid :Long, r :LongRange) => {
 				for(i in r) vec_(i) = 1.0 / vec_(i);
 			});
 		});
-		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, true, 0.0, W);
+		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, false, 0.0, W);
 		
 		sw.next("calc eigenvectors");
 		
@@ -156,7 +156,7 @@ final public class SpectralClusteringImpl {
 					val x_ = new MemoryChunk[Double](workd.raw(), ipntr(0) - 1, nloc);
 					val y_ = new MemoryChunk[Double](workd.raw(), ipntr(1) - 1, nloc);
 					MemoryChunk.copy[Double](x_, 0L, x(), 0L, nloc);
-					BLAS.mult_[Double](1.0, A, true, x, 0.0, y);
+					BLAS.mult_[Double](1.0, A, false, x, 0.0, y);
 					MemoryChunk.copy[Double](y(), 0L, y_, 0L, nloc);
 					
 				} else if(ido == 2) {
