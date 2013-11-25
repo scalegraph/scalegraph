@@ -73,9 +73,9 @@ public class HyperANF {
 
 
 	// TODO
-	// messageを作るところに新しい関数を作る
-	// @Nativeを最初に書いて
-	// 中身でx10の処理を書いて
+	// message繧剃ｽ懊ｋ縺ｨ縺薙ｍ縺ｫ譁ｰ縺励＞髢｢謨ｰ繧剃ｽ懊ｋ
+	// @Native繧呈怙蛻昴↓譖ｸ縺�※
+	// 荳ｭ霄ｫ縺ｧx10縺ｮ蜃ｦ逅�ｒ譖ｸ縺�※
 	// 
 	//
 	
@@ -256,7 +256,7 @@ public class HyperANF {
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), weights, true, true);
+				Config.get().distXPregel(), weights, true, false);
 		return execute(matrix);	
 	}
 
