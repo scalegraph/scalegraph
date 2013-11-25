@@ -24,9 +24,14 @@ final class CSVReaderTest extends STest {
 	}
 	
 	public def run(args: Array[String](1)): Boolean {
-		val mode = 5;
+		val mode = 0;
+		if(mode==0){
+			val colTypes = [Type.Boolean, Type.Byte, Type.Short, Type.Int, Type.Long, Type.Float, Type.Double, Type.UByte, Type.UShort, Type.UInt, Type.ULong, Type.Char, Type.String, Type.String];
+			val nd = CSV.read(args(0), colTypes, true);
+			
+			CSV.write("csvwTest", nd, false);
+		}else if(mode==1){
 		
-		if(mode==1){
 			val colTypes = [Type.Long as Int, Type.Long, Type.None, Type.Double];
 			val nd = CSV.read(args(0), colTypes, false);
 		

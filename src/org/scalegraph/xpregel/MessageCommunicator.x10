@@ -109,6 +109,13 @@ final class MessageCommunicator[M] { M haszero } {
 		// TODO:
 	}
 	
+	def deleteMessages(){
+		mUCRMessages.del();
+		mBCROffset.del();
+		mBCRMessages.del();
+		mUCROffset.del();
+	}
+	
 	def messageBuffer(tid :Long) = mUCCMessages.subpart(tid * mTeam.size(), mTeam.size());
 	
 	def message(srcid :Long, buffer :GrowableMemory[M]) {

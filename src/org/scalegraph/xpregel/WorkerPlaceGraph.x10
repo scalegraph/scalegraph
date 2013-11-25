@@ -344,6 +344,8 @@ final class WorkerPlaceGraph[V,E] {
 				vc.mNumActiveVertexes = numProcessed;
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
+		
+			ectx.deleteMessages();
 			
 			// gather statistics
 			for(th in 0..(numThreads-1)) {
