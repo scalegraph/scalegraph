@@ -24,8 +24,10 @@ buildDlib: $(ARPACK)
 
 buildParmetis: $(PAR_METIS)
 	mkdir -p $(SG_PREFIX)/metis
-	patch  $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
-	patch  $(PAR_METIS_FOLDER)/metis/GKlib/GKlibSystem.cmake < $(SG_PREFIX)/patches/cc_flag.patch
+	rm -rf $(PAR_METIS_FOLDER)
+	tar xvf $(PAR_METIS)
+	patch -N $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
+	patch -N $(PAR_METIS_FOLDER)/metis/GKlib/GKlibSystem.cmake < $(SG_PREFIX)/patches/cc_flag.patch
 
 	make -C $(PAR_METIS_FOLDER) --environment-overrides clean
 	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1
@@ -53,7 +55,6 @@ $(ARPACK): %:
 
 $(PAR_METIS):
 	curl -O http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/$@
-	tar xvf $@
 
 
 makelib: x10lib/ScaleGraph.jar
