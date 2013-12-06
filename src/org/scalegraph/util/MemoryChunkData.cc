@@ -15,5 +15,11 @@
 
 x10aux::RuntimeType org::scalegraph::util::MCData_Impl<void>::rtt;
 
+pthread_mutex_t org::scalegraph::util::explMemMutex = PTHREAD_MUTEX_INITIALIZER;
+org::scalegraph::util::ExplicitMemory *org::scalegraph::util::explMemList = new org::scalegraph::util::ExplicitMemory();
+//scalegraph::ListEntry org::scalegraph::util::explMemList2;
+
+long org::scalegraph::util::numCnt;
+
 /* END of MemoryChunkData */
 /*************************************************/
