@@ -46,7 +46,7 @@ public class DistBetweennessCentralityWeightedExample {
         bc.directed = true;
         bc.weighted = true;
         bc.exactBc = false;
-        bc.source = 0L;
+        bc.source = [0L as Long];
         
         // Call API
         val result = bc.execute(g);
