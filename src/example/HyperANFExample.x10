@@ -1,6 +1,7 @@
 package example;
 
 import x10.util.Team;
+import x10.io.File;
 
 import org.scalegraph.Config;
 import org.scalegraph.graph.GraphGenerator;
@@ -35,12 +36,10 @@ public final class HyperANFExample {
         val result = org.scalegraph.api.HyperANF.run(g);
         
         // Write output
-        val sb = new SStringBuilder();
-        for(i in result.range()) {
-            sb.add(result(i)).add("\n");
+        val printer = new File(outpath).printer();
+        for (i in result.range()) {
+            printer.println(result(i));
         }
-        val fw = new FileWriter(outpath, FileMode.Create);
-        fw.write(sb.result().bytes());
-        fw.close();
+        printer.close();
     }
 }
