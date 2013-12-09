@@ -129,10 +129,10 @@ public class HyperANF {
 //		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 //		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
 		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
-		xpregel.setLogPrinter(Console.ERR, 0);
+		/// xpregel.setLogPrinter(Console.ERR, 0);
 		xpregel.updateInEdge();
 		
-		sw.lap("UpdateInEdge");
+		/// sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 //		val N:Long = graph.numberOfVertices();
@@ -177,7 +177,7 @@ public class HyperANF {
 				 val startPos = base * ((ctx.superstep()-1) % loop ) ; // ctx.superstep()>=1
 				 val counterA = ctx.value().subpart(startPos, 16);
 				 //maxim massages
-				 if(ctx.id()==0L) sw.lap("hoge"+startPos);
+				 /// if(ctx.id()==0L) sw.lap("hoge"+startPos);
 				 for(i in messages.range()) {
 					 update(counterA, messages, i);
 				 }
@@ -228,15 +228,15 @@ public class HyperANF {
 							return true;
 					}
 				}
-				if(here.id == 0) {
-					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
-				}
+				/// if(here.id == 0) {
+				///	sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
+				/// }
 				
 				return superstep > niter;
 			};
 		//xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
 		xpregel.iterate[MesHANF,Double](compute, aggregator, end);
-		sw.lap("Main iterate");
+		/// sw.lap("Main iterate");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Main iterate:"); }
 		return results()();
 		
