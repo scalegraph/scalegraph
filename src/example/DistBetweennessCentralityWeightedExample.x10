@@ -15,31 +15,27 @@ import x10.util.Team;
 
 import org.scalegraph.api.BetweennessCentrality;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.util.Dist2D;
+import org.scalegraph.util.random.Random;
 import org.scalegraph.util.tuple.Tuple3;
 
 public class DistBetweennessCentralityWeightedExample {
-    
-    public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        return Tuple3[Long, Long, Double] (
-                Long.parse(items(0).trim()),
-                Long.parse(items(1).trim()),
-                Double.parse(items(2).trim())
-        );
-    };
-    
+
     public static def main(args: Array[String]) {
-        if (args.size < 1) {
-            Console.OUT.println("Please enter file name");
-            return;
-        }
         
-        // Load data using SimpleText to read edgelist format file
-        val g = Graph.make(SimpleText.read(args(0), inputFormat), false);
+        // Generate RMAT graph
+        val scale = 10;
+        val edgeFactor = 8;
+        val weightName = "weight";
+        val rnd = new Random(2, 3);
+        val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
+        val g = Graph.make(edgeList);
+        
+        // Generate edge weight
+        val weight = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
+        g.setEdgeAttribute[Double](weightName, weight);
                 
         // Create API instnace, since we would like to specify parameters
         val bc = new BetweennessCentrality();
