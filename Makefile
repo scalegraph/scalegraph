@@ -40,7 +40,7 @@ $(ARPACK_LIB): ARPACK
 libparmetis.so: $(PAR_METIS_FOLDER)
 	mkdir -p $(SG_PREFIX)/metis
 	rm -rf $(PAR_METIS_FOLDER)
-	tar xvf $(PAR_METIS)
+	tar xvf $(PAR_METIS_ARCHIVE)
 	patch -N $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
 	patch -N $(PAR_METIS_FOLDER)/metis/GKlib/GKlibSystem.cmake < $(SG_PREFIX)/patches/cc_flag.patch
 
