@@ -140,7 +140,7 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 * replace the out edges for the current vertex with the given edges
 	 */
 	public def setOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
-		//TODO: uwaaaaaaaaaaaaaaaaaaaa
+		//TODO: apply few edge modify optimization
 		mWorker.mNeedsAllUpdateInEdge=true;	//modify later
 		mEdgeProvider.setOutEdges(id, value);
 	}
@@ -302,7 +302,8 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	}
 	
 	private @Inline def judgeFewInEdgeModify(v:Long) :Boolean{
-		return mWorker.getDiffInDstSize()+v<(mWorker.mOutEdge.vertexes.size()>>6);
+		return true;
+		//return mWorker.getDiffInDstSize() + v < (mWorker.mOutEdge.vertexes.size()>>4);
 	}
 }
 

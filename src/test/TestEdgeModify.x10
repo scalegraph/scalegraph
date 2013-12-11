@@ -74,8 +74,8 @@ public class TestEdgeModify {
 				//super step ha 0 start rashii
 				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
 				
-				for (m in messages.range()){
-					sb.add("message:"+ messages(m)+"\n");
+				for (m in messages){
+					sb.add("message:"+ m +"\n");
 				}
 				
 				if(myId != 0L && (ctx.superstep() as Long)==myId){

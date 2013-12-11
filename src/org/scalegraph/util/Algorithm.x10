@@ -20,6 +20,9 @@ import org.scalegraph.util.tuple.Tuple3;
 
 @NativeCPPInclude("NativeAlgorithm.h")
 public final class Algorithm {
+
+	@Native("c++", "::std::sort((#index)->pointer(), (#index)->pointer() + (#index)->size())")
+	public static native def sort[I](index :MemoryChunk[I]) :void;
 	
 	@Native("c++", "org::scalegraph::util::StableSort_TupleK2<#T >((#data)->pointer(), (#data)->size())")
 	public static native def stableSortTupleKey2[T](data :MemoryChunk[T]) :void;

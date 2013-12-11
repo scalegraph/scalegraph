@@ -155,13 +155,6 @@ final class WorkerPlaceGraph[V,E] {
 
 			mInEdge.offsets = mesComm.mUCROffset;
 			mInEdge.vertexes = mesComm.mUCRMessages;
-			//sort mInEdge.vertexes
-			Parallel.iter(0L..(numLocalVertexes-1L), (i :Long) => {
-				Algorithm.sort(
-						mInEdge.vertexes.subpart(
-								mInEdge.offsets(i),
-								mInEdge.offsets(i+1) - mInEdge.offsets(i)));
-			});
 			mesComm.mUCROffset = new MemoryChunk[Long]();
 			mesComm.mUCRMessages = new MemoryChunk[Long]();
 			mesComm.del();
@@ -176,8 +169,6 @@ final class WorkerPlaceGraph[V,E] {
 			val diffInEdgeData = new MemoryChunk[Tuple2[Long,Long]](allInEdgeNum);
 			val diffInEdgeCount = new MemoryChunk[Int](teamNum, (l:Long) => 0);
 			
-			//malti thread de yaru hitsuyou ga aru?
-			
 			for (i in mWDiffInDst.range())
 			for (j in mWDiffInDst(i).range()){
 				diffInEdgeCount(mDtoS.c(mWDiffInDst(i)(j)))++;	//data suu ++
@@ -185,6 +176,7 @@ final class WorkerPlaceGraph[V,E] {
 					(mStoD(mWDiffInSrcWithAR(i)(j) & ~mask)) | (mWDiffInSrcWithAR(i)(j) & mask);	//tsuide
 				//DstID + mask -> SrcID + mask
 			}
+			val Debugtmp=diffInEdgeCount(0L);
 			
 			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == dstId with AR
 			diffInEdgeOffset(0) = 0;
@@ -200,6 +192,7 @@ final class WorkerPlaceGraph[V,E] {
 				diffInEdgeData(diffInEdgeOffset(p) + diffInEdgeCount(p)++)
 					= new Tuple2(mWDiffInDst(i)(j),mWDiffInSrcWithAR(i)(j));
 			}
+			assert(Debugtmp==diffInEdgeCount(0L));
 			
 			/* 
 			 * diffInEdgeData.get2() wo key to shite sort
@@ -234,6 +227,15 @@ final class WorkerPlaceGraph[V,E] {
 			dstDIEO.del();
 			dstDIEC.del();
 			
+			//sort mInEdge.vertexes
+			for (i in 0..(numVertexes-1)){
+				Parallel.sort(
+					mInEdge.vertexes.subpart(
+						mInEdge.offsets(i),
+						mInEdge.offsets(i+1) - mInEdge.offsets(i)
+					)
+				);
+			}
 			
 			val dstDIE = new MemoryChunk[Tuple3[Long,Long,Boolean]](recvSize+1);	//+1
 			for(dIndex in dstDIED.range()){
@@ -245,119 +247,140 @@ final class WorkerPlaceGraph[V,E] {
 			}
 			dstDIE(recvSize) = new Tuple3[Long,Long,Boolean](Long.MAX_VALUE,Long.MAX_VALUE,false);	//itiban saigo
 			dstDIED.del();
-			//diffInEdgeData.get2() is vertex id which is in local(ue no copy)
+			/* 
+			 * diffInEdgeData.get2() wo key to shite sort
+			 * diffInEdgeData.get2() is vertex id which is in local(ue no copy)
+			 */
 			Algorithm.stableSortTupleKey2(dstDIE);
-			//dstDIE.get1() is is vertex id which is in local
+			/* 
+			 * dstDIE.get1() wo key to shite sort
+			 * dstDIE.get1() is is vertex id which is in local
+			 */
 			Algorithm.stableSortTupleKey1(dstDIE);
-			if(dstDIE.size() > 1){
-				Console.OUT.println(dstDIE(dstDIE.size()-2).get1()+"\t = last dstDIE.get1()\n");
-				assert(dstDIE(dstDIE.size()-2).get1() <= numVertexes);
-			}
-			//--------------- pre process ---------------//
+			
+			assert(dstDIE(dstDIE.size()-1).get1() <= numVertexes);
+			
 			var mInOffIndex :Long = 0L;	//New no hou mo kore de kaneteru
 			var mInVerIndex :Long = 0L;
 			var IEVerIndex :Long = 0L;
+			
 			for(i in 0L..(dstDIE.size()-2L)){
 				if((dstDIE(i).get1() == dstDIE(i+1L).get1()) &&
 					(dstDIE(i).get2() == dstDIE(i+1L).get2()))
 					continue;
 				var length :Long = 0L;
 				while(mInOffIndex < dstDIE(i).get1()){
-					length = mInEdge.offsets(mInOffIndex + 1L) - mInVerIndex;
 					++mInOffIndex;
+					length = mInEdge.offsets(mInOffIndex) - mInVerIndex;
 				}
 				if(mInOffIndex == dstDIE(i).get1()){
-					while(mInVerIndex+length < (mInEdge.offsets(numVertexes)-1L) && 
-							mInEdge.vertexes(mInVerIndex+length) < dstDIE(i).get2()){	//koko (index == size wo sashite shimau!)
+					while((mInVerIndex+length) < (mInEdge.offsets(numVertexes)-1L) && 
+						mInEdge.vertexes(mInVerIndex + length) < dstDIE(i).get2()){
 						++length;
 					}
 				}
 				mInVerIndex += length;
 				IEVerIndex += length;
-				//
-				if(dstDIE(i).get3()){
-					//add
-					if(mInEdge.vertexes(mInVerIndex) == dstDIE(i).get2()){
-						//++IEVerIndex;
-						//ue no copy ni tayoru. nanimo shinai
-					}else{
-						++IEVerIndex;
-					}
-				}else{
-					//remove
-					if(mInEdge.vertexes(mInVerIndex) == dstDIE(i).get2()){
-						++mInVerIndex;
-					}else{
-						//
+				
+				if(dstDIE(i).get3())
+					++IEVerIndex;
+				//size==2, 2 / size == 6, 3
+				if(mInEdge.vertexes(mInVerIndex) == dstDIE(i).get2()){//koko
+					++mInVerIndex;
+					while(mInOffIndex < numVertexes &&
+							mInEdge.offsets(mInOffIndex+1) <= mInVerIndex){
+						++mInOffIndex;
 					}
 				}
 			}
-			IEVerIndex += mInEdge.offsets(numVertexes) - mInVerIndex;
+			IEVerIndex += mInEdge.offsets(numVertexes)-1L-mInVerIndex;
 			val IEVertexes = new MemoryChunk[Long](IEVerIndex+1);
 			mInOffIndex = 0L;
 			mInVerIndex = 0L;
 			IEVerIndex = 0L;
+			//
 			
-			//--------------- post process ---------------//
 			mInEdge.offsets(0) = 0L;
-			for(i in 0L..(dstDIE.size()-2L)){
+			//kotti wo henshu suru
+			for(i in 0L..(dstDIE.size()-2L)){	//saigo ha syuutan index you nanode -2
+				//onaji id no uwagaki update ga atta ra skip
 				if((dstDIE(i).get1() == dstDIE(i+1L).get1()) &&
 					(dstDIE(i).get2() == dstDIE(i+1L).get2()))
 					continue;
+				//reset length
 				var length :Long = 0L;
+				//update suru srcid wo atarashii hou ni awaseru
+				//(update suru srcid) < (atarashii srcid)
 				while(mInOffIndex < dstDIE(i).get1()){
-					length = mInEdge.offsets(mInOffIndex + 1L) - mInVerIndex;
-					++mInOffIndex;					//modified ________
-					mInEdge.offsets(mInOffIndex) = IEVerIndex + length;
+					++mInOffIndex;
+					length = mInEdge.offsets(mInOffIndex) - mInVerIndex;	//skip suru vertex suu wo dasu
+					mInEdge.offsets(mInOffIndex) = mInVerIndex + length;	//vertex no update nashi nanode offset wo update
 				}
+				//MEMO: kokodeha (update suru srcid) >= (atarashii srcid)
+				//reset length
+				//length = 0L;
+				//kison INEDGE no dstid + length < out of range -1 (mada fuyaseru) &&
+				// (update suru dstid) < (atarashii dstid)
 				if(mInOffIndex == dstDIE(i).get1()){
 					while(mInVerIndex+length < (mInEdge.offsets(numVertexes)-1L) && 
-							mInEdge.vertexes(mInVerIndex+length) < dstDIE(i).get2()){
+						mInEdge.vertexes(mInVerIndex + length) < dstDIE(i).get2()){
 						++length;
 					}
 				}
-				//13, 11, 16, 12, -6, i=2
+				//MEMO: kokodeha (update suru dstid) >= (atarashii dstid)
+				//copy
 				MemoryChunk.copy(mInEdge.vertexes, mInVerIndex, IEVertexes, IEVerIndex, length);
+				//index update
 				mInVerIndex += length;
 				IEVerIndex += length;
-				//
+				
 				if(dstDIE(i).get3()){
-					if(mInEdge.vertexes(mInVerIndex) == dstDIE(i).get2()){
-						//++IEVerIndex;
-						//ue no copy ni tayoru. nanimo shinai
-					}else{
-						IEVertexes(IEVerIndex) = dstDIE(i).get2();
-						++IEVerIndex;
-					}
+					//add
+					/*
+					 * IEVerIndex	huyasu
+					 */
+					IEVertexes(IEVerIndex) = dstDIE(i).get2();
+					//merged INEDGE no vertex offset wo fuyasu
+					++IEVerIndex;
 				}else{
-					if(mInEdge.vertexes(mInVerIndex) == dstDIE(i).get2()){
-						++mInVerIndex;
-					}else{
-						//
-					}
+					//remove
+					/*
+					 * IEVerIndex	sonomama
+					 */
+					//yarukoto nai?
+				}
+				//hidari	mInVerIndex=2, mInEdge.vertexes.size()=2
+				//migi		i=4			dstDIE.size()=6
+				//
+				// (update shita dstid) == (atarashii dstid)
+				if(mInEdge.vertexes(mInVerIndex) == dstDIE(i).get2()){			//koko!
+					//add taisyou ga sudeni atta => fuyasu
+					//remove taisyou ga atta => fuyasu
+					//TODO: kangae naosu
+					//mInVerIndex ha sukunakarazu fuyasu
+					//cOffset ha hitsuyou ga areba fuyasu
+					++mInVerIndex;
+				}
+
+				//moshikashitara offset wo koete shimatta kamo sirenai node hosei
+				//srcid <= # of vertexes && tsugi no dstid no index < ima no dstid no index
+				while(mInOffIndex<numVertexes &&
+						mInEdge.offsets(mInOffIndex+1)<=mInVerIndex){
+					++mInOffIndex;
+					//merged offset koushin
+					//mInEdge.offsets(mInOffIndex) = mInVerIndex;
 				}
 			}
-			//*********************************************************************************************//
-			val gap = mInEdge.offsets(numVertexes) - mInVerIndex;
-			assert(0 <= gap);
-			//offset to vertex no index no tsujitsuma awase
-			while(mInEdge.offsets(mInOffIndex) < mInVerIndex){
-				++mInOffIndex;
-				mInEdge.offsets(mInOffIndex) = IEVerIndex;
-			}
-			if(0 < gap){
-				//sabun tekiyou kokode owari. ato ha henkou nashi no bun wo copy suru
-				//copy vertexes
-				MemoryChunk.copy(
-						mInEdge.vertexes,	mInVerIndex, 
-						IEVertexes,			IEVerIndex,		gap);
-				mInEdge.vertexes.del();
-				mInEdge.vertexes = IEVertexes;
-				//copy offsets
-				val diffOff = IEVerIndex - mInVerIndex;
-				for (i in (mInOffIndex + 1)..numVertexes){	//tyouten suu +1 made tyanto update siteiru
-					mInEdge.offsets(i) = mInEdge.offsets(i) + diffOff;
-				}
+			//sabun tekiyou kokode owari. ato ha henkou nashi no bun wo copy suru
+			//copy vertexes
+			MemoryChunk.copy(mInEdge.vertexes, mInVerIndex/*+1L*/, IEVertexes, IEVerIndex/*+1L*/, mInEdge.vertexes.size()-mInVerIndex/*-1*/);	//koko!!!
+			//						6					3					4				3									3
+			mInEdge.vertexes.del();
+			mInEdge.vertexes = IEVertexes;
+			//copy offsets
+			val diffOff = IEVerIndex - mInVerIndex;
+			for (i in (mInOffIndex+1)..numVertexes){	//tyouten suu +1 made tyanto update siteiru
+				mInEdge.offsets(i) = mInEdge.offsets(i) + diffOff;
 			}
 		}
 		

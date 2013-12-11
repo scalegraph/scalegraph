@@ -9,14 +9,14 @@ import org.scalegraph.id.Type;
 import org.scalegraph.io.CSV;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.util.random.*;
 import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.Graph;
 
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-public class TestInEdgeModify {
+
+public class TestShowEdge {
 	public static def main(args:Array[String](1)) {
 		
 		//-----initialize team
@@ -37,15 +37,13 @@ public class TestInEdgeModify {
 		val xpregel = new XPregelGraph[Long, Long](
 				g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true));
 
+		
 		val start_time = System.currentTimeMillis();
 		
 		//-----update inEdge
-		Console.OUT.println("initial update inEdge");
+		Console.OUT.println("update inEdge");
 		xpregel.updateInEdge();
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + " [ms]");
-		
-		//set all vertex value as 0L 
-	//	xpregel.initVertexValue(0L);
 		
 		//make stringbuilder
 		Console.OUT.println("make stringBuilder");
@@ -53,62 +51,41 @@ public class TestInEdgeModify {
 		
 		//-----start of work
 		Console.OUT.println("start work");
-		
-		
-		for(nnn in 0..2){
-			mesBuf().add(nnn+"kaime!\n");
-			//-----update inEdge
-			Console.OUT.println("update inEdge!");
-			xpregel.updateInEdge();
-			xpregel.iterate[Long, Long](
-				(ctx :VertexContext[Long, Long, Long, Long ],
-						messages :MemoryChunk[Long] ) => {
-					//temp string
-					val sb = new StringBuilder();
-					//ID
-					val myId = ctx.realId();
-					
-					//show current state
-					//display current in edges
-					sb.add("--ss:"+ctx.superstep()+" id:"+ myId + 
-							" dstid:" + ctx.dstId(myId) + " --\n\tcurrent inedges:\n");
-					val IEsId = ctx.inEdgesId();
-					for(eI in IEsId){
-						sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
-					}
-					//display current out edges
-					sb.add("\tcurrent outedges:\n");
-					val OEsId = ctx.outEdgesId();
-					for(eI in OEsId){
-						sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
-					}
-					//add out edge
-					if(myId != 0L){
-						//make number
-						val r = (nnn+myId+ctx.superstep())%ctx.numberOfVertices();
-						ctx.addOutEdge(ctx.dstId(r),0L);
-						sb.add("\t\tadd outedge:\t" + r + " (dstid=" + r + ")\n");
-					}
-					//display current out edges
-					sb.add("\tcurrent outedges:\n");
-					val OEsId2 = ctx.outEdgesId();
-					for(eI in OEsId2){
-						sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
-					}
-					
-					atomic {	//atomic ga nai to hukusuu thread de shinu
-						mesBuf().add(sb.toString());
-					}
-					
-					ctx.sendMessage(0L,myId);
-				},
-				(values :MemoryChunk[Long]) => 0L,	//returns 0 with no cost
-				(superstep :Int, aggVal :Long) => (superstep > 1)
-			);
-		}
-		
-		
-		
+		xpregel.iterate[Long, Long](
+			(ctx :VertexContext[Long, Long, Long, Long ],
+					messages :MemoryChunk[Long] ) => {
+				//temp string
+				val sb = new StringBuilder();
+				//ID
+				val myId = ctx.realId();
+				
+				for (m in messages.range()){
+					sb.add("message:"+ messages(m)+"\n");
+				}
+				
+				//display current in edges
+				sb.add("-- ss:"+ctx.superstep()+" id:"+ myId + 
+						" dstid:" + ctx.dstId(myId) + " --\n\tInEdges:\n");
+				val IEsId = ctx.inEdgesId();
+				for(eI in IEsId){
+					sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
+				}
+				//display current out edges
+				sb.add("\tOutEdges:\n");
+				val OEsId = ctx.outEdgesId();
+				for(eI in OEsId){
+					sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
+				}
+				
+				atomic {	//atomic ga nai to hukusuu thread de shinu
+					mesBuf().add(sb.toString());
+				}
+				
+				ctx.voteToHalt();
+			},
+			(values :MemoryChunk[Long]) => 0L,	//returns 0 with no cost
+			(superstep :Int, aggVal :Long) => (superstep > 1)	//tekitou
+		);
 		//-----end of work
 
 		Console.OUT.println("finished work");
@@ -117,14 +94,13 @@ public class TestInEdgeModify {
 		val ps=team.places();
 		for(p in ps) at(ps(p)) {// ...
 			atomic{
-			Console.OUT.println(p + ":\n" + mesBuf().toString());
+				Console.OUT.println(p + ":\n" + mesBuf().toString());
 			}
 		}
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");	
 	}
-	
 }	
 
 
