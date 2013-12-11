@@ -73,9 +73,9 @@ public class HyperANF {
 
 
 	// TODO
-	// messageを作るところに新しい関数を作る
-	// @Nativeを最初に書いて
-	// 中身でx10の処理を書いて
+	// message繧剃ｽ懊ｋ縺ｨ縺薙ｍ縺ｫ譁ｰ縺励＞髢｢謨ｰ繧剃ｽ懊ｋ
+	// @Native繧呈怙蛻昴↓譖ｸ縺�※
+	// 荳ｭ霄ｫ縺ｧx10縺ｮ蜃ｦ逅�ｒ譖ｸ縺�※
 	// 
 	//
 	
@@ -129,10 +129,10 @@ public class HyperANF {
 //		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 //		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
 		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
-		xpregel.setLogPrinter(Console.ERR, 0);
+		/// xpregel.setLogPrinter(Console.ERR, 0);
 		xpregel.updateInEdge();
 		
-		sw.lap("UpdateInEdge");
+		/// sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 //		val N:Long = graph.numberOfVertices();
@@ -177,7 +177,7 @@ public class HyperANF {
 				 val startPos = base * ((ctx.superstep()-1) % loop ) ; // ctx.superstep()>=1
 				 val counterA = ctx.value().subpart(startPos, 16);
 				 //maxim massages
-				// if(ctx.id()==0L) sw.lap("hoge"+startPos);
+
 				 for(i in messages.range()) {
 					 update(counterA, messages, i);
 				 }
@@ -228,15 +228,15 @@ public class HyperANF {
 							return true;
 					}
 				}
-				if(here.id == 0) {
-					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
-				}
+				/// if(here.id == 0) {
+				///	sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
+				/// }
 				
 				return superstep > niter;
 			};
 		//xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
 		xpregel.iterate[MesHANF,Double](compute, aggregator, end);
-		sw.lap("Main iterate");
+		/// sw.lap("Main iterate");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Main iterate:"); }
 		return results()();
 		
@@ -256,7 +256,7 @@ public class HyperANF {
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), weights, true, true);
+				Config.get().distXPregel(), weights, true, false);
 		return execute(matrix);	
 	}
 

@@ -98,9 +98,9 @@ public final struct DistSparseMatrix[T] {
 			// if removeDuplicates then
 			// 		2. remove duplicates by reading and writing whole data
 			// else
-			//			2. move lator region data
+			//		2. move lator region data
 			
-			if(ids.outerOrInner) {
+			if(!ids.transpose) {
 				for(i in 0L..(m.offsets.size()-2)) {
 					val off = cachedOffset;
 					val next = m.offsets(i+1);

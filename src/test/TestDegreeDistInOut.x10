@@ -40,13 +40,14 @@ final class TestDegreeDistInOut extends AlgorithmTest {
 	    else if(op1.equals("low")) {
 	        val sw = Config.get().stopWatch();
 	        val team = g.team();
-	        val outerOrInner = true;
+	        val transpose = false;
 	        val directed = false;
-	        val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
-	        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
+	        //val distColumn = Dist2D.make1D(team, !transpose ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
+	        val distRow = Dist2D.make1D(team, Dist2D.DISTRIBUTE_ROWS);
+	        val rowDistGraph = g.createDistEdgeIndexMatrix(distRow, directed, transpose);
 	        sw.lap("Graph construction");
 	        g.del();
-	        inOutdegResult = DegreeDistribution.run[Long](columnDistGraph);
+	        inOutdegResult = DegreeDistribution.run[Long](rowDistGraph);
 	        sw.lap("Degree distribution calculation");
 	    }
 	    else {

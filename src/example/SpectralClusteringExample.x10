@@ -9,6 +9,8 @@ import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.io.impl.CSVWriter;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.util.random.Random;
+import org.scalegraph.util.MathAppend;
+import org.scalegraph.util.Dist2D;
 
 
 public final class SpectralClusteringExample {
@@ -17,8 +19,12 @@ public final class SpectralClusteringExample {
         
         val config = Config.get();
         val team = config.worldTeam();
-        val dist = config.dist2d();
+        // val dist = config.dist2d();
         val weightAttr = "weight";
+        
+        val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
+        val C = team.size() / R;
+        val dist = Dist2D.make2D(team, C, R);
         
         // the number of cluster
         val numCluster = 2;
@@ -45,8 +51,10 @@ public final class SpectralClusteringExample {
         g.setEdgeAttribute[Double](weightAttr, weight);
         
         // Call API
+        Console.OUT.println("XXXXX");
         val W = g.createDistSparseMatrix[Double](dist, weightAttr, false, false);
         val result = SpectralClustering.run(W, numCluster, tolerance, maxitr, threshold);
+        Console.OUT.println("XXXXX");
         
         // Write output
         val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);

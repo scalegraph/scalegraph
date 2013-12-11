@@ -62,7 +62,7 @@ public abstract class InputSplitter {
 		public def size() = end - start;
 		
 		public def open() {
-			STest.println(here.id + " => (" + start + ", " + end + ")");
+			/// STest.println(here.id + " => (" + start + ", " + end + ")");
 			val reader = new FileReader(path);
 			reader.skip(start);
 			return reader;

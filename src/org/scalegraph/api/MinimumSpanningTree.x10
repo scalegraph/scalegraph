@@ -74,9 +74,9 @@ final public class MinimumSpanningTree {
      */
     public static def run(matrix :DistSparseMatrix[Double]): Graph {
         val sw = Config.get().stopWatch();
-        sw.lap("Graph construction");
+        /// sw.lap("Graph construction");
         val ret =  MinimumSpanningTreeImpl.run(matrix);
-        sw.lap("Minimum spanning tree calculation");
+        /// sw.lap("Minimum spanning tree calculation");
         return ret;
     }
 }

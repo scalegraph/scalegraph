@@ -119,14 +119,14 @@ public final class MinimumSpanningTreeImpl {
 			return true;
 		});
 
-		sw.lap("Create Edge Table");
+		/// sw.lap("Create Edge Table");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Create Edge Table"); }
 		
 		var loop: Long = 0;
 		val numCom: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
 		do {
 		    val loop_ = loop;
-		    Console.OUT.println("\t\tLoop: " + loop);
+		    /// Console.OUT.println("\t\tLoop: " + loop);
 		    
 		    // Select minimum edge
 		    xpregel.iterate[EdgeInfo,Double]((ctx :VertexContext[VertexValue, Double, EdgeInfo, Double], messages :MemoryChunk[EdgeInfo]) => {
@@ -184,9 +184,9 @@ public final class MinimumSpanningTreeImpl {
 		    },
 		    null,
 		    (superstep :Int, aggVal :Double) => {
-		        if (here.id == 0) {
-		            sw.lap("Loop: " + loop_ + ": " + (superstep == 0 ? "Find minimum edge" : "Select root"));
-		        }
+		        /// if (here.id == 0) {
+		        ///    sw.lap("Loop: " + loop_ + ": " + (superstep == 0 ? "Find minimum edge" : "Select root"));
+		        /// }
 		        return superstep == 1;
 		    });
 
@@ -232,9 +232,9 @@ public final class MinimumSpanningTreeImpl {
 		    },
 		    null,
 		    (superstep :Int, aggVal :Double) => {
-		        if (here.id == 0) {
-		            sw.lap("Loop: " + loop_ + ": " + "Connect components at " + superstep);
-		        }
+		        /// if (here.id == 0) {
+		        ///    sw.lap("Loop: " + loop_ + ": " + "Connect components at " + superstep);
+		        /// }
 		        return false;
 		    });
 
@@ -297,11 +297,11 @@ public final class MinimumSpanningTreeImpl {
 		    (superstep :Int, aggVal :Long) => {
 		        if (superstep == 2 && numCom.home == here) {
 		            numCom()() = aggVal;
-		            Console.OUT.println("\t\tAggr: " + aggVal);
+		            /// Console.OUT.println("\t\tAggr: " + aggVal);
 		        }
-		        if (here.id == 0) {
-		            sw.lap("Loop: " + loop_ + ": " + "Pointer Jumping & Gathering at " + superstep);
-		        }
+		        /// if (here.id == 0) {
+		        ///    sw.lap("Loop: " + loop_ + ": " + "Pointer Jumping & Gathering at " + superstep);
+		        /// }
 		        return false;
 		    }); 
 
@@ -313,7 +313,7 @@ public final class MinimumSpanningTreeImpl {
 		val outSrc = xpregel.stealOutput[Long](0);
 		val outDst = xpregel.stealOutput[Long](1);
 		
-		sw.lap("Finished computing MST");
+		/// sw.lap("Finished computing MST");
 		
 		// Create Graph with selected edges
 		return Graph.make(EdgeList(outSrc, outDst));

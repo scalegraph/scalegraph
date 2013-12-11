@@ -39,7 +39,7 @@ final class HyperANFTest extends AlgorithmTest{
 		}
 		else if(args(0).equals("low")) {
 			val matrix = g.createDistSparseMatrix[Double](
-			Config.get().distXPregel(), "weight", true, true);
+			Config.get().distXPregel(), "weight", true, false);
 			// delete the graph object in order to reduce the memory consumption
 			g.del();
 			result = org.scalegraph.api.HyperANF.run(matrix);

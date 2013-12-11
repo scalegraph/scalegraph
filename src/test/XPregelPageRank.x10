@@ -225,7 +225,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		}
 		
 		val sw = Config.get().stopWatch();
-		val csr = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", true, true);
+		val csr = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", true, false);
 		sw.lap("Graph construction");
 		val xpregel = XPregelGraph.make[Double, Double](csr);
 		

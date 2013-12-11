@@ -22,8 +22,7 @@ public final class BLAS {
 		
 		if(B != C) throw new UnsupportedOperationException();
 		
-		if( (!transB && B.ids().isCSR()) ||
-			(transB && B.ids().isCSC()) ) {
+		if( !transB && !B.ids().transpose ) {
 			// OK
 			allTeam.placeGroup().broadcastFlat(() => {
 				try {
@@ -72,8 +71,7 @@ public final class BLAS {
 	{
 		val allTeam = Team2(A.dist().allTeam());
 		
-		if( (!trans && A.ids().isCSR()) ||
-			(trans && A.ids().isCSC()) ) {
+		if( !trans && !A.ids().transpose ) {
 			// OK
 			allTeam.placeGroup().broadcastFlat(() => {
 				mult_[T](alpha, A, trans, x, beta, y);
@@ -91,8 +89,7 @@ public final class BLAS {
 	{
 		val allTeam = Team2(A.dist().allTeam());
 		
-		if( (!trans && A.ids().isCSR()) ||
-		    (trans && A.ids().isCSC()) ) {
+		if( !trans && !A.ids().transpose ) {
 			// OK
 			try {
 				val dist = A.dist();
@@ -133,7 +130,7 @@ public final class BLAS {
 						val next = A_.offsets(i+1);
 						var sum :T = Zero.get[T]();
 						for(ei in off..(next-1)) {
-							if(A_.vertexes(ei) >= localWidth) Console.OUT.println("A_.vertexes(ei) = " + A_.vertexes(ei));
+							//if(A_.vertexes(ei) >= localWidth) Console.OUT.println("A_.vertexes(ei) = " + A_.vertexes(ei));
 							sum += A_.values(ei) * refVector(A_.vertexes(ei));
 						}
 						tmpSendVector(i) = sum;

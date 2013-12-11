@@ -15,32 +15,22 @@ import x10.util.Team;
 
 import org.scalegraph.api.BetweennessCentrality;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.tuple.Tuple3;
+import org.scalegraph.util.random.Random;
 
 public class DistBetweennessCentralityUnweightedExample {
     
-    public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        return Tuple3[Long, Long, Double] (
-                Long.parse(items(0).trim()),
-                Long.parse(items(1).trim()),
-                0D
-        );
-    };
-    
     public static def main(args: Array[String]) {
-        if (args.size < 1) {
-            Console.OUT.println("Please enter file name");
-            return;
-        }
-        val team = Team.WORLD;
 
-        // Load data using SimpleText to read edge list format file
-        val g = Graph.make(SimpleText.read(args(0), inputFormat), false);
+        // Generate RMAT graph
+        val scale = 10;
+        val edgeFactor = 8;
+        val rnd = new Random(2, 3);
+        val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
+        val g = Graph.make(edgeList);
         
         // Call API
         val result = BetweennessCentrality.run(g);

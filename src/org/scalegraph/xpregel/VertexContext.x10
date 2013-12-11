@@ -167,7 +167,7 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 * vertex
 	 */
 	public def sendMessage(id :Long, mes :M) {
-		val dstPlace = mCtx.mDtoV.c(id);
+		val dstPlace = mCtx.mDtoV.r(id);
 		val srcId = mCtx.mDtoS(id);
 		val mesBuf = mUCCMessages(dstPlace);
 		mesBuf.messages.add(mes);
@@ -180,7 +180,7 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 */
 	public def sendMessage(id :MemoryChunk[Long], mes :MemoryChunk[M]) {
 		for(i in id.range()) {
-			val dstPlace = mCtx.mDtoV.c(id(i));
+			val dstPlace = mCtx.mDtoV.r(id(i));
 			val srcId = mCtx.mDtoS(id(i));
 			val mesBuf = mUCCMessages(dstPlace);
 			mesBuf.messages.add(mes(i));

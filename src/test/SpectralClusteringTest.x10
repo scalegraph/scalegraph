@@ -53,6 +53,8 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		val outOrEval = args(4);
 		val outputPath = args(5);
 		
+		Console.OUT.println("dist2d = " + dist);
+		
 		Console.OUT.println("vertices = " + g.numberOfVertices());
 		Console.OUT.println("edges    = " + g.numberOfEdges());
 		
