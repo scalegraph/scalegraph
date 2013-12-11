@@ -86,11 +86,11 @@ final class WorkerPlaceGraph[V,E] {
 		
 		mOutput = new MemoryChunk[GrowableMemory[Int]](numThreads * MAX_OUTPUT_NUMBER, 0, true);
 		
-		if (here.id == 0) {
-			Console.OUT.println("lgl = " + mIds.lgl);
-			Console.OUT.println("lgc = " + mIds.lgc);
-			Console.OUT.println("lgr = " + mIds.lgr);	
-		}
+		/// if (here.id == 0) {
+		///	Console.OUT.println("lgl = " + mIds.lgl);
+		///	Console.OUT.println("lgc = " + mIds.lgc);
+		///	Console.OUT.println("lgr = " + mIds.lgr);	
+		/// }
 	}
 	
 	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long]) {

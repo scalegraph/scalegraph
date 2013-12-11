@@ -39,9 +39,11 @@ $(ARPACK_LIB): ARPACK
 
 libparmetis.so: $(PAR_METIS_FOLDER)
 	mkdir -p $(SG_PREFIX)/metis
-	mkdir -p $(SG_PREFIX)/lib
-	patch  $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
-	patch  $(PAR_METIS_FOLDER)/metis/GKlib/GKlibSystem.cmake < $(SG_PREFIX)/patches/cc_flag.patch
+	rm -rf $(PAR_METIS_FOLDER)
+	tar xvf $(PAR_METIS)
+	patch -N $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
+	patch -N $(PAR_METIS_FOLDER)/metis/GKlib/GKlibSystem.cmake < $(SG_PREFIX)/patches/cc_flag.patch
+
 
 	make -C $(PAR_METIS_FOLDER) --environment-overrides clean
 	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1

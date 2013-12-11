@@ -21,7 +21,7 @@ public class PageRankSimple {
         // load graph from CSV file
         val graph = Graph.make(CSV.read(args(0), 
                                         [Type.Long as Int, Type.Long, Type.Double],
-                                        ["source", "target", "weight"]));
+                                        true));
         // create sparse matrix
         val csr = graph.createDistSparseMatrix[Double](Config.get().dist1d(), "weight", true, true);
         

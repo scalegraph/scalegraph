@@ -99,11 +99,11 @@ public final struct Dist2D {
     			val z = parentTeam.role()(0) / RC;
     			allTeam = parentTeam.split(parentTeam.role()(0), z, role);
     			for(pp in parentTeam.placeGroup()) {
-    				if(here == pp) {
-    					Console.OUT.println(here);
-    					Console.OUT.println("allTeam = " + allTeam);
-    					Console.OUT.println("split(key=" + role + ",color=" + z + ")");
-    				}
+    				/// if(here == pp) {
+    				///	Console.OUT.println(here);
+    				///	Console.OUT.println("allTeam = " + allTeam);
+    				///	Console.OUT.println("split(key=" + role + ",color=" + z + ")");
+    				/// }
     				parentTeam.barrier(parentTeam.role()(0));
     			}
     		}

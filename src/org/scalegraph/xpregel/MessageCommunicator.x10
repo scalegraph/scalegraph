@@ -110,10 +110,11 @@ final class MessageCommunicator[M] { M haszero } {
 	}
 	
 	def deleteMessages(){
-		mUCRMessages.del();
-		mBCROffset.del();
-		mBCRMessages.del();
-		mUCROffset.del();
+	    if(mUCRMessages.size() > 0) { mUCRMessages.del(); mUCRMessages = new MemoryChunk[M](); }
+	    if(mUCROffset.size() > 0) {mUCROffset.del(); mUCROffset = new MemoryChunk[Long]();}
+	    if(mBCRHasMessage != null) {mBCRHasMessage.del(); mBCRHasMessage = null; }
+	    if(mBCROffset.size() > 0) { mBCROffset.del(); mBCROffset = new MemoryChunk[Long](); }
+	    if(mBCRMessages.size() > 0) { mBCRMessages.del(); mBCRMessages = new MemoryChunk[M]();}
 	}
 	
 	def messageBuffer(tid :Long) = mUCCMessages.subpart(tid * mTeam.size(), mTeam.size());
@@ -401,16 +402,7 @@ final class MessageCommunicator[M] { M haszero } {
 		return mBCSOffset(numPlaces);
 	}
 	
-	def resetSRBuffer() {
-		if(mUCRMessages.size() > 0) { mUCRMessages.del(); mUCRMessages = new MemoryChunk[M](); }
-		if(mUCROffset.size() > 0) {mUCROffset.del(); mUCROffset = new MemoryChunk[Long]();}
-		if(mBCRHasMessage != null) {mBCRHasMessage.del(); mBCRHasMessage = null; }
-		if(mBCROffset.size() > 0) { mBCROffset.del(); mBCROffset = new MemoryChunk[Long](); }
-		if(mBCRMessages.size() > 0) { mBCRMessages.del(); mBCRMessages = new MemoryChunk[M]();}
-	}
-	
 	def preProcess() {
-		resetSRBuffer();
 
 		mUCSRawMessageCount = Algorithm.reduce(mUCCMessages.range(),
 				(i:Long) => mUCCMessages(i).messages.size());
