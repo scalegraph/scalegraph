@@ -68,8 +68,8 @@ public final class PageRank {
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), weights, directed, true);
-		Config.get().stopWatch().lap("Graph construction");
+				Config.get().distXPregel(), weights, directed, false);
+		/// Config.get().stopWatch().lap("Graph construction");
 		return execute(matrix);
 	}
 	
@@ -94,7 +94,7 @@ public final class PageRank {
 		val xpgraph = XPregelGraph.make[Double, Double](matrix);
 		xpgraph.updateInEdge();
 		
-		sw.lap("UpdateInEdge");
+		/// sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		xpgraph.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
@@ -110,9 +110,9 @@ public final class PageRank {
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
-			if (here.id == 0) {
-				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
-			}
+			/// if (here.id == 0) {
+			///	sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
+			/// }
 			return (superstep >= niter || aggVal < eps);
 		});
 
@@ -123,7 +123,7 @@ public final class PageRank {
 		});
 		val result = xpgraph.stealOutput[Double]();
 		
-		sw.lap("Retrieve output");
+		/// sw.lap("Retrieve output");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Retrieve Output:"); }
 		
 		return result;

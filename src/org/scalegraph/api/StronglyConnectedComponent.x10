@@ -1,5 +1,6 @@
 package org.scalegraph.api;
 
+
 import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
@@ -155,7 +156,7 @@ public final class StronglyConnectedComponent {
 		val initInfo = new SCCVertex(0L, false, false,-1L, 0L);
 		xpregel.initVertexValue(initInfo);
 
-		sw.lap("UpdateInEdge");
+		/// sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		var recursion:Int = 0;
@@ -407,11 +408,11 @@ public final class StronglyConnectedComponent {
 //			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
 		});
 		
-		sw.lap("numOfCluster" + numOfCluster);
+		/// sw.lap("numOfCluster" + numOfCluster);
 		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0), xpregel.stealOutput[Long](1));
 //		Console.OUT.println("numOfCluster" + numOfCluster);
 
-		sw.lap("Retrieve output");
+		/// sw.lap("Retrieve output");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Retrieve Output:"); }
 		
 		return result;

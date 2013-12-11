@@ -23,7 +23,7 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
 import org.scalegraph.graph.id.IdStruct;
-import org.scalegraph.graph.id.OnedC;
+import org.scalegraph.graph.id.OnedR;
 
 final struct MessageBuffer[M] { M haszero } {
 	val messages :GrowableMemory[M] = new GrowableMemory[M]();
@@ -46,11 +46,11 @@ final class MessageCommunicator[M] { M haszero } {
 	val mNumThreads :Int;
 	var mSuperstep :Int;
 
-	val mVtoD :OnedC.VtoD;
-	val mDtoV :OnedC.DtoV;
-	val mDtoS :OnedC.DtoS;
-	val mStoD :OnedC.StoD;
-	val mStoV :OnedC.StoV;
+	val mVtoD :OnedR.VtoD;
+	val mDtoV :OnedR.DtoV;
+	val mDtoS :OnedR.DtoS;
+	val mStoD :OnedR.StoD;
+	val mStoV :OnedR.StoV;
 
 	var mInEdgesOffset :MemoryChunk[Long];
 	var mInEdgesVertex :MemoryChunk[Long];
@@ -92,11 +92,11 @@ final class MessageCommunicator[M] { M haszero } {
 		mIds = ids;
 		mNumThreads = numThreads;
 		mSuperstep = 0;
-		mVtoD = new OnedC.VtoD(ids);
-		mDtoV = new OnedC.DtoV(ids);
-		mDtoS = new OnedC.DtoS(ids);
-		mStoD = new OnedC.StoD(ids, rank_c);
-		mStoV = new OnedC.StoV(ids, rank_c);
+		mVtoD = new OnedR.VtoD(ids);
+		mDtoV = new OnedR.DtoV(ids);
+		mDtoS = new OnedR.DtoS(ids);
+		mStoD = new OnedR.StoD(ids, rank_c);
+		mStoV = new OnedR.StoV(ids, rank_c);
 
 		// TODO: optimize
 		mUCCMessages = new MemoryChunk[MessageBuffer[M]](mNumThreads * mTeam.size(),
@@ -107,6 +107,14 @@ final class MessageCommunicator[M] { M haszero } {
 	
 	def del() {
 		// TODO:
+	}
+	
+	def deleteMessages(){
+	    if(mUCRMessages.size() > 0) { mUCRMessages.del(); mUCRMessages = new MemoryChunk[M](); }
+	    if(mUCROffset.size() > 0) {mUCROffset.del(); mUCROffset = new MemoryChunk[Long]();}
+	    if(mBCRHasMessage != null) {mBCRHasMessage.del(); mBCRHasMessage = null; }
+	    if(mBCROffset.size() > 0) { mBCROffset.del(); mBCROffset = new MemoryChunk[Long](); }
+	    if(mBCRMessages.size() > 0) { mBCRMessages.del(); mBCRMessages = new MemoryChunk[M]();}
 	}
 	
 	def messageBuffer(tid :Long) = mUCCMessages.subpart(tid * mTeam.size(), mTeam.size());
@@ -394,16 +402,7 @@ final class MessageCommunicator[M] { M haszero } {
 		return mBCSOffset(numPlaces);
 	}
 	
-	def resetSRBuffer() {
-		if(mUCRMessages.size() > 0) { mUCRMessages.del(); mUCRMessages = new MemoryChunk[M](); }
-		if(mUCROffset.size() > 0) {mUCROffset.del(); mUCROffset = new MemoryChunk[Long]();}
-		if(mBCRHasMessage != null) {mBCRHasMessage.del(); mBCRHasMessage = null; }
-		if(mBCROffset.size() > 0) { mBCROffset.del(); mBCROffset = new MemoryChunk[Long](); }
-		if(mBCRMessages.size() > 0) { mBCRMessages.del(); mBCRMessages = new MemoryChunk[M]();}
-	}
-	
 	def preProcess() {
-		resetSRBuffer();
 
 		mUCSRawMessageCount = Algorithm.reduce(mUCCMessages.range(),
 				(i:Long) => mUCCMessages(i).messages.size());

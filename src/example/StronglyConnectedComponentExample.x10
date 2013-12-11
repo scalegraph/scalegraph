@@ -36,7 +36,6 @@ public final class StronglyConnectedComponentExample {
         // Treat graph as directed graph
         api.directed = true;
         val result = api.execute(g);
-        
-        // TODO: Print result
+        Console.OUT.println("Number of cluster: " + result.cluster);
     }
 }

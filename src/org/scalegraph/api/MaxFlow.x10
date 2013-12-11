@@ -210,7 +210,7 @@ final public class MaxFlow {
     	val eps = param.eps;
     	val sw = Config.get().stopWatch();
     	
-    	sw.lap("UpdateInEdge");
+    	/// sw.lap("UpdateInEdge");
     	@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
     	
     	
@@ -370,7 +370,7 @@ final public class MaxFlow {
     						ctx.setVertexShouldBeActive(ctx.value().excess > eps);
     						
     						if(ctx.realId() == sinkVertexId) {
-    							sw.lap("CURRENT FLOW     " + currentRecursion + "    "  + ctx.value().excess);
+    							/// sw.lap("CURRENT FLOW     " + currentRecursion + "    "  + ctx.value().excess);
     							if(flowNum.home==here) {
     								flowNum()() = ctx.value().excess;
     							}
@@ -558,7 +558,7 @@ final public class MaxFlow {
 //    	val flows = g.retrieveEdgeAttribute[Long](csr, output);
     	val result = new Result(flowNum()());
 
-    	sw.lap("Retrieve output");
+    	/// sw.lap("Retrieve output");
     	@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("MaxFlow Retrieve Output:"); }
     
     	return result;

@@ -337,7 +337,7 @@ public class DeltaSteppingVisitor {
             // clear predecessor of root vertex
             predecessors()(v).clear();
         }
-        Console.OUT.println("Before loop");
+        //// Console.OUT.println("Before loop");
         do {
             // clear bucket queue pointer, this makes nextqueue of another buckets deterministic
             lch().bucketQueuePointer() = 0;

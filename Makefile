@@ -24,11 +24,10 @@ buildDlib: $(ARPACK)
 
 buildParmetis: $(PAR_METIS)
 	mkdir -p $(SG_PREFIX)/metis
-
-	sed  -i "s/#define IDXTYPEWIDTH 32/#define IDXTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
-	sed  -i "s/#define REALTYPEWIDTH 32/#define REALTYPEWIDTH 64/g"  $(PAR_METIS_FOLDER)/metis/include/metis.h
-
-	echo "int main () {return 0;}" | $(CC) -x c -Wno-unused-but-set-variable - ; [  $$? -eq 1 ] && grep -rl   '\-Wno-unused-but-set-variable' $(PAR_METIS_FOLDER) | xargs sed  -i "s/-Wno-unused-but-set-variable//g"
+	rm -rf $(PAR_METIS_FOLDER)
+	tar xvf $(PAR_METIS)
+	patch -N $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
+	patch -N $(PAR_METIS_FOLDER)/metis/GKlib/GKlibSystem.cmake < $(SG_PREFIX)/patches/cc_flag.patch
 
 	make -C $(PAR_METIS_FOLDER) --environment-overrides clean
 	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1
@@ -56,7 +55,6 @@ $(ARPACK): %:
 
 $(PAR_METIS):
 	curl -O http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/$@
-	tar xvf $@
 
 
 makelib: x10lib/ScaleGraph.jar
