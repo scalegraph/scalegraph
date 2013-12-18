@@ -93,7 +93,7 @@ namespace org { namespace scalegraph { namespace util {
 				if( totalSize > gcThreshold){
 					GC_gcollect();
 					if(totalSize > gcThreshold){
-						gcThreshold+=totalSize+1024*1024;
+						gcThreshold = totalSize+1024*1024;
 					}
 					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 						showAllData();
@@ -213,7 +213,7 @@ public:
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
                 if(size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
-                        ELEM* allocMem = static_cast<ELEM*>(x10aux::alloc_chunk(size, containsPtrs));
+                        ELEM* allocMem = static_cast<ELEM*>(x10aux::alloc_internal(size, containsPtrs));
                         if (zeroed) {
                                 memset(allocMem, 0, size);
                         }
