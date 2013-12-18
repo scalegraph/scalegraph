@@ -20,4 +20,10 @@ public struct EdgeList[T] {
 		this.src = src;
 		this.dst = dst;
 	}
+	
+	public def del() {
+		src.del();
+		dst.del();
+	}
+
 }

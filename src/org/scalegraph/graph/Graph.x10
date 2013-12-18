@@ -193,30 +193,35 @@ import org.scalegraph.id.Type;
 	public static def make(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def make(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,false);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,true);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,true);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[SString]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
