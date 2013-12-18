@@ -12,151 +12,146 @@
 #ifndef __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H
 #define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H
 
+#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP true
+#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD 1000
+#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT false
+
 #include <x10rt.h>
 #include <double_linked_list.h>
 
-#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP true
-#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_THRESHOLD 1000
-#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_GCLIMIT 200
-#ifndef NDEBUG
-#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT true
-#else
-#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT false
-#endif
-
 namespace org { namespace scalegraph { namespace util {
-        extern long numCnt;
+        extern long numCnt, gcThreshold, totalSize;
         extern pthread_mutex_t explMemMutex;
+        extern pthread_mutex_t explGcMutex;
         struct ExplicitMemory;
         extern ExplicitMemory *explMemList;
         struct ExplicitMemory{
-        		  x10_long byteSize;
-                void* pointer;
-                void* allocHead;
-                const char* filename;
-                long linenumber;
-                ExplicitMemory *fLink, *bLink;
+			x10_long byteSize;
+			void* pointer;
+			void* allocHead;
+			const char* filename;
+			long linenumber;
+			ExplicitMemory *fLink, *bLink;
 
-                ExplicitMemory(){
-                	fLink=this; bLink=this;
-                }
+			ExplicitMemory(){
+				fLink=this; bLink=this;
+			}
 
-                static void showAllData(){
-                	ExplicitMemory *em;
-                	pthread_mutex_lock(&explMemMutex);
-                	em = explMemList->fLink;
-                	while(em!=explMemList){
-                		em->showData();
-                		em = em->fLink;
-                	}
-                	pthread_mutex_unlock(&explMemMutex);
-                }
-                void showData(){
-                	printf("size:%-20d, pointer:%-30p, head pointer:%-30p\n", byteSize, pointer, allocHead);
-                }
+			static void showAllData(){
+				ExplicitMemory *em;
+				pthread_mutex_lock(&explMemMutex);
+				em = explMemList->fLink;
+				while(em!=explMemList){
+					em->showData();
+					em = em->fLink;
+				}
+				pthread_mutex_unlock(&explMemMutex);
+			}
+			void showData(){
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+					printf("size:%-20d, pointer:%-30p, head pointer:%-30p\n", byteSize, pointer, allocHead);
+				}
+			}
 
-                void setData(void* pointer__, x10_long byteSize__){
-                        pointer=(pointer__);
-                        byteSize=(byteSize__);
-                }
+			void setData(void* pointer__, x10_long byteSize__){
+				pointer=(pointer__);
+				byteSize=(byteSize__);
+			}
 
-                static void finalization(void *obj, void *cd){
-                		pthread_mutex_lock(&explMemMutex);
-                		::scalegraph::listRemove((ExplicitMemory*)obj);
-                     pthread_mutex_unlock(&explMemMutex);
-                     if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                    	 	 printf("finalization! p:%p\n",obj);
-                     }
-                     destruct(((ExplicitMemory*)obj)->allocHead,((ExplicitMemory*)obj)->byteSize);//(x10_long*)cd);
-                }
+			static void finalization(void *obj, void *cd){
+			((ExplicitMemory*)obj)->destruct(); 
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+					printf("finalization! p:%p\n",obj);
+				}
+			}
 
-                static void destruct(void* allocMem, x10_long byteSize){
-                        GC_remove_roots(allocMem, (char*)allocMem + byteSize );
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("destruct2!p;%p s:%ld", allocMem,byteSize);
-                        }
-                        free(allocMem);
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("destruct3!\n");
-                        }
-                        numCnt--;
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("cnt:%ld\n",numCnt);
-                        }
-                }
-                void destruct(){
-                		  pthread_mutex_lock(&explMemMutex);
-                		  ::scalegraph::listRemove(this);
-                		  pthread_mutex_unlock(&explMemMutex);
-                       //delete finalizer
-                		  if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                			  printf("destruct4!p;%p ", allocHead);
-                		  }
-                        GC_remove_roots(allocHead, (char*)allocHead + byteSize );
-                        free(allocHead);
-                        numCnt--;
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("cnt:%ld\n",numCnt);
-                        }
-                }
+			void destruct(){
+				pthread_mutex_lock(&explMemMutex);
+				::scalegraph::listRemove(this);
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+					numCnt--;
+					printf("cnt:%ld\n",numCnt);
+					printf("destruct!p;%p ", allocHead);
+				}
+				pthread_mutex_unlock(&explMemMutex);
 
-                void _constructor(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize) {
+				GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+				free(allocHead);
+			}
 
-                  if(numCnt>__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_GCLIMIT){
-                    	GC_gcollect();
-                    	if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT) showAllData();
-                    }
+			void _constructor(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize, bool containPtrs) {
 
-                 pthread_mutex_lock(&explMemMutex);
-                	::scalegraph::listInsertFoward(explMemList, this);
-                	pthread_mutex_unlock(&explMemMutex);
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+					printf("total:%ld threshold:%ld", totalSize, gcThreshold);
+				}
+				pthread_mutex_lock(&explMemMutex);
+				::scalegraph::listInsertFoward(explMemList, this);
+				pthread_mutex_unlock(&explMemMutex);
 
-                        if (0 == numElements) {
-                                setData(NULL,0);
-                                //return THIS(NULL, NULL, 0);
-                                return;
-                        }
-                        assert((alignment & (alignment-1)) == 0);
-                        x10_long size = alignment + numElements*elemSize;//sizeof(ELEM);
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("make! size:%ld\n",size);
-                        }
-                        numCnt++;
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("cnt:%ld\n",numCnt);
-                        }
+				pthread_mutex_lock(&explGcMutex);
+				totalSize += elemSize*numElements;
+				if( totalSize > gcThreshold){
+					GC_gcollect();
+					if(totalSize > gcThreshold){
+						gcThreshold+=totalSize+1024*1024;
+					}
+					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+						showAllData();
+					}
+				}
+				pthread_mutex_unlock(&explGcMutex);
 
-                        void* allocMem = malloc(size);
-                        allocHead=allocMem;
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("alloc! p;%p\n ", allocMem);
-                        }
+				if (0 == numElements) {
+						setData(NULL,0);
+						return;
+				}
+				assert((alignment & (alignment-1)) == 0);
+				x10_long size = alignment + numElements*elemSize;
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+					printf("make! size:%ld\n",size);
+					numCnt++;
+					printf("cnt:%ld\n",numCnt);
+				}
 
-                        GC_add_roots(allocMem, (char*)allocMem + size);
-                        GC_register_finalizer(this, finalization, NULL, NULL, NULL );
+				void* allocMem = malloc(size);
 
-                        if (zeroed) {
-                                memset(allocMem, 0, size);
-                        }
-                        if(alignment > 0) {
-                                x10_long alignDelta = alignment-1;
-                                x10_long alignMask = ~alignDelta;
-                                x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
-                                setData( (void*)alignedMem, elemSize*numElements);;
-                                return;
-                        }
-                        setData( allocMem, elemSize*numElements);
-                }
+				if(allocMem==NULL){
+					pthread_mutex_lock(&explGcMutex);
+					totalSize = elemSize*numElements;
+					pthread_mutex_unlock(&explGcMutex);
+					//throwException<x10::lang::OutOfMemoryError>();
+					fprintf(stderr,"Out of memory\n");
+					abort();
+				}
 
-                static ExplicitMemory* _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize) {
-                        ExplicitMemory* this_ = (ExplicitMemory*)GC_malloc_atomic(sizeof(ExplicitMemory));
-                        this_->_constructor(numElements, alignment, zeroed, elemSize);
+				allocHead=allocMem;
+				if(containPtrs){
+					GC_add_roots(allocMem, (char*)allocMem + size);//only when containsptr is true
+				}
+				GC_register_finalizer(this, finalization, NULL, NULL, NULL );
 
-                        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-                        	printf("exp p;%p\n ", this_);
-                        }
-                        return this_;
-                }
+				if (zeroed) {
+					memset(allocMem, 0, size);
+				}
+				if(alignment > 0) {
+					x10_long alignDelta = alignment-1;
+					x10_long alignMask = ~alignDelta;
+					x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
+					setData( (void*)alignedMem, elemSize*numElements);;
+					return;
+				}
+				setData( allocMem, elemSize*numElements);
+			}
+
+			static ExplicitMemory* _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize, bool containPtrs) {
+				ExplicitMemory* this_ = (ExplicitMemory*)GC_malloc_atomic(sizeof(ExplicitMemory));
+				this_->_constructor(numElements, alignment, zeroed, elemSize, containPtrs);
+
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+					printf("exp p;%p\n ", this_);
+				}
+				return this_;
+			}
         };
 
 template<class THIS, typename ELEM> class MCData_Base {
@@ -217,7 +212,7 @@ public:
                 //}
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
-                if(size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_THRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+                if(size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
                         ELEM* allocMem = static_cast<ELEM*>(x10aux::alloc_chunk(size, containsPtrs));
                         if (zeroed) {
                                 memset(allocMem, 0, size);
@@ -226,12 +221,11 @@ public:
                                 x10_long alignDelta = alignment-1;
                                 x10_long alignMask = ~alignDelta;
                                 x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
-                                return THIS(/*allocMem*/NULL, (ELEM*)alignedMem, numElements);;
+                                return THIS(NULL, (ELEM*)alignedMem, numElements);;
                         }
-                        return THIS(/*allocMem*/NULL, allocMem, numElements);
+                        return THIS(NULL, allocMem, numElements);
                 }else{
-//                	printf("file: %s, line:%d\n", filename, line);
-                        ExplicitMemory *exp = ExplicitMemory::_make(numElements, alignment, zeroed, sizeof(ELEM));
+                        ExplicitMemory *exp = ExplicitMemory::_make(numElements, alignment, zeroed, sizeof(ELEM), containsPtrs);
                         return THIS(exp, (ELEM*)(exp->pointer), numElements);
                 }
         }
@@ -422,29 +416,29 @@ namespace org { namespace scalegraph { namespace util {
 // MCData_Base //
 
 template<class THIS, typename ELEM> void MCData_Base<THIS, ELEM>::del() {
-        if(!FMGL(head)){//FMGL(size)< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_THRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+        if(!FMGL(head)){//FMGL(size)< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
         /*if(FMGL(head) != FMGL(pointer)) {
                 x10aux::throwException(
                                 x10::lang::UnsupportedOperationException::_make(
                                 x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
         }//}
         x10aux::dealloc(FMGL(head));
-        */ //todo
-        x10aux::dealloc(FMGL(pointer));
-        FMGL(head) = NULL;
-        FMGL(pointer) = NULL;
-        FMGL(size) = 0;
+        */ 
+			x10aux::dealloc(FMGL(pointer));
+			FMGL(head) = NULL;
+			FMGL(pointer) = NULL;
+			FMGL(size) = 0;
         }else{
-        GC_register_finalizer( (ExplicitMemory*)FMGL(head), NULL, NULL, NULL, NULL );
-        ((ExplicitMemory*)FMGL(head))->destruct();
+			GC_register_finalizer( (ExplicitMemory*)FMGL(head), NULL, NULL, NULL, NULL );
+			((ExplicitMemory*)FMGL(head))->destruct();
 
-        if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-        	printf("del exp p;%p\n ", FMGL(head));
-        	printf("del size:%ld\n",((ExplicitMemory*)FMGL(head))->byteSize);
-        }
-        FMGL(head) = NULL;
-        FMGL(pointer) = NULL;
-        FMGL(size) = 0;
+			if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+				printf("del exp p;%p\n ", FMGL(head));
+				printf("del size:%ld\n",((ExplicitMemory*)FMGL(head))->byteSize);
+			}
+			FMGL(head) = NULL;
+			FMGL(pointer) = NULL;
+			FMGL(size) = 0;
         }
 }
 
