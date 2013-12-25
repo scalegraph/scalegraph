@@ -68,7 +68,7 @@ final class WorkerPlaceGraph[V,E] {
 		val rank_r = team.role()(0);
 		mTeam = new Team2(team);
 		mIds = ids;
-		
+		//Console.OUT.println("id:"+here.id+" idsVert:"+ids.numberOfLocalVertexes());
 		mVtoD = new OnedR.VtoD(ids);
 		mDtoV = new OnedR.DtoV(ids);
 		mDtoS = new OnedR.DtoS(ids);
@@ -324,10 +324,13 @@ final class WorkerPlaceGraph[V,E] {
 
 				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
 				@Ifdef("PROF_XP") { thtimer.start(); }
+				val len = r.max - r.min;
+				var len2 :Long =0L;
 				for(srcid in r) {
 					vc.mSrcid = srcid;
 					val mes = ectx.message(srcid, mesTempBuffer);
-					if(mes.size() > 0 || mVertexActive(srcid)) {
+					len2 += mes.size();
+					if(mes.size() > 0 || mVertexActive(srcid)) {//count edges
 						
 						compute(vc, mes);
 
@@ -335,6 +338,9 @@ final class WorkerPlaceGraph[V,E] {
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
+				Console.OUT.println("id:"+here.id+"\n"+" vertex:"+len+" message:"+len2+
+										"\n  In offsets:"+mInEdge.offsets.size()+" vertexes:"+mInEdge.vertexes.size()+" value:"+mInEdge.value.size() +
+										"\n  Out offsets:"+mOutEdge.offsets.size()+" vertexes:"+mOutEdge.vertexes.size()+" value:"+mOutEdge.value.size());
 				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_COMPUTE); }
 				if(aggregator != null) {
 					intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
@@ -344,6 +350,7 @@ final class WorkerPlaceGraph[V,E] {
 				vc.mNumActiveVertexes = numProcessed;
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
+			Console.OUT.println("");
 		
 			ectx.deleteMessages();
 			
