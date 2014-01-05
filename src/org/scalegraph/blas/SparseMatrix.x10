@@ -81,7 +81,7 @@ public final struct SparseMatrix[T] {
 		// if gathering outer edges, origin is source and target is destination.
 		// if gathering inner edges, origin is destination and target is source.
 
-		@Ifdef("PROF_XP") { STest.bufferedPrintln("MEM-CONS-MAX: place: " + here.id +
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-CONS-MAX: place: " + here.id +
 				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 		
 		if(!ids.transpose)
@@ -108,7 +108,7 @@ public final struct SparseMatrix[T] {
 		this.vertexes = target;
 		this.values = values_;
 
-		@Ifdef("PROF_XP") { STest.bufferedPrintln("MEM-CONS-FIN: place: " + here.id +
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-CONS-FIN: place: " + here.id +
 				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 	}
 
