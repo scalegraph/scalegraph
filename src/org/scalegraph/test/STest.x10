@@ -13,6 +13,7 @@ package org.scalegraph.test;
 
 import x10.util.StringBuilder;
 import x10.io.Console;
+import x10.util.Team;
 import org.scalegraph.util.SString;
 
 abstract public class STest {
@@ -32,7 +33,7 @@ abstract public class STest {
     	   printException(e);
         }
        buffer.add("\n");
-       flush();
+       Team.WORLD.placeGroup().broadcastFlat(() => { STest.flush(); });
        reportResult(b);
     }
     

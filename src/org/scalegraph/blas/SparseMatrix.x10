@@ -2,6 +2,8 @@ package org.scalegraph.blas;
 
 import x10.util.Team;
 import x10.compiler.Ifndef;
+import x10.compiler.Ifdef;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.graph.id.Twod;
@@ -9,6 +11,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Algorithm;
+import org.scalegraph.test.STest;
 
 /** Sparse matrix representation.
  */
@@ -78,13 +81,18 @@ public final struct SparseMatrix[T] {
 		// if gathering outer edges, origin is source and target is destination.
 		// if gathering inner edges, origin is destination and target is source.
 
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("MEM-CONS-MAX: place: " + here.id +
+				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
+		
 		if(!ids.transpose)
 			Parallel.sort(ids.lgl + ids.lgc, srcV, dstV, values, origin, target, values_);
 		else
 			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
+		
 		srcV.del();
 		dstV.del();
 		values.del();
+		
 		Parallel.makeOffset(origin, offsets_);
 		origin.del();
 
@@ -99,6 +107,9 @@ public final struct SparseMatrix[T] {
 		this.offsets = offsets_;
 		this.vertexes = target;
 		this.values = values_;
+
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("MEM-CONS-FIN: place: " + here.id +
+				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 	}
 
 	/** Constructs non-distributed sparse matrix.

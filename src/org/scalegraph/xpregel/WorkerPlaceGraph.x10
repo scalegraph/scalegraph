@@ -286,6 +286,8 @@ final class WorkerPlaceGraph[V,E] {
 			combiner :(MemoryChunk[M]) => M,
 			end :(Int,A)=>Boolean) { M haszero, A haszero }
 	{
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("MEM-XPS0: place: " + here.id +
+				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		@Ifdef("PROF_XP") { mtimer.start(); }
 		
@@ -348,10 +350,12 @@ final class WorkerPlaceGraph[V,E] {
 				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_AGGREGATE); }
 				vc.mAggregateValue.clear();
 				vc.mNumActiveVertexes = numProcessed;
-				@Ifdef("PROF_XP") { STest.println("place: " + here.id + ": th: " + tid +
+				@Ifdef("PROF_XP") { STest.bufferedPrintln("XPS1: place: " + here.id + ": th: " + tid + "ss: " + ss +
 						": InEdge: " + numLocalInEdges + ": OutEdge: " + numLocalOutEdges + ": Mes: " + numLocalMes); }
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
+			@Ifdef("PROF_XP") { STest.bufferedPrintln("MEM-XPS2: place: " + here.id + "ss: " + ss +
+					": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 		
 			ectx.deleteMessages();
 			

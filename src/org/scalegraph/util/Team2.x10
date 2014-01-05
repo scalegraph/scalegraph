@@ -658,6 +658,12 @@ public final struct Team2 {
 		return dst(0);
 	}
 	
+	/* statistics */
+	
+	public def printMemoryConsumption() {
+		
+	}
+	
 	/* utility methods */
 	
 	public static def countOffsets[T](counts :MemoryChunk[T], offsets :MemoryChunk[T], initialValue :T) {T <: Arithmetic[T]} {
