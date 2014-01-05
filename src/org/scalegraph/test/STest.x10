@@ -37,8 +37,8 @@ abstract public class STest {
        reportResult(b);
     }
     
-    private static def escapeString(str :String) =
-    	SString(str).replace("\n", linebreak).toString(); // 4 space
+    private static def escapeString(str :String) = str;
+    	//SString(str).replace("\n", linebreak).toString(); // 4 space
     
     private atomic static def printException(e :CheckedThrowable, nested :Int) {
     	var nested_prefix :String = "";
