@@ -33,7 +33,7 @@ abstract public class STest {
     	   printException(e);
         }
        buffer.add("\n");
-       Team.WORLD.placeGroup().broadcastFlat(() => { STest.flush(); });
+       finish for(p in Team.WORLD.placeGroup()) at(p) async STest.flush();
        reportResult(b);
     }
     
