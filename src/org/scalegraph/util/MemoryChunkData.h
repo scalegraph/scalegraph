@@ -20,11 +20,13 @@
 #include <double_linked_list.h>
 
 namespace org { namespace scalegraph { namespace util {
+		struct ExplicitMemory;
+
         extern long numCnt, gcThreshold, totalSize;
         extern pthread_mutex_t explMemMutex;
         extern pthread_mutex_t explGcMutex;
-        struct ExplicitMemory;
         extern ExplicitMemory *explMemList;
+
         struct ExplicitMemory{
 			x10_long byteSize;
 			void* pointer;

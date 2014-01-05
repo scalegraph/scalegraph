@@ -386,4 +386,12 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	/** Creates and returns an empty memory chunk.
 	 */
 	public static def getNull[T]() = new MemoryChunk[T](0);
+	
+	@Native("c++", "GC_get_heap_size()")
+	public static native def getGCMemSize() :Long;
+	
+	@Native("c++", "org::scalegraph::util::totalSize")
+	public static native def getExpMemSize() :Long;
+	
+	public static def getMemSize() = getGCMemSize() + getExpMemSize();
 }

@@ -34,6 +34,7 @@ import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.util.DistMemoryChunk;
 import x10.compiler.Native;
 import x10.io.Printer;
+import org.scalegraph.test.STest;
 
 final class WorkerPlaceGraph[V,E] {
 	static val MAX_OUTPUT_NUMBER = 8;
@@ -322,11 +323,16 @@ final class WorkerPlaceGraph[V,E] {
 				val mesTempBuffer :GrowableMemory[M] = new GrowableMemory[M]();
 				var numProcessed :Long = 0L;
 
+				@Ifdef("PROF_XP") val numLocalInEdges = mInEdge.offsets(r.max + 1) - mInEdge.offsets(r.min);
+				@Ifdef("PROF_XP") val numLocalOutEdges = mOutEdge.offsets(r.max + 1) - mOutEdge.offsets(r.min);
+				@Ifdef("PROF_XP") var numLocalMes :Long = 0L;
+
 				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
 				@Ifdef("PROF_XP") { thtimer.start(); }
 				for(srcid in r) {
 					vc.mSrcid = srcid;
 					val mes = ectx.message(srcid, mesTempBuffer);
+					@Ifdef("PROF_XP") { numLocalMes += mes.size(); }
 					if(mes.size() > 0 || mVertexActive(srcid)) {
 						
 						compute(vc, mes);
@@ -342,6 +348,8 @@ final class WorkerPlaceGraph[V,E] {
 				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_AGGREGATE); }
 				vc.mAggregateValue.clear();
 				vc.mNumActiveVertexes = numProcessed;
+				@Ifdef("PROF_XP") { STest.println("place: " + here.id + ": th: " + tid +
+						": InEdge: " + numLocalInEdges + ": OutEdge: " + numLocalOutEdges + ": Mes: " + numLocalMes); }
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 		

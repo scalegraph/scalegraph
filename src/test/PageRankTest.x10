@@ -15,6 +15,7 @@ import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.CSV;
+import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 
 final class PageRankTest extends AlgorithmTest {
@@ -36,10 +37,12 @@ final class PageRankTest extends AlgorithmTest {
     	else if(args(0).equals("low")) {
     		val matrix = g.createDistSparseMatrix[Double](
     				Config.get().distXPregel(), "weight", true, false);
+    		println("TEMS: " + MemoryChunk.getMemSize());
     		// delete the graph object in order to reduce the memory consumption
     		g.del();
     		Config.get().stopWatch().lap("Graph construction: ");
     		result = org.scalegraph.api.PageRank.run(matrix);
+    		println("TEMS: " + MemoryChunk.getMemSize());
     	}
     	else {
     		throw new IllegalArgumentException("Unknown level parameter :" + args(0));
