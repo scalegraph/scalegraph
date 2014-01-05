@@ -18,7 +18,8 @@ import org.scalegraph.util.SString;
 
 abstract public class STest {
 	private static val buffer = new StringBuilder();
-	private static val linebreak = "\n    "; // 4 space
+	//private static val linebreak = "\n    "; // 4 space
+	private static val linebreak = "\n";
 
     abstract public def run(args: Array[String](1)) :boolean;
 
