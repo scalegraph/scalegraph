@@ -70,14 +70,6 @@ public class HyperANF {
 		mc(12) = mes.bc; mc(13) = mes.bd; mc(14) = mes.be; mc(15) = mes.bf;
 		return mc;
 	}
-
-
-	// TODO
-	// message繧剃ｽ懊ｋ縺ｨ縺薙ｍ縺ｫ譁ｰ縺励＞髢｢謨ｰ繧剃ｽ懊ｋ
-	// @Native繧呈怙蛻昴↓譖ｸ縺�※
-	// 荳ｭ霄ｫ縺ｧx10縺ｮ蜃ｦ逅�ｒ譖ｸ縺�※
-	// 
-	//
 	
 	private static def calcSize(counter:MemoryChunk[Byte], alpha:Double) {
 		var Z:Double = 0.0;
@@ -126,16 +118,13 @@ public class HyperANF {
 		
 		val blockLength = 3L;
 
-//		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
-//		val xpregel = new XPregelGraph[MemoryChunk[Byte], Double](csr);
 		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
-		/// xpregel.setLogPrinter(Console.ERR, 0);
+		xpregel.setLogPrinter(Console.ERR, 0);
 		xpregel.updateInEdge();
 		
-		/// sw.lap("UpdateInEdge");
+		sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
-//		val N:Long = graph.numberOfVertices();
 		val N:Long = xpregel.size();
 		val B = 7;
 		val M = 1<<B;
@@ -228,15 +217,15 @@ public class HyperANF {
 							return true;
 					}
 				}
-				/// if(here.id == 0) {
-				///	sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
-				/// }
+				if(here.id == 0) {
+					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
+				}
 				
 				return superstep > niter;
 			};
 		//xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
 		xpregel.iterate[MesHANF,Double](compute, aggregator, end);
-		/// sw.lap("Main iterate");
+		sw.lap("Main iterate");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Main iterate:"); }
 		return results()();
 		
