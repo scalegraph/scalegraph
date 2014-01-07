@@ -162,6 +162,9 @@ final class MessageCommunicator[M] { M haszero } {
 	}
 	
 	private def processUnicastMessages(combine : (MemoryChunk[M]) => M) {
+		val sw = Config.get().stopWatch();
+		if(here.id == 0) sw.lap("start to process unicast messages");
+		
 		val numPlaces = mTeam.size();
 		val combineEnabled = (combine != null);
 		val nullMessage = Zero.get[M]();
@@ -195,6 +198,7 @@ final class MessageCommunicator[M] { M haszero } {
 		assert (numMessages == mesOffset(numPlaces) as Long);
 
 		val idsTmp = new MemoryChunk[Long](numMessages);
+		if(here.id == 0) sw.lap("copying dest id");
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val pstart = mesOffset(p);
 			val plength = mesOffset(p+1) - pstart;
@@ -211,6 +215,7 @@ final class MessageCommunicator[M] { M haszero } {
 		for(i in mUCCMessages.range()) mUCCMessages(i).dstIds.del();
 		
 		val mesTmp = new MemoryChunk[M](numMessages);
+		if(here.id == 0) sw.lap("copying message value");
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 			val pstart = mesOffset(p);
 			val plength = mesOffset(p+1) - pstart;
@@ -305,7 +310,8 @@ final class MessageCommunicator[M] { M haszero } {
 			mUCSMessages = mesTmp;
 			numCombinedMessages = numMessages;
 		}
-		
+
+		if(here.id == 0) sw.lap("finished message processing");
 		return numCombinedMessages;
 	}
 	
@@ -313,6 +319,9 @@ final class MessageCommunicator[M] { M haszero } {
 			mIds.numberOfLocalVertexes2N(), Bitmap.BitsPerWord as Long);
 	
 	private def createInEdgesMask() {
+		val sw = Config.get().stopWatch();
+		if(here.id == 0) sw.lap("creating in edge mask");
+		
 		val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 		val numVertexesBC = numLocalVertexesBC() * mTeam.size();
 		val tmpMask = new Bitmap(numVertexesBC, false);
@@ -332,12 +341,17 @@ final class MessageCommunicator[M] { M haszero } {
 				raw(p) = (raw(Bitmap.offset(numBits * p)) >> shift) & mask;
 			}
 		}
-		
+
+		if(here.id == 0) sw.lap("alltoall...");
 		mTeam.alltoall(tmpMask.raw(), mInEdgesMask.raw());
 		tmpMask.del();
+		if(here.id == 0) sw.lap("in edge mask creation finished");
 	}
 	
 	private def processBroadcastMessages() :Long {
+		val sw = Config.get().stopWatch();
+		if(here.id == 0) sw.lap("start to process broadcast messages");
+		
 		val numLocalVertexesBC = numLocalVertexesBC();
 		val numVertexesBC = numLocalVertexesBC * mTeam.size();
 		val numPlaces = mTeam.size();
@@ -378,7 +392,8 @@ final class MessageCommunicator[M] { M haszero } {
 		for(i in 0..(numPlaces-1)) {
 			mBCSOffset(i + 1) = mBCSOffset(i) + mBCSCount(i);
 		}
-		
+
+		if(here.id == 0) sw.lap("copying messages");
 		mBCSMessages = new MemoryChunk[M](mBCSOffset(numPlaces));
 
 		Parallel.iter(0L..(numPlaces-1), (p :Long) => {
@@ -399,6 +414,7 @@ final class MessageCommunicator[M] { M haszero } {
 			assert (offset == length);
 		});
 
+		if(here.id == 0) sw.lap("finished message processing");
 		return mBCSOffset(numPlaces);
 	}
 	
@@ -424,6 +440,7 @@ final class MessageCommunicator[M] { M haszero } {
 	
 	def exchangeMessages(UCEnabled :Boolean, BCEnabled :Boolean) :void {
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		val sw = Config.get().stopWatch();
 		val numPlaces = mTeam.size();
 		val recvCount = new MemoryChunk[Int](numPlaces);
 		val recvOffset = new MemoryChunk[Int](numPlaces + 1);
@@ -432,6 +449,7 @@ final class MessageCommunicator[M] { M haszero } {
 		mBCREnabled = BCEnabled;
 		
 		if(UCEnabled) {
+			if(here.id == 0) sw.lap("start to unicast message communication");
 			
 			mTeam.alltoall(mUCSCount, recvCount);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMM_COUNT); }
@@ -443,6 +461,7 @@ final class MessageCommunicator[M] { M haszero } {
 			
 			val recvSize = recvOffset(numPlaces);
 
+			if(here.id == 0) sw.lap("alltoallv...");
 			val UCRIdsTmp = new MemoryChunk[Long](recvSize);
 			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIdsTmp, recvOffset, recvCount);
 			mUCSIds.del();
@@ -457,7 +476,8 @@ final class MessageCommunicator[M] { M haszero } {
 
 			val UCRIds = new MemoryChunk[Long](recvSize);
 			mUCRMessages = new MemoryChunk[M](recvSize);
-			
+
+			if(here.id == 0) sw.lap("sort...");
 			Parallel.sort(mIds.lgl, UCRIdsTmp, UCRMessagesTmp, UCRIds, mUCRMessages);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_SORT); }
 
@@ -469,12 +489,14 @@ final class MessageCommunicator[M] { M haszero } {
 			Parallel.makeOffset(UCRIds, mUCROffset);
 			UCRIds.del();
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_MAKE_OFFSET); }
+			if(here.id == 0) sw.lap("finished unicast message communication");
 		}
 		
 		if(BCEnabled) {
 			val numLocalVertexes2N = mIds.numberOfLocalVertexes2N();
 			val numLocalVertexesBC = numLocalVertexesBC();
-			
+
+			if(here.id == 0) sw.lap("start broadcast message communication");
 			mTeam.alltoall(mBCSCount, recvCount);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMM_COUNT); }
 			
@@ -484,7 +506,8 @@ final class MessageCommunicator[M] { M haszero } {
 			}
 
 			val recvSize = recvOffset(numPlaces);
-			
+
+			if(here.id == 0) sw.lap("alltoallv...");
 			mBCRMessages = new MemoryChunk[M](recvSize);
 			mTeam.alltoallv(mBCSMessages, mBCSOffset, mBCSCount, mBCRMessages, recvOffset, recvCount);
 			mBCSMessages.del();
@@ -506,7 +529,8 @@ final class MessageCommunicator[M] { M haszero } {
 				}
 				mBCRHasMessage = dst;
 			}
-			
+
+			if(here.id == 0) sw.lap("scan...");
 			mBCROffset = new MemoryChunk[Long](Bitmap.numWords(mBCRHasMessage.size()) + 1);
 			Parallel.scan(mBCRHasMessage.raw().range(), mBCROffset, 0L,
 					(i:Long, v:Long) => MathAppend.popcount(mBCRHasMessage.word(i)) + v,
@@ -519,6 +543,7 @@ final class MessageCommunicator[M] { M haszero } {
 
 		recvCount.del();
 		recvOffset.del();
+		if(here.id == 0) sw.lap("finished broadcast message communication");
 	}
 }
 

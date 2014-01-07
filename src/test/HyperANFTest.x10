@@ -33,16 +33,18 @@ final class HyperANFTest extends AlgorithmTest{
 	
 	public def run(args :Array[String](1), g :Graph): Boolean {
 //		val result = org.scalegraph.api.HyperANF.run(g);	
+		val hyperANF = new org.scalegraph.api.HyperANF();
 		val result :MemoryChunk[Double];
+		hyperANF.niter = Int.parse(args(3));
 		if(args(0).equals("high")) {
-			result = org.scalegraph.api.HyperANF.run(g);
+			result = hyperANF.execute(g);
 		}
 		else if(args(0).equals("low")) {
 			val matrix = g.createDistSparseMatrix[Double](
 			Config.get().distXPregel(), "weight", true, false);
 			// delete the graph object in order to reduce the memory consumption
 			g.del();
-			result = org.scalegraph.api.HyperANF.run(matrix);
+			result = hyperANF.execute(matrix);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown level parameter :" + args(0));

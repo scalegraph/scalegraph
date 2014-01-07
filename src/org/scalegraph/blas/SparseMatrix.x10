@@ -12,6 +12,7 @@ import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Algorithm;
 import org.scalegraph.test.STest;
+import org.scalegraph.Config;
 
 /** Sparse matrix representation.
  */
@@ -54,6 +55,7 @@ public final struct SparseMatrix[T] {
 	 * @param ids IdStruct that provides the distribution information.
 	 */
 	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], ids :IdStruct) {
+		val sw = Config.get().stopWatch();
 
 		if(srcV.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
@@ -71,6 +73,7 @@ public final struct SparseMatrix[T] {
 				dstV(i) = VtoD(dstV(i));
 			}
 		});
+		if(here.id == 0) sw.lap("finished converting edge format");
 
 		val offsetLength = 1L << (ids.lgl + ids.lgc);
 
@@ -83,11 +86,13 @@ public final struct SparseMatrix[T] {
 
 		@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-CONS-MAX: place: " + here.id +
 				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
-		
+
+		if(here.id == 0) sw.lap("start first step sorting");
 		if(!ids.transpose)
 			Parallel.sort(ids.lgl + ids.lgc, srcV, dstV, values, origin, target, values_);
 		else
 			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
+		if(here.id == 0) sw.lap("finished first step sorting");
 		
 		srcV.del();
 		dstV.del();
@@ -95,6 +100,7 @@ public final struct SparseMatrix[T] {
 		
 		Parallel.makeOffset(origin, offsets_);
 		origin.del();
+		if(here.id == 0) sw.lap("finished making offsets");
 
 		Parallel.iter(0L..(offsetLength-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
@@ -103,6 +109,7 @@ public final struct SparseMatrix[T] {
 				Algorithm.sort(target.subpart(off, len), values_.subpart(off, len));
 			}
 		});
+		if(here.id == 0) sw.lap("finished second step sorting");
 
 		this.offsets = offsets_;
 		this.vertexes = target;

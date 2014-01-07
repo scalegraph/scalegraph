@@ -108,5 +108,8 @@ public final class MathAppend {
     }
     
     @Native("c++", "__builtin_popcountl(#v)")
-    public static native def popcount[T](v :T) :Int {T <: Arithmetic[T]}; 
+    public static native def popcount[T](v :T) :Int {T <: Arithmetic[T]};
+    
+    @Native("c++", "__builtin_bswap64(#v)")
+    public static native def bswap(v :ULong) :ULong;
 }

@@ -55,11 +55,6 @@ namespace org { namespace scalegraph { namespace util {
 				}
 			}
 
-			void setData(void* pointer__, x10_long byteSize__){
-				pointer=(pointer__);
-				byteSize=(byteSize__);
-			}
-
 			static void finalization(void *obj, void *cd){
 			((ExplicitMemory*)obj)->destruct(); 
 				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
@@ -70,6 +65,7 @@ namespace org { namespace scalegraph { namespace util {
 			void destruct(){
 				pthread_mutex_lock(&explMemMutex);
 				::scalegraph::listRemove(this);
+				totalSize -= byteSize;
 				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 					numCnt--;
 					printf("cnt:%ld\n",numCnt);
@@ -95,7 +91,7 @@ namespace org { namespace scalegraph { namespace util {
 				if( totalSize > gcThreshold){
 					GC_gcollect();
 					if(totalSize > gcThreshold){
-						gcThreshold = totalSize+1024*1024;
+						gcThreshold = totalSize * 3 / 2;
 					}
 					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 						showAllData();
@@ -119,7 +115,7 @@ namespace org { namespace scalegraph { namespace util {
 
 				if(allocMem==NULL){
 					pthread_mutex_lock(&explGcMutex);
-					totalSize = elemSize*numElements;
+					totalSize -= elemSize*numElements;
 					pthread_mutex_unlock(&explGcMutex);
 					//throwException<x10::lang::OutOfMemoryError>();
 					fprintf(stderr,"Out of memory\n");
@@ -153,6 +149,12 @@ namespace org { namespace scalegraph { namespace util {
 					printf("exp p;%p\n ", this_);
 				}
 				return this_;
+			}
+
+        private:
+			void setData(void* pointer__, x10_long byteSize__){
+				pointer=(pointer__);
+				byteSize=(byteSize__);
 			}
         };
 

@@ -193,35 +193,35 @@ import org.scalegraph.id.Type;
 	public static def make(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def make(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,false);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,true);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,true);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[SString]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
@@ -626,6 +626,7 @@ import org.scalegraph.id.Type;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		return new DistSparseMatrix(dist2d, () => {
+			val sw = Config.get().stopWatch();
 			val scatterGather = new DistScatterGather(team_);
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
@@ -638,7 +639,8 @@ import org.scalegraph.id.Type;
 			}
 			val rmask = (1L << ids.lgr) - 1;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
-			
+
+			if(here.id == 0) sw.lap("start graph construction");
 			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
@@ -658,6 +660,7 @@ import org.scalegraph.id.Type;
 				}
 			});
 			scatterGather.sum();
+			if(here.id == 0) sw.lap("count edge finished");
 			val teamRank = team_.role()(0);
 			val teamSize = team_.size();
 			val sendCount = scatterGather.sendCount();
@@ -706,9 +709,11 @@ import org.scalegraph.id.Type;
 					}
 				}
 			});
+			if(here.id == 0) sw.lap("complete creating send data");
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
+			if(here.id == 0) sw.lap("alltoall finished");
 			return new Tuple2[IdStruct, SparseMatrix[Long]](ids, new SparseMatrix(recvSrcV, recvDstV, recvValues, ids));
 		});
 	}
@@ -722,6 +727,7 @@ import org.scalegraph.id.Type;
 		val att = getEdgeAttribute[T](name);
 
 		return new DistSparseMatrix(dist2d, () => {
+			val sw = Config.get().stopWatch();
 			val scatterGather = new DistScatterGather(team_);
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
@@ -747,6 +753,7 @@ import org.scalegraph.id.Type;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
 			val att_ = att();
 
+			if(here.id == 0) sw.lap("start graph construction");
 			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
@@ -766,6 +773,7 @@ import org.scalegraph.id.Type;
 				}
 			});
 			scatterGather.sum();
+			if(here.id == 0) sw.lap("count edge finished");
 			val sendCount = scatterGather.sendCount();
 			val sendSrcV = new MemoryChunk[Long](sendCount);
 			val sendDstV = new MemoryChunk[Long](sendCount);
@@ -829,7 +837,8 @@ import org.scalegraph.id.Type;
 				}
 				team.barrier(team.role()(0));
 			}*/
-			
+
+			if(here.id == 0) sw.lap("complete creating send data");
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();

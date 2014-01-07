@@ -221,7 +221,7 @@ public class HyperANF {
 					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
 				}
 				
-				return superstep > niter;
+				return !(superstep < niter*loop);
 			};
 		//xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
 		xpregel.iterate[MesHANF,Double](compute, aggregator, end);

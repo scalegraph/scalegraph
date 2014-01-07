@@ -19,6 +19,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
+import org.scalegraph.util.MathAppend;
 
 /**
  * Provides various graph generators.
@@ -195,9 +196,15 @@ public final class GraphGenerator {
 		return edgeMemory;
 	}
 	
+	/** Generates a R-MAT graph using recursive descent into a 2x2 matrix [A,B; C, 1-(A+B+C)].
+	 	Permutation is enabled. */
+	public static def genRMAT(scale :Int, edgefactor :Int,
+			A :Double, B :Double, C :Double, rnd :Random) : EdgeList[Long]
+		= genRMAT(scale, edgefactor, A, B, C, rnd, true);
+	
 	/** Generates a R-MAT graph using recursive descent into a 2x2 matrix [A,B; C, 1-(A+B+C)]. */
 	public static def genRMAT(scale :Int, edgefactor :Int,
-			A :Double, B :Double, C :Double, rnd :Random)
+			A :Double, B :Double, C :Double, rnd :Random, permute :Boolean)
 	: EdgeList[Long]
 	{
 		if(A+B+C >= 1.0f) throw new IllegalArgumentException("A+B+C >= 1.0: Invalid probabilities");
@@ -246,8 +253,14 @@ public final class GraphGenerator {
 						else if(x < sumABC(depth)) { srcVertex += 1; }
 						else { dstVertex += 1; srcVertex += 1; }
 					}
-					srcMem_(i) = srcVertex;
-					dstMem_(i) = dstVertex;
+					if(permute) {
+						srcMem_(i) = (MathAppend.bswap(srcVertex as ULong) >> (64 - scale)) as Long;
+						dstMem_(i) = (MathAppend.bswap(dstVertex as ULong) >> (64 - scale)) as Long;
+					}
+					else {
+						srcMem_(i) = srcVertex;
+						dstMem_(i) = dstVertex;
+					}
 				}
 			});
 		});
