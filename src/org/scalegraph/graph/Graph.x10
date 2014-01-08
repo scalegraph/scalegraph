@@ -274,7 +274,7 @@ import org.scalegraph.id.Type;
 			g.numberOfVertices = Math.max(maxVertexID + 1, g.numberOfVertices);
 			g.numberOfEdges += globalNumOfEdges;
 		}
-		
+		//Console.OUT.println("id:"+here.id+" globalNumOfEdges:"+globalNumOfEdges);
 		if(srcList_.size() == 0L) {
 			srcList() = tlSrcs;
 			dstList() = tlDsts;
@@ -287,6 +287,7 @@ import org.scalegraph.id.Type;
 			allocator.setMemory(srcList_); allocator.add(tlSrcs); srcList() = allocator.raw();
 			allocator.setMemory(dstList_); allocator.add(tlDsts); dstList() = allocator.raw();
 		}
+		//Console.OUT.println("id:"+here.id+" len3:"+srcList().size());
 	}
 	
 	private def genericAddEdges[T](srcs :DistMemoryChunk[T], dsts :DistMemoryChunk[T]) { T haszero } {
@@ -494,11 +495,14 @@ import org.scalegraph.id.Type;
 	private static def getLocalNumberOfVertices(vi :VertexInfo, role :Int) :Long {
 		val vt_ = vi.vertexTranslator();
 		if(vt_.isTranslator()) {
+			//Console.OUT.println("id:"+here.id+" vtsize1:"+vt_.sizeOfDictionary());
 			return vt_.sizeOfDictionary();
 		}
 		else {
 			val g = vi.numberOfVertices;
 			val d = vi.numberOfPlaces;
+			//Console.OUT.println("id:"+here.id+" g:"+g+" d:"+d+"size:"+(g / d + ((g % d) > role ? 1L : 0L)));
+			//return 32768 +10000*(role==0? 1 : -1);
 			return (g / d + ((g % d) > role ? 1L : 0L));
 		}
 	}
@@ -725,6 +729,7 @@ import org.scalegraph.id.Type;
 			val scatterGather = new DistScatterGather(team_);
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
+			//Console.OUT.println("id:"+here.id+" len6:"+srcList__.size());
 			val ids = dist2d.getIds(vi.numberOfVertices,
 					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());

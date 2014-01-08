@@ -103,6 +103,9 @@ final class MessageCommunicator[M] { M haszero } {
 				(i:Long) => new MessageBuffer[M]());
 		mBCCHasMessage = new Bitmap(mIds.numberOfLocalVertexes(), false);
 		mBCCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
+		//Console.OUT.println("id:"+here.id+" len4:"+mUCCMessages.size());
+		//Console.OUT.println("id:"+here.id+" len5:"+mBCCMessages.size());
+
 	}
 	
 	def del() {
