@@ -25,7 +25,7 @@ final class StronglyConnectedComponentTest extends AlgorithmTest{
 	
 	public def run(args :Array[String](1), g :Graph): Boolean {
 //		val result = org.scalegraph.api.StronglyConnectedComponent.run(g);
-		val result : org.scalegraph.api.StronglyConnectedComponent.Result;
+		val result : org.scalegraph.api.StronglyConnectedComponent2.Result;
 		
 		if(args.size < 3) {
 			println("Usage: [high|low] [write|check] <path>");
@@ -33,16 +33,16 @@ final class StronglyConnectedComponentTest extends AlgorithmTest{
 		}
 		
 		if(args(0).equals("high")) {
-			result = org.scalegraph.api.StronglyConnectedComponent.run(g);
+			result = org.scalegraph.api.StronglyConnectedComponent2.run(g);
 		}
 		else if(args(0).equals("low")) {
 //			val matrix = g.createDistSparseMatrix[Long](Config.get().distXPregel(), "weight", true, true);
 
-			val matrix = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+			val matrix = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, false);
 
 			// delete the graph object in order to reduce the memory consumption
 			g.del();
-			result = org.scalegraph.api.StronglyConnectedComponent.run(matrix);
+			result = org.scalegraph.api.StronglyConnectedComponent2.run(matrix);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown level parameter :" + args(0));
