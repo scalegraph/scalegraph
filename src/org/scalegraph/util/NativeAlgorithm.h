@@ -151,25 +151,6 @@ namespace org { namespace scalegraph { namespace util {
 		reference operator[](const difference_type n) { return reference(first[n], second[n]); }
 	};
 
-	/*template <typename TData,typename T1, typename T2>
-	class StableSort2Inline{
-	public:
-		struct T2K2LessThan{
-			T1 t1;
-			T2 t2;
-			bool operator() (const TData& a, const TData& b) const {
-				return ((reinterpret_cast <T2K2LessThan>(a)).FMGL(val2()))
-							< ((reinterpret_cast <T2K2LessThan>(b)).FMGL(get2()));
-			}
-		};
-
-		static void StableSort_TupleK1(TData* pointer, size_t count){
-		//	pointer_single_iterator<TData>
-		//		begin(pointer),end(pointer+count);
-			std::stable_sort(pointer, pointer+count, T2K2LessThan());
-		}
-	};*/
-
 	template <typename T>
 	struct K1LessThan{
 		bool operator() (const T& a, const T& b) const {
@@ -208,15 +189,17 @@ namespace org { namespace scalegraph { namespace util {
 		std::stable_sort(pointer, pointer+count, K2LessThan<T>());
 	}
 
-	/*template <typename T>
-	void StableSort_TupleK2(T* pointer, size_t count){
-		struct K2LessThan{
-			bool operator() (const T& a, const T& b) const {
-				return a.FMGL(val2) < b.FMGL(val2);
-			}
-		};
-		std::stable_sort(pointer+0, pointer+count, K2LessThan());
-	}*/
+    template<typename IterKey>
+    void sort1(IterKey* begin_key, size_t count)
+    {
+        std::sort(begin_key, begin_key + count);
+    }
+
+    template<typename IterKey, typename Compare>
+	void sort1(IterKey* begin_key, size_t count, Compare comp)
+	{
+		std::sort(begin_key, begin_key + count, comp);
+	}
 
 	template<typename IterKey, typename IterValue>
 	void sort2(IterKey* begin_key, IterValue* begin_value, size_t count)

@@ -1,5 +1,7 @@
 package org.scalegraph.api;
 
+
+import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
 
@@ -138,21 +140,24 @@ public final class StronglyConnectedComponent {
 	 * 
 	 */
 	
-	private static def execute(param :StronglyConnectedComponent, graph:Graph, matrix :DistSparseMatrix[Double]):Result {
+	private static def execute(param :StronglyConnectedComponent, matrix :DistSparseMatrix[Long]):Result {
 
 		val team = param.team;
 		val niter = param.niter;
-		
+		val sw = Config.get().stopWatch();
 		val blockLength = 3L;
 
-		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
-		val xpregel = new XPregelGraph[SCCVertex, Long](csr);		
+//		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+		val xpregel = new XPregelGraph[SCCVertex, Long](matrix);		
 //		val xpregel = XpregelGraph.make[SCCVertex, Double](matrix);
 		xpregel.updateInEdge();
 
 
 		val initInfo = new SCCVertex(0L, false, false,-1L, 0L);
 		xpregel.initVertexValue(initInfo);
+
+		/// sw.lap("UpdateInEdge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		var recursion:Int = 0;
 		var numOfCluster:Long = 0; 
@@ -403,9 +408,13 @@ public final class StronglyConnectedComponent {
 //			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
 		});
 		
-		Console.OUT.println("numOfCluster" + numOfCluster);
+		/// sw.lap("numOfCluster" + numOfCluster);
 		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0), xpregel.stealOutput[Long](1));
 //		Console.OUT.println("numOfCluster" + numOfCluster);
+
+		/// sw.lap("Retrieve output");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Retrieve Output:"); }
+		
 		return result;
 	}
 	
@@ -414,8 +423,8 @@ public final class StronglyConnectedComponent {
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
 	public def execute(matrix :DistSparseMatrix[Long]) :Result{
-		//= execute(this, matrix);
-		throw new UnsupportedOperationException();
+		return  execute(this, matrix);
+		//throw new UnsupportedOperationException();
 	}
 	
 	/** Run the calculation of StronglyConnectedComponent.
@@ -425,9 +434,12 @@ public final class StronglyConnectedComponent {
 //		throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
+		/*
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, true);
-		return execute(this, g, matrix);		 
+*/
+		val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
+		return execute(this, matrix);		 
 	}
 
 
@@ -446,8 +458,5 @@ public final class StronglyConnectedComponent {
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
-	public static def run(matrix :DistSparseMatrix[Long]) :Result {
-		throw new UnsupportedOperationException();
-		//new StronglyConnectedComponent().execute(matrix);
-	}
+	public static def run(matrix :DistSparseMatrix[Long]) :Result = new StronglyConnectedComponent().execute(matrix);
 }

@@ -19,8 +19,8 @@ package org.scalegraph.graph.id;
  * D : Destination form ID
  */
 public final class OnedR {
-	/** Vertex ID to Source ID Converter */
-	public static final struct VtoS {
+	/** Vertex ID to Destination ID Converter */
+	public static final struct VtoD {
 		val lgr :Int;
 		val lgl :Int;
 		val rmask :Long;
@@ -34,8 +34,8 @@ public final class OnedR {
 		public operator this(id :Long) :Long = ((id & rmask) << lgl) | (id >> lgr);
 	}
 
-	/** Vertex ID to Destination ID Converter */
-	public static final struct VtoD {
+	/** Vertex ID to Source ID Converter */
+	public static final struct VtoS {
 		val lgr :Int;
 		
 		public def this(ids :IdStruct) {
@@ -45,8 +45,8 @@ public final class OnedR {
 		public operator this(id :Long) :Long = (id >> lgr);
 	}
 
-	/** Source ID to Vertex ID Converter */
-	public static final struct StoV {
+	/** Destination ID to Vertex ID Converter */
+	public static final struct DtoV {
 		val lgr :Int;
 		val lgl :Int;
 		val lmask :Long;
@@ -58,10 +58,11 @@ public final class OnedR {
 		}
 		
 		public operator this(id :Long) :Long = ((id & lmask) << lgr) | (id >> lgl);
+		public def r(id :Long) :Int = (id >> lgl) as Int;
 	}
 
-	/** Source ID to Destination ID Converter */
-	public static final struct StoD {
+	/** Destination ID to Source ID Converter */
+	public static final struct DtoS {
 		val lmask :Long;
 		
 		public def this(ids :IdStruct) {
@@ -72,8 +73,8 @@ public final class OnedR {
 		public operator this(id :Long) :Long = id & lmask;
 	}
 
-	/** Destination ID to Vertex ID Converter */
-	public static final struct DtoV {
+	/** Source ID to Vertex ID Converter */
+	public static final struct StoV {
 		val r :Int;
 		val lgr :Int;
 		
@@ -85,8 +86,8 @@ public final class OnedR {
 		public operator this(id :Long) :Long = (id << lgr) | r;
 	}
 
-	/** Destination ID to Source ID Converter */
-	public static final struct DtoS {
+	/** Source ID to Destination ID Converter */
+	public static final struct StoD {
 		val rshifted :Long;
 		
 		public def this(ids :IdStruct, r :Int) {

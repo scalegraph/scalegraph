@@ -1,87 +1,72 @@
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-# Makefile for testing x10 based pregel framework #
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+ARPACK_ARCHIVE		= arpack96.tar.gz patch.tar.gz parpack96.tar.gz ppatch.tar.gz
+PAR_METIS_ARCHIVE	= parmetis-4.0.3.tar.gz
+PAR_METIS_FOLDER = $(SG_PREFIX)/$(patsubst %.tar.gz,%, $(PAR_METIS_ARCHIVE))
+DLIBS		= libarpack_LINUX.a libparpack_MPI-LINUX.a libparmetis.so libparmetis.so
+SG_PREFIX	= $(CURDIR)
+TMPDIR		= $(PWD)/tmp
+X10FILES	= $(shell find $(SG_PREFIX)/src/org -name '*.x10')
 
-# setting for x10 threads
-export X10_NTHREADS=5
-export X10_STATIC_THREADS=true
-export X10_NO_STEALS=false
-export X10_NPLACES=4
+LIBS		= -cxx-postarg -larpack_LINUX -cxx-postarg -lparpack_MPI-LINUX -cxx-postarg -lparmetis -cxx-prearg -L$(SG_PREFIX)/lib -cxx-prearg -I$(SG_PREFIX)/include
+LIBPATH		= $(SG_PREFIX)/x10lib
+.SUFFIXES	= .tar.gz
+VPATH		= x10libs $(SG_PREFIX)/lib
 
-# setting for x10 runtime variable
-X10_NPLACES = 4
-#comment out for running on sc
-#X10_HOSTFILE=machines.txt
-X10_NTHREADS = 10
+ARPACK_LIB	= libarpack_LINUX.a libparpack_MPI-LINUX.a
 
-OUTPUT_DIR = ./bin
-INTERM_DIR = ./out
+all: ScaleGraph.jar
+fetch: $(ARPACK_ARCHIVE) $(PAR_METIS_ARCHIVE)
 
-APP_DIR = /nfs/home/thienbao/Project/X10Pregel
-HOSTFILE = machines.txt
+ScaleGraph.jar: $(ARPACK_LIB) libparmetis.so
+	@ mkdir -p x10lib/lib
+	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(LIBPATH) -o ScaleGraph -d $(LIBPATH)/include $(X10FILES)
+	cd src && jar cvf $(LIBPATH)/ScaleGraph.jar {org,x10}
 
-#~~~~~~~~~~~~~~~~~Enviroment dependent settings~~~~~~~~~~~~~~~~~~~~~#
-#Set the x10 home
-#X10_HOME = /Users/thienbao/Applications/X10
-# comment out for running on sc
-X10_HOME=~/Applications/x10-trunk/trunk/x10.dist
+ARPACK: $(ARPACK_ARCHIVE)
+	for x in $^;do tar xf $$x;done
 
-CLASSPATH = $(X10_HOME)
+$(ARPACK_ARCHIVE): %:
+	curl -O http://www.caam.rice.edu/software/ARPACK/SRC/$@
 
-#MPI home
-MPI_HOME = /nfs/data0/miyuru/software/mpich2-1.4
+#$(DLIBS): buildDlib libparmetis.so
 
-# for Team Library
-LABAPPHOME=/usr/global
-#tsubame 
-#LABAPPHOME=/home/usr1/11M38097/lab
-X10_TEAM=$(LABAPPHOME)/x10/x10-trunk-custom/x10.dist
-# tsubame x10 home
-#X10_HOME=/home/usr1/11M38097/lab/x10/x10-trunk
-MPAVICH2=$(LABAPPHOME)/x10/mvapich2-1.9a
+$(ARPACK_LIB): ARPACK
+	sed -i -e "24s/^/\*/g" ARPACK/UTIL/second.f
+	cat ARPACK/ARMAKES/ARmake.MPI-SUN4 > ARPACK/ARmake.inc
+	cd ARPACK && $(MAKE) HOME=$(SG_PREFIX) FC=gfortran FFLAGS="-O -fPIC" PFC=mpif77 PFFLAGS="-O -fPIC" MAKE=make all
+	@ mkdir -p lib
+	cp ARPACK/libarpack_SUN4.a $(SG_PREFIX)/lib/libarpack_LINUX.a
+	cp ARPACK/parpack_MPI-SUN4.a $(SG_PREFIX)/lib/libparpack_MPI-LINUX.a
 
-#Test 1
-test_1:
-	@echo "---------------------Test for graph reader and round-robin partition------------------" ;
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT_DIR) -o $(OUTPUT_DIR)/Test1 \
-	src/x10/pregel/test/TestAdjencyListReader.x10 ;
-	@echo "---------------------Running Test 1---------------------------------------------------" ;
-	$(X10_HOME)/bin/X10Launcher -np $(X10_PLACES) -hostfile $(APP_DIR)/$(HOSTFILE) $(OUTPUT_DIR)/Test1 ;
+libparmetis.so: $(PAR_METIS_FOLDER)
+	mkdir -p $(SG_PREFIX)/metis
+	rm -rf $(PAR_METIS_FOLDER)
+	tar xvf $(PAR_METIS_ARCHIVE)
+	patch -N $(PAR_METIS_FOLDER)/metis/include/metis.h < $(SG_PREFIX)/patches/metis.h.patch
+	patch -N $(PAR_METIS_FOLDER)/metis/GKlib/GKlibSystem.cmake < $(SG_PREFIX)/patches/cc_flag.patch
 
-test_plh:
-	@echo "---------------------Test PlaceLocalHandle------------------" ;
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT_DIR) -o $(OUTPUT_DIR)/TestPlaceLocalHandle \
-	src/x10/pregel/test/TestPlaceLocalHandle.x10 ;
-	@echo "---------------------Running Test PlaceLocalHandle---------------------------------------------------" ;
-	$(X10_HOME)/bin/X10Launcher $(OUTPUT_DIR)/TestPlaceLocalHandle ;
 
-test_hdfs:
-	@echo "---------------------Test HDFS Reader and Writer-------------" ;
-	$(X10_HOME)/bin/x10c++ -d $(OUTPUT_DIR) -o $(OUTPUT_DIR)/TestHdfs \
-	-post "# # -L /usr/global/hadoop/lib/native -lhdfs -L /usr/global/hotspot/jre/lib/amd64/server -ljvm # -I /usr/global/hadoop/include -I /usr/global/hotspot/include -I /usr/global/hotspot/include/linux" \
-	src/x10/pregel/test/TestHdfsFileSystem.x10 \
-	src/x10/pregel/io/hdfs/HDFSFileSystem.x10 ;
+	make -C $(PAR_METIS_FOLDER) --environment-overrides clean
+	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1
+	make -C $(PAR_METIS_FOLDER) --environment-overrides
+	make -C $(PAR_METIS_FOLDER) --environment-overrides install
 
-test_xpregel_graph:
-	@echo "--------------------- Test XPregel Graph In ScaleGraph--------";
-	$(X10_TEAM)/bin/x10c++ -cxx-prearg -g -x10rt mpi -d $(OUTPUT_DIR) -o $(OUTPUT_DIR)/XPregelGraph \
-	-sourcepath ./src ./src/org/scalegraph/xpregel/test/TestGraph.x10
-
-xpregel_pagerank:
-	@echo "--------------------- PageRank - XPregel - Scalegraph 2.0--------------------";
-	$(X10_TEAM)/bin/x10c++ -cxx-prearg -g -x10rt mpi -d $(OUTPUT_DIR) -o $(OUTPUT_DIR)/PageRank \
-	-sourcepath ./src ./src/org/scalegraph/xpregel/test/PageRank.x10 
-
-xpregel_sssp:
-	@echo "--------------------- SSSP - XPregel - Scalegraph 2.0 -----------------------";
-	$(X10_TEAM)/bin/x10c++ -cxx-prearg -g -x10rt mpi -d $(OUTPUT_DIR) -o $(OUTPUT_DIR)/SSSP \
-	-sourcepath ./src ./src/org/scalegraph/xpregel/test/SSSP.x10
-
-xpregel_blondel:
-	@echo "--------------------- Blondel - XPregel - Scalegraph 2.0 --------------------";
-	$(X10_TEAM)/bin/x10c++ -cxx-prearg -g -x10rt mpi -d $(OUTPUT_DIR) -o $(OUTPUT_DIR)/Blondel \
-	-sourcepath ./src ./src/org/scalegraph/xpregel/test/BlondelTest.x10
+	ln -sf  $(SG_PREFIX)/metis/include/parmetis.h  $(SG_PREFIX)/include/parmetis.h
+	ln -sf  $(PAR_METIS_FOLDER)/metis/include/metis.h  $(SG_PREFIX)/include/metis.h
+	ln -sf  $(SG_PREFIX)/metis/lib/libparmetis.so  $(SG_PREFIX)/lib/libparmetis.so
 
 clean:
-	rm -r $(OUTPUT_DIR)/*
-	
+	#rm -f *.tar.gz
+	rm -fr lib
+	rm -fr ARPACK
+	rm -fr x10lib
+	rm -fr metis
+	rm -fr $(PAR_METIS_FOLDER)
+.tar.gz:
+	echo $*
+	tar xvf $*.tar.gz
+
+$(PAR_METIS_ARCHIVE):
+	curl -O http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/$@
+
+$(PAR_METIS_FOLDER): $(PAR_METIS_ARCHIVE)
+	tar xvf $<

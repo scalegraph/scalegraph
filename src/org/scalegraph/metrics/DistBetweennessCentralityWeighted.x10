@@ -428,7 +428,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             return new LocalState(matrix, transBuf, N, delta, numSource_, sources_, sourceRange_);
         });
         val stopWatch = Config.get().stopWatch();
-        stopWatch.lap("Graph construction");
+        /// stopWatch.lap("Graph construction");
         val bc = new DistBetweennessCentralityWeighted(localState);
         bc.start();
         
@@ -474,7 +474,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         //     return id;
         // });
         // g.setVertexAttribute[Long]("name", vertexIds);
-        stopWatch.lap("Betweenness centrality (Weighted) calculation");
+        /// stopWatch.lap("Betweenness centrality (Weighted) calculation");
         return result;
     }
     

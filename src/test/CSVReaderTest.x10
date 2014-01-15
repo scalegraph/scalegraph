@@ -16,6 +16,7 @@ import org.scalegraph.test.STest;
 import org.scalegraph.io.ID;
 import org.scalegraph.io.CSV;
 import org.scalegraph.id.Type;
+import org.scalegraph.util.ExplicitMemory;
 import x10.io.File;
 
 final class CSVReaderTest extends STest {
@@ -25,8 +26,13 @@ final class CSVReaderTest extends STest {
 	
 	public def run(args: Array[String](1)): Boolean {
 		val mode = 5;
+		if(mode==0){
+			val colTypes = [Type.Boolean, Type.Byte, Type.Short, Type.Int, Type.Long, Type.Float, Type.Double, Type.UByte, Type.UShort, Type.UInt, Type.ULong, Type.Char, Type.String, Type.String];
+			val nd = CSV.read(args(0), colTypes, true);
+			
+			CSV.write("csvwTest", nd, false);
+		}else if(mode==1){
 		
-		if(mode==1){
 			val colTypes = [Type.Long as Int, Type.Long, Type.None, Type.Double];
 			val nd = CSV.read(args(0), colTypes, false);
 		
@@ -60,6 +66,16 @@ final class CSVReaderTest extends STest {
 			}
 		}else if(mode==5){
 			val hoge=Console.IN.readChar();
+			Console.OUT.println("will new");
+			var hoga :Char = Console.IN.readChar();
+			val em = new ExplicitMemory[Long](16*1024*1024);
+			Console.OUT.println("new");
+			hoga=Console.IN.readChar();
+			hoga=Console.IN.readChar();
+			em.del();
+			Console.OUT.println("del");
+			hoga=Console.IN.readChar();
+			hoga=Console.IN.readChar();
 			if(hoge=='1'){
 				val colTypes = [Type.Long as Int, Type.Long, Type.None, Type.Double];
 				val nd = CSV.read(args(0), colTypes, false);

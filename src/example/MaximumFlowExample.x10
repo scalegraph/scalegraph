@@ -1,17 +1,13 @@
 package example;
 
 import x10.util.Team;
-import x10.io.File;
 
-import org.scalegraph.Config;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.io.FileWriter;
-import org.scalegraph.io.FileMode;
+import org.scalegraph.Config;
 import org.scalegraph.util.random.Random;
-import org.scalegraph.util.SStringBuilder;
 
-public final class HyperANFExample {
+public final class MaximumFlowExample {
 
     public static def main(args: Array[String]) {
         
@@ -19,7 +15,6 @@ public final class HyperANFExample {
         val team = config.worldTeam();
         val dist = config.dist2d();
         val weightAttr = "weight";
-        val outpath = "out_hyperanf";
         
         // Generate RMAT graph
         val scale = 10;
@@ -32,14 +27,20 @@ public final class HyperANFExample {
         val weight = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
         g.setEdgeAttribute[Double](weightAttr, weight);
         
-        // Call API
-        val result = org.scalegraph.api.HyperANF.run(g);
+        // Create API object
+        val api = new org.scalegraph.api.MaxFlow();
         
-        // Write output
-        val printer = new File(outpath).printer();
-        for (i in result.range()) {
-            printer.println(result(i));
-        }
-        printer.close();
+        // Set source and sink vertices
+        api.sourceVertexId = 0L;
+        api.sinkVertexId = 1L;
+        
+        // Set edge attribute
+        api.weights = "weight";
+        
+        // Call api
+        val result = api.execute(g);
+        
+        // Show result
+        Console.OUT.println("Maximum Flow is "+ result.maxFlow);
     }
 }

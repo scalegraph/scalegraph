@@ -45,8 +45,9 @@ public final struct SparseMatrix[T] {
 	}
 
 	/** Constructs partial sparse matrix of the distributed sparse matrix.
-	 * @param edges The edge list assigned to the current place.
-	 * @param values The edge values corresponds to the edge list.
+	 * @param srcV This will be deleted.
+	 * @param dstV This will be deleted.
+	 * @param values The edge values corresponds to the edge list. This will be deleted.
 	 * @param ids IdStruct that provides the distribution information.
 	 */
 	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], ids :IdStruct) {
@@ -68,22 +69,24 @@ public final struct SparseMatrix[T] {
 			}
 		});
 
-		val offsetLength = 1L << (ids.lgl + (ids.outerOrInner ? ids.lgr : ids.lgc));
+		val offsetLength = 1L << (ids.lgl + ids.lgc);
 
 		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
 		val origin = new MemoryChunk[Long](srcV.size());
 		val target = new MemoryChunk[Long](srcV.size());
 		val values_ = new MemoryChunk[T](srcV.size());
-		
 		// if gathering outer edges, origin is source and target is destination.
 		// if gathering inner edges, origin is destination and target is source.
 
-		if(ids.outerOrInner)
-			Parallel.sort(ids.lgl + ids.lgr, srcV, dstV, values, origin, target, values_);
+		if(!ids.transpose)
+			Parallel.sort(ids.lgl + ids.lgc, srcV, dstV, values, origin, target, values_);
 		else
 			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
-		
+		srcV.del();
+		dstV.del();
+		values.del();
 		Parallel.makeOffset(origin, offsets_);
+		origin.del();
 
 		Parallel.iter(0L..(offsetLength-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
@@ -103,7 +106,7 @@ public final struct SparseMatrix[T] {
 	 * @param indexes The indexes corresponds to the edge list.
 	 * @param lgl The number of bits for the vertex ID.
 	 */
-	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], lgl :Int, outerOrInner :Boolean) {
+	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], lgl :Int, transpose :Boolean) {
 
 		if(srcV.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
@@ -119,10 +122,10 @@ public final struct SparseMatrix[T] {
 		val target = new MemoryChunk[Long](srcV.size());
 		val values_ = new MemoryChunk[T](srcV.size());
 
-		if(outerOrInner)
+		//if(!transpose)
 			Parallel.sort(lgl, srcV, dstV, values, origin, target, values_);
-		else
-			Parallel.sort(lgl, dstV, srcV, values, origin, target, values_);
+		//else
+		//	Parallel.sort(lgl, dstV, srcV, values, origin, target, values_);
 		
 		Parallel.makeOffset(origin, offsets_);
 

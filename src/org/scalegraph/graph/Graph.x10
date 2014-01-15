@@ -193,30 +193,35 @@ import org.scalegraph.id.Type;
 	public static def make(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def make(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,false);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,true);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,true);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[SString]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
 		g.addEdges(edges);
+		edges.del();
 		return g;
 	}
 	
@@ -614,7 +619,7 @@ import org.scalegraph.id.Type;
 	 * @param directed Directed graph or undirected graph. If false (undirected graph), all edges are duplicated to connect with each direction.
 	 * @param outerOrInner Constructs outer edges (true) or inner edges (false). This flag is valuable only for directed graph.
 	 */
-	public def createDistEdgeIndexMatrix(dist2d :Dist2D, directed :Boolean, outerOrInner :Boolean) {
+	public def createDistEdgeIndexMatrix(dist2d :Dist2D, directed :Boolean, transpose :Boolean) {
 		val team_ = team;
 		val srcList_ = srcList;
 		val dstList_ = dstList;
@@ -625,7 +630,7 @@ import org.scalegraph.id.Type;
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
-					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
+					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for([i] in places) {
@@ -640,15 +645,15 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
 					}
 				}
 				else {
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
+						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 					}
 				}
 			});
@@ -680,7 +685,7 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						val off0 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
 						sendValues(off0) = i * teamSize + teamRank;
@@ -690,11 +695,11 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						val off0 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
 						sendValues(off0) = i * teamSize + teamRank;
-						val off1 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
+						val off1 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						sendSrcV(off1) = v1;
 						sendDstV(off1) = v0;
 						sendValues(off1) = i * teamSize + teamRank;
@@ -708,7 +713,7 @@ import org.scalegraph.id.Type;
 		});
 	}
 	
-	public def createDistSparseMatrix[T](dist2d :Dist2D, name :String, directed :Boolean, outerOrInner :Boolean) { T haszero }
+	public def createDistSparseMatrix[T](dist2d :Dist2D, name :String, directed :Boolean, transpose :Boolean) { T haszero }
 	{
 		val team_ = team;
 		val srcList_ = srcList;
@@ -721,7 +726,7 @@ import org.scalegraph.id.Type;
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
-					getLocalNumberOfVertices(vi, team_.role()(0)), outerOrInner);
+					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for([i] in places) {
@@ -748,15 +753,15 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
 					}
 				}
 				else {
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						counts(roleMap((v1 & cmask) | (v0 & rmask)))++;
+						counts(roleMap((v0 & cmask) | (v1 & rmask)))++;
 					}
 				}
 			});
@@ -786,7 +791,7 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						val off0 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
 						sendValues(off0) = att_(i);
@@ -796,11 +801,11 @@ import org.scalegraph.id.Type;
 					for(i in r) {
 						val v0 = srcList__(i);
 						val v1 = dstList__(i);
-						val off0 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
+						val off0 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
 						sendSrcV(off0) = v0;
 						sendDstV(off0) = v1;
 						sendValues(off0) = att_(i);
-						val off1 = offsets(roleMap((v1 & cmask) | (v0 & rmask)))++;
+						val off1 = offsets(roleMap((v0 & cmask) | (v1 & rmask)))++;
 						sendSrcV(off1) = v1;
 						sendDstV(off1) = v0;
 						sendValues(off1) = att_(i);
@@ -823,22 +828,12 @@ import org.scalegraph.id.Type;
 					Console.OUT.println("sendValues = " + sendValues);
 				}
 				team.barrier(team.role()(0));
-			}
-			*/
+			}*/
+			
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
-			/*
-			for(p in team.placeGroup()) {
-				if(here == p) {
-					Console.OUT.println(here);
-					Console.OUT.println("recvSrcV = " + recvSrcV);
-					Console.OUT.println("recvDstV = " + recvDstV);
-					Console.OUT.println("recvValues = " + recvValues);
-				}
-				team.barrier(team.role()(0));
-			}
-			*/
+			
 			return new Tuple2[IdStruct, SparseMatrix[T]](ids, new SparseMatrix(recvSrcV, recvDstV, recvValues, ids));
 		});
 	}
@@ -848,7 +843,7 @@ import org.scalegraph.id.Type;
 	 * @param directed Directed graph or undirected graph. If false (undirected graph), all edges are duplicated to connect with each direction.
 	 * @outerOrInner Constructs outer edges (true) or inner edges (false). This flag is worth only for directed graph.
 	 */
-	public def createSimpleEdgeIndexMatrix(place :Place, directed :Boolean, outerOrInner :Boolean) {
+	public def createSimpleEdgeIndexMatrix(place :Place, directed :Boolean, transpose :Boolean) {
 		// return GlobalRef[SparseMatrix]...
 		val team_ = team;
 		val srcList_ = srcList;
@@ -911,7 +906,7 @@ import org.scalegraph.id.Type;
 					team2.gatherv(root, sendIndexes, recvIndexes, counts, offsets);
 					
 					val lgl = MathAppend.ceilLog2(numberOfVertices);
-					val sparseMatrix = new SparseMatrix[Long](recvSrcV, recvDstV, recvIndexes, lgl, outerOrInner);
+					val sparseMatrix = new SparseMatrix[Long](recvSrcV, recvDstV, recvIndexes, lgl, transpose);
 					
 					// write result
 					val ref = new GlobalRef[Cell[SparseMatrix[Long]]](new Cell[SparseMatrix[Long]](sparseMatrix));

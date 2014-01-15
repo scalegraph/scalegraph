@@ -29,7 +29,7 @@ import org.scalegraph.util.ProfilingDB;
 
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.blas.SparseMatrix;
-import org.scalegraph.graph.id.OnedC;
+import org.scalegraph.graph.id.OnedR;
 import org.scalegraph.graph.id.IdStruct;
 
 import org.scalegraph.xpregel.VertexContext;
@@ -44,11 +44,11 @@ final class WorkerPlaceGraph[V,E] {
 	val mTeam :Team2;
 	val mIds :IdStruct;
 
-	val mVtoD :OnedC.VtoD;
-	val mDtoV :OnedC.DtoV;
-	val mDtoS :OnedC.DtoS;
-	val mStoD :OnedC.StoD;
-	val mStoV :OnedC.StoV;
+	val mVtoD :OnedR.VtoD;
+	val mDtoV :OnedR.DtoV;
+	val mDtoS :OnedR.DtoS;
+	val mStoD :OnedR.StoD;
+	val mStoV :OnedR.StoV;
 	
 	var mVertexValue :MemoryChunk[V];
 	val mVertexActive :Bitmap;
@@ -77,16 +77,15 @@ final class WorkerPlaceGraph[V,E] {
 	var mEdgeModifyReqsWithAR :MemoryChunk[GrowableMemory[Tuple2[Long,E]]];
 	
 	public def this(team :Team, ids :IdStruct) {
-		val rank_c = team.role()(0);
-		
+		val rank_r = team.role()(0);
 		mTeam = new Team2(team);
 		mIds = ids;
 		
-		mVtoD = new OnedC.VtoD(ids);
-		mDtoV = new OnedC.DtoV(ids);
-		mDtoS = new OnedC.DtoS(ids);
-		mStoD = new OnedC.StoD(ids, rank_c);
-		mStoV = new OnedC.StoV(ids, rank_c);
+		mVtoD = new OnedR.VtoD(ids);
+		mDtoV = new OnedR.DtoV(ids);
+		mDtoS = new OnedR.DtoS(ids);
+		mStoD = new OnedR.StoD(ids, rank_r);
+		mStoV = new OnedR.StoV(ids, rank_r);
 		
 		val numVertexes = mIds.numberOfLocalVertexes();
 		val numVertexesPerThread = numVertexes/numThreads + 1L;
@@ -106,18 +105,11 @@ final class WorkerPlaceGraph[V,E] {
 		
 		mOutput = new MemoryChunk[GrowableMemory[Int]](numThreads * MAX_OUTPUT_NUMBER, 0, true);
 		
-	/*	mWDiffInDst = new MemoryChunk[GrowableMemory[Long]](
-				numThreads,
-				(i :Long) => new GrowableMemory[Long](32));
-		mWDiffInSrcWithAR = new MemoryChunk[GrowableMemory[Long]](
-				numThreads,
-				(i :Long) => new GrowableMemory[Long](32));
-	*/	
-		if (here.id == 0) {
-			Console.OUT.println("lgl = " + mIds.lgl);
-			Console.OUT.println("lgc = " + mIds.lgc);
-			Console.OUT.println("lgr = " + mIds.lgr);	
-		}
+		/// if (here.id == 0) {
+		///	Console.OUT.println("lgl = " + mIds.lgl);
+		///	Console.OUT.println("lgc = " + mIds.lgc);
+		///	Console.OUT.println("lgr = " + mIds.lgr);	
+		/// }
 	}
 	
 	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long]) {
@@ -129,14 +121,13 @@ final class WorkerPlaceGraph[V,E] {
 	
 	public def updateInEdge() {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val teamNum = mTeam.size();
+
+		
+		//<<<<<<< HEAD
+
 		//@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
-		
-		
 		//TODO: naosu
 		mNeedsAllUpdateInEdge = true;
-		
-		
 		mNeedsAllUpdateInEdge = 0 < mTeam.allreduce[Int](mNeedsAllUpdateInEdge?1:0,Team.ADD);
 		Console.OUT.println("in update inEdge! mNeedsAllUpdateInEdge:"+mNeedsAllUpdateInEdge);
 		//TODO: zanteiteki teamNum jouken
@@ -145,7 +136,8 @@ final class WorkerPlaceGraph[V,E] {
 			@Ifdef("PROF_XP") { mtimer.start(); }
 			val numThreads = Runtime.NTHREADS;
 			val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
-			val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+			
+			val StoD = new OnedR.StoD(mIds, mTeam.base.role()(0));
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
 			
 			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
@@ -157,7 +149,7 @@ final class WorkerPlaceGraph[V,E] {
 				for(vid in r) {
 					val vid_ = StoD(vid);
 					for(i in offset(vid)..(offset(vid + 1) - 1)) {
-						val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
+						val mesBuf = UCCMessages(mesComm.mDtoV.r(id(i)));
 						mesBuf.messages.add(vid_);
 						mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 					}
@@ -386,7 +378,7 @@ final class WorkerPlaceGraph[V,E] {
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val StoD = new OnedC.StoD(mIds, mTeam.base.role()(0));
+		val StoD = new OnedR.StoD(mIds, mTeam.base.role()(0));
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
 		
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
@@ -399,7 +391,7 @@ final class WorkerPlaceGraph[V,E] {
 			for(vid in r) {
 				val vid_ = StoD(vid);
 				for(i in offset(vid)..(offset(vid + 1) - 1)) {
-					val mesBuf = UCCMessages(mesComm.mDtoV.c(id(i)));
+					val mesBuf = UCCMessages(mesComm.mDtoV.r(id(i)));
 					mesBuf.messages.add(Tuple2[Long, E](vid_, value(i)));
 					mesBuf.dstIds.add(mesComm.mDtoS(id(i)));
 				}
@@ -584,6 +576,8 @@ final class WorkerPlaceGraph[V,E] {
 				vc.mNumActiveVertexes = numProcessed;
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
+		
+			ectx.deleteMessages();
 			
 			// gather statistics
 			for(th in 0..(numThreads-1)) {

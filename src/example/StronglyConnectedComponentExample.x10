@@ -1,7 +1,6 @@
 package example;
 
 import x10.util.Team;
-import x10.io.File;
 
 import org.scalegraph.Config;
 import org.scalegraph.graph.GraphGenerator;
@@ -11,7 +10,7 @@ import org.scalegraph.io.FileMode;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.util.SStringBuilder;
 
-public final class HyperANFExample {
+public final class StronglyConnectedComponentExample {
 
     public static def main(args: Array[String]) {
         
@@ -19,7 +18,6 @@ public final class HyperANFExample {
         val team = config.worldTeam();
         val dist = config.dist2d();
         val weightAttr = "weight";
-        val outpath = "out_hyperanf";
         
         // Generate RMAT graph
         val scale = 10;
@@ -32,14 +30,12 @@ public final class HyperANFExample {
         val weight = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
         g.setEdgeAttribute[Double](weightAttr, weight);
         
-        // Call API
-        val result = org.scalegraph.api.HyperANF.run(g);
+        // Create api instance
+        val api = new org.scalegraph.api.StronglyConnectedComponent();
         
-        // Write output
-        val printer = new File(outpath).printer();
-        for (i in result.range()) {
-            printer.println(result(i));
-        }
-        printer.close();
+        // Treat graph as directed graph
+        api.directed = true;
+        val result = api.execute(g);
+        Console.OUT.println("Number of cluster: " + result.cluster);
     }
 }

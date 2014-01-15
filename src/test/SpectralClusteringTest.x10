@@ -50,35 +50,41 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		val tolerance = Double.parse(args(1));
 		val maxitr = Int.parse(args(2));
 		val threshold = Double.parse(args(3));
-		val outputPath = args(4);
+		val outOrEval = args(4);
+		val outputPath = args(5);
+		
+		Console.OUT.println("dist2d = " + dist);
 		
 		Console.OUT.println("vertices = " + g.numberOfVertices());
 		Console.OUT.println("edges    = " + g.numberOfEdges());
 		
 		val sw = new MyStopWatch();
-		sw.start("create dist sparse matrix");
 		
+		sw.start("create dist sparse matrix");
 		val W = g.createDistSparseMatrix[Double](dist, ID.NAME_WEIGHT, false, false);
 		g.del();
 		
 		sw.next("spectral clustering");
-		
 		val result = SpectralClustering.run(W, numCluster, tolerance, maxitr, threshold);
 		
-		//sw.next("output");
-		
-		//DistributedReader.write("outvec-%d.txt", result);
-		//val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
-		//CSVWriter.write(team, outputPath, namedDistData, true);
-		
 		sw.next("normalized cut");
-		
 		val ncut = normalizedCut(W, result, numCluster);
 		Console.OUT.println("ncut = " + ncut);
 		
-		sw.next("validation");
+		if(outOrEval.equals("out")) {
 		
-		checkResult[Int](result, outputPath, 0);
+			sw.next("output");
+			val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
+			CSVWriter.write(team, outputPath, namedDistData, true);
+			
+		} else if(outOrEval.equals("eval")) {
+		
+			sw.next("validation");
+			checkResult[Int](result, outputPath, 0);
+			
+		} else {
+			Console.OUT.printf("Worning: invalid argument \"%s\" will be ignored\n", outOrEval);
+		}
 		
 		sw.end();
 		sw.print();

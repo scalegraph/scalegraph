@@ -1,17 +1,15 @@
 package example;
 
 import x10.util.Team;
-import x10.io.File;
 
 import org.scalegraph.Config;
-import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.io.FileWriter;
-import org.scalegraph.io.FileMode;
+import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.io.impl.CSVWriter;
+import org.scalegraph.io.NamedDistData;
 import org.scalegraph.util.random.Random;
-import org.scalegraph.util.SStringBuilder;
 
-public final class HyperANFExample {
+public final class PageRankExample {
 
     public static def main(args: Array[String]) {
         
@@ -19,8 +17,8 @@ public final class HyperANFExample {
         val team = config.worldTeam();
         val dist = config.dist2d();
         val weightAttr = "weight";
-        val outpath = "out_hyperanf";
-        
+        val outputPath = "pagerank-%d";
+                
         // Generate RMAT graph
         val scale = 10;
         val edgeFactor = 8;
@@ -33,13 +31,16 @@ public final class HyperANFExample {
         g.setEdgeAttribute[Double](weightAttr, weight);
         
         // Call API
-        val result = org.scalegraph.api.HyperANF.run(g);
+        val pr = new org.scalegraph.api.PageRank();
+        pr.directed = true;
+        pr.damping = 0.85;
+        pr.eps = 0.001;
+        pr.niter = 15;
+        
+        val result = pr.execute(g);
         
         // Write output
-        val printer = new File(outpath).printer();
-        for (i in result.range()) {
-            printer.println(result(i));
-        }
-        printer.close();
+        val namedDistData = new NamedDistData(["pr_result" as String], [result as Any]);
+        CSVWriter.write(team, outputPath, namedDistData, true);
     }
 }

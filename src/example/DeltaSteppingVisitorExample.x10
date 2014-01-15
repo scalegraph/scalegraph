@@ -14,31 +14,27 @@ package example;
 import x10.util.Team;
 
 import org.scalegraph.Config;
-import org.scalegraph.io.SimpleText;
-import org.scalegraph.io.CSV;
-import org.scalegraph.util.tuple.*;
 import org.scalegraph.graph.Graph;
+import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.util.random.Random;
+import org.scalegraph.util.tuple.*;
 import org.scalegraph.visitor.DeltaSteppingVisitor;
 
 public class DeltaSteppingVisitorExample {
-    
-    public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        return Tuple3[Long, Long, Double] (
-                Long.parse(items(0).trim()),
-                Long.parse(items(1).trim()),
-                Double.parse(items(2).trim())
-        );
-    };
-    
-    public static def main(args: Array[String]) {
-        if (args.size < 1) {
-            Console.OUT.println("Please enter file name");
-            return;
-        }
         
-        // Load data from edge list file
-        val g = Graph.make(SimpleText.read(args(0), inputFormat));
+    public static def main(args: Array[String]) {
+        
+        // Generate RMAT graph
+        val scale = 10;
+        val edgeFactor = 8;
+        val weightName = "weight";
+        val rnd = new Random(2, 3);
+        val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
+        val g = Graph.make(edgeList);
+        
+        // Generate edge weight
+        val weight = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
+        g.setEdgeAttribute[Double](weightName, weight);
         
         Console.OUT.println("Start delta-stepping");
         
@@ -48,7 +44,7 @@ public class DeltaSteppingVisitorExample {
                                               true,
                                               true);
         // Construct attribute
-        val weightAttr = g.createDistAttribute[Double](csr, false, "weight");
+        val weightAttr = g.createDistAttribute[Double](csr, false, weightName);
         
         // Run delta stepping
         val source = 0L;
