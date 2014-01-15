@@ -177,7 +177,7 @@ public class HyperANF {
 				 val startPos = base * ((ctx.superstep()-1) % loop ) ; // ctx.superstep()>=1
 				 val counterA = ctx.value().subpart(startPos, 16);
 				 //maxim massages
-				 /// if(ctx.id()==0L) sw.lap("hoge"+startPos);
+
 				 for(i in messages.range()) {
 					 update(counterA, messages, i);
 				 }
