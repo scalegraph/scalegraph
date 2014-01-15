@@ -66,9 +66,15 @@ final class WorkerPlaceGraph[V,E] {
 	var mLogPrinter :Printer;
 	var mEnableStatistics :Boolean = true;
 	
-	var mWDiffInDst :MemoryChunk[GrowableMemory[Long]];
-	var mWDiffInSrcWithAR :MemoryChunk[GrowableMemory[Long]];
+//	var mWDiffInDst :MemoryChunk[GrowableMemory[Long]];
+//	var mWDiffInSrcWithAR :MemoryChunk[GrowableMemory[Long]];
 	var mNeedsAllUpdateInEdge :Boolean = true;
+	
+	//req[threadid][srcid per thread ("foreachvertex" de ijirou!)]
+	//run wo mataide hozon sareru you ni suru niha koko ni oku shika nai
+	//reqs ga growable nanode thread goto ni wakeru hitsuyou ga aru
+	var mEdgeModifyReqOffsets :MemoryChunk[MemoryChunk[Long]];
+	var mEdgeModifyReqsWithAR :MemoryChunk[GrowableMemory[Tuple2[Long,E]]];
 	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_c = team.role()(0);
@@ -83,6 +89,13 @@ final class WorkerPlaceGraph[V,E] {
 		mStoV = new OnedC.StoV(ids, rank_c);
 		
 		val numVertexes = mIds.numberOfLocalVertexes();
+		val numVertexesPerThread = numVertexes/numThreads + 1L;
+		mEdgeModifyReqOffsets = new MemoryChunk[MemoryChunk[Long]](
+				numThreads,
+				(i :Long) => new MemoryChunk[Long](numVertexesPerThread));
+		mEdgeModifyReqsWithAR = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](
+				numThreads,
+				(i :Long) => new GrowableMemory[Tuple2[Long,E]](0L));
 		
 		mVertexValue = new MemoryChunk[V](numVertexes);
 		mVertexActive = new Bitmap(numVertexes, true);
@@ -93,13 +106,13 @@ final class WorkerPlaceGraph[V,E] {
 		
 		mOutput = new MemoryChunk[GrowableMemory[Int]](numThreads * MAX_OUTPUT_NUMBER, 0, true);
 		
-		mWDiffInDst = new MemoryChunk[GrowableMemory[Long]](
+	/*	mWDiffInDst = new MemoryChunk[GrowableMemory[Long]](
 				numThreads,
 				(i :Long) => new GrowableMemory[Long](32));
 		mWDiffInSrcWithAR = new MemoryChunk[GrowableMemory[Long]](
 				numThreads,
 				(i :Long) => new GrowableMemory[Long](32));
-		
+	*/	
 		if (here.id == 0) {
 			Console.OUT.println("lgl = " + mIds.lgl);
 			Console.OUT.println("lgc = " + mIds.lgc);
@@ -117,11 +130,17 @@ final class WorkerPlaceGraph[V,E] {
 	public def updateInEdge() {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val teamNum = mTeam.size();
-		@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
+		//@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
+		
+		
+		//TODO: naosu
+		mNeedsAllUpdateInEdge = true;
+		
+		
 		mNeedsAllUpdateInEdge = 0 < mTeam.allreduce[Int](mNeedsAllUpdateInEdge?1:0,Team.ADD);
 		Console.OUT.println("in update inEdge! mNeedsAllUpdateInEdge:"+mNeedsAllUpdateInEdge);
 		//TODO: zanteiteki teamNum jouken
-		if(teamNum==1 || mNeedsAllUpdateInEdge){
+		if(/*teamNum==1 ||*/ mNeedsAllUpdateInEdge){
 			@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 			@Ifdef("PROF_XP") { mtimer.start(); }
 			val numThreads = Runtime.NTHREADS;
@@ -167,6 +186,7 @@ final class WorkerPlaceGraph[V,E] {
 			mesComm.del();
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 		}else{
+			/*
 			//memo:	mDiffInDst == dstId	,mDiffInSrcWithAR == srcId with AR
 			assert(mWDiffInSrcWithAR(0).size() == mWDiffInDst(0).size());
 			val allInEdgeNum = getDiffInDstSize();
@@ -201,20 +221,6 @@ final class WorkerPlaceGraph[V,E] {
 					= new Tuple2(mWDiffInDst(i)(j),mWDiffInSrcWithAR(i)(j));
 			}
 			
-			/* 
-			 * diffInEdgeData.get2() wo key to shite sort
-			 * diffInEdgeData.get2() is vertex id which is in local
-			 */
-			//TODO: Bug -> Add/Remove ga haitta joutai de sort shiteru
-			/*for (i in 0..(diffInEdgeOffset.size()-1)){
-				Algorithm.stableSortTupleKey2(
-					diffInEdgeData.subpart(
-						diffInEdgeOffset(i),
-						diffInEdgeOffset(i+1)-diffInEdgeOffset(i)
-					)
-				);
-			}*/
-			//okutta ato yarukotoni shita (koko de yatte mo imi nashi)
 
 			val dstDIEO = new MemoryChunk[Int](teamNum+1);
 			val dstDIEC = new MemoryChunk[Int](teamNum);
@@ -337,7 +343,6 @@ final class WorkerPlaceGraph[V,E] {
 					}
 				}
 			}
-			//*********************************************************************************************//
 			val gap = mInEdge.offsets(numVertexes) - mInVerIndex;
 			assert(0 <= gap);
 			//offset to vertex no index no tsujitsuma awase
@@ -359,16 +364,20 @@ final class WorkerPlaceGraph[V,E] {
 					mInEdge.offsets(i) = mInEdge.offsets(i) + diffOff;
 				}
 			}
+			*/
 		}
 		
 		//!!!!!kanarazu koko wo toosu!!!!!
 		//TODO:atosyori
-		for(i in mWDiffInDst.range()){
+		/*for(i in mWDiffInDst.range()){
 			mWDiffInDst(i).clear();
 			mWDiffInSrcWithAR(i).clear();
-		}
+		}*/
 		mNeedsAllUpdateInEdge = false;
-		@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
+		//@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
+		
+		//TODO: naosu
+		mNeedsAllUpdateInEdge = true;
 	}
 	
 	public def updateInEdgeWithValue() {E haszero} {
@@ -521,15 +530,17 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mIds, numThreads);
-		val vctxs = new MemoryChunk[VertexContext[V, E, M, A]](numThreads,
-				(i :Long) => new VertexContext[V, E, M, A](this, ectx, i));
-		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads as Long,
-				(i:Long) => vctxs(i).mEdgeProvider);
+		val vctxs = new MemoryChunk[VertexContext[V, E, M, A]](numThreads);
+		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads);
+		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+			vctxs(tid) = new VertexContext[V, E, M, A](this, ectx, tid, r.min);
+			edgeProviderList(tid) = vctxs(tid).mEdgeProvider;
+		});
 		val intermedAggregateValue = new MemoryChunk[A](numThreads);
 		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
 		val statistics = new MemoryChunk[Long](STT_MAX*2);
 		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
-
+		
 		ectx.mInEdgesOffset = mInEdge.offsets;
 		ectx.mInEdgesVertex = mInEdge.vertexes;
 		ectx.mInEdgesMask = mInEdgesMask;
@@ -560,7 +571,7 @@ final class WorkerPlaceGraph[V,E] {
 						
 						compute(vc, mes);
 
-						if(ep.mEdgeChanged) ep.fixModifiedEdges(srcid);
+						if(ep.mEdgeChanged) ep.fixModifiedEdges(srcid);	//TODO: uncomment
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
@@ -581,7 +592,11 @@ final class WorkerPlaceGraph[V,E] {
 			}
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_SQWEEZMES); }
 			// update out edges
-			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
+			EdgeProvider.updateOutEdge[V,E](mOutEdge, edgeProviderList, mIds);
+			// TODO: update in edges
+			
+			// delete gomi
+			EdgeProvider.reInitializeEdgeProvider[E](edgeProviderList);
 			
 			
 			//-----directionOptimization
@@ -687,13 +702,13 @@ final class WorkerPlaceGraph[V,E] {
 		return outMem;
 	}
 	
-	public def getDiffInDstSize() :Long{
+	/*public def getDiffInDstSize() :Long{
 		var l:Long = 0L;
 		for(i in mWDiffInDst.range()){
 			l += mWDiffInDst(i).size();
 		}
 		return l;
-	}
+	}*/
 	/*
 	private static def recursiveMergeSort[T](
 			sArg :MemoryChunk[T],

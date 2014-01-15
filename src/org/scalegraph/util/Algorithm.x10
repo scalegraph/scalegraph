@@ -29,6 +29,26 @@ public final class Algorithm {
 	
 	@Native("c++", "org::scalegraph::util::StableSort_TupleK1<#T >((#data)->pointer(), (#data)->size())")
 	public static native def stableSortTupleKey1[T](data :MemoryChunk[T]) :void;
+
+	//yabee
+	@Native("c++", "org::scalegraph::util::MaskedStableSort_TupleK1<#T >((#data)->pointer(), (#data)->size())")
+	public static native def maskedStableSortTupleKey1[T](data :MemoryChunk[T]) :void;
+
+	@Native("c++", "(x10_long)((::std::lower_bound((#mem)->pointer() + (#startOff), (#mem)->pointer() + (#endOff), (#num)) - (#mem)->pointer())/sizeof(#T))")
+	public static native def lowerBound[T](mem:MemoryChunk[T], startOff:Long , endOff:Long, num:Long) :Long;
+	
+	@Native("c++", "(x10_long)((::std::find((#mem)->pointer() + (#startOff), (#mem)->pointer() + (#endOff), (#num)) - (#mem)->pointer())/sizeof(#T))")
+	public static native def find[T](mem:MemoryChunk[T], startOff:Long , endOff:Long, num:Long) :Long;
+	
+	public static def binarySearch[T](mem:MemoryChunk[T], range:LongRange, num:Long) :Tuple2[Boolean,Long] {
+		val tmp = lowerBound(mem, range.min, range.max, num);
+		return new Tuple2[Boolean,Long](mem(tmp) == num, tmp);
+	}
+	
+	public static def linearSearch[T](mem:MemoryChunk[T], range:LongRange, num:Long) :Tuple2[Boolean,Long] {
+		val tmp = find(mem, range.min, range.max, num);
+		return new Tuple2[Boolean,Long](mem(tmp) == num, tmp);
+	}
 	
 	public static def sort[I, V](index :MemoryChunk[I], value :MemoryChunk[V]) {
 		sortWithLt(index, value);

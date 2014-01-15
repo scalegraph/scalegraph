@@ -49,7 +49,7 @@ public class TestOutEdgeModify {
 		
 		//-----update inEdge
 		Console.OUT.println("update inEdge");
-		xpregel.updateInEdge();
+	//	xpregel.updateInEdge();
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + " [ms]");
 		
 		//set all vertex value as 0L 

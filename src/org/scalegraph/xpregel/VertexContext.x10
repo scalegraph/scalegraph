@@ -52,16 +52,24 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	var mNumActiveVertexes :Long = 0L;
 	var mBCSInputCount :Long = 0L;
 	
-	var mDiffInDst :GrowableMemory[Long];
-	var mDiffInSrcWithAR :GrowableMemory[Long];
-	public static val INEDGE_ADDBIT :Long= (1L<<62);
+//	var mDiffInDst :GrowableMemory[Long];
+//	var mDiffInSrcWithAR :GrowableMemory[Long];
 	
-	def this(worker :WorkerPlaceGraph[V, E], ctx :MessageCommunicator[M], tid :Long) {
+	def this(
+			worker :WorkerPlaceGraph[V, E],
+			ctx :MessageCommunicator[M],
+			tid :Long,
+			startSrcid :Long) {
 		mWorker = worker;
 		mCtx = ctx;
-		mDiffInDst = worker.mWDiffInDst(tid);
-		mDiffInSrcWithAR = worker.mWDiffInSrcWithAR(tid);
-		mEdgeProvider = new EdgeProvider[E](worker.mOutEdge, worker.mInEdge);
+	//	mDiffInDst = worker.mWDiffInDst(tid);
+	//	mDiffInSrcWithAR = worker.mWDiffInSrcWithAR(tid);
+		mEdgeProvider = new EdgeProvider[E](
+				worker.mOutEdge,
+				worker.mInEdge,
+				worker.mEdgeModifyReqOffsets(tid),
+				worker.mEdgeModifyReqsWithAR(tid),
+				startSrcid);
 		mUCCMessages = mCtx.messageBuffer(tid);
 		mOut = worker.outBuffer(tid);
 	}
@@ -140,56 +148,29 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 * replace the out edges for the current vertex with the given edges
 	 */
 	public def setOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
-		//TODO: apply few edge modify optimization
-		mWorker.mNeedsAllUpdateInEdge=true;	//modify later
-		mEdgeProvider.setOutEdges(id, value);
+		//TODO: comment
+	//	mWorker.mNeedsAllUpdateInEdge=true;	//modify later
+		mEdgeProvider.setOutEdges(mSrcid, id, value);
 	}
 	
 	/**
 	 * remove all the out edges for the current vertex
 	 */
 	public def clearOutEdges() {
-		if(!mWorker.mNeedsAllUpdateInEdge){
-			val oEId = outEdgesId();
-			if(judgeFewInEdgeModify(oEId.size())){
-				mDiffInDst.add(oEId);
-				for(i in oEId.range())
-					mDiffInSrcWithAR.add(mSrcid);
-			}else{
-				mWorker.mNeedsAllUpdateInEdge=true;
-			}
-		}
-		mEdgeProvider.clearOutEdges();
+		mEdgeProvider.clearOutEdges(mSrcid);
 	}
 	
 	/**
 	 * remove out edges for the current vertex
 	 */
 	public def removeOutEdges(id :MemoryChunk[Long]) {
-		if(!mWorker.mNeedsAllUpdateInEdge){
-			if(judgeFewInEdgeModify(id.size())){
-				mDiffInDst.add(id);
-				for(i in id.range())
-					mDiffInSrcWithAR.add(mSrcid);
-			}else{
-				mWorker.mNeedsAllUpdateInEdge=true;
-			}
-		}
-		mEdgeProvider.removeOutEdges(mSrcid, id);
+		mEdgeProvider.removeOutEdges(id);
 	}
 	
 	/**
 	 * add out edge to the current vertex
 	 */
 	public def addOutEdge(id :Long, value :E) {
-		if(!mWorker.mNeedsAllUpdateInEdge){
-			if(judgeFewInEdgeModify(1)){
-				mDiffInDst.add(id);
-				mDiffInSrcWithAR.add(mSrcid + INEDGE_ADDBIT);
-			}else{
-				mWorker.mNeedsAllUpdateInEdge=true;
-			}
-		}
 		mEdgeProvider.addOutEdge(id, value);
 	}
 	
@@ -197,15 +178,6 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 * add out edges to the current vertex
 	 */
 	public def addOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
-		if(!mWorker.mNeedsAllUpdateInEdge){
-			if(judgeFewInEdgeModify(id.size())){
-				mDiffInDst.add(id);
-				for(i in id.range())
-					mDiffInSrcWithAR.add(mSrcid + INEDGE_ADDBIT);
-			}else{
-				mWorker.mNeedsAllUpdateInEdge=true;
-			}
-		}
 		mEdgeProvider.addOutEdges(id, value);
 	}
 	
@@ -305,6 +277,9 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 		return true;
 		//return mWorker.getDiffInDstSize() + v < (mWorker.mOutEdge.vertexes.size()>>4);
 	}
+	
+	//TODO: add modify edge value ???????
+	//(addOutEdge shitokeba optimizeReqEdges ga modify toshite kaisyaku shite kureru)
 }
 
 
