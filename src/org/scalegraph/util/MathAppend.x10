@@ -12,6 +12,7 @@
 package org.scalegraph.util;
 
 import x10.compiler.Native;
+import x10.compiler.NativeCPPInclude;
 import x10.util.Ordered;
 import x10.compiler.Inline;
 
@@ -25,6 +26,7 @@ import x10.compiler.Inline;
  * 
  */
 
+@NativeCPPInclude("MathAppend_Natives.h")
 public final class MathAppend {
 	
 	public static def abs[T](a :T) {T <: Arithmetic[T], T <: Ordered[T], T haszero} = a > Zero.get[T]() ? a : -a;
@@ -109,7 +111,13 @@ public final class MathAppend {
     
     @Native("c++", "__builtin_popcountl(#v)")
     public static native def popcount[T](v :T) :Int {T <: Arithmetic[T]};
-    
-    @Native("c++", "__builtin_bswap64(#v)")
-    public static native def bswap(v :ULong) :ULong;
+
+    @Native("c++", "org::scalegraph::util::bitreverse(#v)")
+    public static native def bitreverse(v :ULong) :ULong;
+
+    @Native("c++", "org::scalegraph::util::bitreverse(#scale, #v)")
+    public static native def bitreverse(scale :Int, v :Long) :Long;
+
+    @Native("c++", "org::scalegraph::util::scramble(#scale, #v, #v0, #v1)")
+    public static native def scramble(scale :Int, v :Long, v0 :Long, v1 :Long) :Long;
 }

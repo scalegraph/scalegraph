@@ -254,8 +254,8 @@ public final class GraphGenerator {
 						else { dstVertex += 1; srcVertex += 1; }
 					}
 					if(permute) {
-						srcMem_(i) = (MathAppend.bswap(srcVertex as ULong) >> (64 - scale)) as Long;
-						dstMem_(i) = (MathAppend.bswap(dstVertex as ULong) >> (64 - scale)) as Long;
+						srcMem_(i) = MathAppend.scramble(scale, srcVertex, 0x1234567812345678UL, 0x2345678923456789UL);
+						dstMem_(i) = MathAppend.scramble(scale, dstVertex, 0x1234567812345678UL, 0x2345678923456789UL);
 					}
 					else {
 						srcMem_(i) = srcVertex;
