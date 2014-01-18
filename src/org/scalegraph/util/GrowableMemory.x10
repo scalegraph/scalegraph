@@ -146,7 +146,8 @@ public final class GrowableMemory[T] {
 		if (newCapacity < 8) newCapacity = 8;
 		while (newCapacity < reqCapacity) newCapacity *= 2;
 		
-		val tmp = new MemoryChunk[T](newCapacity);
+		val tmp: MemoryChunk[T];
+		atomic tmp = new MemoryChunk[T](newCapacity);
 		MemoryChunk.copy(mc, 0L, tmp, 0L, size);
 		mc = tmp;
 	}
