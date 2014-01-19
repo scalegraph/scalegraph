@@ -82,18 +82,20 @@ namespace org { namespace scalegraph { namespace util {
 			}
 
 			static ExplicitMemory* _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize, bool containPtrs, const char* filename, int linenumber) {
+		pthread_mutex_lock(&ExpMemState.mutex);
 				ExplicitMemory* this_ = x10aux::alloc<ExplicitMemory>(sizeof(ExplicitMemory), false);
 				this_->filename = filename;
 				this_->linenumber = linenumber;
 
 				if (0 == numElements) {
 					this_->setData(NULL, NULL,0);
+		pthread_mutex_unlock(&ExpMemState.mutex);
 					return this_;
 				}
 				assert((alignment & (alignment-1)) == 0);
 				x10_long size = alignment + numElements * elemSize;
 
-				pthread_mutex_lock(&ExpMemState.mutex);
+			//	pthread_mutex_lock(&ExpMemState.mutex);
 
 				::scalegraph::listInsertFoward(ExpMemState.list, this_);
 
@@ -126,14 +128,14 @@ namespace org { namespace scalegraph { namespace util {
 					printf("%d: Allocation!: size:%d, from %s:%d\n", x10rt_here(), size, filename, linenumber);
 				}
 
-				pthread_mutex_unlock(&ExpMemState.mutex);
-
 				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 					printf("make! size:%ld\n",size);
 					printf("cnt:%ld\n", ++ExpMemState.numCnt);
 				}
+			//	pthread_mutex_unlock(&ExpMemState.mutex);
 
-				void* allocMem = malloc(size);
+				char* allocMem = x10aux::system_alloc<char>(size);
+			pthread_mutex_unlock(&ExpMemState.mutex);
 
 				if(allocMem==NULL){
 					pthread_mutex_lock(&ExpMemState.mutex);
@@ -145,7 +147,7 @@ namespace org { namespace scalegraph { namespace util {
 				}
 
 				if(containPtrs){
-					GC_add_roots(allocMem, (char*)allocMem + size);//only when containsptr is true
+					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
 				}
 				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
 
@@ -234,9 +236,9 @@ public:
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
                 if(size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
-    			//	pthread_mutex_lock(&ExpMemState.mutex);
+    	pthread_mutex_lock(&ExpMemState.mutex);
                         ELEM* allocMem = x10aux::alloc<ELEM>(size, containsPtrs);
-    			//		pthread_mutex_unlock(&ExpMemState.mutex);
+    	pthread_mutex_unlock(&ExpMemState.mutex);
                         if (zeroed) {
                                 memset(allocMem, 0, size);
                         }

@@ -11,6 +11,7 @@
 
 package org.scalegraph.api;
 
+import org.scalegraph.Config;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.Dist2D;
@@ -119,9 +120,9 @@ public class BetweennessCentrality {
 
         val team = g.team();
         val matrix = g.createDistEdgeIndexMatrix(
-                    Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
+        		Config.get().distXPregel(),
                     inst.directed,
-                    true); 
+                    false); 
         val N = g.numberOfVertices();
         return executeUnweightedBcWrap(inst, matrix, N);
     }
@@ -148,7 +149,7 @@ public class BetweennessCentrality {
 
         val team = g.team();
         val matrix = g.createDistSparseMatrix[Double](
-                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS), inst.weightAttrName, inst.directed, true);
+        		Config.get().distXPregel(), inst.weightAttrName, inst.directed, false);
         val N = g.numberOfVertices();
         return executeWeightedBcWrap(inst, matrix, N);
     }
