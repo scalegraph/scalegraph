@@ -33,25 +33,25 @@ public final class GIMV {
 		public tmprv : MemoryChunk[U]; // temporary vector for receiving (length: local C size for each place)
 	
 		public def this() {
-			this.dstv = new MemoryChunk[U](0);
-			this.refv = new MemoryChunk[U](0);
-			this.tmpsv = new MemoryChunk[U](0);
-			this.tmprv = new MemoryChunk[U](0);
+			this.dstv = MemoryChunk.make[U](0);
+			this.refv = MemoryChunk.make[U](0);
+			this.tmpsv = MemoryChunk.make[U](0);
+			this.tmprv = MemoryChunk.make[U](0);
 		}
 		
 		public def this(ids : IdStruct, twod :Boolean) {
 			val localsize = 1L << ids.lgl;
 			val localRsize = 1L << (ids.lgl + ids.lgr);
 			val localCsize = 1L << (ids.lgl + ids.lgc);
-			this.dstv = new MemoryChunk[U](localsize);
-			this.refv = new MemoryChunk[U](localRsize);
+			this.dstv = MemoryChunk.make[U](localsize);
+			this.refv = MemoryChunk.make[U](localRsize);
 			if(twod) {
-				this.tmpsv = new MemoryChunk[U](localCsize);
-				this.tmprv = new MemoryChunk[U](localCsize);
+				this.tmpsv = MemoryChunk.make[U](localCsize);
+				this.tmprv = MemoryChunk.make[U](localCsize);
 			}
 			else {
-				this.tmpsv = new MemoryChunk[U](0);
-				this.tmprv = new MemoryChunk[U](0);
+				this.tmpsv = MemoryChunk.make[U](0);
+				this.tmprv = MemoryChunk.make[U](0);
 			}
 		}
 	}
@@ -90,7 +90,7 @@ public final class GIMV {
 			val columnTeam = Team2(matrix.dist().columnTeam());
 			val rowTeam = Team2(matrix.dist().rowTeam());
 			val map_tmp_array = new Array[GrowableMemory[U]](Runtime.NTHREADS, (Int)=>new GrowableMemory[U](0));
-			val convergence = new MemoryChunk[U](1);
+			val convergence = MemoryChunk.make[U](1);
 			
 			// superstep loop
 			for(loop in 0..39) {
@@ -220,7 +220,7 @@ public final class GIMV {
 			val v = vector();
 			val map_tmp = new GrowableMemory[U](0);
 			val map_tmp_array = new Array[GrowableMemory[U]](Runtime.NTHREADS, (Int)=>new GrowableMemory[U](0));
-			val convergence = new MemoryChunk[U](1);
+			val convergence = MemoryChunk.make[U](1);
 			
 			// superstep loop
 			for(loop in 0..39) {

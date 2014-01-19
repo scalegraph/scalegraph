@@ -21,13 +21,13 @@ public final class Bitmap {
 	
 	public def this(size :Long) {
 		val numWords = (size + BitsPerWord - 1) / BitsPerWord;
-		this.mc = new MemoryChunk[ULong](numWords);
+		this.mc = MemoryChunk.make[ULong](numWords);
 		this.size = size;
 	}
 	
 	public def this(size :Long, initv :Boolean) {
 		val numWords = (size + BitsPerWord - 1) / BitsPerWord;
-		this.mc = new MemoryChunk[ULong](numWords);
+		this.mc = MemoryChunk.make[ULong](numWords);
 		this.size = size;
 		val value = initv ? ~0UL : 0UL;
 		for(i in mc.range()) mc(i) = value;

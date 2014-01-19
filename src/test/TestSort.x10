@@ -76,8 +76,8 @@ final class TestSort extends STest {
         Console.OUT.flush();
     }
     private static def runtest(n : Int, m : Int) {
-        val a1 = new MemoryChunk[Int](n);
-        val a2 = new MemoryChunk[Int](n);
+        val a1 = MemoryChunk.make[Int](n);
+        val a2 = MemoryChunk.make[Int](n);
 
         var seq : Double = 0.0;
         var par : Double = 0.0;

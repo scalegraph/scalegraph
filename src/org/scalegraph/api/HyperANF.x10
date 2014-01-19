@@ -65,7 +65,7 @@ public class HyperANF {
 		
 	}
 	private static def retMC(mes:MesHANF) {
-		val mc = new MemoryChunk[Byte](16);
+		val mc = MemoryChunk.make[Byte](16);
 		mc( 0) = mes.b0; mc( 1) = mes.b1; mc( 2) = mes.b2; mc( 3) = mes.b3;
 		mc( 4) = mes.b4; mc( 5) = mes.b5; mc( 6) = mes.b6; mc( 7) = mes.b7;
 		mc( 8) = mes.b8; mc( 9) = mes.b9; mc(10) = mes.ba; mc(11) = mes.bb;
@@ -149,13 +149,13 @@ public class HyperANF {
 		 * 		0 : initialize each node value(MemoryChunk)
 		 * 		0~ : recieve messages , change my value and send my value to adjacent nodes.
 		 */
-		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
+		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](MemoryChunk.make[Double](niter+2)));
 		val compute :(ctx :VertexContext[MemoryChunk[Byte], Double, MesHANF, Double], messages :MemoryChunk[MesHANF]) => void
 		 = (ctx :VertexContext[MemoryChunk[Byte], Double, MesHANF, Double], messages :MemoryChunk[MesHANF]) => {
 
 //			 var counterB:MemoryChunk[Byte];
 			 if(ctx.superstep()==0) {
-				 val counterA = new MemoryChunk[Byte](M);
+				 val counterA = MemoryChunk.make[Byte](M);
 				 for(i in counterA.range()) counterA(i) = 0;
 				 val rand = new Random(ctx.realId(ctx.id()), 1000);
 				 val pos = rand.nextInt()%M;
@@ -186,7 +186,7 @@ public class HyperANF {
 		val combiner :(values : MemoryChunk[MemoryChunk[Byte]]) => MemoryChunk[Byte] =
 			(values : MemoryChunk[MemoryChunk[Byte]]) =>{
 				if(values.size()==0L) {
-					val ret:MemoryChunk[Byte] = new MemoryChunk[Byte]((M as Long)) ;
+					val ret:MemoryChunk[Byte] = MemoryChunk.make[Byte]((M as Long)) ;
 					for(i in ret.range()) ret(i) = (0 as Byte);
 					return ret;
 				}

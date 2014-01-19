@@ -78,14 +78,14 @@ final class WorkerPlaceGraph[V,E] {
 		
 		val numVertexes = mIds.numberOfLocalVertexes();
 		
-		mVertexValue = new MemoryChunk[V](numVertexes);
+		mVertexValue = MemoryChunk.make[V](numVertexes);
 		mVertexActive = new Bitmap(numVertexes, true);
 		mVertexShouldBeActive = new Bitmap(numVertexes, true);
 
 		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
 		
-		mOutput = new MemoryChunk[GrowableMemory[Int]](numThreads * MAX_OUTPUT_NUMBER, 0, true);
+		mOutput = MemoryChunk.make[GrowableMemory[Int]](numThreads * MAX_OUTPUT_NUMBER, 0, true);
 		
 		/// if (here.id == 0) {
 		///	Console.OUT.println("lgl = " + mIds.lgl);
@@ -98,7 +98,7 @@ final class WorkerPlaceGraph[V,E] {
 		this(team, edgeIndexMatrix.ids());
 		mOutEdge.offsets = edgeIndexMatrix().offsets;
 		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
-		mOutEdge.value = new MemoryChunk[E](mOutEdge.vertexes.size());
+		mOutEdge.value = MemoryChunk.make[E](mOutEdge.vertexes.size());
 	}
 	
 	public def updateInEdge() {
@@ -141,8 +141,8 @@ final class WorkerPlaceGraph[V,E] {
 
 		mInEdge.offsets = mesComm.mUCROffset;
 		mInEdge.vertexes = mesComm.mUCRMessages;
-		mesComm.mUCROffset = new MemoryChunk[Long]();
-		mesComm.mUCRMessages = new MemoryChunk[Long]();
+		mesComm.mUCROffset = MemoryChunk.make[Long]();
+		mesComm.mUCRMessages = MemoryChunk.make[Long]();
 		mesComm.del();
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 		if(here.id == 0) sw.lap("finished to update in edge");
@@ -183,8 +183,8 @@ final class WorkerPlaceGraph[V,E] {
 		mesComm.exchangeMessages(true, false);
 		
 		val numEdges = mesComm.mUCRMessages.size();
-		val id = new MemoryChunk[Long](numEdges);
-		val value = new MemoryChunk[E](numEdges);
+		val id = MemoryChunk.make[Long](numEdges);
+		val value = MemoryChunk.make[E](numEdges);
 		Parallel.iter(0..(numEdges-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
 				id(i) = mesComm.mUCRMessages(i).get1();
@@ -196,7 +196,7 @@ final class WorkerPlaceGraph[V,E] {
 		mInEdge.vertexes = id;
 		mInEdge.value = value;
 		
-		mesComm.mUCROffset = new MemoryChunk[Long]();
+		mesComm.mUCROffset = MemoryChunk.make[Long]();
 		mesComm.del();
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 	}
@@ -303,13 +303,13 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mIds, numThreads);
-		val vctxs = new MemoryChunk[VertexContext[V, E, M, A]](numThreads,
+		val vctxs = MemoryChunk.make[VertexContext[V, E, M, A]](numThreads,
 				(i :Long) => new VertexContext[V, E, M, A](this, ectx, i));
-		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads,
+		val edgeProviderList = MemoryChunk.make[EdgeProvider[E]](numThreads,
 				(i:Long) => vctxs(i).mEdgeProvider);
-		val intermedAggregateValue = new MemoryChunk[A](numThreads);
-		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
-		val statistics = new MemoryChunk[Long](STT_MAX*2);
+		val intermedAggregateValue = MemoryChunk.make[A](numThreads);
+		val aggregateBuffer = MemoryChunk.make[A](root ? mTeam.size() : 0);
+		val statistics = MemoryChunk.make[Long](STT_MAX*2);
 		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
 
 		ectx.mInEdgesOffset = mInEdge.offsets;
@@ -435,7 +435,7 @@ final class WorkerPlaceGraph[V,E] {
 			length += mOutput(i * MAX_OUTPUT_NUMBER + index).size();
 		}
 		
-		val outMem = new MemoryChunk[T](length);
+		val outMem = MemoryChunk.make[T](length);
 		var offset :Long = 0L;
 		finish for(i in 0..(numThreads-1)) {
 			val buf = mOutput(i * MAX_OUTPUT_NUMBER + index);

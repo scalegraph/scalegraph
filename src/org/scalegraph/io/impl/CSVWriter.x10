@@ -49,8 +49,8 @@ public class CSVWriter {
 		
 		public def this(fw :FileWriter, strClousure :MemoryChunk[(sb :SStringBuilder, idx :Long) => void]) {
 			val nthreads = Runtime.NTHREADS;
-			this.frontBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
-			this.backBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
+			this.frontBuffer = MemoryChunk.make[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
+			this.backBuffer = MemoryChunk.make[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
 			for( i in 0..(nthreads-1)){
 				frontBuffer(i).add("");
 				backBuffer(i).add("");
@@ -145,7 +145,7 @@ public class CSVWriter {
 
 		val typeId = data.typeId();
 		val colNum = typeId.size;
-		val atts = new MemoryChunk[CSVAttributeHandler](colNum,
+		val atts = MemoryChunk.make[CSVAttributeHandler](colNum,
 				(i :Long) => CSVAttributeHandler.create(typeId(i as Int), false));
 		val dmc = data.data();
 		@Ifdef("PROF_IO") { mtimer_.lap(IO.MAIN_PREPARE); }

@@ -377,7 +377,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         }
         // Return result as a graph attribute
         val result = new DistMemoryChunk[Double](places, () => {
-            val r = new MemoryChunk[Double](localState()._score.length());
+            val r = MemoryChunk.make[Double](localState()._score.length());
             for (i in 0..(r.size() -1))
                 r(i) = localState()._score(i);
             return r;
@@ -388,7 +388,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         // // This is workaround for creating vertex attribute for graph,
         // // This problem should be fixed by vertex translator or graph class
         // val vertexIds = new DistMemoryChunk[Long](places, () => {
-        //     val id = new MemoryChunk[Long](localState()._score.length());
+        //     val id = MemoryChunk.make[Long](localState()._score.length());
         //     for (i in 0..(id.size() -1))
         //         id(i) = bc.LocSrcToOrg(i);
         //     return id;

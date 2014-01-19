@@ -77,10 +77,10 @@ public final struct SparseMatrix[T] {
 
 		val offsetLength = 1L << (ids.lgl + ids.lgc);
 
-		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
-		val origin = new MemoryChunk[Long](srcV.size());
-		val target = new MemoryChunk[Long](srcV.size());
-		val values_ = new MemoryChunk[T](srcV.size());
+		val offsets_ = MemoryChunk.make[Long](offsetLength + 1);
+		val origin = MemoryChunk.make[Long](srcV.size());
+		val target = MemoryChunk.make[Long](srcV.size());
+		val values_ = MemoryChunk.make[T](srcV.size());
 		// if gathering outer edges, origin is source and target is destination.
 		// if gathering inner edges, origin is destination and target is source.
 
@@ -135,10 +135,10 @@ public final struct SparseMatrix[T] {
 
 		val offsetLength = 1L << lgl;
 
-		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
-		val origin = new MemoryChunk[Long](srcV.size());
-		val target = new MemoryChunk[Long](srcV.size());
-		val values_ = new MemoryChunk[T](srcV.size());
+		val offsets_ = MemoryChunk.make[Long](offsetLength + 1);
+		val origin = MemoryChunk.make[Long](srcV.size());
+		val target = MemoryChunk.make[Long](srcV.size());
+		val values_ = MemoryChunk.make[T](srcV.size());
 
 		//if(!transpose)
 			Parallel.sort(lgl, srcV, dstV, values, origin, target, values_);
@@ -172,9 +172,9 @@ public final struct SparseMatrix[T] {
 				(new Cell[SparseMatrix[T]](sparseMatrix));
 
 		return PlaceLocalHandle.make[Cell[SparseMatrix[T]]](team.placeGroup(), () => {
-			val offsets = new MemoryChunk[Long](numVerts);
-			val vertexes = new MemoryChunk[Long](numEdges);
-			val values = new MemoryChunk[T](numEdges);
+			val offsets = MemoryChunk.make[Long](numVerts);
+			val vertexes = MemoryChunk.make[Long](numEdges);
+			val values = MemoryChunk.make[T](numEdges);
 
 			val team2 = new Team2(team);
 			if(ref_matrix.home == here) { // root

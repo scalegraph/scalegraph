@@ -72,7 +72,7 @@ public class CSVAttributeHandler {
 			getBuffer :(tid :Int) => Any) :Any
 	{
 		val ret = DistMemoryChunk.make[T](team.placeGroup(), ()=> {
-			val buffers = new MemoryChunk[ChunkBuffer[T]](nthreads);
+			val buffers = MemoryChunk.make[ChunkBuffer[T]](nthreads);
 			for(tid in 0..(nthreads-1)) {
 				val ch = buffers(tid);
 				ch.buf = getBuffer(tid) as GrowableMemory[T];
@@ -86,7 +86,7 @@ public class CSVAttributeHandler {
 			for(tid in 0..(nthreads-1)) {
 				totalSize += buffers(tid).buf.size();
 			}
-			val outbuf = new MemoryChunk[T](totalSize);
+			val outbuf = MemoryChunk.make[T](totalSize);
 			
 			// copy the result
 			val numChunks = getChunkSize(0).size();

@@ -28,11 +28,11 @@ public final class ParallelTest extends STest {
 		Console.OUT.println("Scan Test");
 		val n = 10L;
 		val m = 300L;
-		val result = new MemoryChunk[Long](m+1);
+		val result = MemoryChunk.make[Long](m+1);
 		for ( count in 0..(n-1)) {
 			val c = count + 1;
 			val d = count + 2;
-			val input = new MemoryChunk[Long](m, (i:Long)=> c *(i%d == (d - 1) ? 1 : 0) );
+			val input = MemoryChunk.make[Long](m, (i:Long)=> c *(i%d == (d - 1) ? 1 : 0) );
 			val retval = Parallel.scan(input.range(), result, 0L, (i:Long,x:Long)=> input(i) + x, (x:Long, y:Long)=> x+y);
 			Console.OUT.println("count: " + count + ", n: " + n + ", input: " + input);
 			Console.OUT.println("count: " + count + ", n: " + n + ", result: " + result(count));
@@ -49,7 +49,7 @@ public final class ParallelTest extends STest {
 		val n = 5000;
 		finish for (i in 1..n) {
             val len = Math.abs(rand.nextInt() % i);
-		    val input = new MemoryChunk[Int](len);
+		    val input = MemoryChunk.make[Int](len);
             for ( j in input.range()) {
                 input(j) = rand.nextInt() % i;
             }
@@ -69,7 +69,7 @@ public final class ParallelTest extends STest {
 	static def testpartition(): void{
 		Console.OUT.println("Partite Test");
 		val n = 15;
-		val input = new MemoryChunk[Long](n + 1, (i:Long)=> i );
+		val input = MemoryChunk.make[Long](n + 1, (i:Long)=> i );
 		finish for (i in 1..n) {
 			Console.OUT.println("n: " + i + ", input: " + input);
 			val result = Parallel.partition[Long](input, (x:Long)=> (x % i) as Int, i);

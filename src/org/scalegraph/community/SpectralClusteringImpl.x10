@@ -48,7 +48,7 @@ final public class SpectralClusteringImpl {
 		sw.start("create affinity matrix");
 		
 		val N = W.ids().numberOfLocalVertexes2N();
-		val D = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](N, (Long) => 1.0));
+		val D = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](N, (Long) => 1.0));
 		BLAS.mult[Double](1.0, W, false, D, 0.0, D);
 		team.placeGroup().broadcastFlat(() => {
 			val vec_ = D();
@@ -104,8 +104,8 @@ final public class SpectralClusteringImpl {
 		val ldu:Int = nloc;
 		val maxitr = params.maxitr;
 		val lworkl:Int = params.lworkl;
-		val x = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
-		val y = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
+		val x = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](nloc));
+		val y = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](nloc));
 		
 		// global params for pdseupd
 		val rvec:Int = params.rvec;
@@ -153,8 +153,8 @@ final public class SpectralClusteringImpl {
 				
 				if(ido == -1 || ido == 1) {
 					// y <- OP(x)
-					val x_ = new MemoryChunk[Double](workd.raw(), ipntr(0) - 1, nloc);
-					val y_ = new MemoryChunk[Double](workd.raw(), ipntr(1) - 1, nloc);
+					val x_ = MemoryChunk.make[Double](workd.raw(), ipntr(0) - 1, nloc);
+					val y_ = MemoryChunk.make[Double](workd.raw(), ipntr(1) - 1, nloc);
 					MemoryChunk.copy[Double](x_, 0L, x(), 0L, nloc);
 					BLAS.mult_[Double](1.0, A, false, x, 0.0, y);
 					MemoryChunk.copy[Double](y(), 0L, y_, 0L, nloc);
@@ -190,7 +190,7 @@ final public class SpectralClusteringImpl {
 				Console.OUT.println(d);
 			}
 			
-			val result = new MemoryChunk[Double](v.size);
+			val result = MemoryChunk.make[Double](v.size);
 			Parallel.iter(
 					0..(nloc-1),
 					(tid:Int, r:IntRange) => {
@@ -212,10 +212,10 @@ final public class SpectralClusteringImpl {
 		assert(dmc().size() % k == 0L);
 		val team2 = new Team2(team);
 		val root = team.role()(0);
-		val assign = new DistMemoryChunk[Int](team.placeGroup(), () => new MemoryChunk[Int](dmc().size() / k));
-		val curC = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](k * k));
-		val nextC = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](k * k));
-		val count = new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](k));
+		val assign = new DistMemoryChunk[Int](team.placeGroup(), () => MemoryChunk.make[Int](dmc().size() / k));
+		val curC = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](k * k));
+		val nextC = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](k * k));
+		val count = new DistMemoryChunk[Long](team.placeGroup(), () => MemoryChunk.make[Long](k));
 		
 		team2.placeGroup().broadcastFlat(() => {
 			//Console.OUT.println(here + ": K-means started");

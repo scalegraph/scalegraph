@@ -54,12 +54,12 @@ final struct MemoryChunkData[T] {
 	public static def make[T](backing :IndexedMemoryChunk[T]) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, 0L, backing.length());
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, 0, true)")
-	public static def make[T](numElements :Long) :MemoryChunkData[T] {
-		return new MemoryChunkData[T](allocateFlat[T](numElements, 0, true), 0L, numElements);
-	}
 	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed)")
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean) :MemoryChunkData[T] {
+		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
+	}
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed, (char*)#filename, #num)")
+	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean, filename :MemoryPointer[Byte], num :Int) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
 	

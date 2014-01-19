@@ -15,14 +15,21 @@
 
 x10aux::RuntimeType org::scalegraph::util::MCData_Impl<void>::rtt;
 
-pthread_mutex_t org::scalegraph::util::explMemMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t org::scalegraph::util::explGcMutex = PTHREAD_MUTEX_INITIALIZER;
-org::scalegraph::util::ExplicitMemory *org::scalegraph::util::explMemList = new org::scalegraph::util::ExplicitMemory();
-//scalegraph::ListEntry org::scalegraph::util::explMemList2;
+namespace org { namespace scalegraph { namespace util {
 
-long org::scalegraph::util::numCnt;
-long org::scalegraph::util::gcThreshold = 1024*1024;
-long org::scalegraph::util::totalSize = 0;
+ExpMemGlobalState ExpMemState = ExpMemGlobalState();
+
+ExpMemGlobalState::ExpMemGlobalState() {
+	numCnt = 0;
+	gcThreshold = 1024*1024;
+	totalSize = 0;
+	gcWait = false;
+	pthread_mutex_init(&mutex, NULL);
+	pthread_cond_init(&sync, NULL);
+	list = new ExplicitMemory();
+}
+
+} } } // namespace org { namespace scalegraph { namespace util {
 
 /* END of MemoryChunkData */
 /*************************************************/

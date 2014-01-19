@@ -66,9 +66,9 @@ public final class GraphGenerator {
 	    
 	    // last place has edges less than another place by 1
 	    val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
-	            () => new MemoryChunk[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
+	            () => MemoryChunk.make[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
 	    val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
-	            () => new MemoryChunk[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
+	            () => MemoryChunk.make[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
 	    
 	    team.placeGroup().broadcastFlat(() => {
 	        val srcMem_ = srcMemory();
@@ -98,9 +98,9 @@ public final class GraphGenerator {
 		val numLocalEdges = numEdges / team.size();
 		
 		val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 		val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.role()(0);
@@ -128,18 +128,18 @@ public final class GraphGenerator {
 	: DistMemoryChunk[Double]
 	{
 		val team = Config.get().worldTeam();
-		val sizeArray = new GlobalRef[Cell[MemoryChunk[Long]]](new Cell(new MemoryChunk[Long](team.size())));
+		val sizeArray = new GlobalRef[Cell[MemoryChunk[Long]]](new Cell(MemoryChunk.make[Long](team.size())));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val t2 = new Team2(team);
-			val src = new MemoryChunk[Long](1);
+			val src = MemoryChunk.make[Long](1);
 			src(0) = getSize();
-			val dst = (sizeArray.home == here) ? sizeArray.getLocalOrCopy()() : new MemoryChunk[Long](0);
+			val dst = (sizeArray.home == here) ? sizeArray.getLocalOrCopy()() : MemoryChunk.make[Long](0);
 			t2.gather(0, src, dst);
 		});
 		
 		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](getSize()));
+				() => MemoryChunk.make[Double](getSize()));
 		
 		val sizeArray_ = sizeArray()();
 		val placeArray = team.places();
@@ -175,7 +175,7 @@ public final class GraphGenerator {
 		val numLocalEdges = numEdges / team.size();
 		
 		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](numLocalEdges));
+				() => MemoryChunk.make[Double](numLocalEdges));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.role()(0);
@@ -215,13 +215,13 @@ public final class GraphGenerator {
 		val numLocalEdges = numEdges / team.size();
 
 		val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 		val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 
-		val sumA = new MemoryChunk[Double](scale);
-		val sumAB = new MemoryChunk[Double](scale);
-		val sumABC = new MemoryChunk[Double](scale);
+		val sumA = MemoryChunk.make[Double](scale);
+		val sumAB = MemoryChunk.make[Double](scale);
+		val sumABC = MemoryChunk.make[Double](scale);
 		for(i in 0..(scale-1)) {
 			val a = A * (rnd.nextFloat() + 0.5f);
 			val b = B * (rnd.nextFloat() + 0.5f);
