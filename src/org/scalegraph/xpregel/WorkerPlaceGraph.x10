@@ -297,7 +297,7 @@ final class WorkerPlaceGraph[V,E] {
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		@Ifdef("PROF_XP") { mtimer.start(); }
 		val sw = Config.get().stopWatch();
-		if(here.id == 0) sw.lap("start to update in edge");
+		if(here.id == 0) sw.lap("start xpregel iteration");
 		
 		val root = (mTeam.base.role()(0) == 0);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
