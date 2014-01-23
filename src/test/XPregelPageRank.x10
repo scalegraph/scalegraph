@@ -169,7 +169,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		 * val csr = g.createDistSparseMatrix[Double](dist, "edgevalue", true, true);
 		 * val xpregel = XPregelGraph.make[Double, Double](team, csr);
 		 */
-		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
+		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, false);
 		val edgeWeight = g.createDistAttribute[Double](edgeIndexMatrix, false, "edgevalue");
 		val xpregel = new XPregelGraph[Double, Double](edgeIndexMatrix);
 		team.placeGroup().broadcastFlat(() => { try {
