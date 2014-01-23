@@ -119,7 +119,7 @@ public final class StronglyConnectedComponent2 {
 	
 	private static def execute(param :StronglyConnectedComponent2, matrix :DistSparseMatrix[Long]):Result {
 
-		val maxMemo = 1000000; // new val
+		val maxMemo = 2000000; // new val
 //		val niter:Int = 1000; // TODO : Change this value. // new val
 		
 		val team = param.team;
@@ -131,7 +131,7 @@ public final class StronglyConnectedComponent2 {
 		val xpregel = new XPregelGraph[SCCVertex, Long](matrix);		
 //		val xpregel = XpregelGraph.make[SCCVertex, Double](matrix);
 		xpregel.updateInEdge();
-
+		var numOfVertices:Long;
 		xpregel.once((ctx :VertexContext[SCCVertex, Long, Any, Any]) => {
 			val value = new SCCVertex(ctx.realId(), ctx.realId(), ctx.id());
 			ctx.setValue(value);
@@ -143,12 +143,18 @@ public final class StronglyConnectedComponent2 {
 				ctx.value().changeEnd();
 				ctx.value().changePAddress(ctx.id());
 			}
+			if(ctx.id()==0L) ;
 			
 		});
 		var numOfCluster : Long =0;
 		
 		var recursion:Int = 0;
+		var sum:Long = 0;
 		while(recursion < niter ) {
+			if(niter==recursion+1) {
+				Console.OUT.println("OUT on recursion");
+				
+			}
 			val end_hoge_time = System.currentTimeMillis();
 			//			Console.OUT.println("proc time: "+(end_hoge_time-start_read_time)+" millis");
 			//			Console.OUT.println("rec" + recursion);
@@ -167,12 +173,12 @@ public final class StronglyConnectedComponent2 {
 								else ctx.aggregate(1);
 							}
 							if(curRec>0){
-								//if(curRec%2==0) { 
+				///				if(curRec%2==0) { 
 									if(ctx.value().prevFromId != ctx.value().prevToId) {
 										ctx.value().changePrev(ctx.realId());
-									}
+				///					}
 									
-								//}
+								}
 								if(ctx.value().prevFromId != ctx.value().prevToId)  {
 									updateAll = true;
 								}
@@ -185,14 +191,14 @@ public final class StronglyConnectedComponent2 {
 									ctx.voteToHalt();
 									return ;
 								}
-								//if(curRec%2==0) {
+					///			if(curRec%2==0) {
 									ctx.value().changePAddress(ctx.id());
-								//}
+					///			}
 							}
 							if(updateAll) {
 								updateFrom = updateTo = true;
-								//if(curRec%2==0) if(ctx.realId() < 100) updateFrom = updateTo = true;
-								//if(curRec%2==1) if(ctx.realId() >=100) updateFrom = updateTo = true;
+					///			if(curRec%2==0) if(ctx.realId() < 100) updateFrom = updateTo = true;
+					///			if(curRec%2==1) if(ctx.realId() >=100) updateFrom = updateTo = true;
 							}
 							
 						}
@@ -246,10 +252,19 @@ public final class StronglyConnectedComponent2 {
 								cl()() = aggVal;
 						return (superstep >= 1000);
 					} );
-			numOfCluster += cl()();
+			sum += cl()();
+			if(recursion%2==1) {
+				if(recursion>1 && sum==0L) {
+					Console.OUT.println("endofRecursion" + recursion );
+					break;
+				}
+				numOfCluster += sum;
+				sum = 0;
+			}
 		}
-		
-		val numOfVerteces = xpregel.size();
+//		val hoge = xpregel.placeGroup();
+		val numOfVerteces = xpregel.ids().numberOfGlobalVertexes();
+//		Console.OUT.println("numOfVerteces " + numOfVerteces + " " + xpregel.placeGroup().size());
 		var iter:Long = 0;
 		while(iter*maxMemo<2*numOfVerteces) {
 			// " 2* " nenn no tame desu
@@ -257,7 +272,7 @@ public final class StronglyConnectedComponent2 {
 			val right = left + maxMemo;
 			xpregel.iterate[Boolean, Long](
 					(ctx :VertexContext[SCCVertex, Long, Boolean,Long ], messages :MemoryChunk[Boolean] ) => {
-						if(left<=ctx.realId() && ctx.realId()<right) {
+						if(ctx.superstep()==0 && left<=ctx.realId() && ctx.realId()<right) {
 							val mes = true;
 							ctx.sendMessage(ctx.value().parentAddress, mes);
 						}
