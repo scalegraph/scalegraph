@@ -31,11 +31,11 @@ public class ProfilingDBTest extends STest {
 		
 		Config.get().worldTeam().placeGroup().broadcastFlat(() => {
 			val timer = prof.timer(0, 0);
-			val counters = new MemoryChunk[ProfilingDB.Timer](
+			val counters = MemoryChunk.make[ProfilingDB.Timer](
 					Runtime.NTHREADS, (i:Long) => prof.timer(1, i));
 			
 			timer.start();
-			val testdata = new MemoryChunk[Int](10000000);
+			val testdata = MemoryChunk.make[Int](10000000);
 			timer.lap(0);
 			Parallel.iter(testdata.range(), (tid :Long, r :LongRange) => {
 				counters(tid).start();

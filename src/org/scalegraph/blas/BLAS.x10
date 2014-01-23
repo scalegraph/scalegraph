@@ -38,8 +38,8 @@ public final class BLAS {
 					//	val columnTeam = Team2(B.dist().columnTeam());
 					val rowTeam = Team2(B.dist().rowTeam());
 					//
-					//	val refVector = new MemoryChunk[T](localWidth);
-					val refVector = new MemoryChunk[T](localHeight);
+					//	val refVector = MemoryChunk.make[T](localWidth);
+					val refVector = MemoryChunk.make[T](localHeight);
 					
 					//	columnTeam.allgather(A()(), refVector);
 					rowTeam.allgather(A()(), refVector);
@@ -104,9 +104,9 @@ public final class BLAS {
 				val columnTeam = Team2(A.dist().columnTeam());
 				val rowTeam = Team2(A.dist().rowTeam());
 				//
-				val refVector = new MemoryChunk[T](localWidth);
-				val tmpSendVector = new MemoryChunk[T](localHeight);
-				val tmpRecvVector = new MemoryChunk[T](localHeight);
+				val refVector = MemoryChunk.make[T](localWidth);
+				val tmpSendVector = MemoryChunk.make[T](localHeight);
+				val tmpRecvVector = MemoryChunk.make[T](localHeight);
 				
 				columnTeam.allgather(x(), refVector);
 				

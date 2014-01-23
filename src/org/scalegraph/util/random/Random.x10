@@ -87,7 +87,7 @@ public class Random implements CustomSerialization {
 	}
 
 	public def serialize():x10.io.SerialData {
-		val arr = new MemoryChunk[Int](5);
+		val arr = MemoryChunk.make[Int](5);
 		arr(0) = state.z1;
 		arr(1) = state.z2;
 		arr(2) = state.z3;

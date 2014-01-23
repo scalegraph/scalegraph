@@ -106,7 +106,7 @@ public final class MinimumSpanningTreeImpl {
 		    vertex.root = vid;
 		    
 		    if (ids.size() > 0) {
-		        val table = new MemoryChunk[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
+		        val table = MemoryChunk.make[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
 		        vertex.edgeTable = table;
 		    } else {
 		        vertex.edgeTable = MemoryChunk.getNull[EdgeInfo]();

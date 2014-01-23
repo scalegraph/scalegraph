@@ -458,7 +458,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         }
         // return result as a graph attribute
         val result = new DistMemoryChunk[Double](places, () => {
-            val r = new MemoryChunk[Double](localState().score.length());
+            val r = MemoryChunk.make[Double](localState().score.length());
             for (i in 0..(r.size() -1))
                 r(i) = localState().score(i);
             return r;
@@ -468,7 +468,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         // // This is workaround for creating vertex attribute for graph,
         // // This problem should be fixed by vertex translator or graph class
         // val vertexIds = new DistMemoryChunk[Long](places, () => {
-        //     val id = new MemoryChunk[Long](localState().score.length());
+        //     val id = MemoryChunk.make[Long](localState().score.length());
         //     for (i in 0..(id.size() -1))
         //         id(i) = bc.LocSrcToOrg(i);
         //     return id;

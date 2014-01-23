@@ -642,8 +642,8 @@ public final class Parallel {
       */
 	public static @Inline def partition[T](array :MemoryChunk[T], func :(Long,T)=>Int, kinds :Int) : MemoryChunk[MemoryChunk[T]] {
 		debugln("partition: " + ", size: " + array.size() +  " kinds:" + kinds);
-		val acc = new MemoryChunk[MemoryChunk[GrowableMemory[T]]](Runtime.MAX_THREADS,
-				(Long)=>new MemoryChunk[GrowableMemory[T]](kinds,
+		val acc = MemoryChunk.make[MemoryChunk[GrowableMemory[T]]](Runtime.MAX_THREADS,
+				(Long)=>MemoryChunk.make[GrowableMemory[T]](kinds,
 						(Long)=>new GrowableMemory[T]()));
 		debugln("before acc");
 		Parallel.iter(array.range(), (Long, range :LongRange)=> {
@@ -654,15 +654,15 @@ public final class Parallel {
 			}
 		});
 		debugln("acc: " + acc);
-		val resultSizes = new MemoryChunk[Long](kinds, 0, true);
-		val resultOffsets = new MemoryChunk[MemoryChunk[Long]](kinds, (Long) => new MemoryChunk[Long](Runtime.MAX_THREADS + 1));
+		val resultSizes = MemoryChunk.make[Long](kinds, 0, true);
+		val resultOffsets = MemoryChunk.make[MemoryChunk[Long]](kinds, (Long) => MemoryChunk.make[Long](Runtime.MAX_THREADS + 1));
 		debugln("before scan");
 		for (k in 0..(kinds-1)) {
-			val arr = new MemoryChunk[Long](Runtime.MAX_THREADS, (i:Long)=>acc(i)(k).size());
+			val arr = MemoryChunk.make[Long](Runtime.MAX_THREADS, (i:Long)=>acc(i)(k).size());
 			debugln("k: " + k + " arr: " + arr);
 			resultOffsets(k)(0) = 0L;
 			resultSizes(k) = Parallel.scan(acc.range(), resultOffsets(k), 0L, (i:Long, a:Long)=> acc(i)(k).size() + a, (x:Long, y:Long)=>x+y);
-			val truescan = new MemoryChunk[Long](Runtime.MAX_THREADS + 1);
+			val truescan = MemoryChunk.make[Long](Runtime.MAX_THREADS + 1);
 			Parallel.scan(acc.range(), truescan, 0L, (i:Long, a:Long)=> arr(i) + a, (x:Long, y:Long)=>x+y);
 			debugln("k: " + k +  "truescan: " + truescan);
 			debugln("k: " + k +  "resultOffsets: " + resultOffsets(k));
@@ -672,10 +672,10 @@ public final class Parallel {
 		for (k in 0..(kinds-1)) {
 				debugln("k: " + k +  ", resultOffsets: " + resultOffsets(k));
 		}
-		val result = new MemoryChunk[MemoryChunk[T]](kinds, (i:Long)=>new MemoryChunk[T](resultSizes(i)));
+		val result = MemoryChunk.make[MemoryChunk[T]](kinds, (i:Long)=>MemoryChunk.make[T](resultSizes(i)));
 		debugln("before copy");
 		debugln("sizes" + resultSizes);
-		debugln("sizes" + new MemoryChunk[Long](kinds, (i:Long)=>resultOffsets(i)(Runtime.MAX_THREADS - 1)));
+		debugln("sizes" + MemoryChunk.make[Long](kinds, (i:Long)=>resultOffsets(i)(Runtime.MAX_THREADS - 1)));
 		finish for (k in 0..(kinds-1)) {
 			Parallel.iter(0..(Runtime.MAX_THREADS-1), (wid:Int)=>{
 				val size = acc(wid)(k).size();
@@ -782,7 +782,7 @@ public final class Parallel {
 		if(size == 0L) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
-		val intermid = new MemoryChunk[U](nthreads);
+		val intermid = MemoryChunk.make[U](nthreads);
 		finish for(i in 0..(nthreads-1)) {
 			val idx = i;
 			val i_start = range.min + i*chunk_size;
@@ -803,7 +803,7 @@ public final class Parallel {
 		if(size == 0L) return Zero.get[U]();
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
 		val chunk_size = Math.max((size + nthreads - 1) / nthreads, 1L);
-		val intermid = new MemoryChunk[U](nthreads);
+		val intermid = MemoryChunk.make[U](nthreads);
 		finish for(i in 0..(nthreads-1)) {
 			val idx = i;
 			val i_start = range.min + i*chunk_size;

@@ -50,7 +50,7 @@ public class Import {
 		} catch(e:IOException) {
 		}
 		
-		val vertexList = new MemoryChunk[Long](vertexSet.size());
+		val vertexList = MemoryChunk.make[Long](vertexSet.size());
 		val it = vertexSet.iterator();
 		for(var i:Int = 0; it.hasNext(); i++) {
 			vertexList(i) = it.next();

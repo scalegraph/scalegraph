@@ -112,8 +112,8 @@ final class SpectralClusteringTest extends AlgorithmTest {
 			val vertexes = W_.vertexes;
 			val values = W_.values;
 			
-			val srcRefVector = new MemoryChunk[Int](localHeight);
-			val dstRefVector = new MemoryChunk[Int](localWidth);
+			val srcRefVector = MemoryChunk.make[Int](localHeight);
+			val dstRefVector = MemoryChunk.make[Int](localWidth);
 			
 			val rowTeam = Team2(dist.rowTeam());
 			val columnTeam = Team2(dist.columnTeam());

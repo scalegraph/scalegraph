@@ -112,7 +112,7 @@ public final class FileReader {
 	
 	private def replaceBuffer(new_size :Long) {
 		val buffered = length - offset;
-		val new_mem = new MemoryChunk[Byte](new_size);
+		val new_mem = MemoryChunk.make[Byte](new_size);
 		val old_mem = buffer.raw();
 		MemoryChunk.copy(old_mem, offset, new_mem, 0L, buffered);
 		buffer.setMemory(new_mem);
@@ -186,7 +186,7 @@ public final class FileReader {
 
 	public def readLine() {
 		val str = internalReadLine();
-		val ret = new MemoryChunk[Byte](str.size()+1);
+		val ret = MemoryChunk.make[Byte](str.size()+1);
 		MemoryChunk.copy(str, 0L, ret, 0L, str.size());
 		ret(str.size()) = 0Y;
 		return SString(ret.subpart(0, str.size()));

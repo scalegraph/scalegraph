@@ -40,8 +40,8 @@ public final struct Team2 {
 	public @Inline def places() = base.places();
 	public @Inline def placeGroup() = base.placeGroup();
 	
-	public def barrier (role:Int) : void {
-		base.barrier(role);
+	public def barrier () : void {
+		base.barrier(role());
 	}
 	
 	/* native methods */
@@ -157,14 +157,14 @@ public final struct Team2 {
 				if (role == root) {
 					val places = size();
                     val count = dst.size() as Int;
-					val src_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
-					val src_counts = new MemoryChunk[Int](places, (i :Long) => count);
-					val ser_offs = new MemoryChunk[Int](places);
-					val ser_counts = new MemoryChunk[Int](places);
+					val src_offs = MemoryChunk.make[Int](places, (i :Long) => (i * count) as Int);
+					val src_counts = MemoryChunk.make[Int](places, (i :Long) => count);
+					val ser_offs = MemoryChunk.make[Int](places);
+					val ser_counts = MemoryChunk.make[Int](places);
 					val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
-					val deser_counts = new MemoryChunk[Int](1);
+					val deser_counts = MemoryChunk.make[Int](1);
 					finish nativeScatter[Int](base.id(), role, root, ser_counts, deser_counts, 1);
-					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					val deser_dst = MemoryChunk.make[Byte](deser_counts(0));
 					finish nativeScatterv[Byte](base.id(), role, root, ser_src, ser_offs, ser_counts, deser_dst, deser_counts(0));
 					Serialization.deserialize(dst, 0, count, deser_dst, 0, deser_counts(0));
 					src_offs.del();
@@ -176,9 +176,9 @@ public final struct Team2 {
 					deser_dst.del();
 				}
 				else {
-					val deser_counts = new MemoryChunk[Int](1);
+					val deser_counts = MemoryChunk.make[Int](1);
 					finish nativeScatter[Int](base.id(), role, root, nullChunk[Int](), deser_counts, 1);
-					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					val deser_dst = MemoryChunk.make[Byte](deser_counts(0));
 					finish nativeScatterv[Byte](base.id(), role, root, nullChunk[Byte](), nullChunk[Int](), nullChunk[Int](), deser_dst, deser_counts(0));
 					Serialization.deserialize(dst, 0, dst.size() as Int, deser_dst, 0, deser_counts(0));
 					deser_counts.del();
@@ -205,12 +205,12 @@ public final struct Team2 {
 			if (Serialization.needToSerialize[T]()) {
 				if (role == root) {
 					val places = size();
-					val ser_offs = new MemoryChunk[Int](places);
-					val ser_counts = new MemoryChunk[Int](places);
+					val ser_offs = MemoryChunk.make[Int](places);
+					val ser_counts = MemoryChunk.make[Int](places);
 					val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
-					val deser_counts = new MemoryChunk[Int](1);
+					val deser_counts = MemoryChunk.make[Int](1);
 					finish nativeScatter[Int](base.id(), role, root, ser_counts, deser_counts, 1);
-					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					val deser_dst = MemoryChunk.make[Byte](deser_counts(0));
 					finish nativeScatterv[Byte](base.id(), role, root, ser_src, ser_offs, ser_counts, deser_dst, deser_counts(0));
 					Serialization.deserialize(dst, 0, dst.size() as Int, deser_dst, 0, deser_counts(0));
 					ser_offs.del();
@@ -220,9 +220,9 @@ public final struct Team2 {
 					deser_dst.del();
 				}
 				else {
-					val deser_counts = new MemoryChunk[Int](1);
+					val deser_counts = MemoryChunk.make[Int](1);
 					finish nativeScatter[Int](base.id(), role, root, nullChunk[Int](), deser_counts, 1);
-					val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+					val deser_dst = MemoryChunk.make[Byte](deser_counts(0));
 					finish nativeScatterv[Byte](base.id(), role, root, nullChunk[Byte](), nullChunk[Int](), nullChunk[Int](), deser_dst, deser_counts(0));
 					Serialization.deserialize(dst, 0, dst.size() as Int, deser_dst, 0, deser_counts(0));
 					deser_counts.del();
@@ -244,13 +244,13 @@ public final struct Team2 {
 	 */
 	public def scatterv[T] (root:Int, src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : MemoryChunk[T] {
 		val role = base.role()(0);
-		val dst_size = new MemoryChunk[Int](1);
-		val src_offs = root == role ? new MemoryChunk[Int](src_counts.size() + 1) : MemoryChunk.getNull[Int]();
+		val dst_size = MemoryChunk.make[Int](1);
+		val src_offs = root == role ? MemoryChunk.make[Int](src_counts.size() + 1) : MemoryChunk.getNull[Int]();
 		if(root == role){
 			countOffsets(src_counts, src_offs, 0);
 		}
 		scatter(root, src_counts, dst_size);
-		val dst = new MemoryChunk[T](dst_size(0));
+		val dst = MemoryChunk.make[T](dst_size(0));
 		scatterv(root, src, src_offs, src_counts, dst);
 		return dst;
 	}
@@ -268,16 +268,16 @@ public final struct Team2 {
                     val places = size();
                     val count = src.size() as Int;
                     val ser_src = Serialization.serialize(src, 0, count);
-                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
-                    val deser_counts = new MemoryChunk[Int](places);
+                    val ser_counts = MemoryChunk.make[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val deser_counts = MemoryChunk.make[Int](places);
 			    	finish nativeGather[Int](base.id(), role, root, ser_counts, deser_counts, 1);
-                    val deser_offs = new MemoryChunk[Int](places+1);
+                    val deser_offs = MemoryChunk.make[Int](places+1);
                     deser_offs(0) = 0;
                     for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
-                    val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                    val deser_dst = MemoryChunk.make[Byte](deser_offs(places));
                     finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
-                    val dst_counts = new MemoryChunk[Int](places, (i:Long)=>count);
-                    val dst_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
+                    val dst_counts = MemoryChunk.make[Int](places, (i:Long)=>count);
+                    val dst_offs = MemoryChunk.make[Int](places, (i :Long) => (i * count) as Int);
                     Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
                     ser_src.del();
                     ser_counts.del();
@@ -290,7 +290,7 @@ public final struct Team2 {
                 else {
                     val count = src.size() as Int;
                     val ser_src = Serialization.serialize(src, 0, count);
-                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val ser_counts = MemoryChunk.make[Int](1, (i:Long)=>ser_src.size() as Int);
 	    			finish nativeGather[Int](base.id(), role, root, ser_counts, nullChunk[Int](), 1);
                     finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), nullChunk[Byte](), nullChunk[Int](), nullChunk[Int]());
                     ser_src.del();
@@ -316,13 +316,13 @@ public final struct Team2 {
                 if (role == root) {
                     val places = size();
                     val ser_src = Serialization.serialize(src, 0, src.size() as Int);
-                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
-                    val deser_counts = new MemoryChunk[Int](places);
+                    val ser_counts = MemoryChunk.make[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val deser_counts = MemoryChunk.make[Int](places);
 			    	finish nativeGather[Int](base.id(), role, root, ser_counts, deser_counts, 1);
-                    val deser_offs = new MemoryChunk[Int](places+1);
+                    val deser_offs = MemoryChunk.make[Int](places+1);
                     deser_offs(0) = 0;
                     for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
-                    val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                    val deser_dst = MemoryChunk.make[Byte](deser_offs(places));
                     finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
                     Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
                     ser_src.del();
@@ -333,7 +333,7 @@ public final struct Team2 {
                 }
                 else {
                     val ser_src = Serialization.serialize(src, 0, src.size() as Int);
-                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val ser_counts = MemoryChunk.make[Int](1, (i:Long)=>ser_src.size() as Int);
 	    			finish nativeGather[Int](base.id(), role, root, ser_counts, nullChunk[Int](), 1);
                     finish nativeGatherv[Byte](base.id(), role, root, ser_src, ser_counts(0), nullChunk[Byte](), nullChunk[Int](), nullChunk[Int]());
                     ser_src.del();
@@ -353,18 +353,18 @@ public final struct Team2 {
 	
 	public def gatherv[T] (root:Int, src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
 		val role = base.role()(0);
-		val src_size = new MemoryChunk[Int](1);
+		val src_size = MemoryChunk.make[Int](1);
 		src_size(0) = src.size() as Int;
 		
 		if(root == role){
-			val dst_counts = new MemoryChunk[Int](size());
+			val dst_counts = MemoryChunk.make[Int](size());
 			gather(root, src_size, dst_counts);
 			var dst_size :Int = 0;
 			for(i in dst_counts.range()){
 				dst_size += dst_counts(i);
 			}
-			val dst = new MemoryChunk[T](dst_size);
-			val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+			val dst = MemoryChunk.make[T](dst_size);
+			val dst_offs = MemoryChunk.make[Int](dst_counts.size() + 1);
 			countOffsets(dst_counts, dst_offs, 0);
 			gatherv(root, src, dst, dst_offs, dst_counts);
 			return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
@@ -388,10 +388,10 @@ public final struct Team2 {
                     val places = size();
                     val count = dst.size() as Int;
                     val ser_src = Serialization.serialize(src, 0, count);
-                    val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
-                    val deser_counts = new MemoryChunk[Int](1);
+                    val ser_counts = MemoryChunk.make[Int](1, (i:Long)=>ser_src.size() as Int);
+                    val deser_counts = MemoryChunk.make[Int](1);
                     finish nativeBcast[Int](base.id(), role, root, ser_counts, deser_counts, 1);
-                    val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+                    val deser_dst = MemoryChunk.make[Byte](deser_counts(0));
                     finish nativeBcast[Byte](base.id(), role, root, ser_src, deser_dst, deser_counts(0));
                     Serialization.deserialize(dst, 0, count, deser_dst, 0, deser_counts(0));
                     ser_src.del();
@@ -401,9 +401,9 @@ public final struct Team2 {
                 }
                 else {
                     val count = dst.size() as Int;
-                    val deser_counts = new MemoryChunk[Int](1);
+                    val deser_counts = MemoryChunk.make[Int](1);
                     finish nativeBcast[Int](base.id(), role, root, nullChunk[Int](), deser_counts, 1);
-                    val deser_dst = new MemoryChunk[Byte](deser_counts(0));
+                    val deser_dst = MemoryChunk.make[Byte](deser_counts(0));
                     finish nativeBcast[Byte](base.id(), role, root, nullChunk[Byte](), deser_dst, deser_counts(0));
                     Serialization.deserialize(dst, 0, count, deser_dst, 0, deser_counts(0));
                     deser_counts.del();
@@ -431,16 +431,16 @@ public final struct Team2 {
                 val places = size();
                 val count = src.size() as Int;
                 val ser_src = Serialization.serialize(src, 0, count);
-                val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
-                val deser_counts = new MemoryChunk[Int](places);
+                val ser_counts = MemoryChunk.make[Int](1, (i:Long)=>ser_src.size() as Int);
+                val deser_counts = MemoryChunk.make[Int](places);
                 finish nativeAllgather[Int](base.id(), role, ser_counts, deser_counts, 1);
-                val deser_offs = new MemoryChunk[Int](places + 1);
+                val deser_offs = MemoryChunk.make[Int](places + 1);
                 deser_offs(0) = 0;
                 for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
-                val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                val deser_dst = MemoryChunk.make[Byte](deser_offs(places));
                 finish nativeAllgatherv[Byte](base.id(), role, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
-                val dst_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
-                val dst_counts = new MemoryChunk[Int](places, (i:Long)=>count);
+                val dst_offs = MemoryChunk.make[Int](places, (i :Long) => (i * count) as Int);
+                val dst_counts = MemoryChunk.make[Int](places, (i:Long)=>count);
                 Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
                 ser_src.del();
                 ser_counts.del();
@@ -469,13 +469,13 @@ public final struct Team2 {
                 val places = size();
                 val src_count = src.size() as Int;
                 val ser_src = Serialization.serialize(src, 0, src_count);
-                val ser_counts = new MemoryChunk[Int](1, (i:Long)=>ser_src.size() as Int);
-                val deser_counts = new MemoryChunk[Int](places);
+                val ser_counts = MemoryChunk.make[Int](1, (i:Long)=>ser_src.size() as Int);
+                val deser_counts = MemoryChunk.make[Int](places);
                 finish nativeAllgather[Int](base.id(), role, ser_counts, deser_counts, 1);
-                val deser_offs = new MemoryChunk[Int](places + 1);
+                val deser_offs = MemoryChunk.make[Int](places + 1);
                 deser_offs(0) = 0;
                 for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
-                val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+                val deser_dst = MemoryChunk.make[Byte](deser_offs(places));
                 finish nativeAllgatherv[Byte](base.id(), role, ser_src, ser_counts(0), deser_dst, deser_offs, deser_counts);
                 Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
                 ser_src.del();
@@ -497,16 +497,16 @@ public final struct Team2 {
 	
 	public def allgatherv[T] (src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]]  {
 		val role = base.role()(0);
-		val src_size = new MemoryChunk[Int](1);
-		val dst_counts = new MemoryChunk[Int](size());
+		val src_size = MemoryChunk.make[Int](1);
+		val dst_counts = MemoryChunk.make[Int](size());
 		src_size(0) = src.size() as Int;
 		allgather(src_size, dst_counts);
 		var dst_size :Int = 0;
 		for(i in dst_counts.range()){
 			dst_size += dst_counts(i);
 		}
-		val dst = new MemoryChunk[T](dst_size);
-		val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+		val dst = MemoryChunk.make[T](dst_size);
+		val dst_offs = MemoryChunk.make[Int](dst_counts.size() + 1);
 		countOffsets(dst_counts, dst_offs, 0);
 		allgatherv(src, dst, dst_offs, dst_counts);
 		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
@@ -521,20 +521,20 @@ public final struct Team2 {
 			if (Serialization.needToSerialize[T]()) {
 				val places = size();
                 val count = (src.size() / places) as Int;
-				val src_counts = new MemoryChunk[Int](places, (i:Long)=>count);
-				val src_offs = new MemoryChunk[Int](places, (i :Long) => (i * count) as Int);
-				val ser_offs = new MemoryChunk[Int](places);
-				val ser_counts = new MemoryChunk[Int](places);
+				val src_counts = MemoryChunk.make[Int](places, (i:Long)=>count);
+				val src_offs = MemoryChunk.make[Int](places, (i :Long) => (i * count) as Int);
+				val ser_offs = MemoryChunk.make[Int](places);
+				val ser_counts = MemoryChunk.make[Int](places);
 				val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
-				val deser_counts = new MemoryChunk[Int](places);
+				val deser_counts = MemoryChunk.make[Int](places);
 				finish nativeAlltoall[Int](base.id(), role, ser_counts, deser_counts, 1);
-				val deser_offs = new MemoryChunk[Int](places + 1);
+				val deser_offs = MemoryChunk.make[Int](places + 1);
 				deser_offs(0) = 0;
 				for (i in 0..(places-1)) deser_offs(i+1) = deser_counts(i) + deser_offs(i);
-				val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+				val deser_dst = MemoryChunk.make[Byte](deser_offs(places));
 				finish nativeAlltoallv[Byte](base.id(), role, ser_src, ser_offs, ser_counts, deser_dst, deser_offs, deser_counts);
-				val dst_counts = new MemoryChunk[Int](places, (i:Long)=>count);
-				val dst_offs = new MemoryChunk[Int](places + 1);
+				val dst_counts = MemoryChunk.make[Int](places, (i:Long)=>count);
+				val dst_offs = MemoryChunk.make[Int](places + 1);
 				dst_offs(0) = 0;
 				for (i in 0..(places-1)) dst_offs(i+1) = dst_counts(i) + dst_offs(i);
 				Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
@@ -566,14 +566,14 @@ public final struct Team2 {
 		@Ifdef("__CPP__") {
 			if (Serialization.needToSerialize[T]()) {
 				val places = size();
-				val ser_offs = new MemoryChunk[Int](places);
-				val ser_counts = new MemoryChunk[Int](places);
+				val ser_offs = MemoryChunk.make[Int](places);
+				val ser_counts = MemoryChunk.make[Int](places);
 				val ser_src = Serialization.serialize(src, src_offs, src_counts, ser_offs, ser_counts);
-				val deser_counts = new MemoryChunk[Int](places);
+				val deser_counts = MemoryChunk.make[Int](places);
 				finish nativeAlltoall[Int](base.id(), role, ser_counts, deser_counts, 1);
-				val deser_offs = new MemoryChunk[Int](places + 1);
+				val deser_offs = MemoryChunk.make[Int](places + 1);
 				countOffsets(deser_counts, deser_offs, 0);
-				val deser_dst = new MemoryChunk[Byte](deser_offs(places));
+				val deser_dst = MemoryChunk.make[Byte](deser_offs(places));
 				finish nativeAlltoallv[Byte](base.id(), role, ser_src, ser_offs, ser_counts, deser_dst, deser_offs, deser_counts);
 				Serialization.deserialize(dst, dst_offs, dst_counts, deser_dst, deser_offs, deser_counts);
                 ser_counts.del();
@@ -597,16 +597,16 @@ public final struct Team2 {
 	
 	public def alltoallv[T] (src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
 		val role = base.role()(0);
-		val src_offs = new MemoryChunk[Int](src_counts.size() + 1);
+		val src_offs = MemoryChunk.make[Int](src_counts.size() + 1);
 		countOffsets(src_counts, src_offs, 0);
-		val dst_counts = new MemoryChunk[Int](size());
+		val dst_counts = MemoryChunk.make[Int](size());
 		alltoall(src_counts, dst_counts);
 		var dst_size :Int = 0;
 		for(i in dst_counts.range()){
 			dst_size += dst_counts(i);
 		}
-		val dst = new MemoryChunk[T](dst_size);
-		val dst_offs = new MemoryChunk[Int](dst_counts.size() + 1);
+		val dst = MemoryChunk.make[T](dst_size);
+		val dst_offs = MemoryChunk.make[Int](dst_counts.size() + 1);
 		countOffsets(dst_counts, dst_offs, 0);
 		alltoallv(src, src_offs, src_counts, dst, dst_offs, dst_counts);
 		return new Tuple2[MemoryChunk[T],MemoryChunk[Int]](dst, dst_counts);
@@ -628,8 +628,8 @@ public final struct Team2 {
 	 }
 	
 	public def allreduce[T](src:T, op:Int) : T {
-		val src_ = new MemoryChunk[T](1);
-		val dst = new MemoryChunk[T](1);
+		val src_ = MemoryChunk.make[T](1);
+		val dst = MemoryChunk.make[T](1);
 		src_(0) = src;
 		allreduce(src_, dst, op);
 		return dst(0);
@@ -651,11 +651,17 @@ public final struct Team2 {
 	}
 	
 	public def reduce[T](root:Int, src:T, op:Int) : T {
-		val src_ = new MemoryChunk[T](1);
-		val dst = new MemoryChunk[T](1);
+		val src_ = MemoryChunk.make[T](1);
+		val dst = MemoryChunk.make[T](1);
 		src_(0) = src;
 		reduce(root, src_, dst, op);
 		return dst(0);
+	}
+	
+	/* statistics */
+	
+	public def printMemoryConsumption() {
+		
 	}
 	
 	/* utility methods */
@@ -673,7 +679,7 @@ public final struct Team2 {
 	public static def getCounts[T](offsets :MemoryChunk[T]) {T <: Arithmetic[T]} :MemoryChunk[T] {
 		if(offsets.size() == 0L)
 			throw new IllegalArgumentException();
-		val counts = new MemoryChunk[T](offsets.size()-1);
+		val counts = MemoryChunk.make[T](offsets.size()-1);
 		for(i in offsets.range()){
 			counts(i) = offsets(i + 1) - offsets(i);
 		}

@@ -93,7 +93,7 @@ MemoryChunk<x10_byte> charsToUTF8_(const MemoryChunk<x10_char>& chars) {
 		x10_char c = chars_ptr[i];
 		UTF8_CHAR_BYTES(c, bytesCount);
 	}
-	MemoryChunk<x10_byte> bytes = MemoryChunk<x10_byte>::_make(bytesCount + 1);
+	MemoryChunk<x10_byte> bytes = MemoryChunk<x10_byte>::_make(bytesCount + 1, MCDEFARGS);
 	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
 	int bytesIndex = 0;
 	for(int i = 0; i < chars_size; ++i) {
@@ -121,7 +121,7 @@ MemoryChunk<x10_char> UTF8ToChars_(const MemoryChunk<x10_byte>& bytes) {
 		int b0 = bytes_ptr[i];
 		UTF8_CODE_LENGTH(b0, i);
 	}
-	MemoryChunk<x10_char> chars = MemoryChunk<x10_char>::_make(charsCount);
+	MemoryChunk<x10_char> chars = MemoryChunk<x10_char>::_make(charsCount, MCDEFARGS);
 	x10_char* chars_ptr = chars.FMGL(data).FMGL(pointer);
 	charsCount = 0;
 	for(int i = 0; i < bytes_size; ++charsCount) {
@@ -286,7 +286,7 @@ x10_byte* StringCstr_(SString& str) {
 	int size = str.FMGL(content).FMGL(data).FMGL(size);
 	if(ptr[size] != 0) {
 		x10_byte* old_ptr = ptr;
-		MemoryChunk<x10_byte> nb = MemoryChunk<x10_byte>::_make(size+1);
+		MemoryChunk<x10_byte> nb = MemoryChunk<x10_byte>::_make(size+1, MCDEFARGS);
 		ptr = nb.FMGL(data).FMGL(pointer);
 		memcpy(ptr, old_ptr, size);
 		ptr[size] = 0;

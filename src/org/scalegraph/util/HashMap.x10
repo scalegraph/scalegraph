@@ -114,7 +114,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
 
     assert((nChunk & -nChunk) == nChunk);
 
-    table = MemoryChunk[HashEntry[K, V]](init_size as Long);
+    table = MemoryChunk.make[HashEntry[K, V]](init_size as Long);
     this.logSize = MathAppend.ceilLog2(table.size());
     this.size = 0;
     shouldRehash = false;
@@ -183,7 +183,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
   }
 
   public def get(ks : MemoryChunk[K], defValue : V) {
-    val vs = new MemoryChunk[V](ks.size());
+    val vs = MemoryChunk.make[V](ks.size());
 
     val eachSize = new Array[Long](nChunk, (i:Int)=>{
       if (i == nChunk - 1) {return ks.size() / nChunk + ks.size() % nChunk;}
@@ -215,7 +215,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     if (size + ks.size() >= table.size() / 2) {
       rehashInternal();
     }
-    val chunk = new MemoryChunk[Pair[Int, Long]](ks.size());
+    val chunk = MemoryChunk.make[Pair[Int, Long]](ks.size());
 
     // closure__1
     val scatterGather = new ScatterGather(nChunk);
@@ -251,7 +251,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
         (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
 
-    val pushed = new MemoryChunk[Int](ks.size());
+    val pushed = MemoryChunk.make[Int](ks.size());
     for (i in pushed.range()) {
       pushed(i) = -1L;
     }
@@ -298,7 +298,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     }
     val dummysize = localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
 
-    val newKeys = new MemoryChunk[K](dummysize);
+    val newKeys = MemoryChunk.make[K](dummysize);
 
     val counts2 = new Array[Int](nChunk, 0);
     Parallel.iter(pushed.range(), (tid : Long, r : LongRange) =>{
@@ -399,7 +399,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       rehashInternal();
     }
     assert(ks.size() == vs.size());
-    val chunk = new MemoryChunk[Pair[Int, Long]](ks.size());
+    val chunk = MemoryChunk.make[Pair[Int, Long]](ks.size());
 
     val scatterGather = new ScatterGather(nChunk);
     Parallel.iter(ks.range(), (tid: Long, r : LongRange)=>{
@@ -505,7 +505,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     val t = table;
     val oldSize = size;
     size = 0;
-    table = new MemoryChunk[HashEntry[K, V]](t.size() * 2);
+    table = MemoryChunk.make[HashEntry[K, V]](t.size() * 2);
     this.logSize = MathAppend.ceilLog2(table.size());
 
 
@@ -523,7 +523,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     });
     scatterGather.sum();
 
-    val chunk = new MemoryChunk[Pair[Int, Long]](scatterGather.size());
+    val chunk = MemoryChunk.make[Pair[Int, Long]](scatterGather.size());
 
     // split elements according to upper nMaskBit
     Parallel.iter(t.range(), (tid: Long, r : LongRange)=>{

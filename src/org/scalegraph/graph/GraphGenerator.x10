@@ -19,6 +19,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
+import org.scalegraph.util.MathAppend;
 
 /**
  * Provides various graph generators.
@@ -65,9 +66,9 @@ public final class GraphGenerator {
 	    
 	    // last place has edges less than another place by 1
 	    val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
-	            () => new MemoryChunk[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
+	            () => MemoryChunk.make[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
 	    val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
-	            () => new MemoryChunk[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
+	            () => MemoryChunk.make[Long](here.id == 0 ? numLocalEdges - 1: numLocalEdges));
 	    
 	    team.placeGroup().broadcastFlat(() => {
 	        val srcMem_ = srcMemory();
@@ -97,9 +98,9 @@ public final class GraphGenerator {
 		val numLocalEdges = numEdges / team.size();
 		
 		val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 		val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.role()(0);
@@ -127,18 +128,18 @@ public final class GraphGenerator {
 	: DistMemoryChunk[Double]
 	{
 		val team = Config.get().worldTeam();
-		val sizeArray = new GlobalRef[Cell[MemoryChunk[Long]]](new Cell(new MemoryChunk[Long](team.size())));
+		val sizeArray = new GlobalRef[Cell[MemoryChunk[Long]]](new Cell(MemoryChunk.make[Long](team.size())));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val t2 = new Team2(team);
-			val src = new MemoryChunk[Long](1);
+			val src = MemoryChunk.make[Long](1);
 			src(0) = getSize();
-			val dst = (sizeArray.home == here) ? sizeArray.getLocalOrCopy()() : new MemoryChunk[Long](0);
+			val dst = (sizeArray.home == here) ? sizeArray.getLocalOrCopy()() : MemoryChunk.make[Long](0);
 			t2.gather(0, src, dst);
 		});
 		
 		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](getSize()));
+				() => MemoryChunk.make[Double](getSize()));
 		
 		val sizeArray_ = sizeArray()();
 		val placeArray = team.places();
@@ -174,7 +175,7 @@ public final class GraphGenerator {
 		val numLocalEdges = numEdges / team.size();
 		
 		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](numLocalEdges));
+				() => MemoryChunk.make[Double](numLocalEdges));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.role()(0);
@@ -195,9 +196,15 @@ public final class GraphGenerator {
 		return edgeMemory;
 	}
 	
+	/** Generates a R-MAT graph using recursive descent into a 2x2 matrix [A,B; C, 1-(A+B+C)].
+	 	Permutation is enabled. */
+	public static def genRMAT(scale :Int, edgefactor :Int,
+			A :Double, B :Double, C :Double, rnd :Random) : EdgeList[Long]
+		= genRMAT(scale, edgefactor, A, B, C, rnd, true);
+	
 	/** Generates a R-MAT graph using recursive descent into a 2x2 matrix [A,B; C, 1-(A+B+C)]. */
 	public static def genRMAT(scale :Int, edgefactor :Int,
-			A :Double, B :Double, C :Double, rnd :Random)
+			A :Double, B :Double, C :Double, rnd :Random, permute :Boolean)
 	: EdgeList[Long]
 	{
 		if(A+B+C >= 1.0f) throw new IllegalArgumentException("A+B+C >= 1.0: Invalid probabilities");
@@ -208,13 +215,13 @@ public final class GraphGenerator {
 		val numLocalEdges = numEdges / team.size();
 
 		val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 		val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
-				() => new MemoryChunk[Long](numLocalEdges));
+				() => MemoryChunk.make[Long](numLocalEdges));
 
-		val sumA = new MemoryChunk[Double](scale);
-		val sumAB = new MemoryChunk[Double](scale);
-		val sumABC = new MemoryChunk[Double](scale);
+		val sumA = MemoryChunk.make[Double](scale);
+		val sumAB = MemoryChunk.make[Double](scale);
+		val sumABC = MemoryChunk.make[Double](scale);
 		for(i in 0..(scale-1)) {
 			val a = A * (rnd.nextFloat() + 0.5f);
 			val b = B * (rnd.nextFloat() + 0.5f);
@@ -246,8 +253,14 @@ public final class GraphGenerator {
 						else if(x < sumABC(depth)) { srcVertex += 1; }
 						else { dstVertex += 1; srcVertex += 1; }
 					}
-					srcMem_(i) = srcVertex;
-					dstMem_(i) = dstVertex;
+					if(permute) {
+						srcMem_(i) = MathAppend.scramble(scale, srcVertex, 0x1234567812345678UL, 0x2345678923456789UL);
+						dstMem_(i) = MathAppend.scramble(scale, dstVertex, 0x1234567812345678UL, 0x2345678923456789UL);
+					}
+					else {
+						srcMem_(i) = srcVertex;
+						dstMem_(i) = dstVertex;
+					}
 				}
 			});
 		});

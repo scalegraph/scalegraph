@@ -2,6 +2,8 @@ package org.scalegraph.blas;
 
 import x10.util.Team;
 import x10.compiler.Ifndef;
+import x10.compiler.Ifdef;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.graph.id.Twod;
@@ -9,6 +11,8 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Algorithm;
+import org.scalegraph.test.STest;
+import org.scalegraph.Config;
 
 /** Sparse matrix representation.
  */
@@ -51,6 +55,7 @@ public final struct SparseMatrix[T] {
 	 * @param ids IdStruct that provides the distribution information.
 	 */
 	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], ids :IdStruct) {
+		val sw = Config.get().stopWatch();
 
 		if(srcV.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
@@ -68,25 +73,34 @@ public final struct SparseMatrix[T] {
 				dstV(i) = VtoD(dstV(i));
 			}
 		});
+		if(here.id == 0) sw.lap("finished converting edge format");
 
 		val offsetLength = 1L << (ids.lgl + ids.lgc);
 
-		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
-		val origin = new MemoryChunk[Long](srcV.size());
-		val target = new MemoryChunk[Long](srcV.size());
-		val values_ = new MemoryChunk[T](srcV.size());
+		val offsets_ = MemoryChunk.make[Long](offsetLength + 1);
+		val origin = MemoryChunk.make[Long](srcV.size());
+		val target = MemoryChunk.make[Long](srcV.size());
+		val values_ = MemoryChunk.make[T](srcV.size());
 		// if gathering outer edges, origin is source and target is destination.
 		// if gathering inner edges, origin is destination and target is source.
 
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-CONS-MAX: place: " + here.id +
+				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
+
+		if(here.id == 0) sw.lap("start first step sorting");
 		if(!ids.transpose)
 			Parallel.sort(ids.lgl + ids.lgc, srcV, dstV, values, origin, target, values_);
 		else
 			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
+		if(here.id == 0) sw.lap("finished first step sorting");
+		
 		srcV.del();
 		dstV.del();
 		values.del();
+		
 		Parallel.makeOffset(origin, offsets_);
 		origin.del();
+		if(here.id == 0) sw.lap("finished making offsets");
 
 		Parallel.iter(0L..(offsetLength-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
@@ -95,10 +109,14 @@ public final struct SparseMatrix[T] {
 				Algorithm.sort(target.subpart(off, len), values_.subpart(off, len));
 			}
 		});
+		if(here.id == 0) sw.lap("finished second step sorting");
 
 		this.offsets = offsets_;
 		this.vertexes = target;
 		this.values = values_;
+
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-CONS-FIN: place: " + here.id +
+				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 	}
 
 	/** Constructs non-distributed sparse matrix.
@@ -117,10 +135,10 @@ public final struct SparseMatrix[T] {
 
 		val offsetLength = 1L << lgl;
 
-		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
-		val origin = new MemoryChunk[Long](srcV.size());
-		val target = new MemoryChunk[Long](srcV.size());
-		val values_ = new MemoryChunk[T](srcV.size());
+		val offsets_ = MemoryChunk.make[Long](offsetLength + 1);
+		val origin = MemoryChunk.make[Long](srcV.size());
+		val target = MemoryChunk.make[Long](srcV.size());
+		val values_ = MemoryChunk.make[T](srcV.size());
 
 		//if(!transpose)
 			Parallel.sort(lgl, srcV, dstV, values, origin, target, values_);
@@ -154,9 +172,9 @@ public final struct SparseMatrix[T] {
 				(new Cell[SparseMatrix[T]](sparseMatrix));
 
 		return PlaceLocalHandle.make[Cell[SparseMatrix[T]]](team.placeGroup(), () => {
-			val offsets = new MemoryChunk[Long](numVerts);
-			val vertexes = new MemoryChunk[Long](numEdges);
-			val values = new MemoryChunk[T](numEdges);
+			val offsets = MemoryChunk.make[Long](numVerts);
+			val vertexes = MemoryChunk.make[Long](numEdges);
+			val values = MemoryChunk.make[T](numEdges);
 
 			val team2 = new Team2(team);
 			if(ref_matrix.home == here) { // root

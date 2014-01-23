@@ -18,7 +18,7 @@ public final class OrderedPlaceGroup extends PlaceGroup {
 	private val places :MemoryChunk[Place];
 	
 	public def this(ps :Array[Place]) {
-		places = new MemoryChunk[Place](ps.raw());
+		places = MemoryChunk.make[Place](ps.raw());
 	}
 	
 	public def this(ps :MemoryChunk[Place]) {

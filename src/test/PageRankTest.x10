@@ -15,6 +15,7 @@ import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.CSV;
+import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 
 final class PageRankTest extends AlgorithmTest {
