@@ -153,11 +153,17 @@ final public class SpectralClusteringImpl {
 				
 				if(ido == -1 || ido == 1) {
 					// y <- OP(x)
-					val x_ = MemoryChunk.make[Double](workd.raw(), ipntr(0) - 1, nloc);
-					val y_ = MemoryChunk.make[Double](workd.raw(), ipntr(1) - 1, nloc);
-					MemoryChunk.copy[Double](x_, 0L, x(), 0L, nloc);
+					Parallel.iter(0..(nloc-1), (tid:Int, r:IntRange) => {
+						for(i in r) {
+							x()(i) = workd(ipntr(0) - 1 + i);
+						}
+					});
 					BLAS.mult_[Double](1.0, A, false, x, 0.0, y);
-					MemoryChunk.copy[Double](y(), 0L, y_, 0L, nloc);
+					Parallel.iter(0..(nloc-1), (tid:Int, r:IntRange) => {
+						for(i in r) {
+							workd(ipntr(1) - 1 + i) = y()(i);
+						}
+					});
 					
 				} else if(ido == 2) {
 					// y <- Bx
