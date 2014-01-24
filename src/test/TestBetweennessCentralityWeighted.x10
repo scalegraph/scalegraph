@@ -24,6 +24,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.api.BetweennessCentrality;
 import org.scalegraph.util.Dist2D;
+import org.scalegraph.Config;
 import org.scalegraph.io.CSV;
 
 final class TestBetweennessCentralityWeighted extends AlgorithmTest {
@@ -54,7 +55,7 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	        bc.weighted = true;
 	        bc.directed = directed;
 	        val matrix = g.createDistSparseMatrix[Double](
-	                Dist2D.make1D(g.team(), Dist2D.DISTRIBUTE_COLUMNS), bc.weightAttrName, bc.directed, true);
+	                Config.get().distXPregel(), bc.weightAttrName, bc.directed, true);
 	        val N = g.numberOfVertices();
 	        result = bc.execute(matrix, N);
 	    } 
@@ -67,10 +68,9 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	        bc.directed = directed;
 	        bc.exactBc = false;
 	        val team = g.team();
-	        val matrix = g.createDistEdgeIndexMatrix(
-	                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
-	                directed,
-	                true); 
+	        val matrix = g.createDistSparseMatrix[Double](
+	                Config.get().distXPregel(),
+	                bc.weightAttrName, bc.directed, true); 
 	        g.del();
 	        Config.get().stopWatch().lap("Graph construction: ");
 	        val N = g.numberOfVertices(); 

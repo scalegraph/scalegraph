@@ -69,16 +69,17 @@ final class TestBetweennessCentralityUnweighted extends AlgorithmTest {
 	        bc.exactBc = false;
 	        val team = g.team();
 	        val matrix = g.createDistEdgeIndexMatrix(
-	                                                 Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
+	                Config.get().distXPregel(),
 	                                                 directed,
-	                                                 true); 
-	        g.del();
+	                                                 false); 
 	        Config.get().stopWatch().lap("Graph construction: ");
-	        val N = g.numberOfVertices(); 
+	        val N = g.numberOfVertices();
+	        g.del();
 	        val sw = new org.scalegraph.util.StopWatch();
 	        sw.start();
 	        result = bc.execute(matrix, N);
 	        sw.lap("BC elasped time");
+	        // throw new Exception("Reach here");
 	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));

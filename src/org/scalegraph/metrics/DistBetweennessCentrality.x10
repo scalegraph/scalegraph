@@ -35,6 +35,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Bitmap2;
 import org.scalegraph.Config;
 import x10.util.concurrent.AtomicDouble;
+import org.scalegraph.graph.id.OnedR;
 
 public type Vertex = Long;
 public type Distance = Long;
@@ -123,6 +124,10 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _sigmaBuf: Array[Array[ArrayList[Long]]];
         val _muBuf: Array[Array[ArrayList[Long]]];
         
+        val s2v: OnedR.StoV;
+        val d2v: OnedR.DtoV;
+        val v2s: OnedR.VtoS;
+        
         protected def this(dsm: DistSparseMatrix[Long],
                            buffSize: Int,
                            nAllVerticesInG: Long,
@@ -206,14 +211,15 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                             
             // Init loop
             for (i in 0..(_numLocalVertices - 1)) {
-                _distanceMap(i) = 0L;
-                _predMap(i) = null;
-                _successorCount(i) = 0;
-                _pathCount(i) = 0L;
-                _numUpdate(i) = 0;
-                _dependencies(i) = 0D;
-                _dependenciesLock(i) = new Lock();
-                _score(i) = 0D;
+                val idx = i;
+                _distanceMap(idx) = 0L;
+              //  _predMap(idx) = null;
+                _successorCount(idx) = 0;
+                _pathCount(idx) = 0L;
+                _numUpdate(idx) = 0;
+                _dependencies(idx) = 0D;
+                _dependenciesLock(idx) = new Lock();
+                _score(idx) = 0D;
             }
             _predBuf = new Array[Array[ArrayList[Vertex]]](_NUM_TASK,
                     (int) => new Array[ArrayList[Vertex]](t.size(),
@@ -230,6 +236,10 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             _muBuf = new Array[Array[ArrayList[Long]]](_NUM_TASK,
                     (int) => new Array[ArrayList[Long]](t.size(),
                             (int) => new ArrayList[Long](buffSize)));
+            
+            s2v = new OnedR.StoV(dsm.ids(), t.role()(0));
+            d2v = new OnedR.DtoV(dsm.ids());
+            v2s = new OnedR.VtoS(dsm.ids());;
         }
     }
     
@@ -512,8 +522,9 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     
     @Inline
     public def isLocalVertex(orgVertex: Vertex): Boolean {
-        val vertexPlace = ((1 << (lgc + lgr)) -1) & orgVertex;
-        if(vertexPlace == role as Long)
+        // val vertexPlace = ((1 << (lgc + lgr)) -1) & orgVertex;
+        val vertexPlace = lch().v2s.r(orgVertex);
+        if(vertexPlace == role )
             return true;
         return false;
     }
@@ -545,16 +556,19 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     }
     
     @Inline
-    public def OrgToLocSrc(v: Vertex) 
-    = (( v & (( 1 << lgr) -1)) << lgl) | (v >> (lgr + lgc));
+    public def OrgToLocSrc(v: Vertex) = lch().v2s(v);
+    // public def OrgToLocSrc(v: Vertex) 
+    // = (( v & (( 1 << lgr) -1)) << lgl) | (v >> (lgr + lgc));
     
     @Inline
-    public def LocSrcToOrg(v: Vertex)
-    = ((((v & (( 1 << lgl) -1)) << lgc)| role) << lgr) | (v>> lgl);
+    public def LocSrcToOrg(v: Vertex) = lch().s2v(v);
+    // public def LocSrcToOrg(v: Vertex)
+    // = ((((v & (( 1 << lgl) -1)) << lgc)| role) << lgr) | (v>> lgl);
     
     @Inline
-    public def LocDstToOrg(v: Vertex)
-    = ((((v & (( 1 << lgl) -1)) << lgc | (v >> lgl)) << lgr ) | 0);
+    public def LocDstToOrg(v: Vertex) = lch().d2v(v);
+    // public def LocDstToOrg(v: Vertex)
+    // = ((((v & (( 1 << lgl) -1)) << lgc | (v >> lgl)) << lgr ) | 0);
     
     @Inline
     private def currentQ() = lch()._queues(lch()._qPointer());
