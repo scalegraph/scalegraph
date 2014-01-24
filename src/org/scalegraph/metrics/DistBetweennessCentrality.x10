@@ -63,7 +63,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _distSparseMatrix: DistSparseMatrix[Long];
         
         val _currentSource: Cell[Vertex];
-        val _queues: IndexedMemoryChunk[Bitmap2];
+        val _queues: MemoryChunk[Bitmap2];
         
         // poniters of current queue and next queue
         val _qPointer: Cell[Int];
@@ -75,7 +75,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _numLocalVertices: Long;
         
         // betweenness centrality score
-        val _score: IndexedMemoryChunk[Double];
+        val _score: MemoryChunk[Double];
         
         // the number of vertices in graph
         val _numberOfVerticesInGraph: Long;
@@ -95,26 +95,26 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _CONGRUENT = false;
         
         // distance from source
-        val _distanceMap: IndexedMemoryChunk[Long];
+        val _distanceMap: MemoryChunk[Long];
         
         // predecessor list in bfs-graph
-        val _predMap: IndexedMemoryChunk[ArrayList[Long]];
+        val _predMap: MemoryChunk[ArrayList[Long]];
         
         // the number of predecessor
-        val _successorCount: IndexedMemoryChunk[Long];
+        val _successorCount: MemoryChunk[Long];
         
         // the number of geodesic paths passing through a vertex
-        val _pathCount: IndexedMemoryChunk[Long];
+        val _pathCount: MemoryChunk[Long];
         
         // vertex dependecies
-        val _dependencies: IndexedMemoryChunk[Double];
-        val _dependenciesLock: IndexedMemoryChunk[Lock];
+        val _dependencies: MemoryChunk[Double];
+        val _dependenciesLock: MemoryChunk[Lock];
                 
         /* Back tracking stuff */
-        val _backtrackingQueues: IndexedMemoryChunk[Bitmap2];
+        val _backtrackingQueues: MemoryChunk[Bitmap2];
         val _backtrackingQPointer: Cell[Int];
         // The number of vertex's successor that has called back 
-        val _numUpdate: IndexedMemoryChunk[Long];
+        val _numUpdate: MemoryChunk[Long];
         
         /* Buffer stuffs*/
         val _predBuf: Array[Array[ArrayList[Vertex]]];
@@ -144,55 +144,65 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             _numSource = nSrc;
             _sourceRange = srcRange;
             _currentSource = new Cell[Vertex](0);
-            _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](2,
-                            _ALIGN,
-                            _CONGRUENT);
+            // _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](2,
+            //                 _ALIGN,
+            //                 _CONGRUENT);
+            _queues = MemoryChunk.make[Bitmap2](2);
             _queues(0) = new Bitmap2(_numLocalVertices);
             _queues(1) = new Bitmap2(_numLocalVertices);
             _qPointer = new Cell[Int](0);
             _currentLevel = new Cell[Long](0);
             
-            _score = IndexedMemoryChunk.allocateZeroed[Double](
-                    _numLocalVertices,
-                    _ALIGN,
-                    _CONGRUENT);
-            _distanceMap = IndexedMemoryChunk.allocateZeroed[Long](
-                    _numLocalVertices,
-                    _ALIGN,
-                    _CONGRUENT);
-            _predMap =IndexedMemoryChunk.allocateUninitialized[ArrayList[Long]](
-                    _numLocalVertices,
-                    _ALIGN,
-                    _CONGRUENT);
-            _successorCount = IndexedMemoryChunk.allocateUninitialized[Long](
-                    _numLocalVertices,
-                    _ALIGN,
-                    _CONGRUENT);
-            _pathCount = IndexedMemoryChunk.allocateZeroed[Long](
-                    _numLocalVertices, 
-                    _ALIGN, 
-                    _CONGRUENT);
-            _dependencies = IndexedMemoryChunk.allocateZeroed[Double](
-                    _numLocalVertices, 
-                    _ALIGN, 
-                    _CONGRUENT);
-            _dependenciesLock = IndexedMemoryChunk.allocateZeroed[Lock](
-                    _numLocalVertices, 
-                    _ALIGN, 
-                    _CONGRUENT);
+            // _score = IndexedMemoryChunk.allocateZeroed[Double](
+            //         _numLocalVertices,
+            //         _ALIGN,
+            //         _CONGRUENT);
+            _score = MemoryChunk.make[Double](_numLocalVertices);
+            // _distanceMap = IndexedMemoryChunk.allocateZeroed[Long](
+            //         _numLocalVertices,
+            //         _ALIGN,
+            //         _CONGRUENT);
+            _distanceMap = MemoryChunk.make[Long](_numLocalVertices);
+            // _predMap =IndexedMemoryChunk.allocateUninitialized[ArrayList[Long]](
+            //         _numLocalVertices,
+            //         _ALIGN,
+            //         _CONGRUENT);
+            _predMap = MemoryChunk.make[ArrayList[Long]](_numLocalVertices);
+            // _successorCount = IndexedMemoryChunk.allocateUninitialized[Long](
+            //         _numLocalVertices,
+            //         _ALIGN,
+            //         _CONGRUENT);
+            _successorCount = MemoryChunk.make[Long](_numLocalVertices);
+            // _pathCount = IndexedMemoryChunk.allocateZeroed[Long](
+            //         _numLocalVertices, 
+            //         _ALIGN, 
+            //         _CONGRUENT);
+            _pathCount = MemoryChunk.make[Long](_numLocalVertices);
+            // _dependencies = IndexedMemoryChunk.allocateZeroed[Double](
+            //         _numLocalVertices, 
+            //         _ALIGN, 
+            //         _CONGRUENT);
+            _dependencies = MemoryChunk.make[Double](_numLocalVertices);
+            // _dependenciesLock = IndexedMemoryChunk.allocateZeroed[Lock](
+            //         _numLocalVertices, 
+            //         _ALIGN, 
+            //         _CONGRUENT);
+            _dependenciesLock = MemoryChunk.make[Lock](_numLocalVertices);
 
             // Create queue for updating score
-            _backtrackingQueues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](
-                    2, 
-                    _ALIGN,
-                    _CONGRUENT);
+            // _backtrackingQueues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](
+            //         2, 
+            //         _ALIGN,
+            //         _CONGRUENT);
+            _backtrackingQueues = MemoryChunk.make[Bitmap2](2);
             _backtrackingQueues(0) = new Bitmap2(_numLocalVertices);
             _backtrackingQueues(1) = new Bitmap2(_numLocalVertices);
             _backtrackingQPointer = new Cell[Int](0);
-            _numUpdate = IndexedMemoryChunk.allocateZeroed[Long](
-                    _numLocalVertices, 
-                    _ALIGN, 
-                    _CONGRUENT);
+            // _numUpdate = IndexedMemoryChunk.allocateZeroed[Long](
+            //         _numLocalVertices, 
+            //         _ALIGN, 
+            //         _CONGRUENT);
+            _numUpdate = MemoryChunk.make[Long](_numLocalVertices);
                             
             // Init loop
             for (i in 0..(_numLocalVertices - 1)) {
@@ -377,10 +387,11 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         }
         // Return result as a graph attribute
         val result = new DistMemoryChunk[Double](places, () => {
-            val r = MemoryChunk.make[Double](localState()._score.length());
-            for (i in 0..(r.size() -1))
-                r(i) = localState()._score(i);
-            return r;
+            // val r = MemoryChunk.make[Double](localState()._score.length());
+            // for (i in 0..(r.size() -1))
+            //     r(i) = localState()._score(i);
+            // return r;
+            return localState()._score;
         });
         // g.setVertexAttribute[Double](attrName, result);
         // //TODO: Remove this line for release
@@ -478,19 +489,25 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         currentQ().clearAll();
         backtrackingCurrentQ().clearAll();
         backtrackingNextQ().clearAll();
-        lch()._currentLevel() = 0L;
+        
+        val ls = lch();
+        ls._currentLevel() = 0L;
         val numLocalVertices = lch()._numLocalVertices;
-        for (i in 0..(lch()._numLocalVertices - 1)) {
-            lch()._distanceMap(i) = 0L;
-            if (lch()._predMap(i) != null) {
-                lch()._predMap(i).clear();
+        for (i in 0..(ls._numLocalVertices - 1)) {
+            ls._distanceMap(i) = 0L;
+            if (ls._predMap(i) != null) {
+                ls._predMap(i).clear();
             }
+            ls._successorCount(i) = 0;
+            ls._pathCount(i) = 0;
+            ls._numUpdate(i) = 0;
+            ls._dependencies(i) = 0;
         }
         
-        lch()._successorCount.clear(0, numLocalVertices);
-        lch()._pathCount.clear(0, numLocalVertices);
-        lch()._numUpdate.clear(0, numLocalVertices);
-        lch()._dependencies.clear(0, numLocalVertices);
+        // ls._successorCount.clear(0, numLocalVertices);
+        // ls._pathCount.clear(0, numLocalVertices);
+        // ls._numUpdate.clear(0, numLocalVertices);
+        // ls._dependencies.clear(0, numLocalVertices);
     }
     
     @Inline
@@ -652,17 +669,22 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     public def visit(orgSrc: Long, orgDst: Long, predDistance: Long, predSigma: Long) {
         val localDst = OrgToLocSrc(orgDst);
         val d = predDistance + 1;
+        val ls = lch();
         val f = () => {
-            var predMap: ArrayList[Long] = compare_and_swap_val[ArrayList[Long]](lch()._predMap, localDst, null, new ArrayList[Long]());    
-            if (predMap == null) { 
-                predMap = lch()._predMap(localDst);
-            }
+            // var predMap: ArrayList[Long] = compare_and_swap_val[ArrayList[Long]](lch()._predMap, localDst, null, new ArrayList[Long]());    
+            ls._predMap.atomicCAS(localDst, null, new ArrayList[Long]());
+            val predMap = ls._predMap(localDst);
+            // if (predMap == null) { 
+            //     predMap = lch()._predMap(localDst);
+            // }
             // add predecessor
             atomic predMap.add(orgSrc);
             // increase the number of geodesic paths
-            add_and_fetch[Long](lch()._pathCount, localDst, predSigma);
+            // add_and_fetch[Long](ls._pathCount, localDst, predSigma);
+            ls._pathCount.atomicAdd(localDst, predSigma);
         };
-        if (compare_and_swap(lch()._distanceMap, localDst, 0L, d)) {
+        if (ls._distanceMap.atomicCAS(localDst, 0L, d)) {
+        // if (compare_and_swap(ls._distanceMap, localDst, 0L, d)) {
             // First visit
             nextQ().set(localDst);
         }         
@@ -686,7 +708,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 for(k in 0..(preds.size - 1)) {
                     val pred = preds(k);
                     val locPred = OrgToLocSrc(pred);
-                    add_and_fetch[Long](lch()._successorCount, locPred, 1L);
+                    // add_and_fetch[Long](lch()._successorCount, locPred, 1L);
+                    lch()._successorCount.atomicAdd(locPred, 1L);
                 }
             }
             clearBuffer(bufId, pid);
@@ -715,7 +738,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                         val pred = lch()._predMap(i)(k);
                         val locPred = OrgToLocSrc(pred);
                         if (isLocalVertex(pred))  {
-                            fetch_and_add[Long](lch()._successorCount, locPred, 1);
+                            // fetch_and_add[Long](lch()._successorCount, locPred, 1);
+                            lch()._successorCount.atomicAdd(locPred, 1);
                         } else {
                             val targetRole = team.role(getVertexPlace(pred))(0);
                             addRemote(threadId as Int, targetRole, pred);
@@ -826,7 +850,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val locPred = OrgToLocSrc(v);
         val l = inst._dependenciesLock(locPred);
         l.lock();
-        val numUpdates = add_and_fetch[Long](inst._numUpdate, locPred, 1L);
+        // val numUpdates = add_and_fetch[Long](inst._numUpdate, locPred, 1L);
+        val numUpdates = inst._numUpdate.atomicAdd(locPred, 1L);
         val sigma = inst._pathCount(locPred) as Double;
         
         var dep: Double = 0;
