@@ -26,8 +26,8 @@ import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.graph.id.OnedR;
 
 final struct MessageBuffer[M] { M haszero } {
-	val messages :GrowableMemory[M] = new GrowableMemory[M]();
-	val dstIds :GrowableMemory[Long] = new GrowableMemory[Long]();
+	val messages :GrowableMemory[M] = new GrowableMemory[M](128);
+	val dstIds :GrowableMemory[Long] = new GrowableMemory[Long](128);
 	
 	def this() { }
 }

@@ -30,6 +30,7 @@ namespace org { namespace scalegraph { namespace io { namespace impl {
 using namespace ::x10::lang;
 using ::x10::io::IOException;
 using ::org::scalegraph::util::MCData_Impl;
+using ::org::scalegraph::util::MemoryChunk;
 
 class CSVParser {
 
@@ -157,8 +158,8 @@ static inline x10_byte* trimSpace(x10_byte* ptr, x10_byte* begin) {
 	return ptr + 1;
 }
 
-NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
-	x10_byte* orig = ptr;
+NativeCSVHeader::NativeCSVHeader(MemoryChunk<x10_byte> str, x10_long size) {
+	x10_byte* ptr = str->pointer();
 	x10_byte* terminal = ptr + size;
 	CSVParser p;
 	while(true) {
@@ -193,8 +194,8 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 		}
 		if(typeNameEnd == NULL) typeName = NULL;
 
-		MemoryChunk<x10_byte> attNameMC = { MCData_Impl<x10_byte>(orig, attName, attNameEnd - attName) };
-		MemoryChunk<x10_byte> typeNameMC = { MCData_Impl<x10_byte>(orig, typeName, typeNameEnd - typeName) };
+		MemoryChunk<x10_byte> attNameMC = { MCData_Impl<x10_byte>(attName, attNameEnd - attName, str.FMGL(data).FMGL(memobj)) };
+		MemoryChunk<x10_byte> typeNameMC = { MCData_Impl<x10_byte>(typeName, typeNameEnd - typeName, str.FMGL(data).FMGL(memobj)) };
 		NativeCSVAttribute att = { (typeName != NULL), p.doubleQuoated, attNameMC, typeNameMC };
 		attrs.push_back(att);
 
@@ -209,7 +210,7 @@ NativeCSVHeader::NativeCSVHeader(x10_byte* ptr, x10_long size) {
 
 NativeCSVHeader* readCSVHeader(SString headerLine) {
 	return new (x10aux::alloc<NativeCSVHeader>()) NativeCSVHeader(
-			headerLine.FMGL(content).pointer(), headerLine.size());
+			headerLine.FMGL(content), headerLine.size());
 }
 
 x10_long LineNextBreak(MemoryChunk<x10_byte> data, x10_long offset)
@@ -505,7 +506,7 @@ void CSVParseElements(x10_byte** elemPtrs, int lines, GrowableMemory<T>* outBuf)
 		}
 	}
 
-	MemoryChunk<T> mc = { MCData_Impl<T>(tmp, tmp, lines) };
+	MemoryChunk<T> mc = { MCData_Impl<T>(tmp, lines, NULL) };
 	outBuf->add(mc);
 }
 
@@ -516,7 +517,7 @@ void CSVParseStringElements(x10_byte** elemPtrs, int lines, GrowableMemory<SStri
 	for(int i = 0; i < lines; ++i) {
 		char *endptr;
 		if(ptrs[i] == NULL) {
-			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(NULL, NULL, 0) };
+			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(NULL, 0, NULL) };
 			tmp[i].FMGL(content) = mc;
 		}
 		else {
@@ -549,12 +550,12 @@ void CSVParseStringElements(x10_byte** elemPtrs, int lines, GrowableMemory<SStri
 				//strbuf[len]='\0';
 				memcpy(strbuf, ptrs[i], len+1);
 			}
-			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(strbuf, strbuf, len) };
+			MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(strbuf, len, NULL) };
 			tmp[i].FMGL(content) = mc;
 		}
 	}
 
-	MemoryChunk<SString> mc = { MCData_Impl<SString>(tmp, tmp, lines) };
+	MemoryChunk<SString> mc = { MCData_Impl<SString>(tmp, lines, NULL) };
 	outBuf->add(mc);
 }
 

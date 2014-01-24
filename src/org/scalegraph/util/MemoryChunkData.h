@@ -40,6 +40,7 @@ namespace org { namespace scalegraph { namespace util {
 			x10_long byteSize;
 			void* pointer;
 			void* allocHead;
+			bool containPtrs;
 			const char* filename;
 			long linenumber;
 			ExplicitMemory *fLink, *bLink;
@@ -77,7 +78,9 @@ namespace org { namespace scalegraph { namespace util {
 				}
 				pthread_mutex_unlock(&ExpMemState.mutex);
 
-				GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+				if(containPtrs) {
+					GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+				}
 				free(allocHead);
 			}
 
@@ -85,6 +88,7 @@ namespace org { namespace scalegraph { namespace util {
 				ExplicitMemory* this_ = x10aux::alloc<ExplicitMemory>(sizeof(ExplicitMemory), false);
 				this_->filename = filename;
 				this_->linenumber = linenumber;
+				this_->containPtrs = containPtrs;
 
 				if (0 == numElements) {
 					this_->setData(NULL, NULL,0);
@@ -187,33 +191,21 @@ public:
          * head points to starting address of allocated memory, a MemoryChunkData that subparts from any MemoryChunkData
          * whill have head point to the same address
          * */
-        //ELEM * FMGL(head);
-        void * FMGL(head);
-        ELEM * FMGL(pointer);
+        ELEM* FMGL(pointer);
         x10_long FMGL(size);
+        ExplicitMemory* FMGL(memobj);
 
         MCData_Base()
-                : FMGL(head)(NULL),
-                  FMGL(pointer)(NULL),
-                  FMGL(size)(0)
+                : FMGL(pointer)(NULL),
+                  FMGL(size)(0),
+                  FMGL(memobj)(NULL)
         { }
-        MCData_Base(/*ELEM**/void* head__, ELEM* pointer__, x10_long size__)
-                : FMGL(head)(head__),
-                  FMGL(pointer)(pointer__),
-                  FMGL(size)(size__)
-        {
-            /**
-             * pointer = null implies the memory was created from alloc method, otherwise from subpart method
-             */
-            if (FMGL(pointer) == NULL) {
-               // FMGL(pointer) = FMGL(head);
-            }
-        }
-/*
-        static MCData_Impl<T> _make(T * head, T * pointer, x10_long size) {
-                return MCData_Impl(head, pointer, size);
-        }
-*/
+        MCData_Base(ELEM* pointer__, x10_long size__, ExplicitMemory* memobj__)
+                : FMGL(pointer)(pointer__),
+                  FMGL(size)(size__),
+                  FMGL(memobj)(memobj__)
+        { }
+
         static inline THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
         	return _make(numElements, alignment, zeroed, "--", 0);
         }
@@ -222,7 +214,7 @@ public:
         }
         static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
                 if (0 == numElements) {
-                        return THIS(NULL, NULL, 0);
+                        return THIS(NULL, 0, NULL);
                 }
                 assert((alignment & (alignment-1)) == 0);
                 x10_long size = alignment + numElements*sizeof(ELEM);
@@ -242,12 +234,12 @@ public:
                                 x10_long alignDelta = alignment-1;
                                 x10_long alignMask = ~alignDelta;
                                 x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
-                                return THIS(NULL, (ELEM*)alignedMem, numElements);;
+                                return THIS((ELEM*)alignedMem, numElements, NULL);
                         }
-                        return THIS(NULL, allocMem, numElements);
+                        return THIS(allocMem, numElements, NULL);
                 }else{
                         ExplicitMemory *exp = ExplicitMemory::_make(numElements, alignment, zeroed, sizeof(ELEM), containsPtrs, filename, line);
-                        return THIS(exp, (ELEM*)(exp->pointer), numElements);
+                        return THIS((ELEM*)(exp->pointer), numElements, exp);
                 }
         }
 
@@ -274,8 +266,8 @@ public:
                 : BASE()
         { }
 
-        MCData_Impl(/*ELEM**/void* head__, ELEM* pointer__, x10_long size__)
-                : BASE(head__, pointer__, size__)
+        MCData_Impl(ELEM* pointer__, x10_long size__, ExplicitMemory* memobj__)
+                : BASE(pointer__, size__, memobj__)
         { }
 
         static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
@@ -353,8 +345,8 @@ public:
                 : BASE()
         { }
 
-        MCData_Impl(/*ELEM**/void* head__, ELEM* pointer__, x10_long size__)
-                : BASE(head__, pointer__, size__)
+        MCData_Impl(ELEM* pointer__, x10_long size__, ExplicitMemory* memobj__)
+                : BASE(pointer__, size__, memobj__)
         { }
 
         static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
@@ -437,30 +429,21 @@ namespace org { namespace scalegraph { namespace util {
 // MCData_Base //
 
 template<class THIS, typename ELEM> void MCData_Base<THIS, ELEM>::del() {
-        if(!FMGL(head)){//FMGL(size)< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
-        /*if(FMGL(head) != FMGL(pointer)) {
-                x10aux::throwException(
-                                x10::lang::UnsupportedOperationException::_make(
-                                x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
-        }//}
-        x10aux::dealloc(FMGL(head));
-        */ 
+        if(FMGL(memobj) == NULL){
 			x10aux::dealloc(FMGL(pointer));
-			FMGL(head) = NULL;
-			FMGL(pointer) = NULL;
-			FMGL(size) = 0;
         }else{
-			GC_register_finalizer( (ExplicitMemory*)FMGL(head), NULL, NULL, NULL, NULL );
-			((ExplicitMemory*)FMGL(head))->destruct();
+        	// TODO: release memobj
+			GC_register_finalizer(FMGL(memobj), NULL, NULL, NULL, NULL );
+			FMGL(memobj)->destruct();
 
 			if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-				printf("del exp p;%p\n ", FMGL(head));
-				printf("del size:%ld\n",((ExplicitMemory*)FMGL(head))->byteSize);
+				printf("del exp p;%p\n ", FMGL(memobj));
+				printf("del size:%ld\n",FMGL(memobj)->byteSize);
 			}
-			FMGL(head) = NULL;
-			FMGL(pointer) = NULL;
-			FMGL(size) = 0;
         }
+		FMGL(pointer) = NULL;
+		FMGL(size) = 0;
+		FMGL(memobj) = NULL;
 }
 
 template<class THIS, typename ELEM> x10::lang::String* MCData_Base<THIS, ELEM>::typeName() {
