@@ -12,7 +12,7 @@
 #ifndef __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H
 #define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H
 
-#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP false
+#define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP true
 #define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD 1000
 #define __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT false
 
@@ -225,7 +225,7 @@ public:
                 //}
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
-                if(size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+                if(containsPtrs || size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
                         ELEM* allocMem = x10aux::alloc<ELEM>(size, containsPtrs);
                         if (zeroed) {
                                 memset(allocMem, 0, size);

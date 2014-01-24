@@ -37,12 +37,15 @@ public final class OnedR {
 	/** Vertex ID to Source ID Converter */
 	public static final struct VtoS {
 		val lgr :Int;
+		val rmask :Long;
 		
 		public def this(ids :IdStruct) {
 			lgr = ids.lgr;
+			rmask = ((1L << lgr) - 1L);
 		}
 		
 		public operator this(id :Long) :Long = (id >> lgr);
+		public def r(id :Long) :Int = (id & rmask) as Int;
 	}
 
 	/** Destination ID to Vertex ID Converter */

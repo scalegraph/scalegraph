@@ -64,6 +64,8 @@ final class TestMST extends AlgorithmTest {
 	    }
 	    else if(op.equals("check")) {
 	        return checkResult(result.source(), result.target(), ref);
+	    } else if (op.equals("nowrite")) {
+	        return true;
 	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown command :" + args(0));
