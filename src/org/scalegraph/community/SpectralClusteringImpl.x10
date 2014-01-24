@@ -131,6 +131,9 @@ final public class SpectralClusteringImpl {
 			val d:Array[Double](1) = new Array[Double](nev);
 			val v:Array[Double](1) = new Array[Double](nev * ldv);
 			
+			val sw = Config.get().stopWatch();
+			if(here.id == 0) sw.lap("start ARPACK iteration");
+			
 			iparam(0) = 1;
 			iparam(2) = maxitr;
 			iparam(3) = 1;
@@ -146,6 +149,8 @@ final public class SpectralClusteringImpl {
 				ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
 						resid, ncv, u, ldu, iparam, ipntr,
 						workd, workl, lworkl, info);
+
+				if(here.id == 0) sw.lap("ARPACK Iteration " + iter);
 				
 				if(role == 0 && info != 0) {
 					ARPACK.printError("pdsaupd", info);
@@ -164,6 +169,7 @@ final public class SpectralClusteringImpl {
 							workd(ipntr(1) - 1 + i) = y()(i);
 						}
 					});
+					if(here.id == 0) sw.lap("Operation y <- OP(x): " + iter);
 					
 				} else if(ido == 2) {
 					// y <- Bx
@@ -172,8 +178,10 @@ final public class SpectralClusteringImpl {
 							workd(ipntr(1) - 1 + i) = workd(ipntr(0) - 1 + i);
 						}
 					});
+					if(here.id == 0) sw.lap("Operation y <- Bx: " + iter);
 				} else {
 					if(role == 0 && ido != 99) Console.OUT.println("ARPACK: pdsaupd: unknown operation: ido = " + ido);
+					if(here.id == 0) sw.lap("Iteration finished");
 					break;
 				}
 			}
@@ -196,6 +204,8 @@ final public class SpectralClusteringImpl {
 				Console.OUT.println(d);
 			}
 			
+			if(here.id == 0) sw.lap("Last ARPACK call");
+			
 			val result = MemoryChunk.make[Double](v.size);
 			Parallel.iter(
 					0..(nloc-1),
@@ -207,6 +217,9 @@ final public class SpectralClusteringImpl {
 						}
 					}
 			);
+			
+			if(here.id == 0) sw.lap("Eigenvector calcularion finished");
+			
 			result
 		});
 	}
@@ -314,6 +327,9 @@ final public class SpectralClusteringImpl {
 			}
 			//Console.OUT.println(here + ": K-means finished");
 		});
+		
+		val sw = Config.get().stopWatch();
+		if(here.id == 0) sw.lap("KMeans completed");
 		
 		return assign;
 	}
