@@ -58,6 +58,27 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	        val N = g.numberOfVertices();
 	        result = bc.execute(matrix, N);
 	    } 
+	    else if (args(0).equals("low_apprx")) {
+	        // Test low-level api with exact bc computation
+	        val bc = new BetweennessCentrality();
+	        val directed =true;
+	        bc.weighted =true;
+	        bc.source = [Long.parseLong(args(3))];
+	        bc.directed = directed;
+	        bc.exactBc = false;
+	        val team = g.team();
+	        val matrix = g.createDistEdgeIndexMatrix(
+	                Dist2D.make1D(team, Dist2D.DISTRIBUTE_COLUMNS),
+	                directed,
+	                true); 
+	        g.del();
+	        Config.get().stopWatch().lap("Graph construction: ");
+	        val N = g.numberOfVertices(); 
+	        val sw = new org.scalegraph.util.StopWatch();
+	        sw.start();
+	        result = bc.execute(matrix, N);
+	        sw.lap("BC elasped time");
+	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
 	    }
