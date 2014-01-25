@@ -67,21 +67,29 @@ namespace org { namespace scalegraph { namespace util {
 			}
 
 			void destruct(){
+				void* ptr = NULL;
+
 				pthread_mutex_lock(&ExpMemState.mutex);
-				::scalegraph::listRemove(this);
-				ExpMemState.totalSize -= byteSize;
-				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT)
-				{
-					printf("%d: finalization!: ", x10rt_here());
-					showData();
-					printf("cnt:%ld\n", --ExpMemState.numCnt);
+				if(allocHead) {
+					::scalegraph::listRemove(this);
+					ExpMemState.totalSize -= byteSize;
+					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT)
+					{
+						printf("%d: finalization!: ", x10rt_here());
+						showData();
+						printf("cnt:%ld\n", --ExpMemState.numCnt);
+					}
+					ptr = allocHead;
+					allocHead = pointer = NULL;
 				}
 				pthread_mutex_unlock(&ExpMemState.mutex);
 
-				if(containPtrs) {
-					GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+				if(ptr) {
+					if(containPtrs) {
+						GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+					}
+					::free(ptr);
 				}
-				free(allocHead);
 			}
 
 			static ExplicitMemory* _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize, bool containPtrs, const char* filename, int linenumber) {
@@ -112,7 +120,9 @@ namespace org { namespace scalegraph { namespace util {
 					ExpMemState.gcWait = true;
 					pthread_mutex_unlock(&ExpMemState.mutex);
 
+x10aux::alloc_lock.lock();
 					GC_gcollect();
+x10aux::alloc_lock.unlock();
 
 					pthread_mutex_lock(&ExpMemState.mutex);
 					ExpMemState.gcWait = false;
@@ -148,10 +158,12 @@ namespace org { namespace scalegraph { namespace util {
 					abort();
 				}
 
+x10aux::alloc_lock.lock();
 				if(containPtrs){
 					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
 				}
 				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
+x10aux::alloc_lock.unlock();
 
 				if (zeroed) {
 					memset(allocMem, 0, size);
@@ -433,8 +445,10 @@ template<class THIS, typename ELEM> void MCData_Base<THIS, ELEM>::del() {
 			x10aux::dealloc(FMGL(pointer));
         }else{
         	// TODO: release memobj
+x10aux::alloc_lock.lock();
 			GC_register_finalizer(FMGL(memobj), NULL, NULL, NULL, NULL );
 			FMGL(memobj)->destruct();
+x10aux::alloc_lock.unlock();
 
 			if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 				printf("del exp p;%p\n ", FMGL(memobj));
