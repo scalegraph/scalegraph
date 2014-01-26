@@ -36,10 +36,8 @@ final class StronglyConnectedComponentTest extends AlgorithmTest{
 			result = org.scalegraph.api.StronglyConnectedComponent2.run(g);
 		}
 		else if(args(0).equals("low")) {
-
 			val matrix = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", true, false);
 //			val matrix = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, false);
-
 
 			// delete the graph object in order to reduce the memory consumption
 			g.del();
