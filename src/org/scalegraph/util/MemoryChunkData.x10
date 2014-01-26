@@ -66,6 +66,9 @@ final struct MemoryChunkData[T] {
 	@Native("c++", "(#this).del()")
 	public def del() :void { }
 	
+	@Native("c++", "(#this).isValid()")
+	public def isValid() :Boolean = true;
+	
 	@NativeRep("c++", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", null)
 	static struct Pointer[T] { }
 	

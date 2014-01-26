@@ -36,6 +36,8 @@ namespace org { namespace scalegraph { namespace util {
 
 		extern ExpMemGlobalState ExpMemState;
 
+		x10_long get_gc_heap_size();
+
         struct ExplicitMemory{
 			x10_long byteSize;
 			void* pointer;
@@ -120,9 +122,9 @@ namespace org { namespace scalegraph { namespace util {
 					ExpMemState.gcWait = true;
 					pthread_mutex_unlock(&ExpMemState.mutex);
 
-x10aux::alloc_lock.lock();
+					x10aux::alloc_lock.lock();
 					GC_gcollect();
-x10aux::alloc_lock.unlock();
+					x10aux::alloc_lock.unlock();
 
 					pthread_mutex_lock(&ExpMemState.mutex);
 					ExpMemState.gcWait = false;
@@ -158,12 +160,12 @@ x10aux::alloc_lock.unlock();
 					abort();
 				}
 
-x10aux::alloc_lock.lock();
+				x10aux::alloc_lock.lock();
 				if(containPtrs){
 					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
 				}
 				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
-x10aux::alloc_lock.unlock();
+				x10aux::alloc_lock.unlock();
 
 				if (zeroed) {
 					memset(allocMem, 0, size);
@@ -237,7 +239,7 @@ public:
                 //}
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
-                if(containsPtrs || size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
                         ELEM* allocMem = x10aux::alloc<ELEM>(size, containsPtrs);
                         if (zeroed) {
                                 memset(allocMem, 0, size);
@@ -288,6 +290,8 @@ public:
         static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
                         return BASE::_make(numElements, alignment, zeroed, filename, line);
                 }
+
+        x10_boolean isValid() { return (this->FMGL(memobj) == NULL) || (this->FMGL(memobj)->allocHead != NULL); }
 
         T& operator[](x10_long index) { return this->FMGL(pointer)[index]; }
         T& operator[](x10_int index) { return this->FMGL(pointer)[index]; }
@@ -378,6 +382,8 @@ public:
                 return this_;
         }
 
+        x10_boolean isValid() { return (this->FMGL(memobj) == NULL) || (this->FMGL(memobj)->allocHead != NULL); }
+
         T* operator[](x10_long index) { return &this->FMGL(pointer)[index]; }
         T* operator[](x10_int index) { return &this->FMGL(pointer)[index]; }
         void set(x10_long index, T* ptr) { this->FMGL(pointer)[index] = *ptr; }
@@ -445,10 +451,10 @@ template<class THIS, typename ELEM> void MCData_Base<THIS, ELEM>::del() {
 			x10aux::dealloc(FMGL(pointer));
         }else{
         	// TODO: release memobj
-x10aux::alloc_lock.lock();
+        	x10aux::alloc_lock.lock();
 			GC_register_finalizer(FMGL(memobj), NULL, NULL, NULL, NULL );
 			FMGL(memobj)->destruct();
-x10aux::alloc_lock.unlock();
+			x10aux::alloc_lock.unlock();
 
 			if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 				printf("del exp p;%p\n ", FMGL(memobj));

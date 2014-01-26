@@ -202,6 +202,9 @@ public class HyperANF {
 		   */
 		val end :(superstep :Int, aggVal :Double) => Boolean =
 			(superstep :Int, aggVal :Double) => {
+				if(here.id == 0) {
+					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
+				}
 				if(results.home==here) {
 					if((superstep & mask)!=0) return false;
 					val index = superstep / loop;
@@ -214,9 +217,6 @@ public class HyperANF {
 						if(MathAppend.abs(a/b - 1.0) < 0.001)
 							return true;
 					}
-				}
-				if(here.id == 0) {
-					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
 				}
 				
 				return !(superstep < niter*loop);

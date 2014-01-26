@@ -29,6 +29,14 @@ ExpMemGlobalState::ExpMemGlobalState() {
 	list = new ExplicitMemory();
 }
 
+x10_long get_gc_heap_size() {
+#ifdef X10_USE_BDWGC
+			return GC_get_heap_size();
+#else
+			return 0;
+#endif
+		}
+
 } } } // namespace org { namespace scalegraph { namespace util {
 
 /* END of MemoryChunkData */

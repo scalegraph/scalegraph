@@ -126,6 +126,7 @@ public abstract class AlgorithmTest extends STest {
 	}
 
 	public final def run(args :Array[String](1)): Boolean {
+		print("ARGS: "); println(args);
 		val [ graphArgs, mainArgs ] = splitArgs(args);
 		return run(mainArgs, loadGraph(graphArgs));
 	}
