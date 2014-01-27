@@ -35,7 +35,12 @@ final class HyperANFTest extends AlgorithmTest{
 //		val result = org.scalegraph.api.HyperANF.run(g);	
 		val hyperANF = new org.scalegraph.api.HyperANF();
 		val result :MemoryChunk[Double];
+		
 		hyperANF.niter = Int.parse(args(3));
+		hyperANF.B = Int.parse(args(4));
+		
+		println("HyperANF [niter=" + hyperANF.niter + ",B=" + hyperANF.B + "]");
+		
 		if(args(0).equals("high")) {
 			result = hyperANF.execute(g);
 		}

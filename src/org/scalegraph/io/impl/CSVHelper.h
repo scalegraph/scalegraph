@@ -52,7 +52,7 @@ struct NativeCSVAttribute {
 struct NativeCSVHeader {
 	gc_std<NativeCSVAttribute>::vector attrs;
 
-	NativeCSVHeader(x10_byte* ptr, x10_long size);
+	NativeCSVHeader(MemoryChunk<x10_byte> str, x10_long size);
 	~NativeCSVHeader() { }
 };
 

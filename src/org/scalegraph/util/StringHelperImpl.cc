@@ -109,7 +109,7 @@ MemoryChunk<x10_byte> charToUTF8_(x10_char ch, const MemoryChunk<x10_byte>& byte
 	int bytesCount = 0;
 	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
 	UTF8_ENCODE_CHAR(ch, bytes_ptr, bytesCount);
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(bytes_ptr, bytes_ptr, bytesCount) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(bytes_ptr, bytesCount, bytes.FMGL(data).FMGL(memobj)) };
 	return mc;
 }
 
@@ -297,7 +297,7 @@ x10_byte* StringCstr_(SString& str) {
 
 MemoryChunk<x10_byte> StringFromX10String(x10::lang::String* x10str) {
 	x10_byte* ptr = reinterpret_cast<x10_byte*>(const_cast<char*>(x10str->c_str()));
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(ptr, ptr, x10str->length()) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(ptr, x10str->length(), NULL) };
 	return mc;
 }
 
@@ -538,7 +538,7 @@ template <> SStringBuilder StringBuilderAdd_<x10_char>(SStringBuilder th, const 
 	x10_byte buf[4];
 	int len = 0;
 	UTF8_ENCODE_CHAR(x, buf, len);
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(buf, buf, len) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(buf, len, NULL) };
 	th->FMGL(buffer)->::org::scalegraph::util::GrowableMemory<x10_byte>::add(mc);
 }
 template <> SStringBuilder StringBuilderAdd_<x10_byte>(SStringBuilder th, const x10_byte x) {
@@ -549,7 +549,7 @@ template <> SStringBuilder StringBuilderAdd_<x10_ubyte>(SStringBuilder th, const
 }
 template <> SStringBuilder StringBuilderAdd_<x10_boolean>(SStringBuilder th, const x10_boolean x) {
 	x10_byte* str = (x10_byte*)(x ? "true" : "false");
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(str, str, x ? 4 : 5) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(str, x ? 4 : 5, NULL) };
 	th->FMGL(buffer)->::org::scalegraph::util::GrowableMemory<x10_byte>::add(mc);
 	return th;
 }

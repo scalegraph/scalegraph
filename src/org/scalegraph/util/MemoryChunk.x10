@@ -194,7 +194,13 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	
 	/** Returens the internal pointer object.
 	 */
-	public def pointer() :MemoryChunkData.Pointer[T] = data.pointer();
+	public def pointer() :MemoryChunkData.Pointer[T] {
+		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
+		}
+		return data.pointer();
+	}
 
 	/** Returens the number of elements.
 	 */
@@ -243,6 +249,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public def subpart(offset :Long, size :Long) {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(offset < 0 || offset + size > data.size)
 				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
 		}
@@ -254,6 +262,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline operator this(index:int):T {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -265,6 +275,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline operator this(index:Long):T {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -276,6 +288,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline operator this(index:int)=(value:T):T{self==value} {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -288,6 +302,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline operator this(index:Long)=(value:T):T{self==value} {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -306,6 +322,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline def atomicAdd(index:Long, value:T):T {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -317,6 +335,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline def atomicOr(index:Long, value:T):T {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -328,6 +348,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline def atomicAnd(index:Long, value:T):T {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -343,6 +365,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline def atomicXor(index:Long, value:T):T {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -365,6 +389,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public @Inline def atomicCAS(index:Long, expect:T, value:T):Boolean {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
@@ -381,6 +407,8 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	public static def copy[T](src:MemoryChunk[T], srcIndex:Long,
 			dst:MemoryChunk[T], dstIndex:Long, numElems:Long):void {
 		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!src.data.isValid() || !dst.data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(numElems < 0 || srcIndex < 0 || dstIndex < 0)
 				throw new IllegalArgumentException();
 			if(src.size() < srcIndex + numElems || dst.size() < dstIndex + numElems)
@@ -393,7 +421,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 */
 	public static def getNull[T]() = MemoryChunk.make[T](0);
 	
-	@Native("c++", "GC_get_heap_size()")
+	@Native("c++", "org::scalegraph::util::get_gc_heap_size()")
 	public static native def getGCMemSize() :Long;
 	
 	@Native("c++", "org::scalegraph::util::ExpMemState.totalSize")

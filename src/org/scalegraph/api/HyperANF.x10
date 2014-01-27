@@ -202,6 +202,9 @@ public class HyperANF {
 		   */
 		val end :(superstep :Int, aggVal :Double) => Boolean =
 			(superstep :Int, aggVal :Double) => {
+				if(here.id == 0) {
+					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
+				}
 				if(results.home==here) {
 					if((superstep & mask)!=0) return false;
 					val index = superstep / loop;
@@ -215,11 +218,8 @@ public class HyperANF {
 							return true;
 					}
 				}
-				if(here.id == 0) {
-					sw.lap("Neighborhood function at superstep " + superstep + " = " + aggVal);
-				}
 				
-				return !(superstep < niter*BW);
+				return !(superstep < niter*loop);
 			};
 		//xpregel.iterate[MemoryChunk[Byte],Double](compute, aggregator, combiner, end);
 		xpregel.iterate[MesHANF,Double](compute, aggregator, end);
