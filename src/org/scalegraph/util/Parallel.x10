@@ -482,8 +482,124 @@ public final class Parallel {
     		hi_ = cut;
     	}
     }
-    
     public static def sort[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
+    	val numThreads = Runtime.NTHREADS;
+    	val chunkSize = 16 * 1024;
+    	val numChunks = src_i.size()/chunkSize;
+    	val logChunks = MathAppend.ceilLog2(numChunks);
+    	//val numChunks = 1 << logChunks;
+    	val numShift = rangeScale - logChunks;
+    	val counts = MemoryChunk.make[Long](numChunks);
+    	val offsets = MemoryChunk.make[Long](numChunks);
+    	Console.OUT.println("sort start3");
+    	
+    	assert (src_i.size() == src_v.size());
+    	assert (src_i.size() == dst_i.size());
+    	assert (src_i.size() == dst_v.size());
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		val size = (src_i.size()-1)/numThreads + 1;
+    		for(j in (size*i)..(Math.min((size*(i+1))-1, src_i.size()-1)) ){
+    			counts.atomicAdd(src_i(j) >> numShift, 1);
+    		}
+    	}
+    	
+    	offsets(0) = 0l;
+    	for(i in 1..(numChunks-1) ){
+    		offsets(i) = offsets(i-1)+counts(i-1);
+    	}
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		val size = (src_i.size()-1)/numThreads + 1;
+    		for(j in (size*i)..(Math.min((size*(i+1))-1, src_i.size()-1)) ){
+    			val dstIndex = offsets.atomicAdd(src_i(j) >> numShift,1);
+    			dst_i(dstIndex) = src_i(j);
+    			dst_v(dstIndex) = src_v(j);
+    		}
+    	}
+    	
+    	//    	sg.check(src_i.size() as Int);
+    	
+    	val taskCounter = MemoryChunk.make[Int](1);
+    	Algorithm.sort(dst_i.subpart(0, counts(0)), dst_v.subpart(0, counts(0)));
+    	taskCounter(0)=1;
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		var taskNum :Int = 0;
+    		while(true){
+    			taskNum = taskCounter.atomicAdd(0,1);
+    			if(taskNum>=numChunks){ break;}
+    			val off = offsets(taskNum-1);
+    			val len = counts(taskNum);
+    			Algorithm.sort(dst_i.subpart(off, len), dst_v.subpart(off, len));
+    		}
+    	}
+    	Console.OUT.println("sort end3");
+    }
+
+    public static def sort2[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
+    	val numThreads = Runtime.NTHREADS as Long;
+    	val chunkSize = 128 * 1024;
+    	val numChunks = src_i.size()/chunkSize;
+    	//val offsets = new MemoryChunk[long](offsetsNum);
+    	
+    	val logChunks = MathAppend.ceilLog2(numChunks);
+    	//val numChunks = 1L << logChunks;
+    	val numShift = rangeScale - logChunks;
+    	val sg = new ScatterGather(numChunks);
+    	Console.OUT.println("sort start");
+    	
+    	assert (src_i.size() == src_v.size());
+    	assert (src_i.size() == dst_i.size());
+    	assert (src_i.size() == dst_v.size());
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val counts = sg.counts(tid as Int);
+    		for(i in r) {
+    			counts(src_i(i) >> numShift as Int)++;
+    			//offsets( src_i(i) >> numShift as Int )++;
+    		}
+    	});
+    	
+    	sg.sum();
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val offsets = sg.offsets(tid as Int);
+    		for(i in r) {
+    			val dstIndex = offsets(src_i(i) >> numShift as Int)++;
+    			dst_i(dstIndex) = src_i(i);
+    			dst_v(dstIndex) = src_v(i);
+    		}
+    	});
+    	
+    	sg.check(src_i.size() as Int);
+    	
+    	//finish for(i in 0..(numChunks-1)) async {
+    	//	val off = sg.offsets()(i);
+    	//	val len = sg.counts()(i);
+    	//	Algorithm.sort(dst_i.subpart(off, len), dst_v.subpart(off, len));
+    	//}
+    	
+    	val taskCounter = MemoryChunk.make[Int](1);
+    	taskCounter(0)=0;
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		var taskNum :Int = 0;
+    		while(true){
+    			//atomic taskNum = taskCounter++;
+    			taskNum = taskCounter.atomicAdd(0,1);
+    			if(taskNum>=numChunks){ break;}
+    			val off = sg.offsets()(taskNum);
+    			val len = sg.counts()(taskNum);
+    			Algorithm.sort(dst_i.subpart(off, len), dst_v.subpart(off, len));
+    		}
+    	}
+    	Console.OUT.println("sort end");
+    }    
+
+
+    
+    public static def sort1[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
     	val numThreads = Runtime.NTHREADS as Long;
     	val logChunks = MathAppend.ceilLog2(numThreads * 4L);
     	val numChunks = 1L << logChunks;
@@ -520,8 +636,128 @@ public final class Parallel {
     		Algorithm.sort(dst_i.subpart(off, len), dst_v.subpart(off, len));
     	}
     }
-    
     public static def sort[V1, V2](rangeScale :Int,
+    		src_i :MemoryChunk[Long], src_v1 :MemoryChunk[V1], src_v2 :MemoryChunk[V2],
+    		dst_i :MemoryChunk[Long], dst_v1 :MemoryChunk[V1], dst_v2 :MemoryChunk[V2])
+    		{
+    	val numThreads = Runtime.NTHREADS;
+    	val chunkSize = 16 * 1024;
+    	val numChunks = src_i.size()/chunkSize;
+    	val logChunks = MathAppend.ceilLog2(numChunks);
+    	//val numChunks = 1 << logChunks;
+    	val numShift = rangeScale - logChunks;
+    	val counts = MemoryChunk.make[Long](numChunks);
+    	val offsets = MemoryChunk.make[Long](numChunks);
+    	Console.OUT.println("sort start3");
+    	
+    	assert (src_i.size() == src_v1.size());
+    	assert (src_i.size() == src_v2.size());
+    	assert (src_i.size() == dst_i.size());
+    	assert (src_i.size() == dst_v1.size());
+    	assert (src_i.size() == dst_v2.size());
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		val size = (src_i.size()-1)/numThreads + 1;
+    		for(j in (size*i)..(Math.min((size*(i+1))-1, src_i.size()-1)) ){
+    			counts.atomicAdd(src_i(j) >> numShift, 1);
+    		}
+    	}
+    	
+    	offsets(0) = 0l;
+    	for(i in 1..(numChunks-1) ){
+    		offsets(i) = offsets(i-1)+counts(i-1);
+    	}
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		val size = (src_i.size()-1)/numThreads + 1;
+    		for(j in (size*i)..(Math.min((size*(i+1))-1, src_i.size()-1)) ){
+    			val dstIndex = offsets.atomicAdd(src_i(j) >> numShift,1);
+    			dst_i(dstIndex) = src_i(j);
+    			dst_v1(dstIndex) = src_v1(j);
+    			dst_v2(dstIndex) = src_v2(j);
+    		}
+    	}
+    	
+    	//    	sg.check(src_i.size() as Int);
+    	
+    	val taskCounter = MemoryChunk.make[Int](1);
+    	Algorithm.sort(dst_i.subpart(0, counts(0)), dst_v1.subpart(0, counts(0)), dst_v2.subpart(0, counts(0)));
+    	taskCounter(0)=1;
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		var taskNum :Int = 0;
+    		while(true){
+    			taskNum = taskCounter.atomicAdd(0,1);
+    			if(taskNum>=numChunks){ break;}
+    			val off = offsets(taskNum-1);
+    			val len = counts(taskNum);
+    			Algorithm.sort(dst_i.subpart(off, len), dst_v1.subpart(off, len), dst_v2.subpart(off, len));
+    		}
+    	}
+    	Console.OUT.println("sort end3");
+    		}
+    
+    public static def sort1[V1, V2](rangeScale :Int,
+    		src_i :MemoryChunk[Long], src_v1 :MemoryChunk[V1], src_v2 :MemoryChunk[V2],
+    		dst_i :MemoryChunk[Long], dst_v1 :MemoryChunk[V1], dst_v2 :MemoryChunk[V2])
+    		{
+    	val numThreads = Runtime.NTHREADS;
+    	val chunkSize = 256 * 1024;
+    	val numChunksMin = src_i.size()/chunkSize;
+    	val logChunks = MathAppend.ceilLog2(numChunksMin);
+    	val numChunks = 1 << logChunks;
+    	val numShift = rangeScale - logChunks;
+    	val sg = new ScatterGather(numChunks);
+    	Console.OUT.println("sort start2");
+    	
+    	assert (src_i.size() == src_v1.size());
+    	assert (src_i.size() == src_v2.size());
+    	assert (src_i.size() == dst_i.size());
+    	assert (src_i.size() == dst_v1.size());
+    	assert (src_i.size() == dst_v2.size());
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val counts = sg.counts(tid as Int);
+    		for(i in r) {
+    			counts(src_i(i) >> numShift)++;
+    			//counts.atomicAdd(src_i(i) >> numShift, 1);
+    		}
+    	});
+    	
+    	sg.sum();
+    	
+    	Parallel.iter(0..(src_i.size()-1), (tid :Long, r :LongRange) => {
+    		val offsets = sg.offsets(tid as Int);
+    		for(i in r) {
+    			val dstIndex = offsets(src_i(i) >> numShift)++;
+    			//val dstIndex = offsets.atomicAdd(src_i(i) >> numShift,1);
+    			dst_i(dstIndex) = src_i(i);
+    			dst_v1(dstIndex) = src_v1(i);
+    			dst_v2(dstIndex) = src_v2(i);
+    		}
+    	});
+    	
+    	sg.check(src_i.size() as Int);
+    	
+    	
+    	val taskCounter = MemoryChunk.make[Int](1);
+    	taskCounter(0)=0;
+    	
+    	finish for(i in 0..(numThreads-1)) async {
+    		var taskNum :Int = 0;
+    		while(true){
+    			//atomic taskNum = taskCounter++;
+    			taskNum = taskCounter.atomicAdd(0,1);
+    			if(taskNum>=numChunks){ break;}
+    			val off = sg.offsets()(taskNum);
+    			val len = sg.counts()(taskNum);
+    			Algorithm.sort(dst_i.subpart(off, len), dst_v1.subpart(off, len), dst_v2.subpart(off, len));
+    		}
+    	}
+    	Console.OUT.println("sort end2");
+    		}    
+    
+    public static def sort2[V1, V2](rangeScale :Int,
     		src_i :MemoryChunk[Long], src_v1 :MemoryChunk[V1], src_v2 :MemoryChunk[V2],
     		dst_i :MemoryChunk[Long], dst_v1 :MemoryChunk[V1], dst_v2 :MemoryChunk[V2])
     {
