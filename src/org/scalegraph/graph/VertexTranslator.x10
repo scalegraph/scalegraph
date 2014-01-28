@@ -197,7 +197,6 @@ import org.scalegraph.util.DistMemoryChunk;
 		private def innerPutWithAllAndTranslate(scatterGather :DistScatterGather,
 				edges: MemoryChunk[T], translated :MemoryChunk[Long], withPut :Boolean) {
 			val sizeMask = teamSize - 1;
-			scatterGather.reset();
 			Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
 				val counts = scatterGather.getCounts(tid as Int);
 				for(i in r)

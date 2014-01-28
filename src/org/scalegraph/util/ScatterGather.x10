@@ -49,19 +49,11 @@ public final struct ScatterGather {
 		sendCounts = dist.next(nChunk);
 		sendOffsets = dist.next(nChunk + 1);
 		dist.checkFinish();
-
-		for(i in threadCounts.range()) threadCounts(i) = 0;
-	}
-
-	public def reset() {
-		for(i in threadCounts.range()) threadCounts(i) = 0;
 	}
 
 	public def counts(tid :Int) {
 		val mc = threadCounts.subpart(bufferWidth*tid, bufferWidth);
-		@Ifndef("NO_BOUNDS_CHECKS") {
-			for(i in 0..(bufferWidth-1)) assert(mc(i) == 0L);
-		}
+		for(i in mc.range()) mc(i) = 0;
 		return mc;
 	}
 

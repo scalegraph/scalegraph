@@ -110,14 +110,14 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	/** Creates a memory chunk with the specified number of elements. This method is equivalent to this(size, 0, false).
 	 * @param size The number of elements
 	 */
-	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, 0, true, (x10_byte*)(void*)__FILE__, __LINE__)")
+	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, 0, false, (x10_byte*)(void*)__FILE__, __LINE__)")
 	public static native def make[T](size :Long) :MemoryChunk[T];
 	
 	/** Creates memory chunk with the specified size and alignment.
 	 * @param size The number of elements
 	 * @param alignment The alignment for the backing memory
 	 */
-	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, true, (x10_byte*)(void*)__FILE__, __LINE__)")
+	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, false, (x10_byte*)(void*)__FILE__, __LINE__)")
 	public static native def make[T](size :Long, alignment :Int) :MemoryChunk[T];
 	
 	/** Creates memory chunk with the specified size and alignment.

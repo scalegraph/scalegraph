@@ -28,7 +28,7 @@ final class TestSort1 extends STest {
 	}
 	
     private static def runtest(n : Long) {
-        val orgM = MemoryChunk[Long](n, (i: Long) => i);
+        val orgM = MemoryChunk.make[Long](n, (i: Long) => i);
         
         // shuffle
         val random = new Random();
