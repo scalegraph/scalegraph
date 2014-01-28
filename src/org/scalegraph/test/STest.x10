@@ -13,11 +13,13 @@ package org.scalegraph.test;
 
 import x10.util.StringBuilder;
 import x10.io.Console;
+import x10.util.Team;
 import org.scalegraph.util.SString;
 
 abstract public class STest {
 	private static val buffer = new StringBuilder();
-	private static val linebreak = "\n    "; // 4 space
+	//private static val linebreak = "\n    "; // 4 space
+	private static val linebreak = "\n";
 
     abstract public def run(args: Array[String](1)) :boolean;
 
@@ -32,12 +34,12 @@ abstract public class STest {
     	   printException(e);
         }
        buffer.add("\n");
-       flush();
+       finish for(p in Team.WORLD.placeGroup()) at(p) async STest.flush();
        reportResult(b);
     }
     
-    private static def escapeString(str :String) =
-    	SString(str).replace("\n", linebreak).toString(); // 4 space
+    private static def escapeString(str :String) = str;
+    	//SString(str).replace("\n", linebreak).toString(); // 4 space
     
     private atomic static def printException(e :CheckedThrowable, nested :Int) {
     	var nested_prefix :String = "";

@@ -217,8 +217,8 @@ final class SCCDebug extends STest {
 					ctx.voteToHalt();
 				}
 				if(ctx.superstep()==1) {
-					val cnt = new MemoryChunk[Long](4);
-					val pos = new MemoryChunk[Long](4);
+					val cnt = MemoryChunk.make[Long](4);
+					val pos = MemoryChunk.make[Long](4);
 					for(i in messages.range()) {
 						var iter:Long = 0;
 						if(messages(i).front) iter += 2;

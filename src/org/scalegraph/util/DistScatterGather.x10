@@ -46,7 +46,7 @@ public final struct DistScatterGather {
 		bufferWidth = Math.max(CACHE_LINE/4, teamSize);
 
 		val size = bufferWidth * (maxThreads*2 + 1) + (teamSize*2 + 1) * 2;
-		val dist = (new MemoryChunk[Int](size, CACHE_LINE)).distributor();
+		val dist = (MemoryChunk.make[Int](size, CACHE_LINE)).distributor();
 
 		threadCounts = dist.next(bufferWidth*maxThreads);
 		threadOffsets = dist.next(bufferWidth*(maxThreads+1));
@@ -120,14 +120,14 @@ public final struct DistScatterGather {
 		}
 		team.alltoall(sendCounts, recvCounts);
 		Team2.countOffsets(recvCounts, recvOffsets, 0);
-		val recvData = new MemoryChunk[T](recvOffsets(teamSize));
+		val recvData = MemoryChunk.make[T](recvOffsets(teamSize));
 		team.alltoallv(sendData, sendOffsets, sendCounts, recvData, recvOffsets, recvCounts);
 		return recvData;
 	}
 
 	public def gather[T](sendData :MemoryChunk[T]) {
 		val teamSize = team.size();
-		val recvData = new MemoryChunk[T](sendOffsets(teamSize));
+		val recvData = MemoryChunk.make[T](sendOffsets(teamSize));
 		team.alltoallv(sendData, recvOffsets, recvCounts, recvData, sendOffsets, sendCounts);
 		return recvData;
 	}

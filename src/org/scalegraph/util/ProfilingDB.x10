@@ -52,14 +52,14 @@ public struct ProfilingDB {
 		def this(numPoints_ :Array[Int](1)) {
 			numFrames = numPoints_.size;
 			numThreads = Runtime.NTHREADS;
-			numPoints = new MemoryChunk[Int](numPoints_.size, (i:Long) => numPoints_(i as Int));
+			numPoints = MemoryChunk.make[Int](numPoints_.size, (i:Long) => numPoints_(i as Int));
 			frameOffsets = initOffset(numPoints);
 			totalPoints = Algorithm.reduce(0L..(numPoints_.size-1L), (i :Long) => numPoints_(i as Int));
 			width = (frameOffsets(numFrames) + 7) & ~7;
 			
-			step = new MemoryChunk[Long](width * numThreads, 64, true);
+			step = MemoryChunk.make[Long](width * numThreads, 64, true);
 			
-			pointIndex = new MemoryChunk[Int](totalPoints);
+			pointIndex = MemoryChunk.make[Int](totalPoints);
 			var pt :Long = 0;
 			for(frame in 0..(numFrames-1))
 				for(i in 0..(numPoints(frame)-1))
@@ -67,7 +67,7 @@ public struct ProfilingDB {
 		}
 		
 		private static def initOffset(numPoints :MemoryChunk[Int]) {
-			val offsets = new MemoryChunk[Int](numPoints.size() + 1);
+			val offsets = MemoryChunk.make[Int](numPoints.size() + 1);
 			offsets(0) = 0;
 			for(i in numPoints.range()) offsets(i+1) = offsets(i) + numPoints(i)*2 + 1;
 			return offsets;
@@ -128,13 +128,13 @@ public struct ProfilingDB {
 			val teamSize = team.size();
 			val role = team.role();
 			if(role == 0 && result.size() == 0L)
-				result = new MemoryChunk[Double](totalPoints * RES_COUNT, (i:Long) => 0.0);
+				result = MemoryChunk.make[Double](totalPoints * RES_COUNT, (i:Long) => 0.0);
 			
 			val tp = totalPoints;
 			val tr = 0..(numThreads-1);
 			val pr = 0..(totalPoints-1);
 
-			val buf = new MemoryChunk[Long](totalPoints*2*4);
+			val buf = MemoryChunk.make[Long](totalPoints*2*4);
 			val buf1 = buf.subpart(tp*2*0, tp*2);
 			val buf2 = buf.subpart(tp*2*1, tp*2);
 			val buf3 = buf.subpart(tp*2*2, tp*2);
@@ -142,7 +142,7 @@ public struct ProfilingDB {
 			val buf12 = buf.subpart(tp*2*0, tp*2*2);
 			val buf34 = buf.subpart(tp*2*2, tp*2*2);
 
-			val dbuf = new MemoryChunk[Double](totalPoints*2*4);
+			val dbuf = MemoryChunk.make[Double](totalPoints*2*4);
 			val dbuf1 = dbuf.subpart(tp*2*0, tp*2);
 			val dbuf2 = dbuf.subpart(tp*2*1, tp*2);
 			val dbuf3 = dbuf.subpart(tp*2*2, tp*2);

@@ -147,19 +147,19 @@ final class TestBinaryIO extends STest {
 	
 	private static def makeTestData(team : Team) {
 		val va_data = new DistMemoryChunk[Int](team.placeGroup(), () => {
-			val mc = new MemoryChunk[Int](2);
+			val mc = MemoryChunk.make[Int](2);
 			mc(0) = here.id * 2 + 1;
 			mc(1) = here.id * 2 + 2;
 			mc
 		});
 		val ea_data1 = new DistMemoryChunk[Short](team.placeGroup(), () => {
-			val mc = new MemoryChunk[Short](2);
+			val mc = MemoryChunk.make[Short](2);
 			mc(0) = (here.id * 2 + 1) as Short;
 			mc(1) = (here.id * 2 + 2) as Short;
 			mc
 		});
 		val ea_data2 = new DistMemoryChunk[Byte](team.placeGroup(), () => {
-			val mc = new MemoryChunk[Byte](2);
+			val mc = MemoryChunk.make[Byte](2);
 			mc(0) = (here.id * 2 + 1) as Byte;
 			mc(1) = (here.id * 2 + 2) as Byte;
 			mc

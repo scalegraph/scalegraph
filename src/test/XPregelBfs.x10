@@ -198,7 +198,7 @@ final class XPregelBfs extends AlgorithmTest {
 		val sw = Config.get().stopWatch();
 		val numEdges = g.numberOfEdges();
 		val root = g.source()()(0);
-		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), false, true);
+		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), false, false);
 		sw.lap("Graph construction");
 		val xpregel = new XPregelGraph[Long, Byte](edgeIndexMatrix);
 		

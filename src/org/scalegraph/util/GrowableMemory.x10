@@ -32,7 +32,7 @@ public final class GrowableMemory[T] {
 	 * @param cap Initial capacity for this instance.
 	 */
 	public def this(cap :Long) {
-		mc = new MemoryChunk[T](cap);
+		mc = MemoryChunk.make[T](cap);
 		size = 0L;
 	}
 	
@@ -146,7 +146,8 @@ public final class GrowableMemory[T] {
 		if (newCapacity < 8) newCapacity = 8;
 		while (newCapacity < reqCapacity) newCapacity *= 2;
 		
-		val tmp = new MemoryChunk[T](newCapacity);
+		val tmp :MemoryChunk[T];
+		tmp = MemoryChunk.make[T](newCapacity);
 		MemoryChunk.copy(mc, 0L, tmp, 0L, size);
 		mc = tmp;
 	}
@@ -156,7 +157,7 @@ public final class GrowableMemory[T] {
 	 */
 	public def shrink(var newCapacity:Long):void {
 		newCapacity = x10.lang.Math.max(newCapacity, size);
-		val tmp = new MemoryChunk[T](newCapacity);        
+		val tmp = MemoryChunk.make[T](newCapacity);        
 		MemoryChunk.copy(mc, 0L, tmp, 0L, size);
 		mc = tmp;
 	}

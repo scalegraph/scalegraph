@@ -19,16 +19,30 @@
 #include <x10rt.h>
 #include <double_linked_list.h>
 
+#define MCDEFARGS 0, false, (x10_byte*)(void*)__FILE__, __LINE__
+
 namespace org { namespace scalegraph { namespace util {
-        extern long numCnt, gcThreshold, totalSize;
-        extern pthread_mutex_t explMemMutex;
-        extern pthread_mutex_t explGcMutex;
-        struct ExplicitMemory;
-        extern ExplicitMemory *explMemList;
+		struct ExplicitMemory;
+
+		struct ExpMemGlobalState {
+	        long numCnt, gcThreshold, totalSize;
+	        bool gcWait;
+	        pthread_mutex_t mutex;
+	        pthread_cond_t sync;
+	        ExplicitMemory *list;
+
+	        ExpMemGlobalState();
+		};
+
+		extern ExpMemGlobalState ExpMemState;
+
+		x10_long get_gc_heap_size();
+
         struct ExplicitMemory{
 			x10_long byteSize;
 			void* pointer;
 			void* allocHead;
+			bool containPtrs;
 			const char* filename;
 			long linenumber;
 			ExplicitMemory *fLink, *bLink;
@@ -37,98 +51,121 @@ namespace org { namespace scalegraph { namespace util {
 				fLink=this; bLink=this;
 			}
 
+			/** Caller must lock before call this method. */
 			static void showAllData(){
 				ExplicitMemory *em;
-				pthread_mutex_lock(&explMemMutex);
-				em = explMemList->fLink;
-				while(em!=explMemList){
+				em = ExpMemState.list->fLink;
+				while(em!=ExpMemState.list){
 					em->showData();
 					em = em->fLink;
 				}
-				pthread_mutex_unlock(&explMemMutex);
 			}
 			void showData(){
-				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-					printf("size:%-20d, pointer:%-30p, head pointer:%-30p\n", byteSize, pointer, allocHead);
-				}
-			}
-
-			void setData(void* pointer__, x10_long byteSize__){
-				pointer=(pointer__);
-				byteSize=(byteSize__);
+				printf("size:%d, pointer:%p, head pointer:%p, from %s:%d\n", byteSize, pointer, allocHead, filename, linenumber);
 			}
 
 			static void finalization(void *obj, void *cd){
-			((ExplicitMemory*)obj)->destruct(); 
-				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-					printf("finalization! p:%p\n",obj);
-				}
+				((ExplicitMemory*)obj)->destruct();
 			}
 
 			void destruct(){
-				pthread_mutex_lock(&explMemMutex);
-				::scalegraph::listRemove(this);
-				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-					numCnt--;
-					printf("cnt:%ld\n",numCnt);
-					printf("destruct!p;%p ", allocHead);
-				}
-				pthread_mutex_unlock(&explMemMutex);
+				void* ptr = NULL;
 
-				GC_remove_roots(allocHead, (char*)allocHead + byteSize );
-				free(allocHead);
+				pthread_mutex_lock(&ExpMemState.mutex);
+				if(allocHead) {
+					::scalegraph::listRemove(this);
+					ExpMemState.totalSize -= byteSize;
+					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT)
+					{
+						printf("%d: finalization!: ", x10rt_here());
+						showData();
+						printf("cnt:%ld\n", --ExpMemState.numCnt);
+					}
+					ptr = allocHead;
+					allocHead = pointer = NULL;
+				}
+				pthread_mutex_unlock(&ExpMemState.mutex);
+
+				if(ptr) {
+					if(containPtrs) {
+						GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+					}
+					::free(ptr);
+				}
 			}
 
-			void _constructor(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize, bool containPtrs) {
+			static ExplicitMemory* _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize, bool containPtrs, const char* filename, int linenumber) {
+				ExplicitMemory* this_ = x10aux::alloc<ExplicitMemory>(sizeof(ExplicitMemory), false);
+				this_->filename = filename;
+				this_->linenumber = linenumber;
+				this_->containPtrs = containPtrs;
 
-				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-					printf("total:%ld threshold:%ld", totalSize, gcThreshold);
+				if (0 == numElements) {
+					this_->setData(NULL, NULL,0);
+					return this_;
 				}
-				pthread_mutex_lock(&explMemMutex);
-				::scalegraph::listInsertFoward(explMemList, this);
-				pthread_mutex_unlock(&explMemMutex);
+				assert((alignment & (alignment-1)) == 0);
+				x10_long size = alignment + numElements * elemSize;
 
-				pthread_mutex_lock(&explGcMutex);
-				totalSize += elemSize*numElements;
-				if( totalSize > gcThreshold){
+				pthread_mutex_lock(&ExpMemState.mutex);
+
+				::scalegraph::listInsertFoward(ExpMemState.list, this_);
+
+				while(ExpMemState.gcWait) {
+					// wait for GC completion
+					pthread_cond_wait(&ExpMemState.sync, &ExpMemState.mutex);
+				}
+
+				ExpMemState.totalSize += size;
+				if(ExpMemState.totalSize > ExpMemState.gcThreshold) {
+					// The guy who exceeded the threshold is responsible to invoke GC.
+					ExpMemState.gcWait = true;
+					pthread_mutex_unlock(&ExpMemState.mutex);
+
+					x10aux::alloc_lock.lock();
 					GC_gcollect();
-					if(totalSize > gcThreshold){
-						gcThreshold = totalSize+1024*1024;
+					x10aux::alloc_lock.unlock();
+
+					pthread_mutex_lock(&ExpMemState.mutex);
+					ExpMemState.gcWait = false;
+					if(ExpMemState.totalSize > ExpMemState.gcThreshold){
+						ExpMemState.gcThreshold = ExpMemState.totalSize * 3 / 2;
 					}
 					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 						showAllData();
 					}
+					pthread_cond_broadcast(&ExpMemState.sync);
 				}
-				pthread_mutex_unlock(&explGcMutex);
 
-				if (0 == numElements) {
-						setData(NULL,0);
-						return;
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT)
+				{
+					printf("total:%ld threshold:%ld", ExpMemState.totalSize, ExpMemState.gcThreshold);
+					printf("%d: Allocation!: size:%d, from %s:%d\n", x10rt_here(), size, filename, linenumber);
 				}
-				assert((alignment & (alignment-1)) == 0);
-				x10_long size = alignment + numElements*elemSize;
+
 				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 					printf("make! size:%ld\n",size);
-					numCnt++;
-					printf("cnt:%ld\n",numCnt);
+					printf("cnt:%ld\n", ++ExpMemState.numCnt);
 				}
+				pthread_mutex_unlock(&ExpMemState.mutex);
 
-				void* allocMem = malloc(size);
+				char* allocMem = x10aux::system_alloc<char>(size);
 
 				if(allocMem==NULL){
-					pthread_mutex_lock(&explGcMutex);
-					totalSize = elemSize*numElements;
-					pthread_mutex_unlock(&explGcMutex);
+					pthread_mutex_lock(&ExpMemState.mutex);
+					ExpMemState.totalSize -= size;
+					pthread_mutex_unlock(&ExpMemState.mutex);
 					//throwException<x10::lang::OutOfMemoryError>();
 					fprintf(stderr,"Out of memory\n");
 					abort();
 				}
 
-				allocHead=allocMem;
+				x10aux::alloc_lock.lock();
 				if(containPtrs){
-					GC_add_roots(allocMem, (char*)allocMem + size);//only when containsptr is true
+					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
 				}
-				GC_register_finalizer(this, finalization, NULL, NULL, NULL );
+				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
+				x10aux::alloc_lock.unlock();
 
 				if (zeroed) {
 					memset(allocMem, 0, size);
@@ -137,20 +174,22 @@ namespace org { namespace scalegraph { namespace util {
 					x10_long alignDelta = alignment-1;
 					x10_long alignMask = ~alignDelta;
 					x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
-					setData( (void*)alignedMem, elemSize*numElements);;
-					return;
+					this_->setData(allocMem, (void*)alignedMem, size);
+					return this_;
 				}
-				setData( allocMem, elemSize*numElements);
-			}
-
-			static ExplicitMemory* _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int elemSize, bool containPtrs) {
-				ExplicitMemory* this_ = (ExplicitMemory*)GC_malloc_atomic(sizeof(ExplicitMemory));
-				this_->_constructor(numElements, alignment, zeroed, elemSize, containPtrs);
+				this_->setData(allocMem, allocMem, size);
 
 				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 					printf("exp p;%p\n ", this_);
 				}
 				return this_;
+			}
+
+        private:
+			void setData(void* allocHead__, void* pointer__, x10_long byteSize__){
+				allocHead = allocHead__;
+				pointer = pointer__;
+				byteSize = byteSize__;
 			}
         };
 
@@ -166,33 +205,21 @@ public:
          * head points to starting address of allocated memory, a MemoryChunkData that subparts from any MemoryChunkData
          * whill have head point to the same address
          * */
-        //ELEM * FMGL(head);
-        void * FMGL(head);
-        ELEM * FMGL(pointer);
+        ELEM* FMGL(pointer);
         x10_long FMGL(size);
+        ExplicitMemory* FMGL(memobj);
 
         MCData_Base()
-                : FMGL(head)(NULL),
-                  FMGL(pointer)(NULL),
-                  FMGL(size)(0)
+                : FMGL(pointer)(NULL),
+                  FMGL(size)(0),
+                  FMGL(memobj)(NULL)
         { }
-        MCData_Base(/*ELEM**/void* head__, ELEM* pointer__, x10_long size__)
-                : FMGL(head)(head__),
-                  FMGL(pointer)(pointer__),
-                  FMGL(size)(size__)
-        {
-            /**
-             * pointer = null implies the memory was created from alloc method, otherwise from subpart method
-             */
-            if (FMGL(pointer) == NULL) {
-               // FMGL(pointer) = FMGL(head);
-            }
-        }
-/*
-        static MCData_Impl<T> _make(T * head, T * pointer, x10_long size) {
-                return MCData_Impl(head, pointer, size);
-        }
-*/
+        MCData_Base(ELEM* pointer__, x10_long size__, ExplicitMemory* memobj__)
+                : FMGL(pointer)(pointer__),
+                  FMGL(size)(size__),
+                  FMGL(memobj)(memobj__)
+        { }
+
         static inline THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
         	return _make(numElements, alignment, zeroed, "--", 0);
         }
@@ -201,7 +228,7 @@ public:
         }
         static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
                 if (0 == numElements) {
-                        return THIS(NULL, NULL, 0);
+                        return THIS(NULL, 0, NULL);
                 }
                 assert((alignment & (alignment-1)) == 0);
                 x10_long size = alignment + numElements*sizeof(ELEM);
@@ -212,8 +239,8 @@ public:
                 //}
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
-                if(size< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
-                        ELEM* allocMem = static_cast<ELEM*>(x10aux::alloc_internal(size, containsPtrs));
+                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+                        ELEM* allocMem = x10aux::alloc<ELEM>(size, containsPtrs);
                         if (zeroed) {
                                 memset(allocMem, 0, size);
                         }
@@ -221,12 +248,12 @@ public:
                                 x10_long alignDelta = alignment-1;
                                 x10_long alignMask = ~alignDelta;
                                 x10_long alignedMem = ((size_t)allocMem + alignDelta) & alignMask;
-                                return THIS(NULL, (ELEM*)alignedMem, numElements);;
+                                return THIS((ELEM*)alignedMem, numElements, NULL);
                         }
-                        return THIS(NULL, allocMem, numElements);
+                        return THIS(allocMem, numElements, NULL);
                 }else{
-                        ExplicitMemory *exp = ExplicitMemory::_make(numElements, alignment, zeroed, sizeof(ELEM), containsPtrs);
-                        return THIS(exp, (ELEM*)(exp->pointer), numElements);
+                        ExplicitMemory *exp = ExplicitMemory::_make(numElements, alignment, zeroed, sizeof(ELEM), containsPtrs, filename, line);
+                        return THIS((ELEM*)(exp->pointer), numElements, exp);
                 }
         }
 
@@ -253,16 +280,18 @@ public:
                 : BASE()
         { }
 
-        MCData_Impl(/*ELEM**/void* head__, ELEM* pointer__, x10_long size__)
-                : BASE(head__, pointer__, size__)
+        MCData_Impl(ELEM* pointer__, x10_long size__, ExplicitMemory* memobj__)
+                : BASE(pointer__, size__, memobj__)
         { }
 
         static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
                 return BASE::_make(numElements, alignment, zeroed);
         }
-        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int num) {
-                        return BASE::_make(numElements, alignment, zeroed, num);
+        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+                        return BASE::_make(numElements, alignment, zeroed, filename, line);
                 }
+
+        x10_boolean isValid() { return (this->FMGL(memobj) == NULL) || (this->FMGL(memobj)->allocHead != NULL); }
 
         T& operator[](x10_long index) { return this->FMGL(pointer)[index]; }
         T& operator[](x10_int index) { return this->FMGL(pointer)[index]; }
@@ -332,8 +361,8 @@ public:
                 : BASE()
         { }
 
-        MCData_Impl(/*ELEM**/void* head__, ELEM* pointer__, x10_long size__)
-                : BASE(head__, pointer__, size__)
+        MCData_Impl(ELEM* pointer__, x10_long size__, ExplicitMemory* memobj__)
+                : BASE(pointer__, size__, memobj__)
         { }
 
         static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
@@ -344,14 +373,16 @@ public:
                 }
                 return this_;
         }
-        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, int line) {
-                THIS this_ = BASE::_make(numElements, alignment, zeroed, line);
+        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+                THIS this_ = BASE::_make(numElements, alignment, zeroed, filename, line);
                 for(x10_long i = 0; i < numElements; ++i) {
                         T* elem = new (&this_.FMGL(pointer)[i]) T();
                         elem->_constructor();
                 }
                 return this_;
         }
+
+        x10_boolean isValid() { return (this->FMGL(memobj) == NULL) || (this->FMGL(memobj)->allocHead != NULL); }
 
         T* operator[](x10_long index) { return &this->FMGL(pointer)[index]; }
         T* operator[](x10_int index) { return &this->FMGL(pointer)[index]; }
@@ -416,30 +447,23 @@ namespace org { namespace scalegraph { namespace util {
 // MCData_Base //
 
 template<class THIS, typename ELEM> void MCData_Base<THIS, ELEM>::del() {
-        if(!FMGL(head)){//FMGL(size)< __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
-        /*if(FMGL(head) != FMGL(pointer)) {
-                x10aux::throwException(
-                                x10::lang::UnsupportedOperationException::_make(
-                                x10::lang::String::Lit("You can not free the MemoryChunk created from subpart method.")));
-        }//}
-        x10aux::dealloc(FMGL(head));
-        */ 
+        if(FMGL(memobj) == NULL){
 			x10aux::dealloc(FMGL(pointer));
-			FMGL(head) = NULL;
-			FMGL(pointer) = NULL;
-			FMGL(size) = 0;
         }else{
-			GC_register_finalizer( (ExplicitMemory*)FMGL(head), NULL, NULL, NULL, NULL );
-			((ExplicitMemory*)FMGL(head))->destruct();
+        	// TODO: release memobj
+        	x10aux::alloc_lock.lock();
+			GC_register_finalizer(FMGL(memobj), NULL, NULL, NULL, NULL );
+			FMGL(memobj)->destruct();
+			x10aux::alloc_lock.unlock();
 
 			if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
-				printf("del exp p;%p\n ", FMGL(head));
-				printf("del size:%ld\n",((ExplicitMemory*)FMGL(head))->byteSize);
+				printf("del exp p;%p\n ", FMGL(memobj));
+				printf("del size:%ld\n",FMGL(memobj)->byteSize);
 			}
-			FMGL(head) = NULL;
-			FMGL(pointer) = NULL;
-			FMGL(size) = 0;
         }
+		FMGL(pointer) = NULL;
+		FMGL(size) = 0;
+		FMGL(memobj) = NULL;
 }
 
 template<class THIS, typename ELEM> x10::lang::String* MCData_Base<THIS, ELEM>::typeName() {

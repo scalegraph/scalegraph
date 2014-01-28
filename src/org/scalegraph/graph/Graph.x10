@@ -83,7 +83,7 @@ import org.scalegraph.id.Type;
 
 	private static def createVertexTranslator[T](team :Team) {T haszero}
 	{
-		val vertexNames = DistMemoryChunk[T](team.placeGroup(), ()=>new MemoryChunk[T]());
+		val vertexNames = DistMemoryChunk[T](team.placeGroup(), ()=>MemoryChunk.make[T]());
 		val vertexTranslator = PlaceLocalHandle.makeFlat[VertexTranslatorBase](
 				team.placeGroup(), ()=>new VertexTranslator.HashTranslator[T](team, vertexNames));
 		return Tuple2[Any, VT_PLH](vertexNames, vertexTranslator);
@@ -110,8 +110,8 @@ import org.scalegraph.id.Type;
 			throw new IllegalArgumentException("Please, input Team.WORLD as the team parameter.");
 		
 		team = team_;
-		srcList = new DistMemoryChunk[Long](team_.placeGroup(), ()=>new MemoryChunk[Long]());
-		dstList = new DistMemoryChunk[Long](team_.placeGroup(), ()=>new MemoryChunk[Long]());
+		srcList = new DistMemoryChunk[Long](team_.placeGroup(), ()=>MemoryChunk.make[Long]());
+		dstList = new DistMemoryChunk[Long](team_.placeGroup(), ()=>MemoryChunk.make[Long]());
 		
 		val translator :Tuple2[Any, VT_PLH];
 		switch(vertexType) {
@@ -193,35 +193,35 @@ import org.scalegraph.id.Type;
 	public static def make(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,false);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def make(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,false);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Long]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Long,true);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[Double]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.Double,true);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
 	public static def makeWithTranslator(edges :EdgeList[SString]) {
 		val g = new Graph(Config.get().worldTeam(),Graph.VertexType.String,true);
 		g.addEdges(edges);
-		edges.del();
+		g.team.placeGroup().broadcastFlat(()=> { edges.del(); });
 		return g;
 	}
 	
@@ -234,7 +234,7 @@ import org.scalegraph.id.Type;
 			if(throwAlreadyExist) throw new IllegalOperationException("key already exists");
 			return att as DistMemoryChunk[T];
 		}
-		val newAtt = new DistMemoryChunk[T](team.placeGroup(), ()=>new MemoryChunk[T]());
+		val newAtt = new DistMemoryChunk[T](team.placeGroup(), ()=>MemoryChunk.make[T]());
 		attributes.put(name, newAtt);
 		return newAtt;
 	}
@@ -372,10 +372,10 @@ import org.scalegraph.id.Type;
 				val att_ :MemoryChunk[T];
 				if(vertexOrEdge) {
 					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
-					att_ = new MemoryChunk[T](actualLocalVertices);
+					att_ = MemoryChunk.make[T](actualLocalVertices);
 				}
 				else {
-					att_ = new MemoryChunk[T](srcList_().size());
+					att_ = MemoryChunk.make[T](srcList_().size());
 				}
 				
 				val mask = team_.size() - 1;
@@ -404,14 +404,14 @@ import org.scalegraph.id.Type;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		return DistMemoryChunk[T](team_.placeGroup(), () => {
-			var att_ :MemoryChunk[T] = new MemoryChunk[T]();
+			var att_ :MemoryChunk[T] = MemoryChunk.make[T]();
 			try {
 				if(vertexOrEdge) {
 					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
-					att_ = new MemoryChunk[T](actualLocalVertices);
+					att_ = MemoryChunk.make[T](actualLocalVertices);
 				}
 				else {
-					att_ = new MemoryChunk[T](srcList_().size());
+					att_ = MemoryChunk.make[T](srcList_().size());
 				}
 				
 				val mask = team_.size() - 1;
@@ -580,7 +580,7 @@ import org.scalegraph.id.Type;
 				val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
 				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
 				if(attValues().size() == 0L) {
-					attValues() = new MemoryChunk[T](actualLocalVertices);
+					attValues() = MemoryChunk.make[T](actualLocalVertices);
 				}
 				val att_ = attValues();
 				
@@ -626,19 +626,21 @@ import org.scalegraph.id.Type;
 		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
 		
 		return new DistSparseMatrix(dist2d, () => {
+			val sw = Config.get().stopWatch();
 			val scatterGather = new DistScatterGather(team_);
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
 					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
-			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
+			val roleMap = MemoryChunk.make[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for([i] in places) {
 				roleMap(i) = team_.role(places(i))(0);
 			}
 			val rmask = (1L << ids.lgr) - 1;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
-			
+
+			if(here.id == 0) sw.lap("start graph construction");
 			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
@@ -658,12 +660,13 @@ import org.scalegraph.id.Type;
 				}
 			});
 			scatterGather.sum();
+			if(here.id == 0) sw.lap("count edge finished");
 			val teamRank = team_.role()(0);
 			val teamSize = team_.size();
 			val sendCount = scatterGather.sendCount();
-			val sendSrcV = new MemoryChunk[Long](sendCount);
-			val sendDstV = new MemoryChunk[Long](sendCount);
-			val sendValues = new MemoryChunk[Long](sendCount);
+			val sendSrcV = MemoryChunk.make[Long](sendCount);
+			val sendDstV = MemoryChunk.make[Long](sendCount);
+			val sendValues = MemoryChunk.make[Long](sendCount);
 			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				/*
@@ -706,9 +709,11 @@ import org.scalegraph.id.Type;
 					}
 				}
 			});
+			if(here.id == 0) sw.lap("complete creating send data");
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
+			if(here.id == 0) sw.lap("alltoall finished");
 			return new Tuple2[IdStruct, SparseMatrix[Long]](ids, new SparseMatrix(recvSrcV, recvDstV, recvValues, ids));
 		});
 	}
@@ -722,12 +727,13 @@ import org.scalegraph.id.Type;
 		val att = getEdgeAttribute[T](name);
 
 		return new DistSparseMatrix(dist2d, () => {
+			val sw = Config.get().stopWatch();
 			val scatterGather = new DistScatterGather(team_);
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
 					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
-			val roleMap = new MemoryChunk[Int](dist2d.allTeam().size());
+			val roleMap = MemoryChunk.make[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for([i] in places) {
 				roleMap(i) = team_.role(places(i))(0);
@@ -747,6 +753,7 @@ import org.scalegraph.id.Type;
 			val cmask = (1L << (ids.lgc + ids.lgr)) - 1 - rmask;
 			val att_ = att();
 
+			if(here.id == 0) sw.lap("start graph construction");
 			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val counts = scatterGather.getCounts(tid as Int);
 				if(directed) {
@@ -766,10 +773,11 @@ import org.scalegraph.id.Type;
 				}
 			});
 			scatterGather.sum();
+			if(here.id == 0) sw.lap("count edge finished");
 			val sendCount = scatterGather.sendCount();
-			val sendSrcV = new MemoryChunk[Long](sendCount);
-			val sendDstV = new MemoryChunk[Long](sendCount);
-			val sendValues = new MemoryChunk[T](sendCount);
+			val sendSrcV = MemoryChunk.make[Long](sendCount);
+			val sendDstV = MemoryChunk.make[Long](sendCount);
+			val sendValues = MemoryChunk.make[T](sendCount);
 			Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				/*
@@ -829,7 +837,8 @@ import org.scalegraph.id.Type;
 				}
 				team.barrier(team.role()(0));
 			}*/
-			
+
+			if(here.id == 0) sw.lap("complete creating send data");
 			val recvSrcV = scatterGather.scatter(sendSrcV); sendSrcV.del();
 			val recvDstV = scatterGather.scatter(sendDstV); sendDstV.del();
 			val recvValues = scatterGather.scatter(sendValues); sendValues.del();
@@ -858,9 +867,9 @@ import org.scalegraph.id.Type;
 				val dstList__ = dstList_();
 				val numEdges = srcList__.size();
 				val sendCount = directed ? numEdges : numEdges * 2;
-				val sendSrcV = new MemoryChunk[Long](sendCount);
-				val sendDstV = new MemoryChunk[Long](sendCount);
-				val sendIndexes = new MemoryChunk[Long](sendCount);
+				val sendSrcV = MemoryChunk.make[Long](sendCount);
+				val sendDstV = MemoryChunk.make[Long](sendCount);
+				val sendIndexes = MemoryChunk.make[Long](sendCount);
 				val teamSize = team_.size();
 				val teamRank = team_.role()(0);
 				Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
@@ -889,18 +898,18 @@ import org.scalegraph.id.Type;
 				
 				val team2 = new Team2(team_);
 				
-				val sendNumEdges = new MemoryChunk[Int](1);
+				val sendNumEdges = MemoryChunk.make[Int](1);
 				sendNumEdges(0) = sendSrcV.size() as Int;
 				if(place == here) { // root
-					val counts = new MemoryChunk[Int](team_.size(), 0, true);
-					val offsets  = new MemoryChunk[Int](team_.size() + 1);
+					val counts = MemoryChunk.make[Int](team_.size(), 0, true);
+					val offsets  = MemoryChunk.make[Int](team_.size() + 1);
 					team2.gather(root, sendNumEdges, counts);
 					
 					offsets(0) = 0;
 					for(i in counts.range()) offsets(i + 1) = offsets(i) + counts(i);
-					val recvSrcV = new MemoryChunk[Long](offsets(team_.size()));
-					val recvDstV = new MemoryChunk[Long](offsets(team_.size()));
-					val recvIndexes = new MemoryChunk[Long](offsets(team_.size()));
+					val recvSrcV = MemoryChunk.make[Long](offsets(team_.size()));
+					val recvDstV = MemoryChunk.make[Long](offsets(team_.size()));
+					val recvIndexes = MemoryChunk.make[Long](offsets(team_.size()));
 					team2.gatherv(root, sendSrcV, recvSrcV, counts, offsets);
 					team2.gatherv(root, sendDstV, recvDstV, counts, offsets);
 					team2.gatherv(root, sendIndexes, recvIndexes, counts, offsets);
@@ -955,7 +964,7 @@ import org.scalegraph.id.Type;
 					val sizeOfDist = allTeam.size();
 					val localsize = 1L << edgeIndexMatrix.ids().lgl;
 					
-					val distAtt = new MemoryChunk[T](localsize);
+					val distAtt = MemoryChunk.make[T](localsize);
 					Remote.get(team_, att(), distAtt, distAtt.range(),
 							(i :Long, get:(Long, Int, Long)=>void) => {
 						val rr = i * sizeOfDist + roleInDist;
@@ -969,7 +978,7 @@ import org.scalegraph.id.Type;
 					val shift = MathAppend.log2(team_.size()) as Int;
 					val rankMask = (1L << shift) - 1;
 					val edgeIndexes = edgeIndexMatrix().values;
-					val distAtt = new MemoryChunk[T](edgeIndexes.size());
+					val distAtt = MemoryChunk.make[T](edgeIndexes.size());
 					Remote.get(team_, att(), distAtt, distAtt.range(), (i :Long, get:(Long, Int, Long)=>void) => {
 						val index = edgeIndexes(i);
 						get(i, (index & rankMask) as Int, index >> shift);

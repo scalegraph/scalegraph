@@ -39,7 +39,7 @@ public abstract class AlgorithmTest extends STest {
 		val team = Config.get().worldTeam();
 		
 		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](getSize()));
+				() => MemoryChunk.make[Double](getSize()));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val role = team.role()(0);
@@ -126,6 +126,7 @@ public abstract class AlgorithmTest extends STest {
 	}
 
 	public final def run(args :Array[String](1)): Boolean {
+		print("ARGS: "); println(args);
 		val [ graphArgs, mainArgs ] = splitArgs(args);
 		return run(mainArgs, loadGraph(graphArgs));
 	}
@@ -178,7 +179,7 @@ public abstract class AlgorithmTest extends STest {
 			if((flags & 2) != 0) {
 				val shift = MathAppend.ceilLog2(teamSize);
 				val mask = (1L << shift) - 1;
-				val recv = new MemoryChunk[T](result_.size());
+				val recv = MemoryChunk.make[T](result_.size());
 				Remote.put(team, recv, index_.range(),
 						(index :Long, put :(Int, Long, T)=>void)=> {
 					val id = index_(index);

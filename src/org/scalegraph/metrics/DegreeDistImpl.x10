@@ -47,7 +47,7 @@ public final class DegreeDistImpl {
 				}
 			});
 			scatterGather.sum();
-			val requests = new MemoryChunk[Long](scatterGather.sendCount());
+			val requests = MemoryChunk.make[Long](scatterGather.sendCount());
 			Parallel.iter(vertexRange, (tid :Long, r :LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				for(i in r) {

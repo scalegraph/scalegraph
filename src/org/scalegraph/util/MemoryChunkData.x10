@@ -46,25 +46,28 @@ final struct MemoryChunkData[T] {
 	@Native("java", "x10.core.IndexedMemoryChunk.<#T$box>allocate(#T$rtt, #numElements, #zeroed)")
 	private static native def allocateFlat[T](numElements :Long, alignment :Int, zeroed :Boolean) :IndexedMemoryChunk[T];
 
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw() + (#offset), NULL, (#size))")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw() + (#offset), (#size), NULL)")
 	public static def make[T](backing :IndexedMemoryChunk[T], offset :Long, size :Long) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, offset, size);
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw(), NULL, (#backing).length())")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw(), (#backing).length(), NULL)")
 	public static def make[T](backing :IndexedMemoryChunk[T]) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, 0L, backing.length());
-	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, 0, true)")
-	public static def make[T](numElements :Long) :MemoryChunkData[T] {
-		return new MemoryChunkData[T](allocateFlat[T](numElements, 0, true), 0L, numElements);
 	}
 	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed)")
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed, (char*)#filename, #num)")
+	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean, filename :MemoryPointer[Byte], num :Int) :MemoryChunkData[T] {
+		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
+	}
 	
 	@Native("c++", "(#this).del()")
 	public def del() :void { }
+	
+	@Native("c++", "(#this).isValid()")
+	public def isValid() :Boolean = true;
 	
 	@NativeRep("c++", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", null)
 	static struct Pointer[T] { }
@@ -72,7 +75,7 @@ final struct MemoryChunkData[T] {
 	@Native("c++", "(#this).FMGL(pointer)")
 	public native def pointer() :Pointer[T];
 
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#this).FMGL(head), (#this).FMGL(pointer) + (#offset), (#size))")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#this).FMGL(pointer) + (#offset), (#size), (#this).FMGL(memobj))")
 	public def subpart(offset :Long, size :Long) :MemoryChunkData[T] =
 		new MemoryChunkData[T](raw, this.offset + offset, size);
 

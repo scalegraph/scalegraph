@@ -23,7 +23,7 @@ final class GraphEdge [E] {
 		val numEdges = m.vertexes.size();
 		offsets = m.offsets;
 		vertexes = m.vertexes;
-		value = new MemoryChunk[E](numEdges);
+		value = MemoryChunk.make[E](numEdges);
 	}*/
 	
 	def this() { }
