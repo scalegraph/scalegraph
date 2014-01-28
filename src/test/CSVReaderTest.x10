@@ -16,7 +16,6 @@ import org.scalegraph.test.STest;
 import org.scalegraph.io.ID;
 import org.scalegraph.io.CSV;
 import org.scalegraph.id.Type;
-import org.scalegraph.util.ExplicitMemory;
 import x10.io.File;
 
 final class CSVReaderTest extends STest {
@@ -68,7 +67,7 @@ final class CSVReaderTest extends STest {
 			val hoge=Console.IN.readChar();
 			Console.OUT.println("will new");
 			var hoga :Char = Console.IN.readChar();
-			val em = new ExplicitMemory[Long](16*1024*1024);
+			val em = MemoryChunk.make[Long](16*1024*1024);
 			Console.OUT.println("new");
 			hoga=Console.IN.readChar();
 			hoga=Console.IN.readChar();
