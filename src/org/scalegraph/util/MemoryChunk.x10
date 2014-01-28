@@ -89,6 +89,12 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		}
 	}
 	
+	private def this(imc :IndexedMemoryChunk[T], offset :Long, size :Long) {
+		if(offset < 0 || offset + size > imc.length())
+			throw new ArrayIndexOutOfBoundsException("Out of bounds. Please, check the offset and the size.");
+		this.data = MemoryChunkData.make[T](imc, offset, size);
+	}
+	
 	def this(data :MemoryChunkData[T]) {
 		this.data = data;
 	}
@@ -130,43 +136,31 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 * @param offset The offset from which the subsection starts
 	 * @param size The number of elements of the subsection
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Long, size :Long) {
-		if(offset < 0 || offset + size > imc.length())
-			throw new ArrayIndexOutOfBoundsException("Out of bounds. Please, check the offset and the size.");
-		this.data = MemoryChunkData.make[T](imc, offset, size);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Long, size :Long) = new MemoryChunk[T](imc, offset, size);
 	
 	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk.
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 * @param size The number of elements of the subsection
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Int, size :Int) {
-		this(imc, offset as Long, size as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Int, size :Int) = new MemoryChunk[T](imc, offset, size);
 	
 	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, offset, (imc.length() - offset)).
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Long) {
-		this(imc, offset, (imc.length() - offset) as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Long) = new MemoryChunk[T](imc, offset, (imc.length() - offset) as Long);
 	
 	/** Creates memory chunk which refers the subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, offset, (imc.length() - offset)).
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Int) {
-		this(imc, offset as Long, (imc.length() - offset) as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Int) = new MemoryChunk[T](imc, offset as Long, (imc.length() - offset) as Long);
 	
 	/** Creates memory chunk which refers the subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, 0, imc.length()).
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 */
-	public def this(imc :IndexedMemoryChunk[T]) {
-		this(imc, 0L, imc.length() as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T]) = new MemoryChunk[T](imc, 0L, imc.length() as Long);
 	
 	/** Free memory. Once you free MemoryChunk,
 	 * you can not use any MemoryChunk which point to the released memory.
