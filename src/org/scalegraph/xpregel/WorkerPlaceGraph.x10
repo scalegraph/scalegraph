@@ -379,7 +379,6 @@ final class WorkerPlaceGraph[V,E] {
 			if(here.id == 0) sw.lap("update out edge");
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
 			
-			
 			//-----directionOptimization
 			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
 			if(0L < numAllBCSCount && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/50)){	//TODO: modify /20
@@ -399,7 +398,7 @@ final class WorkerPlaceGraph[V,E] {
 				});
 				ectx.mBCCHasMessage.clear(false);
 				ectx.mBCCMessages.del();
-				ectx.mBCCMessages = new MemoryChunk[M](mIds.numberOfLocalVertexes());
+				ectx.mBCCMessages = MemoryChunk.make[M](numLocalVertexes);
 				ectx.mBCSInputCount=0L;
 			}
 			//-----
