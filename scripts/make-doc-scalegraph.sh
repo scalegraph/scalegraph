@@ -1,16 +1,8 @@
 #!/bin/bash
-#source /nfs/home/sakamoto/.bashvar
-#source $APPDIR/x10/env.sh -x develop
 
-SRC_X10=x10/x10.runtime/src-x10
-echo $0
-SRC_SG=`dirname $0`/../src
-DOCDIR=`dirname $0`/../doc
+SC_HOME=$(cd $(dirname $0); cd ..; pwd)
+SC_SRC=${SC_HOME}/src
+SC_DOC=${SC_HOME}/doc
 
-make_doc () {
-  TESTNO=$1
-  NAME=$2
-  cd $SRC_SG
-  find . -iname '*.x10' | xargs x10doc -d $DOCDIR/doc-$NAME -sourcepath . | tee $NAME.log
-}
-make_doc 2 scalegraph
+find ${SC_SRC}/org/scalegraph -name '*.x10' | xargs x10doc -d ${SC_DOC} -sourcepath ${SC_SRC} | tee make-doc.log
+
