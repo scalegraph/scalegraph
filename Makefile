@@ -39,10 +39,14 @@ $(ARPACK_LIB): ARPACK
 	cp ARPACK/parpack_MPI-SUN4.a $(LIBPATH)/libparpack.a
 
 $(PAR_METIS_LIB): $(PAR_METIS_FOLDER)
-	make -C $(PAR_METIS_FOLDER) --environment-overrides clean
+	make -C $(PAR_METIS_FOLDER) --environment-overrides distclean
 	make -C $(PAR_METIS_FOLDER) --environment-overrides config shared=1 prefix=$(SG_PREFIX)/metis debug=1 assert=1 assert2=1
 	make -C $(PAR_METIS_FOLDER) --environment-overrides
 	make -C $(PAR_METIS_FOLDER) --environment-overrides install
+
+	rm -f  $(SG_PREFIX)/include/parmetis.h
+	rm -f  $(SG_PREFIX)/include/metis.h
+	rm -f  $(SG_PREFIX)/lib/libparmetis.so
 
 	cp  $(SG_PREFIX)/metis/include/parmetis.h  $(SG_PREFIX)/include/parmetis.h
 	cp  $(PAR_METIS_FOLDER)/metis/include/metis.h  $(SG_PREFIX)/include/metis.h
@@ -54,7 +58,7 @@ clean:
 	rm -fr ARPACK
 	rm -fr x10lib
 	rm -fr metis
-	rm -fr $(PAR_METIS_FOLDER)
+	rm -fr $(PAR_METIS_FOLDER)  $(SG_PREFIX)/include/parmetis.h $(SG_PREFIX)/include/metis.h  $(SG_PREFIX)/lib/libparmetis.so
 
 $(PAR_METIS_ARCHIVE):
 	curl -O http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/$@
