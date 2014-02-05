@@ -30,7 +30,37 @@ import org.scalegraph.util.*;
 
 /**
  * Calculates the Strongly Connected Component.
- * Details: TODO: write the algorithm description
+ * We inplement Orzan's coloring algorithm to solve Strongly Connected Component (SCC) Problem. 
+ * ("coloring" is not official name. Detail algorithm is written in following pdf. )
+ * http://www.cs.vu.nl/en/Images/SM%20Orzan%205-11-2004_tcm75-258582.pdf
+ * 
+ * First, we describe input and output.
+ * input : directed graph which has edge with no weight.
+ * output : this program output two files.
+ * 	   we define "leader vertex" of a SCC. This vertex is minimal index in a group of SCC.
+ *     1. for all vertex v, output leader vertex of SCC which contains v.
+ *     2. for all vertex v, output 
+ *         the number of vertexes in SCC which contains v (if v is leader vertex of any SCC)
+ *         0 (if v is not leader vertex)
+ *  
+ * In following, we describe detail algorithm.
+ * 
+ * 1. Each vertexes send messages to neighbor vertex along edge with forward direction. 
+ *    These messages have information of minimal index of vertex.
+ *    And, when a vertex receive messages, if (message's index) < (the index that the vertex has) ,
+ *    update index the vertex have and send message this information.
+ *    (For example, there are 3 vertexes 1->2->3, initially vertex 1 has 1, vertex 2 has 2, vertex 3 has 3.  
+ *     After sending messages and some operations, vertex 1 and 2 have 1, vertex 3 has 2. 
+ *         (vertex 1,2,3 send messages, and update in vertex 2 and 3)
+ *     More one operation, all vertexes has 1.
+ *         (vertex 2,3 send messages, and update in vertex 3.))
+ * 2. We do like operation No.1, but send messages along edge not with forward direction but with backward direction.
+ * 3. Each vertex has information of Int with two directions.
+ *    For all vertex, if these two numbers are equal, the operation is ended.
+ *    if not, we continue operation recursively
+ *    (Also, if neighbor vertexes v,u have different pairs, these vertex belong different SCC.
+ *     So, we can split graph some region.).
+ *   
  */
 public final class StronglyConnectedComponent2 {
 	
