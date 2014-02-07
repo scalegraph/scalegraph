@@ -1,10 +1,10 @@
 #Release 2.2
 #ScaleGraph
-*Explicity memory
-*Make script for building X10 linkable library
-*MemoryChunk must be created from the factory method
-*Config class
-*Optimized HyperANF implementation
+* Explicity memory
+* Make script for building X10 linkable library
+* MemoryChunk must be created from the factory method
+* Config class
+* Optimized HyperANF implementation
 
 #SX10
 * Fast compilation
