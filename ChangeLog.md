@@ -1,3 +1,14 @@
+#Release 2.2
+#ScaleGraph
+*Explicity memory
+*Make script for building X10 linkable library
+*MemoryChunk must be created from the factory method
+*Config class
+*Optimized HyperANF implementation
+
+#SX10
+* Fast compilation
+
 #Release 2.1
 The current stable release is ScaleGraph 2.1.
 
