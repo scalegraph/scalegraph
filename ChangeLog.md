@@ -1,13 +1,14 @@
 #Release 2.2
-#ScaleGraph
-* Explicity memory
-* Make script for building X10 linkable library
-* MemoryChunk must be created from the factory method
-* Config class
-* Optimized HyperANF implementation
+##ScaleGraph
+### Features and Improvements
+* Make script for building X10 linkable library - user can create X10 linkable library of ScaleGraph using Makefile in ScaleGraph hone folder
+* Explicit memory allocation - 
+* New method for creating MemoryChunk - a MemoryChunk object must be created from the provided factory method  rather than using "new" operator
+* Optimized HyperANF implementation - HyperANF implementation has been improved to support large graph
+* org.scalegraph.Config class - a class for storing global configuration
 
-#SX10
-* Fast compilation
+##SX10
+* Fast compilation - user now can enable the parallel compilation of c++ source files by adding "-make -make-arg -j" option to the x10c++ command
 
 #Release 2.1
 The current stable release is ScaleGraph 2.1.
