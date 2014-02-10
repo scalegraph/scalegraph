@@ -1,14 +1,22 @@
 #Release 2.2
+
+##Requirements
+* MVAPICH2 with -fPIC enable
+* Cmake 2.8 or above
+* Apache ANT 1.7 or above
+
 ##ScaleGraph
 ### Features and Improvements
-* Make script for building X10 linkable library - user can create X10 linkable library of ScaleGraph using Makefile in ScaleGraph hone folder
-* Explicit memory allocation - 
-* New method for creating MemoryChunk - a MemoryChunk object must be created from the provided factory method  rather than using "new" operator
+* Make script for building ScaleGraph linkable library - user can create X10 linkable library (x10lib) of ScaleGraph library using Makefile in ScaleGraph home folder
+* Explicitly managed memory - for a large memory allocation request, MemoryChunk will allocate memory from outside of the GC heap, because BDWGC is not good at managing large memory regions. This feature reduces the memory consumption dramatically.
+* New method for creating MemoryChunk - a MemoryChunk object must be created from the factory methods.
 * Optimized HyperANF implementation - HyperANF implementation has been improved to support large graph
 * org.scalegraph.Config class - a class for storing global configuration
 
 ##SX10
+### Features and Improvements
 * Fast compilation - user now can enable the parallel compilation of c++ source files by adding "-make -make-arg -j" option to the x10c++ command
+
 
 #Release 2.1
 The current stable release is ScaleGraph 2.1.
