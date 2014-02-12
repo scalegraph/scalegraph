@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -9,14 +9,14 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package example;
+package test;
 
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.*;
 import x10.util.Timer;
 import x10.util.Random;
 
-public class MemoryChunkExample {
+public class TestMemoryChunk {
 	private static def printTime(start :Long) {
 		Console.OUT.println("Time: " + ((Timer.nanoTime() - start) / 1000000.0) + " ms");
 	}
@@ -48,7 +48,7 @@ public class MemoryChunkExample {
 	}
 	public static def commtest_mc() {
 		var start :Long = Timer.nanoTime();
-		val array = new MemoryChunk[Tuple2[Double,Double]](1 << 25);
+		val array = MemoryChunk.make[Tuple2[Double,Double]](1 << 25);
 		for(i in array.range()) array(i) = Tuple2[Double,Double]((i*2) as Double, (i*2+1) as Double);
 		printTime(start); start = Timer.nanoTime();
 		at (here.next()) {
@@ -92,7 +92,7 @@ public class MemoryChunkExample {
 		var start :Long = Timer.nanoTime();
 		for(i in 0..(size*16)) {
 			val next = rand.nextInt() & mask;
-			table(next) = new MemoryChunk[Double](128);
+			table(next) = MemoryChunk.make[Double](128);
 		}
 		printTime(start);
 	}
@@ -100,7 +100,7 @@ public class MemoryChunkExample {
 		val size = 1 << 18;
 		val mask = size - 1;
 		val table = new Array[MemoryChunk[Double]](size);
-		val memory = new MemoryChunk[Double](size*128);
+		val memory = MemoryChunk.make[Double](size*128);
 		val rand = new Random(3);
 		var start :Long = Timer.nanoTime();
 		for(i in 0..(size*16)) {

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -99,11 +99,11 @@ public final struct Dist2D {
     			val z = parentTeam.role()(0) / RC;
     			allTeam = parentTeam.split(parentTeam.role()(0), z, role);
     			for(pp in parentTeam.placeGroup()) {
-    				if(here == pp) {
-    					Console.OUT.println(here);
-    					Console.OUT.println("allTeam = " + allTeam);
-    					Console.OUT.println("split(key=" + role + ",color=" + z + ")");
-    				}
+    				/// if(here == pp) {
+    				///	Console.OUT.println(here);
+    				///	Console.OUT.println("allTeam = " + allTeam);
+    				///	Console.OUT.println("split(key=" + role + ",color=" + z + ")");
+    				/// }
     				parentTeam.barrier(parentTeam.role()(0));
     			}
     		}
@@ -238,16 +238,22 @@ public final struct Dist2D {
      * @param numberOfVertices: The max vertex id
      * @param outerOrInner Whether outer edge or inner edge (true: outer, false: inner)
      */
-    public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, outerOrInner :Boolean) {
-    	val R = R();
-    	val C = C();
+    public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, transpose :Boolean) {
+    	var R:Int, C:Int;
+    	if(!transpose) {
+	    	R = R();
+	    	C = C();
+    	} else {
+    		R = C();
+    		C = R();
+    	}
     	val size = R * C;
     	val avgNumberOfLocalVertices = (numberOfVertices + size - 1) / size;
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))
     		throw new IllegalArgumentException();
     	val teamSize = allTeam().size();
     	return new IdStruct(MathAppend.ceilLog2(R), MathAppend.ceilLog2(C),
-    			MathAppend.ceilLog2(avgNumberOfLocalVertices), outerOrInner, numberOfLocalVertices, numberOfVertices);
+    			MathAppend.ceilLog2(avgNumberOfLocalVertices), transpose, numberOfLocalVertices, numberOfVertices);
     }
     
     /** Delete Dist2D and related objects.

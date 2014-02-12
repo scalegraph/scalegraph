@@ -1,8 +1,20 @@
+/*
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
+
 package org.scalegraph.api;
 
+import x10.compiler.Ifdef;
 import x10.util.Team;
 import x10.compiler.Native;
-
 import org.scalegraph.Config;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
@@ -16,8 +28,44 @@ import org.scalegraph.util.*;
 
 /**
  * Calculates the Strongly Connected Component.
- * Details: TODO: write the algorithm description
- */
+ * 
+ * Details:
+ * 
+ * We inplement "TODO"'s algorithm to solve Strongly Connected Component (SCC) Problem. 
+ * 
+ * First, we describe input and output.
+ * input : directed graph which has edge with no weight.
+ * output : this program output two files.
+ * 	   we define "leader vertex" of a SCC. This vertex is minimal index in a group of SCC.
+ *     1. for all vertex v, output leader vertex of SCC which contains v.
+ *     2. for all vertex v, output 
+ *         the number of vertexes in SCC which contains v (if v is leader vertex of any SCC)
+ *         0 (if v is not leader vertex)
+ *  
+ * In following, we describe detail algorithm.
+ * In brief, our algorithm is "devided and conquer algorithm".
+ * 
+ * In detail, 
+ * 1. We decide initial "root" vertex.
+ * 2. From root vertex, we send message to neighbor vertex along edge in forward direction.
+ *    And this operation repeatedly. Reached vertex have information "forward".
+ * 3. We do like No.2 operation, but now, we send message in backward direction.
+ *    And Reached vertex have information "backward".
+ * (Of course, in No.2 and No.3 operation a vertex send message only once respectedly.)
+ * 4. Each vertex have a information of following 4 informations that is 
+ *    ("forward" & "backward") or ("forward" & not "backward") or (not "forward" & "backward") or (not "forward" & not "backward").
+ *   If two vertex have different information, these vertexes are not in same SCC.
+ *   And, the set of all vertexes that have ("forward" & "backward") information is exact SCC that contains root vertex. 
+ *   So, we can split graph such that neighbor vertex should have same information.
+ *   And, one of this is exact SCC, so these vertexes end operation.
+ *   Other parts (the number of parts is 3 or less) go No.1 operation recursively.
+ * 
+ * And additional operation is following.
+ * 1. This algorithm is bad at input that have many SCCs that each SCCs are not (weakly) connected. 
+ *    So, we add the operation that if not weakly connected, we split graph.
+ * 
+ * 
+ */ 
 public final class StronglyConnectedComponent {
 	
 	// The member variables are algorithm parameters.
@@ -138,21 +186,24 @@ public final class StronglyConnectedComponent {
 	 * 
 	 */
 	
-	private static def execute(param :StronglyConnectedComponent, graph:Graph, matrix :DistSparseMatrix[Double]):Result {
+	private static def execute(param :StronglyConnectedComponent, matrix :DistSparseMatrix[Long]):Result {
 
 		val team = param.team;
 		val niter = param.niter;
-		
+		val sw = Config.get().stopWatch();
 		val blockLength = 3L;
 
-		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
-		val xpregel = new XPregelGraph[SCCVertex, Long](csr);		
+//		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
+		val xpregel = new XPregelGraph[SCCVertex, Long](matrix);		
 //		val xpregel = XpregelGraph.make[SCCVertex, Double](matrix);
 		xpregel.updateInEdge();
 
 
 		val initInfo = new SCCVertex(0L, false, false,-1L, 0L);
 		xpregel.initVertexValue(initInfo);
+
+		/// sw.lap("UpdateInEdge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		var recursion:Int = 0;
 		var numOfCluster:Long = 0; 
@@ -263,8 +314,8 @@ public final class StronglyConnectedComponent {
 							ctx.voteToHalt();
 						}
 						if(ctx.superstep()==1) {
-							val cnt = new MemoryChunk[Long](4);
-							val pos = new MemoryChunk[Long](4);
+							val cnt = MemoryChunk.make[Long](4);
+							val pos = MemoryChunk.make[Long](4);
 							for(i in messages.range()) {
 								var iter:Long = 0;
 								if(messages(i).front) iter += 2;
@@ -403,9 +454,13 @@ public final class StronglyConnectedComponent {
 //			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
 		});
 		
-		Console.OUT.println("numOfCluster" + numOfCluster);
+		/// sw.lap("numOfCluster" + numOfCluster);
 		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0), xpregel.stealOutput[Long](1));
 //		Console.OUT.println("numOfCluster" + numOfCluster);
+
+		/// sw.lap("Retrieve output");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("HyperANF Retrieve Output:"); }
+		
 		return result;
 	}
 	
@@ -414,8 +469,8 @@ public final class StronglyConnectedComponent {
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
 	public def execute(matrix :DistSparseMatrix[Long]) :Result{
-		//= execute(this, matrix);
-		throw new UnsupportedOperationException();
+		return  execute(this, matrix);
+		//throw new UnsupportedOperationException();
 	}
 	
 	/** Run the calculation of StronglyConnectedComponent.
@@ -425,9 +480,12 @@ public final class StronglyConnectedComponent {
 //		throw new UnsupportedOperationException();
 		// Since graph object has its own team, we shold use graph's one.
 		this.team = g.team();	
+		/*
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, true);
-		return execute(this, g, matrix);		 
+*/
+		val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
+		return execute(this, matrix);		 
 	}
 
 
@@ -446,8 +504,5 @@ public final class StronglyConnectedComponent {
 	 * This method is faster than run(Graph) method when it is called several times on the same graph.
 	 * @param matrix 1D row distributed adjacency matrix with edge weights.
 	 */
-	public static def run(matrix :DistSparseMatrix[Long]) :Result {
-		throw new UnsupportedOperationException();
-		//new StronglyConnectedComponent().execute(matrix);
-	}
+	public static def run(matrix :DistSparseMatrix[Long]) :Result = new StronglyConnectedComponent().execute(matrix);
 }

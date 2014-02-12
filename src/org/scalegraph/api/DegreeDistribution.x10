@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -101,13 +101,14 @@ final public class DegreeDistribution {
         }
         val sw = Config.get().stopWatch();
         val team = g.team();
-        val outerOrInner = (m == IN_DEGREE) ? false: true;
+        val transpose = (m == IN_DEGREE) ? true: false;
         val directed = (m == INOUT_DEGREE) ? false: true;
-        val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
-        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
-        sw.lap("Graph construction");
+        //val distColumn = Dist2D.make1D(team, !transpose ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
+        val distColumn = Dist2D.make1D(team, Dist2D.DISTRIBUTE_ROWS);
+        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, transpose);
+        /// sw.lap("Graph construction");
         val result = run[Long](columnDistGraph);
-        sw.lap("Degree distribution calculation (mode = " + m +")");
+        /// sw.lap("Degree distribution calculation (mode = " + m +")");
         
         // delete graph
         columnDistGraph.del();

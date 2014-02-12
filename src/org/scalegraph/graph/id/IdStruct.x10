@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ public final struct IdStruct {
 	public val lgl: Int;
 	
 	/** true -&gt outer edge, false -&gt inner edge */
-	public val outerOrInner :Boolean;
+	public val transpose :Boolean;
 	
 	/** The (maximum) number of local vertices. This value is uniform on all places. */
 	public val numberOfLocalVertexes: Long;
@@ -35,18 +35,18 @@ public final struct IdStruct {
 	 * The original ID of any vertexes in the graph is less than this value. */
 	public val numberOfGlobalVertexes : Long;
 	
-	public def this(lgr: Int, lgc: Int, lgl: Int, outerOrInner :Boolean, numberOfLocalVertexes: Long,  numberOfGlobalVertexes: Long) {
+	public def this(lgr: Int, lgc: Int, lgl: Int, transpose :Boolean, numberOfLocalVertexes: Long,  numberOfGlobalVertexes: Long) {
 		this.lgr = lgr;
 		this.lgc = lgc;
 		this.lgl = lgl;
-		this.outerOrInner = outerOrInner;
+		this.transpose = transpose;
 		this.numberOfLocalVertexes = numberOfLocalVertexes;
 		this.numberOfGlobalVertexes = numberOfGlobalVertexes;
 	}
 	
-	public def isCSR() = outerOrInner;
+	//public def isCSR() = !transpose;
 	
-	public def isCSC() = !outerOrInner;
+	//public def isCSC() = transpose;
 
 	/** Returns <i>numberOfLocalVertexes</i>. */
 	public def numberOfLocalVertexes() = numberOfLocalVertexes;

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ final public class SpectralClusteringImpl {
 	
 	private def this() {}
 	
-	public static def run(g : Graph, attrName : String, numCluster : Int,
+	public static def run(W : DistSparseMatrix[Double], numCluster : Int,
 			tolerance : Double, maxitr : Int, threshold : Double): DistMemoryChunk[Int] {
 		val config = Config.get();
 		val team = config.worldTeam();
@@ -47,17 +47,16 @@ final public class SpectralClusteringImpl {
 		val sw = new MyStopWatch();
 		sw.start("create affinity matrix");
 		
-		val W = g.createDistSparseMatrix[Double](dist, attrName, false, false);
 		val N = W.ids().numberOfLocalVertexes2N();
-		val D = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](N, (Long) => 1.0));
-		BLAS.mult[Double](1.0, W, true, D, 0.0, D);
+		val D = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](N, (Long) => 1.0));
+		BLAS.mult[Double](1.0, W, false, D, 0.0, D);
 		team.placeGroup().broadcastFlat(() => {
 			val vec_ = D();
 			Parallel.iter(vec_.range(), (tid :Long, r :LongRange) => {
 				for(i in r) vec_(i) = 1.0 / vec_(i);
 			});
 		});
-		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, true, 0.0, W);
+		BLAS.mult[Double](1.0, DistDiagonalMatrix(D), W, false, 0.0, W);
 		
 		sw.next("calc eigenvectors");
 		
@@ -105,8 +104,8 @@ final public class SpectralClusteringImpl {
 		val ldu:Int = nloc;
 		val maxitr = params.maxitr;
 		val lworkl:Int = params.lworkl;
-		val x = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
-		val y = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](nloc));
+		val x = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](nloc));
+		val y = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](nloc));
 		
 		// global params for pdseupd
 		val rvec:Int = params.rvec;
@@ -132,6 +131,9 @@ final public class SpectralClusteringImpl {
 			val d:Array[Double](1) = new Array[Double](nev);
 			val v:Array[Double](1) = new Array[Double](nev * ldv);
 			
+			val sw = Config.get().stopWatch();
+			if(here.id == 0) sw.lap("start ARPACK iteration");
+			
 			iparam(0) = 1;
 			iparam(2) = maxitr;
 			iparam(3) = 1;
@@ -147,6 +149,8 @@ final public class SpectralClusteringImpl {
 				ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
 						resid, ncv, u, ldu, iparam, ipntr,
 						workd, workl, lworkl, info);
+
+				if(here.id == 0) sw.lap("ARPACK Iteration " + iter);
 				
 				if(role == 0 && info != 0) {
 					ARPACK.printError("pdsaupd", info);
@@ -154,11 +158,18 @@ final public class SpectralClusteringImpl {
 				
 				if(ido == -1 || ido == 1) {
 					// y <- OP(x)
-					val x_ = new MemoryChunk[Double](workd.raw(), ipntr(0) - 1, nloc);
-					val y_ = new MemoryChunk[Double](workd.raw(), ipntr(1) - 1, nloc);
-					MemoryChunk.copy[Double](x_, 0L, x(), 0L, nloc);
-					BLAS.mult_[Double](1.0, A, true, x, 0.0, y);
-					MemoryChunk.copy[Double](y(), 0L, y_, 0L, nloc);
+					Parallel.iter(0..(nloc-1), (tid:Int, r:IntRange) => {
+						for(i in r) {
+							x()(i) = workd(ipntr(0) - 1 + i);
+						}
+					});
+					BLAS.mult_[Double](1.0, A, false, x, 0.0, y);
+					Parallel.iter(0..(nloc-1), (tid:Int, r:IntRange) => {
+						for(i in r) {
+							workd(ipntr(1) - 1 + i) = y()(i);
+						}
+					});
+					if(here.id == 0) sw.lap("Operation y <- OP(x): " + iter);
 					
 				} else if(ido == 2) {
 					// y <- Bx
@@ -167,8 +178,10 @@ final public class SpectralClusteringImpl {
 							workd(ipntr(1) - 1 + i) = workd(ipntr(0) - 1 + i);
 						}
 					});
+					if(here.id == 0) sw.lap("Operation y <- Bx: " + iter);
 				} else {
 					if(role == 0 && ido != 99) Console.OUT.println("ARPACK: pdsaupd: unknown operation: ido = " + ido);
+					if(here.id == 0) sw.lap("Iteration finished");
 					break;
 				}
 			}
@@ -191,7 +204,9 @@ final public class SpectralClusteringImpl {
 				Console.OUT.println(d);
 			}
 			
-			val result = new MemoryChunk[Double](v.size);
+			if(here.id == 0) sw.lap("Last ARPACK call");
+			
+			val result = MemoryChunk.make[Double](v.size);
 			Parallel.iter(
 					0..(nloc-1),
 					(tid:Int, r:IntRange) => {
@@ -202,6 +217,9 @@ final public class SpectralClusteringImpl {
 						}
 					}
 			);
+			
+			if(here.id == 0) sw.lap("Eigenvector calcularion finished");
+			
 			result
 		});
 	}
@@ -213,10 +231,10 @@ final public class SpectralClusteringImpl {
 		assert(dmc().size() % k == 0L);
 		val team2 = new Team2(team);
 		val root = team.role()(0);
-		val assign = new DistMemoryChunk[Int](team.placeGroup(), () => new MemoryChunk[Int](dmc().size() / k));
-		val curC = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](k * k));
-		val nextC = new DistMemoryChunk[Double](team.placeGroup(), () => new MemoryChunk[Double](k * k));
-		val count = new DistMemoryChunk[Long](team.placeGroup(), () => new MemoryChunk[Long](k));
+		val assign = new DistMemoryChunk[Int](team.placeGroup(), () => MemoryChunk.make[Int](dmc().size() / k));
+		val curC = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](k * k));
+		val nextC = new DistMemoryChunk[Double](team.placeGroup(), () => MemoryChunk.make[Double](k * k));
+		val count = new DistMemoryChunk[Long](team.placeGroup(), () => MemoryChunk.make[Long](k));
 		
 		team2.placeGroup().broadcastFlat(() => {
 			//Console.OUT.println(here + ": K-means started");
@@ -309,6 +327,9 @@ final public class SpectralClusteringImpl {
 			}
 			//Console.OUT.println(here + ": K-means finished");
 		});
+		
+		val sw = Config.get().stopWatch();
+		if(here.id == 0) sw.lap("KMeans completed");
 		
 		return assign;
 	}

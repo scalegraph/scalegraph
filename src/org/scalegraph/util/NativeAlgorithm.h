@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -108,6 +108,18 @@ namespace org { namespace scalegraph { namespace util {
 		// Supports offset dereference operator ([])
 		reference operator[](const difference_type n) { return reference(first[n], second[n]); }
 	};
+
+    template<typename IterKey>
+    void sort1(IterKey* begin_key, size_t count)
+    {
+        std::sort(begin_key, begin_key + count);
+    }
+
+    template<typename IterKey, typename Compare>
+        void sort1(IterKey* begin_key, size_t count, Compare comp)
+        {
+            std::sort(begin_key, begin_key + count, comp);
+        }
 
 	template<typename IterKey, typename IterValue>
 	void sort2(IterKey* begin_key, IterValue* begin_value, size_t count)

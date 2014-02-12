@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -337,7 +337,7 @@ public class DeltaSteppingVisitor {
             // clear predecessor of root vertex
             predecessors()(v).clear();
         }
-        Console.OUT.println("Before loop");
+        //// Console.OUT.println("Before loop");
         do {
             // clear bucket queue pointer, this makes nextqueue of another buckets deterministic
             lch().bucketQueuePointer() = 0;

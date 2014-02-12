@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package org.scalegraph.graph.id;
  * D : Destination form ID
  */
 public final class OnedC {
-	/** Vertex ID to Source ID Converter */
-	public static final struct VtoS {
+	/** Vertex ID to Destination ID Converter */
+	public static final struct VtoD {
 		val lgc :Int;
 		val cmask :Long;
 		
@@ -33,8 +33,8 @@ public final class OnedC {
 		public def c(id :Long) :Int = (id & cmask) as Int;
 	}
 
-	/** Vertex ID to Destination ID Converter */
-	public static final struct VtoD {
+	/** Vertex ID to Source ID Converter */
+	public static final struct VtoS {
 		val lgc :Int;
 		val lgl :Int;
 		val cmask :Long;
@@ -49,8 +49,8 @@ public final class OnedC {
 		public def c(id :Long) :Int = (id & cmask) as Int;
 	}
 
-	/** Source ID to Vertex ID Converter */
-	public static final struct StoV {
+	/** Destination ID to Vertex ID Converter */
+	public static final struct DtoV {
 		val c :Int;
 		val lgc :Int;
 		
@@ -60,22 +60,26 @@ public final class OnedC {
 		}
 		
 		public operator this(id :Long) :Long = (id << lgc) | c;
+		public def c(id :Long) :Int = c;
 	}
 
-	/** Source ID to Destination ID Converter */
-	public static final struct StoD {
+	/** Destination ID to Source ID Converter */
+	public static final struct DtoS {
+		val c :Int;
 		val cshifted :Long;
 		
 		public def this(ids :IdStruct, c :Int) {
 			val lgl = ids.lgl;
+			this.c = c;
 			cshifted = (c as Long) << lgl;
 		}
 		
 		public operator this(id :Long) :Long = id | cshifted;
+		public def c(id :Long) :Int = c;
 	}
 
-	/** Destination ID to Vertex ID Converter */
-	public static final struct DtoV {
+	/** Source ID to Vertex ID Converter */
+	public static final struct StoV {
 		val lgc :Int;
 		val lgl :Int;
 		val lmask :Long;
@@ -90,8 +94,8 @@ public final class OnedC {
 		public def c(id :Long) :Int = (id >> lgl) as Int;
 	}
 
-	/** Destination ID to Source ID Converter */
-	public static final struct DtoS {
+	/** Source ID to Destination ID Converter */
+	public static final struct StoD {
 		val lmask :Long;
 		val lgl :Int;
 		

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -115,8 +115,8 @@ template <typename T> void writePrimitives(NativeFile nf,
 				String::Lit("error while writing file...")));
 }
 
-void readStrings(NativeFile nf, String **array, long numElements, long numBytes);
-long writeStrings(NativeFile nf, String **array, long numElements, long numBytes);
+void readStrings(NativeFile nf, String *array, long numElements, long numBytes);
+long writeStrings(NativeFile nf, String *array, long numElements, long numBytes);
 
 }}}} // namespace org { namespace scalegraph { namespace io { namespace fbio {
 

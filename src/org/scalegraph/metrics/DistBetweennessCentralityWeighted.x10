@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -428,7 +428,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             return new LocalState(matrix, transBuf, N, delta, numSource_, sources_, sourceRange_);
         });
         val stopWatch = Config.get().stopWatch();
-        stopWatch.lap("Graph construction");
+        /// stopWatch.lap("Graph construction");
         val bc = new DistBetweennessCentralityWeighted(localState);
         bc.start();
         
@@ -458,7 +458,7 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         }
         // return result as a graph attribute
         val result = new DistMemoryChunk[Double](places, () => {
-            val r = new MemoryChunk[Double](localState().score.length());
+            val r = MemoryChunk.make[Double](localState().score.length());
             for (i in 0..(r.size() -1))
                 r(i) = localState().score(i);
             return r;
@@ -468,13 +468,13 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
         // // This is workaround for creating vertex attribute for graph,
         // // This problem should be fixed by vertex translator or graph class
         // val vertexIds = new DistMemoryChunk[Long](places, () => {
-        //     val id = new MemoryChunk[Long](localState().score.length());
+        //     val id = MemoryChunk.make[Long](localState().score.length());
         //     for (i in 0..(id.size() -1))
         //         id(i) = bc.LocSrcToOrg(i);
         //     return id;
         // });
         // g.setVertexAttribute[Long]("name", vertexIds);
-        stopWatch.lap("Betweenness centrality (Weighted) calculation");
+        /// stopWatch.lap("Betweenness centrality (Weighted) calculation");
         return result;
     }
     

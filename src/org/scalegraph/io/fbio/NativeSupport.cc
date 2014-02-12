@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -273,7 +273,7 @@ void writeHeaders(
 	x10aux::dealloc(headerMemory);
 }
 
-void readStrings(NativeFile nf, String **array, long numElements, long numBytes) {
+void readStrings(NativeFile nf, String *array, long numElements, long numBytes) {
 	int8_t* buffer = x10aux::alloc<int8_t>(numBytes, false);
 	if(read(nf.handle(), buffer, numBytes) != numBytes) {
 		x10aux::throwException(IOException::_make(
@@ -283,21 +283,21 @@ void readStrings(NativeFile nf, String **array, long numElements, long numBytes)
 	for(long i = 0L; i < numElements; ++i) {
 		FBIO_String* str_data = (FBIO_String*)&buffer[offset];
 		int length = str_data->length;
-		array[i] = x10::lang::String::Steal(
-				x10aux::alloc_utils::strndup(str_data->data, length));
+		array[i] = *(x10::lang::String::Steal(
+				x10aux::alloc_utils::strndup(str_data->data, length)));
 		offset += 4 + align(length, 4);
 	}
 	x10aux::dealloc(buffer);
 }
 
-long writeStrings(NativeFile nf, String **array, long numElements, long numBytes) {
+long writeStrings(NativeFile nf, String *array, long numElements, long numBytes) {
 	int8_t* buffer = x10aux::alloc<int8_t>(numBytes, false);
 	long offset = 0L;
 	for(long i = 0L; i < numElements; ++i) {
-		int length = array[i]->length();
+		int length = array[i].length();
 		FBIO_String* str_data = (FBIO_String*)&buffer[offset];
 		str_data->length = length;
-		memcpy(str_data->data, array[i]->c_str(), length);
+		memcpy(str_data->data, array[i].c_str(), length);
 		offset += 4 + align(length, 4);
 	}
 	if(offset != numBytes) {

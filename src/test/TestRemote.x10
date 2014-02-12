@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@ public final class TestRemote extends STest {
 	}
 
     def createData(pg : PlaceGroup, size : Long) {
-        val dst = new DistMemoryChunk[Long](pg, ()=>(new MemoryChunk[Long](size)));
-        val src = new DistMemoryChunk[Long](pg, ()=>(new MemoryChunk[Long](64)));
+        val dst = new DistMemoryChunk[Long](pg, ()=>(MemoryChunk.make[Long](size)));
+        val src = new DistMemoryChunk[Long](pg, ()=>(MemoryChunk.make[Long](64)));
 
 
         finish for (p in pg) at (p) async {
@@ -105,7 +105,7 @@ public final class TestRemote extends STest {
         }
     }
 
-    def createPutData(pg : PlaceGroup, size : Long) = new DistMemoryChunk[Long](pg, ()=>(new MemoryChunk[Long](size)));
+    def createPutData(pg : PlaceGroup, size : Long) = new DistMemoryChunk[Long](pg, ()=>(MemoryChunk.make[Long](size)));
 
     def testPut(comm : Team, size : Long) {
         Console.OUT.println("Remote.put test");

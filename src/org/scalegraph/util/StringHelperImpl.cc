@@ -1,5 +1,5 @@
 /*
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  *
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -93,7 +93,7 @@ MemoryChunk<x10_byte> charsToUTF8_(const MemoryChunk<x10_char>& chars) {
 		x10_char c = chars_ptr[i];
 		UTF8_CHAR_BYTES(c, bytesCount);
 	}
-	MemoryChunk<x10_byte> bytes = MemoryChunk<x10_byte>::_make(bytesCount + 1);
+	MemoryChunk<x10_byte> bytes = MemoryChunk<x10_byte>::_make(bytesCount + 1, MCDEFARGS);
 	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
 	int bytesIndex = 0;
 	for(int i = 0; i < chars_size; ++i) {
@@ -109,7 +109,7 @@ MemoryChunk<x10_byte> charToUTF8_(x10_char ch, const MemoryChunk<x10_byte>& byte
 	int bytesCount = 0;
 	x10_byte* bytes_ptr = bytes.FMGL(data).FMGL(pointer);
 	UTF8_ENCODE_CHAR(ch, bytes_ptr, bytesCount);
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(bytes_ptr, bytes_ptr, bytesCount) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(bytes_ptr, bytesCount, bytes.FMGL(data).FMGL(memobj)) };
 	return mc;
 }
 
@@ -121,7 +121,7 @@ MemoryChunk<x10_char> UTF8ToChars_(const MemoryChunk<x10_byte>& bytes) {
 		int b0 = bytes_ptr[i];
 		UTF8_CODE_LENGTH(b0, i);
 	}
-	MemoryChunk<x10_char> chars = MemoryChunk<x10_char>::_make(charsCount);
+	MemoryChunk<x10_char> chars = MemoryChunk<x10_char>::_make(charsCount, MCDEFARGS);
 	x10_char* chars_ptr = chars.FMGL(data).FMGL(pointer);
 	charsCount = 0;
 	for(int i = 0; i < bytes_size; ++charsCount) {
@@ -286,7 +286,7 @@ x10_byte* StringCstr_(SString& str) {
 	int size = str.FMGL(content).FMGL(data).FMGL(size);
 	if(ptr[size] != 0) {
 		x10_byte* old_ptr = ptr;
-		MemoryChunk<x10_byte> nb = MemoryChunk<x10_byte>::_make(size+1);
+		MemoryChunk<x10_byte> nb = MemoryChunk<x10_byte>::_make(size+1, MCDEFARGS);
 		ptr = nb.FMGL(data).FMGL(pointer);
 		memcpy(ptr, old_ptr, size);
 		ptr[size] = 0;
@@ -297,7 +297,7 @@ x10_byte* StringCstr_(SString& str) {
 
 MemoryChunk<x10_byte> StringFromX10String(x10::lang::String* x10str) {
 	x10_byte* ptr = reinterpret_cast<x10_byte*>(const_cast<char*>(x10str->c_str()));
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(ptr, ptr, x10str->length()) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(ptr, x10str->length(), NULL) };
 	return mc;
 }
 
@@ -538,7 +538,7 @@ template <> SStringBuilder StringBuilderAdd_<x10_char>(SStringBuilder th, const 
 	x10_byte buf[4];
 	int len = 0;
 	UTF8_ENCODE_CHAR(x, buf, len);
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(buf, buf, len) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(buf, len, NULL) };
 	th->FMGL(buffer)->::org::scalegraph::util::GrowableMemory<x10_byte>::add(mc);
 }
 template <> SStringBuilder StringBuilderAdd_<x10_byte>(SStringBuilder th, const x10_byte x) {
@@ -549,7 +549,7 @@ template <> SStringBuilder StringBuilderAdd_<x10_ubyte>(SStringBuilder th, const
 }
 template <> SStringBuilder StringBuilderAdd_<x10_boolean>(SStringBuilder th, const x10_boolean x) {
 	x10_byte* str = (x10_byte*)(x ? "true" : "false");
-	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(str, str, x ? 4 : 5) };
+	MemoryChunk<x10_byte> mc = { MCData_Impl<x10_byte>(str, x ? 4 : 5, NULL) };
 	th->FMGL(buffer)->::org::scalegraph::util::GrowableMemory<x10_byte>::add(mc);
 	return th;
 }

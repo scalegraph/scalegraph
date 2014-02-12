@@ -1,5 +1,5 @@
 /*
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  *
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ struct NativeCSVAttribute {
 struct NativeCSVHeader {
 	gc_std<NativeCSVAttribute>::vector attrs;
 
-	NativeCSVHeader(x10_byte* ptr, x10_long size);
+	NativeCSVHeader(MemoryChunk<x10_byte> str, x10_long size);
 	~NativeCSVHeader() { }
 };
 

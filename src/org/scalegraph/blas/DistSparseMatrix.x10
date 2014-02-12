@@ -1,3 +1,15 @@
+/*
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
+
 package org.scalegraph.blas;
 
 import x10.util.Team;
@@ -98,9 +110,9 @@ public final struct DistSparseMatrix[T] {
 			// if removeDuplicates then
 			// 		2. remove duplicates by reading and writing whole data
 			// else
-			//			2. move lator region data
+			//		2. move lator region data
 			
-			if(ids.outerOrInner) {
+			if(!ids.transpose) {
 				for(i in 0L..(m.offsets.size()-2)) {
 					val off = cachedOffset;
 					val next = m.offsets(i+1);

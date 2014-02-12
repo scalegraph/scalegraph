@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -12,51 +12,30 @@
 package example;
 
 import x10.util.Team;
-import x10.io.File;
-import x10.io.FileReader;
-import x10.io.IOException;
 
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.api.DegreeDistribution;
+import org.scalegraph.graph.Graph;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.blas.DistSparseMatrix;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.blas.SparseMatrix;
+import org.scalegraph.util.random.Random;
 import org.scalegraph.util.tuple.*;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.api.DegreeDistribution;
 
 
 public final class DegreeDistributionExample {
     
-    public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        try {
-            val x = Long.parse(items(0).trim());
-            val y = Long.parse(items(1).trim());
-            
-        } catch(e: Exception) {
-            Console.OUT.println(items(0).trim() + " " + items(1).trim());
-        }
-        return Tuple3[Long, Long, Double] (
-                Long.parse(items(0).trim()),
-                Long.parse(items(1).trim()),
-                0D
-        );
-    };
-    
     public static def main(args: Array[String]) {
         
-        if (args.size < 1) {
-            Console.OUT.println("Please enter file name");
-            return;
-        }
-        val team = Team.WORLD;
+        // Generate RMAT graph
+        val scale = 10;
+        val edgeFactor = 8;
+        val rnd = new Random(2, 3);
+        val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
         
-        // Load data
-        val g = Graph.make(SimpleText.read(args(0), inputFormat));
+        // Create graph
+        val g = Graph.make(edgeList);
         
+        // Create API instance
         val degreeDist = new DegreeDistribution();
         
         // In-degree calculation

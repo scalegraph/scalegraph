@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -11,23 +11,16 @@
 package test;
 
 import x10.util.Team;
-import x10.io.File;
-import x10.io.FileReader;
-import x10.io.IOException;
 
-import org.scalegraph.test.STest;
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.api.DegreeDistribution;
+import org.scalegraph.blas.DistSparseMatrix;
+import org.scalegraph.Config;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
-import org.scalegraph.blas.SparseMatrix;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.api.DegreeDistribution;
 import org.scalegraph.test.AlgorithmTest;
+import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Dist2D;
-import org.scalegraph.Config;
 
 final class TestDegreeDistInOut extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
@@ -35,47 +28,41 @@ final class TestDegreeDistInOut extends AlgorithmTest {
 	}
     
 	public def run(args :Array[String](1), g :Graph): Boolean {
-	    
-	    if(args.size < 3) {
-	        println("Usage: [high|low] [write|check] <path>");
-	        return false;
-	    }
-	    
+	   
 	    var inOutdegResult: DistMemoryChunk[Long];
+	    val op1 = args(0);
+	    val op2 = args(1);
+	    val op3 = args(2);
 	    
-	    if(args(0).equals("high")) {
+	    if(op1.equals("high")) {
 	        inOutdegResult = new DegreeDistribution(DegreeDistribution.INOUT_DEGREE).execute(g);
 	    }
-	    else if(args(0).equals("low")) {
+	    else if(op1.equals("low")) {
 	        val sw = Config.get().stopWatch();
 	        val team = g.team();
-	        val outerOrInner = true;
+	        val transpose = false;
 	        val directed = false;
-	        val distColumn = Dist2D.make1D(team, outerOrInner ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
-	        val columnDistGraph = g.createDistEdgeIndexMatrix(distColumn, directed, outerOrInner);
+	        //val distColumn = Dist2D.make1D(team, !transpose ? Dist2D.DISTRIBUTE_COLUMNS : Dist2D.DISTRIBUTE_ROWS);
+	        val distRow = Dist2D.make1D(team, Dist2D.DISTRIBUTE_ROWS);
+	        val rowDistGraph = g.createDistEdgeIndexMatrix(distRow, directed, transpose);
 	        sw.lap("Graph construction");
 	        g.del();
-	        inOutdegResult = DegreeDistribution.run[Long](columnDistGraph);
+	        inOutdegResult = DegreeDistribution.run[Long](rowDistGraph);
 	        sw.lap("Degree distribution calculation");
 	    }
 	    else {
-	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
+	        throw new IllegalArgumentException("Unknown level parameter :" + op1);
 	    }
 	    
-	    if(args(1).equals("write")) {
-	        // CSV.write(args(1), new NamedDistData(["indeg" as String], [indegResult as Any]), true);
-	        // CSV.write(args(1), new NamedDistData(["outdeg" as String], [outdegResult as Any]), true);
-	        CSV.write(args(2), new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]), true);
+	    if(op2.equals("write")) {
+	        CSV.write(op3, new NamedDistData(["inoutdeg" as String], [inOutdegResult as Any]), true);
 	        return true;
 	    }
-	    else if(args(1).equals("check")) {
-	        // return checkResult[Long](indegResult, args(1) + "/RMAT_20_INDEG", 0L) 
-	        // && checkResult[Long](outdegResult, args(1) + "/RMAT_20_OUTDEG", 0L)
-	        // && checkResult[Long](inOutdegResult, args(1) + "/RMAT_20_INOUTDEG", 0L);
-	        return checkResult[Long](inOutdegResult, args(2) + "/RMAT_20_INOUTDEG", 0L);
+	    else if(op2.equals("check")) {
+	        return checkResult[Long](inOutdegResult, op3, 0L);
 	    }
 	    else {
-	        throw new IllegalArgumentException("Unknown command :" + args(0));
+	        throw new IllegalArgumentException("Unknown command :" + op2);
 	    }
 	}
 }

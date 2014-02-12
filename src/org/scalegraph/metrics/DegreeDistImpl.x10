@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public final class DegreeDistImpl {
 				}
 			});
 			scatterGather.sum();
-			val requests = new MemoryChunk[Long](scatterGather.sendCount());
+			val requests = MemoryChunk.make[Long](scatterGather.sendCount());
 			Parallel.iter(vertexRange, (tid :Long, r :LongRange) => {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				for(i in r) {

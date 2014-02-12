@@ -1,4 +1,4 @@
- This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ This file is part of the ScaleGraph project (http://scalegraph.org/).
 
  This file is licensed to You under the Eclipse Public License (EPL);
  You may not use this file except in compliance with the License.
@@ -10,7 +10,17 @@
 #ScaleGraph
 ScaleGraph is a graph library based on the highly productive X10 programming language. The goal of ScaleGraph is to provide large-scale graph analysis algorithms and efficient distributed computing framework for graph analysts  and for algorithm developers, respectively
 
-See http://scalegraph.sourceforge.net/web/ for details.
+See http://scalegraph.org/ for details.
 
 ##Update history
 Update history can be found from [ChangeLog](https://github.com/scalegraph/scalegraph/blob/master/ChangeLog.md)
+
+##Build
+
+    % git clone https://github.com/scalegraph/scalegraph.git
+    % cd scalegraph
+    % make
+
+##Usage
+    % mkdir example
+    % x10c++ -x10lib /path/to/scalegraph/x10lib/ScaleGraph.properties /path/to/scalegraph/src/test/PageRankTest.x10

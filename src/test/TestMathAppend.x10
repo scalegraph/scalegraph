@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -9,13 +9,13 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package example;
+package test;
 
 import x10.util.Random;
 
 import org.scalegraph.util.*;
 
-public class MathAppendExample {
+public class TestMathAppend {
 	private static def message (str:String) : void {
 		Console.OUT.println("IdConvEx: " + str);
 	}

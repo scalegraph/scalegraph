@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ public final class Type {
 			return Type.ULong;
 		if(dmc instanceof DistMemoryChunk[Char])
 			return Type.Char;
-		if(dmc instanceof DistMemoryChunk[String])
+		if(dmc instanceof DistMemoryChunk[SString])
 			return Type.String;
 		else
 			throw new Exception("invalid data type");

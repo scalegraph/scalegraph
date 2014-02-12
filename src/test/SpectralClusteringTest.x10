@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.scalegraph.fileread.DistributedReader;
 import org.scalegraph.graph.EdgeList;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.GraphGenerator;
+import org.scalegraph.io.ID;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.impl.CSVWriter;
 import org.scalegraph.util.Dist2D;
@@ -49,31 +50,41 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		val tolerance = Double.parse(args(1));
 		val maxitr = Int.parse(args(2));
 		val threshold = Double.parse(args(3));
-		val outputPath = args(4);
+		val outOrEval = args(4);
+		val outputPath = args(5);
+		
+		Console.OUT.println("dist2d = " + dist);
 		
 		Console.OUT.println("vertices = " + g.numberOfVertices());
 		Console.OUT.println("edges    = " + g.numberOfEdges());
 		
 		val sw = new MyStopWatch();
-		sw.start("spectral clustering");
 		
-		val result = SpectralClustering.run(g, "weight", numCluster, tolerance, maxitr, threshold);
+		sw.start("create dist sparse matrix");
+		val W = g.createDistSparseMatrix[Double](dist, ID.NAME_WEIGHT, false, false);
+		g.del();
 		
-		//sw.next("output");
-		
-		//DistributedReader.write("outvec-%d.txt", result);
-		//val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
-		//CSVWriter.write(team, outputPath, namedDistData, true);
+		sw.next("spectral clustering");
+		val result = SpectralClustering.run(W, numCluster, tolerance, maxitr, threshold);
 		
 		sw.next("normalized cut");
-		
-		val W = g.createDistSparseMatrix[Double](dist, "weight", false, false);
 		val ncut = normalizedCut(W, result, numCluster);
 		Console.OUT.println("ncut = " + ncut);
 		
-		sw.next("validation");
+		if(outOrEval.equals("out")) {
 		
-		checkResult[Int](result, outputPath, 0);
+			sw.next("output");
+			val namedDistData = new NamedDistData(["sc_result" as String], [result as Any]);
+			CSVWriter.write(team, outputPath, namedDistData, true);
+			
+		} else if(outOrEval.equals("eval")) {
+		
+			sw.next("validation");
+			checkResult[Int](result, outputPath, 0);
+			
+		} else {
+			Console.OUT.printf("Worning: invalid argument \"%s\" will be ignored\n", outOrEval);
+		}
 		
 		sw.end();
 		sw.print();
@@ -101,8 +112,8 @@ final class SpectralClusteringTest extends AlgorithmTest {
 			val vertexes = W_.vertexes;
 			val values = W_.values;
 			
-			val srcRefVector = new MemoryChunk[Int](localHeight);
-			val dstRefVector = new MemoryChunk[Int](localWidth);
+			val srcRefVector = MemoryChunk.make[Int](localHeight);
+			val dstRefVector = MemoryChunk.make[Int](localWidth);
 			
 			val rowTeam = Team2(dist.rowTeam());
 			val columnTeam = Team2(dist.columnTeam());
@@ -142,6 +153,7 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		Console.OUT.println(assoc);
 		var ncut:Double = 0.0;
 		for(i in 0..(numberOfClusters - 1)) {
+			if(cut(i) == 0L && assoc(i) == 0L) continue;
 			ncut += cut(i) as Double / assoc(i);
 		}
 		

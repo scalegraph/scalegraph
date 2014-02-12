@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ public final class OrderedPlaceGroup extends PlaceGroup {
 	private val places :MemoryChunk[Place];
 	
 	public def this(ps :Array[Place]) {
-		places = new MemoryChunk[Place](ps.raw());
+		places = MemoryChunk.make[Place](ps.raw());
 	}
 	
 	public def this(ps :MemoryChunk[Place]) {

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -9,12 +9,12 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
-package example;
+package test;
 
 import x10.util.Team;
 import x10.util.Timer;
 
-public class TeamExample {
+public class TestTeam {
 	private static def message (str:String) : void {
 		Console.OUT.println("" + Timer.milliTime() + ":te: " + here + "(" + Runtime.workerId() + ")" + str);
 		Console.OUT.flush();

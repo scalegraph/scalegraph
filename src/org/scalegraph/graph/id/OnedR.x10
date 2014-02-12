@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package org.scalegraph.graph.id;
  * D : Destination form ID
  */
 public final class OnedR {
-	/** Vertex ID to Source ID Converter */
-	public static final struct VtoS {
+	/** Vertex ID to Destination ID Converter */
+	public static final struct VtoD {
 		val lgr :Int;
 		val lgl :Int;
 		val rmask :Long;
@@ -34,19 +34,22 @@ public final class OnedR {
 		public operator this(id :Long) :Long = ((id & rmask) << lgl) | (id >> lgr);
 	}
 
-	/** Vertex ID to Destination ID Converter */
-	public static final struct VtoD {
+	/** Vertex ID to Source ID Converter */
+	public static final struct VtoS {
 		val lgr :Int;
+		val rmask :Long;
 		
 		public def this(ids :IdStruct) {
 			lgr = ids.lgr;
+			rmask = ((1L << lgr) - 1L);
 		}
 		
 		public operator this(id :Long) :Long = (id >> lgr);
+		public def r(id :Long) :Int = (id & rmask) as Int;
 	}
 
-	/** Source ID to Vertex ID Converter */
-	public static final struct StoV {
+	/** Destination ID to Vertex ID Converter */
+	public static final struct DtoV {
 		val lgr :Int;
 		val lgl :Int;
 		val lmask :Long;
@@ -58,10 +61,11 @@ public final class OnedR {
 		}
 		
 		public operator this(id :Long) :Long = ((id & lmask) << lgr) | (id >> lgl);
+		public def r(id :Long) :Int = (id >> lgl) as Int;
 	}
 
-	/** Source ID to Destination ID Converter */
-	public static final struct StoD {
+	/** Destination ID to Source ID Converter */
+	public static final struct DtoS {
 		val lmask :Long;
 		
 		public def this(ids :IdStruct) {
@@ -72,8 +76,8 @@ public final class OnedR {
 		public operator this(id :Long) :Long = id & lmask;
 	}
 
-	/** Destination ID to Vertex ID Converter */
-	public static final struct DtoV {
+	/** Source ID to Vertex ID Converter */
+	public static final struct StoV {
 		val r :Int;
 		val lgr :Int;
 		
@@ -85,8 +89,8 @@ public final class OnedR {
 		public operator this(id :Long) :Long = (id << lgr) | r;
 	}
 
-	/** Destination ID to Source ID Converter */
-	public static final struct DtoS {
+	/** Source ID to Destination ID Converter */
+	public static final struct StoD {
 		val rshifted :Long;
 		
 		public def this(ids :IdStruct, r :Int) {

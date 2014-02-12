@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@ import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.io.CSV;
+import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 
 final class PageRankTest extends AlgorithmTest {
@@ -33,9 +34,20 @@ final class PageRankTest extends AlgorithmTest {
     	if(args(0).equals("high")) {
     		result = org.scalegraph.api.PageRank.run(g);
     	}
+    	else if(args(0).equals("perf")) {
+    		val matrix = g.createDistSparseMatrix[Double](
+    				Config.get().distXPregel(), "weight", true, false);
+    		// delete the graph object in order to reduce the memory consumption
+    		g.del();
+    		Config.get().stopWatch().lap("Graph construction: ");
+    		val pg = new org.scalegraph.api.PageRank();
+    		pg.niter = 30;
+    		pg.eps = 0.0;
+    		result = pg.execute(matrix);
+    	}
     	else if(args(0).equals("low")) {
     		val matrix = g.createDistSparseMatrix[Double](
-    				Config.get().distXPregel(), "weight", true, true);
+    				Config.get().distXPregel(), "weight", true, false);
     		// delete the graph object in order to reduce the memory consumption
     		g.del();
     		Config.get().stopWatch().lap("Graph construction: ");

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -138,7 +138,7 @@ public final struct SString {
 		// shortcut
 		if(indexOf(oldChar, 0) == -1) return this;
 		
-		val new_char = charToUTF8(newChar, new MemoryChunk[Byte](4));
+		val new_char = charToUTF8(newChar, MemoryChunk.make[Byte](4));
 		val buf = new GrowableMemory[Byte]();
 		buf.grow(content.size());
 		var cur_pos :Int = 0;
@@ -193,7 +193,7 @@ public final struct SString {
 			return tokenCount;
 		}
 		public def result() {
-			val array = new MemoryChunk[SString](size());
+			val array = MemoryChunk.make[SString](size());
 			var tokenCount: Int = 0;
 			for(t in this) array(tokenCount++) = t;
 			return array;

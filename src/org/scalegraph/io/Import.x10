@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ public class Import {
 		} catch(e:IOException) {
 		}
 		
-		val vertexList = new MemoryChunk[Long](vertexSet.size());
+		val vertexList = MemoryChunk.make[Long](vertexSet.size());
 		val it = vertexSet.iterator();
 		for(var i:Int = 0; it.hasNext(); i++) {
 			vertexList(i) = it.next();

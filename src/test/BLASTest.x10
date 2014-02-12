@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ final class BLASTest extends STest {
 		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
 		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](edgelist.src().size(), (Long) => 1.0));
+				() => MemoryChunk.make[Double](edgelist.src().size(), (Long) => 1.0));
 
 		val g = Graph.make(edgelist);
 		g.setEdgeAttribute("edgevalue", weight);
@@ -63,7 +63,7 @@ final class BLASTest extends STest {
 
 		// V <- A %*% rbind(rep(1, times=N))
 		val V = new DistMemoryChunk[Double](team.placeGroup(), () =>
-			new MemoryChunk[Double](N, (Long) => 1.0));
+			MemoryChunk.make[Double](N, (Long) => 1.0));
 
 		Console.OUT.println("V <- A * rbind(rep(1, times=N))");
 		BLAS.mult[Double](1.0, A, false, V, 0.0, V);

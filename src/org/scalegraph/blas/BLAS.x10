@@ -1,3 +1,15 @@
+/*
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
+
 package org.scalegraph.blas;
 
 import org.scalegraph.util.DistMemoryChunk;
@@ -22,8 +34,7 @@ public final class BLAS {
 		
 		if(B != C) throw new UnsupportedOperationException();
 		
-		if( (!transB && B.ids().isCSR()) ||
-			(transB && B.ids().isCSC()) ) {
+		if( !transB && !B.ids().transpose ) {
 			// OK
 			allTeam.placeGroup().broadcastFlat(() => {
 				try {
@@ -39,8 +50,8 @@ public final class BLAS {
 					//	val columnTeam = Team2(B.dist().columnTeam());
 					val rowTeam = Team2(B.dist().rowTeam());
 					//
-					//	val refVector = new MemoryChunk[T](localWidth);
-					val refVector = new MemoryChunk[T](localHeight);
+					//	val refVector = MemoryChunk.make[T](localWidth);
+					val refVector = MemoryChunk.make[T](localHeight);
 					
 					//	columnTeam.allgather(A()(), refVector);
 					rowTeam.allgather(A()(), refVector);
@@ -72,8 +83,7 @@ public final class BLAS {
 	{
 		val allTeam = Team2(A.dist().allTeam());
 		
-		if( (!trans && A.ids().isCSR()) ||
-			(trans && A.ids().isCSC()) ) {
+		if( !trans && !A.ids().transpose ) {
 			// OK
 			allTeam.placeGroup().broadcastFlat(() => {
 				mult_[T](alpha, A, trans, x, beta, y);
@@ -91,8 +101,7 @@ public final class BLAS {
 	{
 		val allTeam = Team2(A.dist().allTeam());
 		
-		if( (!trans && A.ids().isCSR()) ||
-		    (trans && A.ids().isCSC()) ) {
+		if( !trans && !A.ids().transpose ) {
 			// OK
 			try {
 				val dist = A.dist();
@@ -107,9 +116,9 @@ public final class BLAS {
 				val columnTeam = Team2(A.dist().columnTeam());
 				val rowTeam = Team2(A.dist().rowTeam());
 				//
-				val refVector = new MemoryChunk[T](localWidth);
-				val tmpSendVector = new MemoryChunk[T](localHeight);
-				val tmpRecvVector = new MemoryChunk[T](localHeight);
+				val refVector = MemoryChunk.make[T](localWidth);
+				val tmpSendVector = MemoryChunk.make[T](localHeight);
+				val tmpRecvVector = MemoryChunk.make[T](localHeight);
 				
 				columnTeam.allgather(x(), refVector);
 				
@@ -133,7 +142,7 @@ public final class BLAS {
 						val next = A_.offsets(i+1);
 						var sum :T = Zero.get[T]();
 						for(ei in off..(next-1)) {
-							if(A_.vertexes(ei) >= localWidth) Console.OUT.println("A_.vertexes(ei) = " + A_.vertexes(ei));
+							//if(A_.vertexes(ei) >= localWidth) Console.OUT.println("A_.vertexes(ei) = " + A_.vertexes(ei));
 							sum += A_.values(ei) * refVector(A_.vertexes(ei));
 						}
 						tmpSendVector(i) = sum;

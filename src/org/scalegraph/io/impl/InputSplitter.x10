@@ -1,5 +1,5 @@
 /*
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  *
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public abstract class InputSplitter {
 		public def size() = end - start;
 		
 		public def open() {
-			STest.println(here.id + " => (" + start + ", " + end + ")");
+			/// STest.println(here.id + " => (" + start + ", " + end + ")");
 			val reader = new FileReader(path);
 			reader.skip(start);
 			return reader;

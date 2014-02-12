@@ -1,7 +1,19 @@
+/* 
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
+ * 
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ * 
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
 package org.scalegraph.blas;
 
 import x10.util.Team;
 import x10.compiler.Ifndef;
+import x10.compiler.Ifdef;
+
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.graph.id.Twod;
@@ -9,6 +21,8 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Algorithm;
+import org.scalegraph.test.STest;
+import org.scalegraph.Config;
 
 /** Sparse matrix representation.
  */
@@ -45,57 +59,80 @@ public final struct SparseMatrix[T] {
 	}
 
 	/** Constructs partial sparse matrix of the distributed sparse matrix.
-	 * @param edges The edge list assigned to the current place.
+	 * @param srcV
+	 * @param dstV
 	 * @param values The edge values corresponds to the edge list.
 	 * @param ids IdStruct that provides the distribution information.
 	 */
-	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], ids :IdStruct) {
+	public def this(origin_ :MemoryChunk[Long], target_ :MemoryChunk[Long], values_: MemoryChunk[T], ids :IdStruct) {
+		val sw = Config.get().stopWatch();
 
-		if(srcV.size() == 0L) { // shortcut
+		if(origin_.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
 			this.vertexes = MemoryChunk.getNull[Long]();
 			this.values = MemoryChunk.getNull[T]();
 			return ;
 		}
 
-		Parallel.iter(srcV.range(), (tid :Long, r :LongRange):void => {
+		val origin :MemoryChunk[Long];
+		val target :MemoryChunk[Long];
+		if(!ids.transpose) {
+			origin = origin_; target = target_;
+		}
+		else {
+			origin = target_; target = origin_;
+		}
+
+		Parallel.iter(origin.range(), (tid :Long, r :LongRange):void => {
 			val VtoS = Twod.VtoS(ids);
 			val VtoD = Twod.VtoD(ids);
 
 			for(i in r) {
-				srcV(i) = VtoS(srcV(i));
-				dstV(i) = VtoD(dstV(i));
+				origin(i) = VtoS(origin(i));
+				target(i) = VtoD(target(i));
 			}
 		});
+		if(here.id == 0) sw.lap("finished converting edge format");
 
-		val offsetLength = 1L << (ids.lgl + (ids.outerOrInner ? ids.lgr : ids.lgc));
+		val offsetLength = 1L << (ids.lgl + ids.lgc);
 
-		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
-		val origin = new MemoryChunk[Long](srcV.size());
-		val target = new MemoryChunk[Long](srcV.size());
-		val values_ = new MemoryChunk[T](srcV.size());
-		
+		val offsets_ = MemoryChunk.make[Long](offsetLength + 1);
+		val key_tmp = MemoryChunk.make[Long](origin.size());
+		val v1_tmp = MemoryChunk.make[Long](origin.size());
+		val v2_tmp = MemoryChunk.make[T](origin.size());
 		// if gathering outer edges, origin is source and target is destination.
 		// if gathering inner edges, origin is destination and target is source.
 
-		if(ids.outerOrInner)
-			Parallel.sort(ids.lgl + ids.lgr, srcV, dstV, values, origin, target, values_);
-		else
-			Parallel.sort(ids.lgl + ids.lgc, dstV, srcV, values, origin, target, values_);
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-CONS-MAX: place: " + here.id +
+				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
+
+		if(here.id == 0) sw.lap("start first step sorting");
+		Parallel.sort(ids.lgl + ids.lgc, origin, target, values_, key_tmp, v1_tmp, v2_tmp);
+		if(here.id == 0) sw.lap("finished first step sorting");
+		
+		key_tmp.del();
+		v1_tmp.del();
+		v2_tmp.del();
 		
 		Parallel.makeOffset(origin, offsets_);
+		origin.del();
+		if(here.id == 0) sw.lap("finished making offsets");
 
 		Parallel.iter(0L..(offsetLength-1), (tid :Long, r :LongRange) => {
 			for(i in r) {
 				val off = offsets_(i);
 				val len = offsets_(i+1) - off;
-				Algorithm.sort(target.subpart(off, len), values.subpart(off, len));
+				Algorithm.sort(target.subpart(off, len), values_.subpart(off, len));
 			}
 		});
+		if(here.id == 0) sw.lap("finished second step sorting");
 
 		this.offsets = offsets_;
 		this.vertexes = target;
-		this.values = values;
+		this.values = values_;
+
+		@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-CONS-FIN: place: " + here.id +
+				": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 	}
 
 	/** Constructs non-distributed sparse matrix.
@@ -103,26 +140,36 @@ public final struct SparseMatrix[T] {
 	 * @param indexes The indexes corresponds to the edge list.
 	 * @param lgl The number of bits for the vertex ID.
 	 */
-	public def this(srcV :MemoryChunk[Long], dstV :MemoryChunk[Long], values: MemoryChunk[T], lgl :Int, outerOrInner :Boolean) {
+	public def this(origin_ :MemoryChunk[Long], target_ :MemoryChunk[Long], values_: MemoryChunk[T], lgl :Int, transpose :Boolean) {
 
-		if(srcV.size() == 0L) { // shortcut
+		if(origin_.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
 			this.vertexes = MemoryChunk.getNull[Long]();
 			this.values = MemoryChunk.getNull[T]();
 			return ;
 		}
+		
+		val origin :MemoryChunk[Long];
+		val target :MemoryChunk[Long];
+		if(!transpose) {
+			origin = origin_; target = target_;
+		}
+		else {
+			origin = target_; target = origin_;
+		}
 
 		val offsetLength = 1L << lgl;
 
-		val offsets_ = new MemoryChunk[Long](offsetLength + 1);
-		val origin = new MemoryChunk[Long](srcV.size());
-		val target = new MemoryChunk[Long](srcV.size());
-		val values_ = new MemoryChunk[T](srcV.size());
+		val offsets_ = MemoryChunk.make[Long](offsetLength + 1);
+		val key_tmp = MemoryChunk.make[Long](origin.size());
+		val v1_tmp = MemoryChunk.make[Long](origin.size());
+		val v2_tmp = MemoryChunk.make[T](origin.size());
 
-		if(outerOrInner)
-			Parallel.sort(lgl, srcV, dstV, values, origin, target, values_);
-		else
-			Parallel.sort(lgl, dstV, srcV, values, origin, target, values_);
+		Parallel.sort(lgl, origin, target, values_, key_tmp, v1_tmp, v2_tmp);
+		
+		key_tmp.del();
+		v1_tmp.del();
+		v2_tmp.del();
 		
 		Parallel.makeOffset(origin, offsets_);
 
@@ -130,13 +177,13 @@ public final struct SparseMatrix[T] {
 			for(i in r) {
 				val off = offsets_(i);
 				val len = offsets_(i+1) - off;
-				Algorithm.sort(target.subpart(off, len), values.subpart(off, len));
+				Algorithm.sort(target.subpart(off, len), values_.subpart(off, len));
 			}
 		});
 
 		this.offsets = offsets_;
 		this.vertexes = target;
-		this.values = values;
+		this.values = values_;
 	}
 
 	/** Creates replica of the sparse matrix on each place of team.
@@ -151,9 +198,9 @@ public final struct SparseMatrix[T] {
 				(new Cell[SparseMatrix[T]](sparseMatrix));
 
 		return PlaceLocalHandle.make[Cell[SparseMatrix[T]]](team.placeGroup(), () => {
-			val offsets = new MemoryChunk[Long](numVerts);
-			val vertexes = new MemoryChunk[Long](numEdges);
-			val values = new MemoryChunk[T](numEdges);
+			val offsets = MemoryChunk.make[Long](numVerts);
+			val vertexes = MemoryChunk.make[Long](numEdges);
+			val values = MemoryChunk.make[T](numEdges);
 
 			val team2 = new Team2(team);
 			if(ref_matrix.home == here) { // root

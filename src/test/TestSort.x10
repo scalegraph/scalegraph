@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -76,8 +76,8 @@ final class TestSort extends STest {
         Console.OUT.flush();
     }
     private static def runtest(n : Int, m : Int) {
-        val a1 = new MemoryChunk[Int](n);
-        val a2 = new MemoryChunk[Int](n);
+        val a1 = MemoryChunk.make[Int](n);
+        val a2 = MemoryChunk.make[Int](n);
 
         var seq : Double = 0.0;
         var par : Double = 0.0;

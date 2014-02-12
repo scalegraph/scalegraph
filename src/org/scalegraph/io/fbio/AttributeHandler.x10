@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 		super(team, id);
 	}
 	public def allocate(localSize :(Int)=>Long) = DistMemoryChunk.make[T, Long](
-				team.placeGroup(), localSize, (ls :Long) => new MemoryChunk[T](ls));
+				team.placeGroup(), localSize, (ls :Long) => MemoryChunk.make[T](ls));
 	public def typeId() = (id << 8);
 	public def numElements(any : Any) = (any as DistMemoryChunk[T])().size();
 	
@@ -128,7 +128,7 @@ class StringAttributeHandler extends AttributeHandler {
 		super(team, id);
 	}
 	public def allocate(localSize :(Int)=>Long) = DistMemoryChunk.make[String, Long](
-				team.placeGroup(), localSize, (ls :Long) => new MemoryChunk[String](ls));
+				team.placeGroup(), localSize, (ls :Long) => MemoryChunk.make[String](ls));
 	public def typeId() = (id << 8);	
 	public def numElements(any : Any) = (any as DistMemoryChunk[String])().size();
 	

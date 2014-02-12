@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ class EdgeProvider [E]/* {E haszero} */{
 		
 		val numThreads = Runtime.NTHREADS;
 		val numVertexes = ids.numberOfLocalVertexes();
-		val offsetPerThread = new MemoryChunk[Long](numThreads + 1, 0);
+		val offsetPerThread = MemoryChunk.make[Long](numThreads + 1, 0);
 		offsetPerThread(0) = 0L;
 		
 		val outOffset = outEdge.offsets;
@@ -86,9 +86,9 @@ class EdgeProvider [E]/* {E haszero} */{
 		}
 		
 		val newNumEdges = offsetPerThread(numThreads);
-		val newOffset = new MemoryChunk[Long](numVertexes + 1);
-		val newVertex = new MemoryChunk[Long](newNumEdges);
-		val newValue = new MemoryChunk[E](newNumEdges);
+		val newOffset = MemoryChunk.make[Long](numVertexes + 1);
+		val newVertex = MemoryChunk.make[Long](newNumEdges);
+		val newValue = MemoryChunk.make[E](newNumEdges);
 		newOffset(0) = 0L;
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_1); }
 		

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -11,56 +11,31 @@
 
 package example;
 
-import x10.compiler.Inline;
 import x10.util.Team;
-import x10.util.ArrayList;
-import x10.util.concurrent.AtomicLong;
-import x10.io.SerialData;
-import x10.io.File;
-import x10.io.FileReader;
-import x10.io.IOException;
 
-import org.scalegraph.io.SimpleText;
+import org.scalegraph.api.BetweennessCentrality;
+import org.scalegraph.graph.Graph;
+import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
-import org.scalegraph.util.Dist2D;
-import org.scalegraph.util.Parallel;
-import org.scalegraph.fileread.DistributedReader;
-import org.scalegraph.blas.DistSparseMatrix;
-import org.scalegraph.graph.Graph;
-import org.scalegraph.blas.SparseMatrix;
-import org.scalegraph.util.tuple.*;
-import org.scalegraph.metrics.DistBetweennessCentrality;
-import org.scalegraph.util.DistMemoryChunk;
-import org.scalegraph.api.BetweennessCentrality;
-import org.scalegraph.graph.Graph.VertexType;
-
+import org.scalegraph.util.tuple.Tuple3;
+import org.scalegraph.util.random.Random;
 
 public class DistBetweennessCentralityUnweightedExample {
     
-    public static val inputFormat = (s: String) => {
-        val items = s.split(" ");
-        return Tuple3[Long, Long, Double] (
-                Long.parse(items(0).trim()),
-                Long.parse(items(1).trim()),
-                0D
-        );
-    };
-    
     public static def main(args: Array[String]) {
-        if (args.size < 1) {
-            Console.OUT.println("Please enter file name");
-            return;
-        }
-        val team = Team.WORLD;
 
-        // Load data
-        val g = Graph.make(SimpleText.read(args(0), inputFormat), true);
+        // Generate RMAT graph
+        val scale = 10;
+        val edgeFactor = 8;
+        val rnd = new Random(2, 3);
+        val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
+        val g = Graph.make(edgeList);
         
-        // DistBetweennessCentrality.calculate(g, true, "bc", false);
-        val bc = BetweennessCentrality.run(g);
-        val attrVertexId = g.getVertexAttribute[Long]("name");
-        // val attrBc = g.getVertexAttribute[Double]("bc");
-        DistributedReader.write("output-%d.txt", attrVertexId, bc);
+        // Call API
+        val result = BetweennessCentrality.run(g);
+        
+        // Write result as CSV file
+        CSV.write("bc-%d", new NamedDistData(["bc" as String], [result as Any]), true);
     }
 }

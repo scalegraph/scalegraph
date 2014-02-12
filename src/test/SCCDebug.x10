@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -217,8 +217,8 @@ final class SCCDebug extends STest {
 					ctx.voteToHalt();
 				}
 				if(ctx.superstep()==1) {
-					val cnt = new MemoryChunk[Long](4);
-					val pos = new MemoryChunk[Long](4);
+					val cnt = MemoryChunk.make[Long](4);
+					val pos = MemoryChunk.make[Long](4);
 					for(i in messages.range()) {
 						var iter:Long = 0;
 						if(messages(i).front) iter += 2;

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -29,6 +29,6 @@ public final class StopWatch {
 		val lapTime = (curTime - prevTime) as Double / 1000000.0;
 		val elapsedTime = (curTime - startTime) as Double / 1000000.0;
 		prevTime = curTime;
-		STest.println(message + ": " + lapTime + " ms: " + elapsedTime + " ms elapsed");
+		STest.println(message + ": " + lapTime + " ms: " + elapsedTime + " ms elapsed: Memory: " + (MemoryChunk.getMemSize() / 1000000.0) + " MB");
 	}
 }

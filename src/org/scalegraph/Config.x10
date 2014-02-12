@@ -1,5 +1,5 @@
 /*
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  *
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ public class Config {
 			val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
 			val C = team.size() / R;
 			val dist2D = Dist2D.make2D(team, R, C);
-			val dist1D = Dist2D.make2D(team, 1, team.size());
+			val dist1D = Dist2D.make2D(team, team.size(), 1);
 			broadcast(new Config(true, team, dist1D, dist2D));
 			return instance();
 		}

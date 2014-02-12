@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	
 	    private def parallelPutLocalAndTranslate(vertices: MemoryChunk[T], translated :MemoryChunk[Long]) {
 	        val newKeys = table.newKeys(vertices, -1L);
-	        val newIds = new MemoryChunk[Long](newKeys.size());
+	        val newIds = MemoryChunk.make[Long](newKeys.size());
 	        Parallel.iter(newIds.range(), (tid : Long, r : LongRange)=> {
 	            for (i in r) {
 	                newIds(i) = count.get() + i;
@@ -197,15 +197,14 @@ import org.scalegraph.util.DistMemoryChunk;
 		private def innerPutWithAllAndTranslate(scatterGather :DistScatterGather,
 				edges: MemoryChunk[T], translated :MemoryChunk[Long], withPut :Boolean) {
 			val sizeMask = teamSize - 1;
-			scatterGather.reset();
 			Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
 				val counts = scatterGather.getCounts(tid as Int);
 				for(i in r)
 					counts(hashFunc(edges(i)) & sizeMask) += 1;
 			});
 			scatterGather.sum();
-			val partitioned = new MemoryChunk[T](edges.size());
-			val indexes = new MemoryChunk[Int](edges.size());
+			val partitioned = MemoryChunk.make[T](edges.size());
+			val indexes = MemoryChunk.make[Int](edges.size());
 			Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
 				val offsets = scatterGather.getOffsets(tid as Int);
 				for(i in r) {
@@ -217,14 +216,14 @@ import org.scalegraph.util.DistMemoryChunk;
 			});
 			val remoteData = scatterGather.scatter(partitioned);
 			partitioned.del();
-			val remoteTranslated = new MemoryChunk[Long](remoteData.size());
+			val remoteTranslated = MemoryChunk.make[Long](remoteData.size());
 	
 			if(withPut)
 				putLocalAndTranslate(remoteData, remoteTranslated);
 			else
 				translateLocal(remoteData, remoteTranslated);
 	
-			val recvTranslated = new MemoryChunk[Long](edges.size());
+			val recvTranslated = MemoryChunk.make[Long](edges.size());
 			scatterGather.gather(remoteTranslated, recvTranslated);
 			remoteTranslated.del();
 			Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
@@ -245,7 +244,7 @@ import org.scalegraph.util.DistMemoryChunk;
 			val iterations = team.allreduce(teamRank,
 					(edges.size() + CHUNK_SIZE - 1) / CHUNK_SIZE, Team.MAX);
 			val scatterGather = new DistScatterGather(team);
-			val translated = new MemoryChunk[Long](edges.size());
+			val translated = MemoryChunk.make[Long](edges.size());
 			val edgesDist = edges.distributor();
 			val translatedDist = translated.distributor();
 			for(it in 0..(iterations-1)) {
@@ -281,7 +280,7 @@ import org.scalegraph.util.DistMemoryChunk;
 		 * @param withPut true: Assigning new number, false: only translation
 		 */
 		public def translateWithAll(vertexes: MemoryChunk[T], withPut :Boolean) {
-			val translated = new MemoryChunk[Long](vertexes.size());
+			val translated = MemoryChunk.make[Long](vertexes.size());
 			val localMaxId = Parallel.reduce(vertexes.range(), (tid :Long, r :LongRange) => {
 				var tmpMaxId :Long = 0L;
 				for(i in r) {
