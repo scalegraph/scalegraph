@@ -12,7 +12,7 @@ package org.scalegraph.util;
 
 import org.scalegraph.test.STest;
 
-public final class StopWatch {
+public final class StopWatch implements TimePrinter {
 	var startTime :Long;
 	var prevTime :Long;
 	

@@ -19,6 +19,8 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.StopWatch;
 import org.scalegraph.util.ProfilingDB;
 import org.scalegraph.id.ProfilingID;
+import org.scalegraph.util.TimePrinter;
+import org.scalegraph.util.GlobalClock;
 
 /** Provides the default data distribution, which includes world team and 1D/2D distribution.
  * Config is used by ScaleGraph API.
@@ -102,7 +104,7 @@ public class Config {
 	private val world :Team;
 	private val distXPregel :Dist2D;
 	private val distBLAS :Dist2D;
-	private val stopWatch :StopWatch;
+	private val stopWatch :TimePrinter;
 	
 	@Ifdef("PROF_XP") @Uninitialized private var profXPregel :ProfilingDB;
 	@Ifdef("PROF_IO") @Uninitialized private var profIO :ProfilingDB;
@@ -112,7 +114,8 @@ public class Config {
 		world = worldTeam;
 		distXPregel = distForXPregel;
 		distBLAS = distForBLAS;
-		stopWatch = new StopWatch();
+		//stopWatch = new StopWatch();
+		stopWatch = new GlobalClock(worldTeam);
 		@Ifdef("PROF_XP") { profXPregel = new ProfilingDB(worldTeam, ProfilingID.XPregel.FRAME_VECTOR); }
 		@Ifdef("PROF_IO") { profIO = new ProfilingDB(worldTeam, ProfilingID.IO.FRAME_VECTOR); }
 	}

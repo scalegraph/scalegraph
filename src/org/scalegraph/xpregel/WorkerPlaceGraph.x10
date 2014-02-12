@@ -327,23 +327,25 @@ final class WorkerPlaceGraph[V,E] {
 			ectx.mSuperstep = ss;
 
 			@Ifdef("PROF_XP") { mtimer.start(); }
-			if(here.id == 0) sw.lap("vertex processing started");
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": vertex processing started");
 			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+				sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": th: " + tid + ": vertex th processing started");
+				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
+				@Ifdef("PROF_XP") { thtimer.start(); }
+				
 				val vc = vctxs(tid);
 				val ep = vc.mEdgeProvider;
 				val mesTempBuffer :GrowableMemory[M] = new GrowableMemory[M]();
 				var numProcessed :Long = 0L;
 
-				@Ifdef("PROF_XP") val numLocalInEdges = mInEdge.offsets(r.max + 1) - mInEdge.offsets(r.min);
-				@Ifdef("PROF_XP") val numLocalOutEdges = mOutEdge.offsets(r.max + 1) - mOutEdge.offsets(r.min);
-				@Ifdef("PROF_XP") var numLocalMes :Long = 0L;
+			//	@Ifdef("PROF_XP") val numLocalInEdges = mInEdge.offsets(r.max + 1) - mInEdge.offsets(r.min);
+			//	@Ifdef("PROF_XP") val numLocalOutEdges = mOutEdge.offsets(r.max + 1) - mOutEdge.offsets(r.min);
+			//	@Ifdef("PROF_XP") var numLocalMes :Long = 0L;
 
-				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
-				@Ifdef("PROF_XP") { thtimer.start(); }
 				for(srcid in r) {
 					vc.mSrcid = srcid;
 					val mes = ectx.message(srcid, mesTempBuffer);
-					@Ifdef("PROF_XP") { numLocalMes += mes.size(); }
+			//		@Ifdef("PROF_XP") { numLocalMes += mes.size(); }
 					if(mes.size() > 0 || mVertexActive(srcid)) {
 						
 						compute(vc, mes);
@@ -356,16 +358,17 @@ final class WorkerPlaceGraph[V,E] {
 				if(aggregator != null) {
 					intermedAggregateValue(tid) = aggregator(vc.mAggregateValue.raw());
 				}
-				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_AGGREGATE); }
 				vc.mAggregateValue.clear();
 				vc.mNumActiveVertexes = numProcessed;
-				@Ifdef("PROF_XP") { STest.bufferedPrintln("$ XPS1: place: " + here.id + ": th: " + tid + ": ss: " + ss +
-						": InEdge: " + numLocalInEdges + ": OutEdge: " + numLocalOutEdges + ": Mes: " + numLocalMes); }
+			//	@Ifdef("PROF_XP") { STest.bufferedPrintln("$ XPS1: place: " + here.id + ": th: " + tid + ": ss: " + ss +
+			//			": InEdge: " + numLocalInEdges + ": OutEdge: " + numLocalOutEdges + ": Mes: " + numLocalMes); }
+				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_AGGREGATE); }
+				sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": th: " + tid + ": vertex th processing finished");
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
-			@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-XPS2: place: " + here.id + ": ss: " + ss +
-					": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
-			if(here.id == 0) sw.lap("vertex processing finished");
+		//	@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-XPS2: place: " + here.id + ": ss: " + ss +
+		//			": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": vertex processing finished");
 			
 			ectx.deleteMessages();
 			
@@ -380,10 +383,11 @@ final class WorkerPlaceGraph[V,E] {
 			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
 			
 			// aggregate
-			if(here.id == 0) sw.lap("aggregate...");
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": aggreagate enter");
 			val aggVal = (aggregator != null)
 				? computeAggregate[A](mTeam, intermedAggregateValue, aggregateBuffer, aggregator)
 				: Zero.get[A]();
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": aggregate finished");
 				
 			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
@@ -409,10 +413,12 @@ final class WorkerPlaceGraph[V,E] {
 				return ;
 			}
 
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": exchange message enter");
 			// exchange messages
 			ectx.exchangeMessages(
 					recvStatistics(STT_COMBINED_MESSAGE) > 0L,
 					recvStatistics(STT_VERTEX_MESSAGE) > 0L);
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": exchange message finished");
 		}
 		
 		throw new Exception("Superstep limit exceeded. # of supterstep > 10000");

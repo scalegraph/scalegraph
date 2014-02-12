@@ -484,7 +484,7 @@ public final class Parallel {
     		hi_ = cut;
     	}
     }
-    public static def sort[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
+    public static def sort3[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
     	val numThreads = Runtime.NTHREADS;
     	val chunkSize = 16 * 1024;
     	val numChunks = src_i.size()/chunkSize;
@@ -601,7 +601,7 @@ public final class Parallel {
 
 
     
-    public static def sort1[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
+    public static def sort[V](rangeScale :Int, src_i :MemoryChunk[Long], src_v :MemoryChunk[V], dst_i :MemoryChunk[Long], dst_v :MemoryChunk[V]) {
     	val numThreads = Runtime.NTHREADS as Long;
     	val logChunks = MathAppend.ceilLog2(numThreads * 4L);
     	val numChunks = 1L << logChunks;
