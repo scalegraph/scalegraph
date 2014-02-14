@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ final class TestSort1 extends STest {
 	}
 	
     private static def runtest(n : Long) {
-        val orgM = MemoryChunk[Long](n, (i: Long) => i);
+        val orgM = MemoryChunk.make[Long](n, (i: Long) => i);
         
         // shuffle
         val random = new Random();

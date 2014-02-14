@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -197,7 +197,6 @@ import org.scalegraph.util.DistMemoryChunk;
 		private def innerPutWithAllAndTranslate(scatterGather :DistScatterGather,
 				edges: MemoryChunk[T], translated :MemoryChunk[Long], withPut :Boolean) {
 			val sizeMask = teamSize - 1;
-			scatterGather.reset();
 			Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
 				val counts = scatterGather.getCounts(tid as Int);
 				for(i in r)

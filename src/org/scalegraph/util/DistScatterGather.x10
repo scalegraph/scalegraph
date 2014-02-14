@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -55,19 +55,11 @@ public final struct DistScatterGather {
 		recvCounts = dist.next(teamSize);
 		recvOffsets = dist.next(teamSize + 1);
 		dist.checkFinish();
-
-		for(i in threadCounts.range()) threadCounts(i) = 0;
-	}
-
-	public def reset() {
-		for(i in threadCounts.range()) threadCounts(i) = 0;
 	}
 
 	public def getCounts(tid :Int) {
 		val mc = threadCounts.subpart(bufferWidth*tid, bufferWidth);
-		@Ifndef("NO_BOUNDS_CHECKS") {
-			for(i in 0..(bufferWidth-1)) assert(mc(i) == 0);
-		}
+		for(i in mc.range()) mc(i) = 0;
 		return mc;
 	}
 

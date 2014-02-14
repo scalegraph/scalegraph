@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -89,6 +89,12 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		}
 	}
 	
+	private def this(imc :IndexedMemoryChunk[T], offset :Long, size :Long) {
+		if(offset < 0 || offset + size > imc.length())
+			throw new ArrayIndexOutOfBoundsException("Out of bounds. Please, check the offset and the size.");
+		this.data = MemoryChunkData.make[T](imc, offset, size);
+	}
+	
 	def this(data :MemoryChunkData[T]) {
 		this.data = data;
 	}
@@ -104,14 +110,14 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	/** Creates a memory chunk with the specified number of elements. This method is equivalent to this(size, 0, false).
 	 * @param size The number of elements
 	 */
-	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, 0, true, (x10_byte*)(void*)__FILE__, __LINE__)")
+	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, 0, false, (x10_byte*)(void*)__FILE__, __LINE__)")
 	public static native def make[T](size :Long) :MemoryChunk[T];
 	
 	/** Creates memory chunk with the specified size and alignment.
 	 * @param size The number of elements
 	 * @param alignment The alignment for the backing memory
 	 */
-	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, true, (x10_byte*)(void*)__FILE__, __LINE__)")
+	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, false, (x10_byte*)(void*)__FILE__, __LINE__)")
 	public static native def make[T](size :Long, alignment :Int) :MemoryChunk[T];
 	
 	/** Creates memory chunk with the specified size and alignment.
@@ -130,43 +136,31 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	 * @param offset The offset from which the subsection starts
 	 * @param size The number of elements of the subsection
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Long, size :Long) {
-		if(offset < 0 || offset + size > imc.length())
-			throw new ArrayIndexOutOfBoundsException("Out of bounds. Please, check the offset and the size.");
-		this.data = MemoryChunkData.make[T](imc, offset, size);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Long, size :Long) = new MemoryChunk[T](imc, offset, size);
 	
 	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk.
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 * @param size The number of elements of the subsection
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Int, size :Int) {
-		this(imc, offset as Long, size as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Int, size :Int) = new MemoryChunk[T](imc, offset, size);
 	
 	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, offset, (imc.length() - offset)).
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Long) {
-		this(imc, offset, (imc.length() - offset) as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Long) = new MemoryChunk[T](imc, offset, (imc.length() - offset) as Long);
 	
 	/** Creates memory chunk which refers the subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, offset, (imc.length() - offset)).
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 */
-	public def this(imc :IndexedMemoryChunk[T], offset :Int) {
-		this(imc, offset as Long, (imc.length() - offset) as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T], offset :Int) = new MemoryChunk[T](imc, offset as Long, (imc.length() - offset) as Long);
 	
 	/** Creates memory chunk which refers the subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, 0, imc.length()).
 	 * @param imc IndexedMemoryChunk whose subsection is used
 	 */
-	public def this(imc :IndexedMemoryChunk[T]) {
-		this(imc, 0L, imc.length() as Long);
-	}
+	public static def make[T](imc :IndexedMemoryChunk[T]) = new MemoryChunk[T](imc, 0L, imc.length() as Long);
 	
 	/** Free memory. Once you free MemoryChunk,
 	 * you can not use any MemoryChunk which point to the released memory.

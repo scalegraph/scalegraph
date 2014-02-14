@@ -1,9 +1,14 @@
 /*
- * double_linked_list.h
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  *
- *  Created on: 2011/02/01
- *      Author: ueno
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
  */
+
 
 #ifndef __SCALEGRAPH_DOUBLE_LINKED_LIST_H_
 #define __SCALEGRAPH_DOUBLE_LINKED_LIST_H_
