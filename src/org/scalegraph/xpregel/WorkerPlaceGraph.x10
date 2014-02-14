@@ -37,7 +37,11 @@ import org.scalegraph.util.DistMemoryChunk;
 import x10.compiler.Native;
 import x10.io.Printer;
 
-final class WorkerPlaceGraph[V,E] {
+// "haszero" cause x10compiler to type incomprehensibility.
+// when you want to get DUMMY value(may not be default), use hoge.
+
+// sukunakutomo E wo haszero ni shite tsujitsuma awaseta kekka dame datta
+final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	static val MAX_OUTPUT_NUMBER = 8;
 	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 	
@@ -65,9 +69,6 @@ final class WorkerPlaceGraph[V,E] {
 	var mLogLevel :Int;
 	var mLogPrinter :Printer;
 	var mEnableStatistics :Boolean = true;
-	
-//	var mWDiffInDst :MemoryChunk[GrowableMemory[Long]];
-//	var mWDiffInSrcWithAR :MemoryChunk[GrowableMemory[Long]];
 	var mNeedsAllUpdateInEdge :Boolean = true;
 	
 	//req[threadid][srcid per thread ("foreachvertex" de ijirou!)]
@@ -80,6 +81,7 @@ final class WorkerPlaceGraph[V,E] {
 		val rank_r = team.role()(0);
 		mTeam = new Team2(team);
 		mIds = ids;
+		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		
 		mVtoD = new OnedR.VtoD(ids);
 		mDtoV = new OnedR.DtoV(ids);
@@ -87,18 +89,29 @@ final class WorkerPlaceGraph[V,E] {
 		mStoD = new OnedR.StoD(ids, rank_r);
 		mStoV = new OnedR.StoV(ids, rank_r);
 		
-		val numVertexes = mIds.numberOfLocalVertexes();
-		val numVertexesPerThread = numVertexes/numThreads + 1L;
-		mEdgeModifyReqOffsets = new MemoryChunk[MemoryChunk[Long]](
-				numThreads,
-				(i :Long) => new MemoryChunk[Long](numVertexesPerThread));
+		val tmpEdgeModifyReqOffsets = new MemoryChunk[MemoryChunk[Long]](numThreads);
+		//for debug
+		//honrai ha iranai hazu
+		val tmp = new MemoryChunk[Long](numThreads);
+		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+			// (contains count) + end index
+			tmpEdgeModifyReqOffsets(tid) = new MemoryChunk[Long](r.max -r.min +1L +1L);
+			tmp(tid) = 777L;
+		});
+		for(i in tmpEdgeModifyReqOffsets.range()){
+			if(tmp(i) == 777L)
+				continue;
+			tmpEdgeModifyReqOffsets(i) = new MemoryChunk[Long](0);
+		}
+		//tsukaware nai bun ha not initialized dakedo tsukawarenai kara hotte oku
+		mEdgeModifyReqOffsets = tmpEdgeModifyReqOffsets;
 		mEdgeModifyReqsWithAR = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](
 				numThreads,
 				(i :Long) => new GrowableMemory[Tuple2[Long,E]](0L));
 		
-		mVertexValue = new MemoryChunk[V](numVertexes);
-		mVertexActive = new Bitmap(numVertexes, true);
-		mVertexShouldBeActive = new Bitmap(numVertexes, true);
+		mVertexValue = new MemoryChunk[V](numLocalVertexes);
+		mVertexActive = new Bitmap(numLocalVertexes, true);
+		mVertexShouldBeActive = new Bitmap(numLocalVertexes, true);
 		
 		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
@@ -121,10 +134,6 @@ final class WorkerPlaceGraph[V,E] {
 	
 	public def updateInEdge() {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-
-		
-		//<<<<<<< HEAD
-
 		//@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
 		//TODO: naosu
 		mNeedsAllUpdateInEdge = true;
@@ -368,7 +377,7 @@ final class WorkerPlaceGraph[V,E] {
 		mNeedsAllUpdateInEdge = false;
 		//@Ifdef("nofemo"){ mNeedsAllUpdateInEdge = true; }
 		
-		//TODO: naosu
+		//TODO: modosu
 		mNeedsAllUpdateInEdge = true;
 	}
 	
@@ -428,6 +437,7 @@ final class WorkerPlaceGraph[V,E] {
 	// src will be destroyed
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],
 			aggregator :(MemoryChunk[A])=>A) :A
+			/*{A haszero }*/	//added
 	{
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		val root = (team.base.role()(0) == 0);
@@ -499,7 +509,9 @@ final class WorkerPlaceGraph[V,E] {
 		
 		return false;
 	}
-			
+	
+	// This method doesn't necessarilly split all works to all threads.
+	// Use this method to initialize containers used in this method.
 	static def foreachVertexes(numLocalVertexes :Long, task :(Long, LongRange) => void) {
 		// Split the range of bitmat words to ensure the processing thread-safe.
 		Parallel.iter(0..(Bitmap.numWords(numLocalVertexes)-1), (tid :Long, r_word :LongRange) => {
@@ -522,12 +534,25 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mIds, numThreads);
+		
 		val vctxs = new MemoryChunk[VertexContext[V, E, M, A]](numThreads);
-		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads);
+		val localSrcids = new MemoryChunk[Long](numThreads);
+		// TODO: ittan for ni suru
+		//val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads);
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
-			vctxs(tid) = new VertexContext[V, E, M, A](this, ectx, tid, r.min);
-			edgeProviderList(tid) = vctxs(tid).mEdgeProvider;
+		//	vctxs(tid) = new VertexContext[V, E, M, A](this, ectx, tid, r.min);
+		//	edgeProviderList(tid) = vctxs(tid).mEdgeProvider;
+			localSrcids(tid) = r.min;
 		});
+		//debugging
+		// conpute taisyou no data ga sukunai baai foreachVertex ga subete no thread de hashiru toha kagiranai node
+		// initialize ha ki wo tsukeru
+		for(tid in 0..(numThreads-1)){
+			vctxs(tid) = new VertexContext[V, E, M, A](this, ectx, tid, localSrcids(tid));
+		}
+		val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads as Long,
+				(i:Long) => vctxs(i).mEdgeProvider);
+		
 		val intermedAggregateValue = new MemoryChunk[A](numThreads);
 		val aggregateBuffer = new MemoryChunk[A](root ? mTeam.size() : 0);
 		val statistics = new MemoryChunk[Long](STT_MAX*2);
@@ -577,6 +602,7 @@ final class WorkerPlaceGraph[V,E] {
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 		
+			// TODO:nanikore
 			ectx.deleteMessages();
 			
 			// gather statistics

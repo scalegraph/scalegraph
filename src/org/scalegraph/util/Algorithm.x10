@@ -8,7 +8,6 @@
  * 
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
-
 package org.scalegraph.util;
 
 import x10.compiler.Native;
@@ -34,23 +33,25 @@ public final class Algorithm {
 	@Native("c++", "org::scalegraph::util::MaskedStableSort_TupleK1<#T >((#data)->pointer(), (#data)->size())")
 	public static native def maskedStableSortTupleKey1[T](data :MemoryChunk[T]) :void;
 
-	@Native("c++", "(x10_long)((::std::lower_bound((#mem)->pointer() + (#startOff), (#mem)->pointer() + (#endOff), (#num)) - (#mem)->pointer())/sizeof(#T))")
-	public static native def lowerBound[T](mem:MemoryChunk[T], startOff:Long , endOff:Long, num:Long) :Long;
+	//@Native("c++", "(x10_long)((::std::lower_bound((#mem)->pointer() + (#startOff), (#mem)->pointer() + (#endOff), (#num)) - (#mem)->pointer())/sizeof(#T))")
+	//public static native def lowerBound[T](mem:MemoryChunk[T], startOff:Long , endOff:Long, num:Long) :Long;
 	
-	@Native("c++", "(x10_long)((::std::find((#mem)->pointer() + (#startOff), (#mem)->pointer() + (#endOff), (#num)) - (#mem)->pointer())/sizeof(#T))")
+	// modoriti ha dou atsukaeba ii noka
+	@Native("c++", "(::std::find((#mem)->pointer() + (size_t)(#startOff), (#mem)->pointer() + (size_t)(#endOff), (#num)) - (#mem)->pointer())")
 	public static native def find[T](mem:MemoryChunk[T], startOff:Long , endOff:Long, num:Long) :Long;
+	//@Native("c++", "(x10_long)(::std::find((#mem)->pointer() + (size_t)(#startOff), (#mem)->pointer() + (size_t)(#endOff), (#num)) )")
 	
-	public static def binarySearch[T](mem:MemoryChunk[T], range:LongRange, num:Long) :Tuple2[Boolean,Long] {
+	/*public static def binarySearch[T](mem:MemoryChunk[T], range:LongRange, num:Long) :Tuple2[Boolean,Long] {
 		val tmp = lowerBound(mem, range.min, range.max, num);
 		return new Tuple2[Boolean,Long](mem(tmp) == num, tmp);
-	}
+	}*/
 	
 	public static def linearSearch[T](mem:MemoryChunk[T], range:LongRange, num:Long) :Tuple2[Boolean,Long] {
-		val tmp = find(mem, range.min, range.max, num);
+		val tmp = find(mem, range.min, range.max+1L, num);
 		return new Tuple2[Boolean,Long](mem(tmp) == num, tmp);
 	}
 	
-    /*public static def sort[I](index :MemoryChunk[I]) {
+	/*public static def sort[I](index :MemoryChunk[I]) {
         sortWithLt(index);
     }*/
     

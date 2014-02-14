@@ -49,11 +49,11 @@ public class TestOutEdgeModify {
 		
 		//-----update inEdge
 		Console.OUT.println("update inEdge");
-	//	xpregel.updateInEdge();
+		xpregel.updateInEdge();
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + " [ms]");
 		
 		//set all vertex value as 0L 
-	//	xpregel.initVertexValue(0L);
+		xpregel.initVertexValue(0L);
 		
 		//make stringbuilder
 		Console.OUT.println("make stringBuilder");
@@ -69,22 +69,22 @@ public class TestOutEdgeModify {
 				//ID
 				val myId = ctx.realId();
 				//remove out edge
-				val e = (myId+1)%ctx.numberOfVertices();
+				val e = 1L;//(myId+1)%ctx.numberOfVertices();	//global vertex num
 
 				//super step ha 0 start rashii
 				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
 				
-				for (m in messages.range()){
-					sb.add("message:"+ messages(m)+"\n");
-				}
+			//	for (m in messages.range()){
+			//		sb.add("message:"+ messages(m)+"\n");
+			//	}
 				
-				if(myId != 0L && (ctx.superstep() as Long)==myId){
+				if(myId != 0L ){//&& (ctx.superstep() as Long)==myId){
 					sb.add(myId + ":\tRemove:\t" + e + "\n");
-					removeOutEdge(ctx,ctx.dstId(e));
+					ctx.removeOutEdge(ctx.dstId(e));
 				}
 				
 				//display current out edges
-				val OEsId = ctx.outEdgesId();
+				val OEsId = ctx.outEdgesId();	//get dstid
 				for(eI in OEsId){
 					sb.add(myId + "->" + ctx.realId(eI) + "\n");
 				}
@@ -93,7 +93,7 @@ public class TestOutEdgeModify {
 					mesBuf().add(sb.toString());
 				}
 				
-				if(ctx.superstep()>=ctx.numberOfVertices()-1){	//koko de vote hantei
+				if(ctx.superstep()>=1){//ctx.numberOfVertices()-1){	//koko de vote hantei
 					ctx.voteToHalt();
 				}else{
 					//send dummy message
@@ -123,27 +123,6 @@ public class TestOutEdgeModify {
 		Console.OUT.println("Finish application");	
 	}
 	
-	public static def removeOutEdge(ctx :VertexContext[Long, Long, Long, Long ],dstId :Long){
-		//Console.OUT.println("\tEnter removeOutEdge:dstId="+dstId);
-		val temp = ctx.outEdges();
-		val len = temp.get1().size();	//motono nagasa
-		//Console.OUT.println("\t len:="+len);
-		//temp ha outEdges no copy rashii
-		ctx.clearOutEdges();
-
-		//TODO:subpart tsukaou
-		//modified  len -> len-1
-		for(i in 0..(len - 1)) {		//length -> index
-			//Console.OUT.println("\t  i:="+i+" temp.get1()(i):="+temp.get1()(i));
-			if(temp.get1()(i)!=dstId){	//keshitakatta dst de nakereba
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" add:i="+i);
-				ctx.addOutEdge(temp.get1()(i),temp.get2()(i));
-			}else{
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" NoOp:i="+i);
-			}
-		}
-		//Console.OUT.println("\tQuit removeOutEdge:"+dstId);
-	}
 }	
 
 

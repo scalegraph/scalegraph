@@ -31,7 +31,7 @@ import x10.compiler.Inline;
  * M: Message value type
  * A: Aggreator value type
  */
-public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
+public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M haszero, A haszero } {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
@@ -158,6 +158,13 @@ public final class VertexContext[V, E, M, A] { M haszero, A haszero } {
 	 */
 	public def clearOutEdges() {
 		mEdgeProvider.clearOutEdges(mSrcid);
+	}
+	
+	/**
+	 * remove out edges for the current vertex
+	 */
+	public def removeOutEdge(id :Long) {
+		mEdgeProvider.removeOutEdge(id);
 	}
 	
 	/**

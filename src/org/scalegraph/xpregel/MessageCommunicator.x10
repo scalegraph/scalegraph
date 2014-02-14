@@ -25,7 +25,7 @@ import org.scalegraph.util.Team2;
 import org.scalegraph.graph.id.IdStruct;
 import org.scalegraph.graph.id.OnedR;
 
-final struct MessageBuffer[M] { M haszero } {
+final struct MessageBuffer[M] {/* M haszero */} {
 	val messages :GrowableMemory[M] = new GrowableMemory[M]();
 	val dstIds :GrowableMemory[Long] = new GrowableMemory[Long]();
 	
@@ -155,7 +155,7 @@ final class MessageCommunicator[M] { M haszero } {
 		return new MemoryChunk[M]();
 	}
 	
-	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) { M haszero, A haszero } {
+	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) { /*V haszero, E haszero,*/ M haszero, A haszero } {
 		mNumActiveVertexes += ctx.mNumActiveVertexes; ctx.mNumActiveVertexes = 0L;
 		mBCSInputCount += ctx.mBCSInputCount; ctx.mBCSInputCount = 0L;
 	}
