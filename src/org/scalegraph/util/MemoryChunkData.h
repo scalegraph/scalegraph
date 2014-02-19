@@ -25,7 +25,7 @@ namespace org { namespace scalegraph { namespace util {
 		struct ExplicitMemory;
 
 		struct ExpMemGlobalState {
-	        long numCnt, gcThreshold, totalSize;
+	        long numCnt, gcThreshold, totalSize, envThreshold;
 	        bool gcWait;
 	        pthread_mutex_t mutex;
 	        pthread_cond_t sync;
@@ -49,6 +49,36 @@ namespace org { namespace scalegraph { namespace util {
 
 			ExplicitMemory(){
 				fLink=this; bLink=this;
+				char* env = getenv("EMMX");
+				if(!env){
+					ExpMemState.envThreshold=0;
+				}else{
+					long tmpSize=0;
+					int index=0;
+					while(env[index]){
+						if(isdigit(env[index])){
+							tmpSize*=10;
+							tmpSize+=env[index]-'0';
+						}else if(env[index]=='k' || env[index]=='K'){
+							tmpSize<<=10;
+							ExpMemState.envThreshold+=tmpSize;	tmpSize=0;
+						}else if(env[index]=='m' || env[index]=='M'){
+							tmpSize<<=20;
+							ExpMemState.envThreshold+=tmpSize;	tmpSize=0;
+						}else if(env[index]=='g' || env[index]=='G'){
+							tmpSize<<=30;
+							ExpMemState.envThreshold+=tmpSize;	tmpSize=0;
+						}else if(env[index]=='t' || env[index]=='T'){
+							tmpSize<<=40;
+							ExpMemState.envThreshold+=tmpSize;	tmpSize=0;
+						}
+						index++;
+					}
+					ExpMemState.envThreshold+=tmpSize;
+				}
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+					printf("threashold:%ld%s\n",ExpMemState.envThreshold ,ExpMemState.envThreshold ? "" : "default");
+				}
 			}
 
 			/** Caller must lock before call this method. */
@@ -117,7 +147,8 @@ namespace org { namespace scalegraph { namespace util {
 				}
 
 				ExpMemState.totalSize += size;
-				if(ExpMemState.totalSize > ExpMemState.gcThreshold) {
+				if( !ExpMemState.envThreshold && (ExpMemState.totalSize > ExpMemState.gcThreshold) ||
+					ExpMemState.envThreshold && (ExpMemState.totalSize > ExpMemState.envThreshold) ) {
 					// The guy who exceeded the threshold is responsible to invoke GC.
 					ExpMemState.gcWait = true;
 					pthread_mutex_unlock(&ExpMemState.mutex);
@@ -128,7 +159,7 @@ namespace org { namespace scalegraph { namespace util {
 
 					pthread_mutex_lock(&ExpMemState.mutex);
 					ExpMemState.gcWait = false;
-					if(ExpMemState.totalSize > ExpMemState.gcThreshold){
+					if(!ExpMemState.envThreshold && ExpMemState.totalSize > ExpMemState.gcThreshold){
 						ExpMemState.gcThreshold = ExpMemState.totalSize * 3 / 2;
 					}
 					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
