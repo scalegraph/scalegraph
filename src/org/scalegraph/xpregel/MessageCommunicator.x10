@@ -462,27 +462,27 @@ final class MessageCommunicator[M] { M haszero } {
 			val recvSize = recvOffset(numPlaces);
 
 			if(here.id == 0) sw.lap("alltoallv...");
-			val UCRIdsTmp = MemoryChunk.make[Long](recvSize);
-			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIdsTmp, recvOffset, recvCount);
+			val UCRIds = MemoryChunk.make[Long](recvSize);
+			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIds, recvOffset, recvCount);
 			mUCSIds.del();
 
-			val UCRMessagesTmp = MemoryChunk.make[M](recvSize);
-			mTeam.alltoallv(mUCSMessages, mUCSOffset, mUCSCount, UCRMessagesTmp, recvOffset, recvCount);
+			mUCRMessages = MemoryChunk.make[M](recvSize);
+			mTeam.alltoallv(mUCSMessages, mUCSOffset, mUCSCount, mUCRMessages, recvOffset, recvCount);
 			mUCSMessages.del();
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_COMM); }
 			
 			mUCSCount.del();
 			mUCSOffset.del();
 
-			val UCRIds = MemoryChunk.make[Long](recvSize);
-			mUCRMessages = MemoryChunk.make[M](recvSize);
+			val UCRIdsBuf = MemoryChunk.make[Long](recvSize);
+			val UCRMessagesBuf = MemoryChunk.make[M](recvSize);
 
 			if(here.id == 0) sw.lap("sort...");
-			Parallel.sort(mIds.lgl, UCRIdsTmp, UCRMessagesTmp, UCRIds, mUCRMessages);
+			Parallel.sort(mIds.lgl, UCRIds, mUCRMessages, UCRIdsBuf, UCRMessagesBuf);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_SORT); }
 
-			UCRMessagesTmp.del();
-			UCRIdsTmp.del();
+			UCRMessagesBuf.del();
+			UCRIdsBuf.del();
 			
 			val numLocalVertexes = mIds.numberOfLocalVertexes();
 			mUCROffset = MemoryChunk.make[Long](numLocalVertexes+1);
