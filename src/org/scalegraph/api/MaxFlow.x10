@@ -66,18 +66,14 @@ final public class MaxFlow {
      * @param g The graph object
      * @return A long integer, the value of the maximum flow
      */    
-
-    private static struct AdjVertex {
+    private static class AdjVertex {
     	val vertexId:Long;
     	val myId:Long;
     	val isOutEdge:Boolean;
-    	val capacity:Double;
-    	// val capacity:Long;
-    	val height:Long;
-    	val excess:Double;
-    	// val excess:Long;
-    	// public def this(v:Long, m:Long, is:Boolean ,cap:Long) {
-    	public def this (v:Long, m:Long,is:Boolean,  cap:Double) {
+    	var capacity:Double;
+    	var height:Long;
+    	var excess:Double;
+    	private def this (v:Long, m:Long,is:Boolean,  cap:Double) {
     		vertexId = v;
     		myId = m;
     		isOutEdge = is;
@@ -86,20 +82,17 @@ final public class MaxFlow {
     		// excess = 0L;
     		excess = 0.0;
     	}
-
-    	@Native("c++", "(#this)->FMGL(excess) = #v")
-    	native def setExcess(v:Double):void;
-    	// native def setExcess(v:Long):void;
-    	
-    	@Native("c++", "(#this)->FMGL(height) = #v")
-    	native def setHeight(v:Long):void;
-    	
-    	@Native("c++", "(#this)->FMGL(capacity) = #v")
-    	native def setCapacity(v:Double):void;
-    	// native def setCapacity(v:Long):void;
+    	private def setExcess(v:Double) {
+    		excess = v;
+    	}
+    	private def setHeight(v:Long) {
+    		height = v;
+    	}
+    	private def setCapacity(v:Double) {
+    		capacity = v;
+    	}
     }
-
-    private static struct FlowMessage {
+    private static class FlowMessage {
     	// val flow:Long;
     	val flow:Double;
     	val fromId:Long;
@@ -110,7 +103,7 @@ final public class MaxFlow {
     	}
     }
 
-    private static struct ValueMessage {
+    private static class ValueMessage {
     	// val excess:Long;
     	val excess:Double;
     	val height:Long;
@@ -123,13 +116,11 @@ final public class MaxFlow {
     	}
     }
 
-    private static struct InitMessage {
+    private static class InitMessage {
     	val val1:Long;
     	val val2:Long;
     	val isOutEdge:Boolean;
     	val capacity:Double;
-    	//val capacity:Long;
-    	// def this(val a:Long, val b:Long, val c:Boolean ,val cap:Long) {
     	def this(val a:Long, val b:Long, val c:Boolean, val cap:Double) {
     		val1=a;
     		val2=b;
@@ -141,18 +132,17 @@ final public class MaxFlow {
     private static class MFEdge {
     	// var capacity:Long;
     	var capacity:Double;
-    	//		def this(val cap:Long) {
     	def this(val cap:Double) {
     		capacity = cap;
     	}
     }
 
-    private static struct MFVertex {
-    	val adjVertex:MemoryChunk[AdjVertex];
+    private static class MFVertex {
+    	var adjVertex:MemoryChunk[AdjVertex];
     	// val excess:Long;
-    	val excess:Double;
-    	val height:Long;
-    	val isExcessNonZero:Boolean;
+    	var excess:Double;
+    	var height:Long;
+    	var isExcessNonZero:Boolean;
     	public def this() {
     		this.adjVertex = MemoryChunk.make[AdjVertex](0);
     		// excess = 0L;
@@ -161,33 +151,32 @@ final public class MaxFlow {
     		isExcessNonZero = false;
     	}
     	
-    	public def this(val adj:MemoryChunk[AdjVertex]) {
+    	private def this(val adj:MemoryChunk[AdjVertex]) {
     		this.adjVertex = adj;
     		// excess = 0L;
     		excess = 0.0;
     		height = 0L;
     		isExcessNonZero = false;
     	}
-    	@Native("c++", "(#this)->FMGL(adjVertex) = #v")
-    	native def setAdj(v:MemoryChunk[AdjVertex]):void;
-
-    	@Native("c++", "(#this)->FMGL(excess) = #v")
-    	native def setExcess(v:Double):void;
-    	// native def setExcess(v:Long):void;
+    	def setAdj(v:MemoryChunk[AdjVertex]) {
+    		adjVertex = v;
+    	}
+    	def setExcess(v:Double) {
+    		excess = v;
+    	}
+    	def setHeight(v:Long) {
+    		height = v;	
+    	}
+    	def setIsExcessNonZero(v:Boolean) {
+    		isExcessNonZero = v;
+    	}
     	
-    	@Native("c++", "(#this)->FMGL(height) = #v")
-    	native def setHeight(v:Long):void;
     	
-    	@Native("c++", "(#this)->FMGL(isExcessNonZero) = #v")
-    	native def setIsExcessNonZero(v:Boolean):void;
-    	
-    	// def setAdjCapacity(id:Long, cap:Long) {
     	def setAdjCapacity(id:Long, cap:Double) {
     		val adjV = adjVertex(id);
     		adjV.setCapacity(cap);
     		adjVertex(id) = adjV;
     	}
-    	// def setAdjExcess(id:Long, excess:Long) {
     	def setAdjExcess(id:Long, excess:Double) {
     		val adjV = adjVertex(id);
     		adjV.setExcess(excess);
@@ -201,7 +190,6 @@ final public class MaxFlow {
     }
     private static def execute(param:MaxFlow, matrix:DistSparseMatrix[Long], edgeValue :DistMemoryChunk[Double]): Result {
 
-    	// define parameters as local values
     	val team = param.team;
     	val sourceVertexId = param.sourceVertexId;
     	val sinkVertexId = param.sinkVertexId;
@@ -222,7 +210,6 @@ final public class MaxFlow {
     		Parallel.iter(dst.range(), (tid :Long, r :LongRange) => {
     			for(i in r)
     				dst(i) = new MFEdge(src(i));
-    			// dst(i) = new MFEdge(src(i) as Long);
     		});
     	});
 
@@ -557,7 +544,8 @@ final public class MaxFlow {
     	
 //    	val flows = g.retrieveEdgeAttribute[Long](csr, output);
     	val result = new Result(flowNum()());
-
+    	val flow:Double = flowNum()();
+    	sw.lap("flowVal = " + flowNum());
     	/// sw.lap("Retrieve output");
     	@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("MaxFlow Retrieve Output:"); }
     
