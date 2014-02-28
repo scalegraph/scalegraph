@@ -586,8 +586,8 @@ public final struct Team2 {
 			}
 			else {
 				finish nativeAlltoallv(base.id(), role, src, src_offs, src_counts, dst, dst_offs, dst_counts);
-	//		}
-		}
+			}
+	//	}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
 			val dstp = dst.raw();

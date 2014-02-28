@@ -22,33 +22,23 @@ public final class Algorithm {
 
 	@Native("c++", "::std::sort((#index)->pointer(), (#index)->pointer() + (#index)->size())")
 	public static native def sort[I](index :MemoryChunk[I]) :void;
-	
-	@Native("c++", "org::scalegraph::util::StableSort_TupleK2<#T >((#data)->pointer(), (#data)->size())")
-	public static native def stableSortTupleKey2[T](data :MemoryChunk[T]) :void;
-	
+
 	@Native("c++", "org::scalegraph::util::StableSort_TupleK1<#T >((#data)->pointer(), (#data)->size())")
 	public static native def stableSortTupleKey1[T](data :MemoryChunk[T]) :void;
+	@Native("c++", "org::scalegraph::util::StableSort_TupleK2<#T >((#data)->pointer(), (#data)->size())")
+	public static native def stableSortTupleKey2[T](data :MemoryChunk[T]) :void;
 
 	//yabee
 	@Native("c++", "org::scalegraph::util::MaskedStableSort_TupleK1<#T >((#data)->pointer(), (#data)->size())")
 	public static native def maskedStableSortTupleKey1[T](data :MemoryChunk[T]) :void;
+	@Native("c++", "org::scalegraph::util::MaskedStableSort_TupleK2<#T >((#data)->pointer(), (#data)->size())")
+	public static native def maskedStableSortTupleKey2[T](data :MemoryChunk[T]) :void;
 
-	//@Native("c++", "(x10_long)((::std::lower_bound((#mem)->pointer() + (#startOff), (#mem)->pointer() + (#endOff), (#num)) - (#mem)->pointer())/sizeof(#T))")
-	//public static native def lowerBound[T](mem:MemoryChunk[T], startOff:Long , endOff:Long, num:Long) :Long;
-	
-	// modoriti ha dou atsukaeba ii noka
 	@Native("c++", "(::std::find((#mem)->pointer() + (size_t)(#startOff), (#mem)->pointer() + (size_t)(#endOff), (#num)) - (#mem)->pointer())")
 	public static native def find[T](mem:MemoryChunk[T], startOff:Long , endOff:Long, num:Long) :Long;
-	//@Native("c++", "(x10_long)(::std::find((#mem)->pointer() + (size_t)(#startOff), (#mem)->pointer() + (size_t)(#endOff), (#num)) )")
-	
-	/*public static def binarySearch[T](mem:MemoryChunk[T], range:LongRange, num:Long) :Tuple2[Boolean,Long] {
-		val tmp = lowerBound(mem, range.min, range.max, num);
-		return new Tuple2[Boolean,Long](mem(tmp) == num, tmp);
-	}*/
-	
 	public static def linearSearch[T](mem:MemoryChunk[T], range:LongRange, num:Long) :Tuple2[Boolean,Long] {
 		val tmp = find(mem, range.min, range.max+1L, num);
-		return new Tuple2[Boolean,Long](mem(tmp) == num, tmp);
+		return new Tuple2[Boolean,Long](tmp != range.max+1L, tmp);
 	}
 	
 	/*public static def sort[I](index :MemoryChunk[I]) {

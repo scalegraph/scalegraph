@@ -163,18 +163,30 @@ namespace org { namespace scalegraph { namespace util {
 		std::stable_sort(pointer, pointer+count, K1LessThan<T>());
 	}
 
-	//Long gata ni
 	template <typename T>
 	struct MaskedK1LessThan{
 		bool operator() (const T& a, const T& b) const {
 			return (a.FMGL(val1) & ((1LL<<(sizeof(a.FMGL(val1))*8)-1)>>4))
-					< (b.FMGL(val1) & ((1LL<<(sizeof(a.FMGL(val2))*8)-1)>>4));
+					< (b.FMGL(val1) & ((1LL<<(sizeof(a.FMGL(val1))*8)-1)>>4));
 		}
 	};
 
 	template <typename T>
 	static void MaskedStableSort_TupleK1(T* pointer, size_t count){
 		std::stable_sort(pointer, pointer+count, MaskedK1LessThan<T>());
+	}
+
+	template <typename T>
+	struct MaskedK2LessThan{
+		bool operator() (const T& a, const T& b) const {
+			return (a.FMGL(val2) & ((1LL<<(sizeof(a.FMGL(val2))*8)-1)>>4))
+					< (b.FMGL(val2) & ((1LL<<(sizeof(a.FMGL(val2))*8)-1)>>4));
+		}
+	};
+
+	template <typename T>
+	static void MaskedStableSort_TupleK2(T* pointer, size_t count){
+		std::stable_sort(pointer, pointer+count, MaskedK2LessThan<T>());
 	}
 
 	template <typename T>

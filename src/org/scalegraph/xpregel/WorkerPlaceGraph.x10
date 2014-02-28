@@ -38,7 +38,7 @@ import x10.compiler.Native;
 import x10.io.Printer;
 
 // "haszero" cause x10compiler to type incomprehensibility.
-// when you want to get DUMMY value(may not be default), use hoge.
+// when you want to get DUMMY value(may not be default), use Utils.getDummyZeroValue[T]();.
 
 // sukunakutomo E wo haszero ni shite tsujitsuma awaseta kekka dame datta
 final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
@@ -74,8 +74,8 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	//req[threadid][srcid per thread ("foreachvertex" de ijirou!)]
 	//run wo mataide hozon sareru you ni suru niha koko ni oku shika nai
 	//reqs ga growable nanode thread goto ni wakeru hitsuyou ga aru
-	var mEdgeModifyReqOffsets :MemoryChunk[MemoryChunk[Long]];
-	var mEdgeModifyReqsWithAR :MemoryChunk[GrowableMemory[Tuple2[Long,E]]];
+	var mOutEdgeModifyReqOffsets :MemoryChunk[MemoryChunk[Long]];
+	var mOutEdgeModifyReqsWithAR :MemoryChunk[GrowableMemory[Tuple2[Long,E]]];
 	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_r = team.role()(0);
@@ -95,7 +95,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val tmp = new MemoryChunk[Long](numThreads);
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 			// (contains count) + end index
-			tmpEdgeModifyReqOffsets(tid) = new MemoryChunk[Long](r.max -r.min +1L +1L);
+			tmpEdgeModifyReqOffsets(tid) = new MemoryChunk[Long]((r.max -r.min +1L) +1L);
 			tmp(tid) = 777L;
 		});
 		for(i in tmpEdgeModifyReqOffsets.range()){
@@ -104,8 +104,8 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			tmpEdgeModifyReqOffsets(i) = new MemoryChunk[Long](0);
 		}
 		//tsukaware nai bun ha not initialized dakedo tsukawarenai kara hotte oku
-		mEdgeModifyReqOffsets = tmpEdgeModifyReqOffsets;
-		mEdgeModifyReqsWithAR = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](
+		mOutEdgeModifyReqOffsets = tmpEdgeModifyReqOffsets;
+		mOutEdgeModifyReqsWithAR = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](
 				numThreads,
 				(i :Long) => new GrowableMemory[Tuple2[Long,E]](0L));
 		
@@ -130,6 +130,103 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		mOutEdge.offsets = edgeIndexMatrix().offsets;
 		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
 		mOutEdge.value = new MemoryChunk[E](mOutEdge.vertexes.size());
+	}
+	
+	public def updateFewInEdge(list :MemoryChunk[EdgeProvider[E]]){
+		val numTeam = mTeam.size();
+		val numLocalVertexes = mIds.numberOfLocalVertexes();
+		
+		//---------- pre process ( prepare for exchanging edge difference ) ----------
+		val diffInEdgeCountPerThread = new MemoryChunk[MemoryChunk[Int]](
+				numThreads,
+				(i:Long)=> new MemoryChunk[Int](numTeam));
+		//place goto ni otodoke suru data no kazu wo shiraberu
+		Parallel.iter(0..(numThreads-1), (tid:Int)=> {
+			val work = diffInEdgeCountPerThread(tid);
+			for(i in mOutEdgeModifyReqsWithAR(tid).range())
+				++work(mDtoV.r(mOutEdgeModifyReqsWithAR(tid)(i).val1));	//TODO: r de ii noka
+		});
+		
+		//diffInEdgeCount	(kansei)
+		val diec = new MemoryChunk[Int](numTeam);
+		for(team in diec.range()){								//Team range
+			for(thread in diffInEdgeCountPerThread.range())	//Thread range
+				diec(team) += diffInEdgeCountPerThread(thread)(team);	//sum
+		}
+		
+		//...Tuple3[Long,Long,E] diffInEdgeDataPerThread[numThreads][teamNum][diffInEdgeCountPerThread(i)(j)]
+		val diffInEdgeDataPerThread = new MemoryChunk[MemoryChunk[MemoryChunk[Tuple3[Long,Long,E]]]](
+				numThreads,
+				(i:Long)=> new MemoryChunk[MemoryChunk[Tuple3[Long,Long,E]]](
+						numTeam,
+						(j:Long) => new MemoryChunk[Tuple3[Long,Long,E]](diffInEdgeCountPerThread(i)(j))
+				)
+		);
+		
+		//req ha optimize zumi dakara henkan shite tsukkomu dake?
+		Parallel.iter(0..(numThreads-1), (tid:Int)=> {
+			val e = list(tid);
+			val workdata = diffInEdgeDataPerThread(tid);	//ika "work(teamNum)(index)" de access suru
+			val workoff = mOutEdgeModifyReqOffsets(tid);
+			val index = new MemoryChunk[Int](numTeam);
+			var srcid :Long = 0;
+			for(i in mOutEdgeModifyReqsWithAR(tid).range()){
+				val target = mOutEdgeModifyReqsWithAR(tid)(i);
+				val dstid = target.val1;
+				val team = mDtoV.r(dstid);
+				while(workoff(srcid+1)<=i)
+					++srcid;
+				workdata(team)(index(team)++) = new Tuple3[Long,Long,E](
+						dstid & EdgeProvider.req_NOINFO,
+						mStoD(e.mStartSrcid+srcid) | (dstid & EdgeProvider.req_INFO),
+						target.val2);	//TODO: r de ii noka
+				//this Tuple3 means: [inEdge's src(dstid), inEdge's dst(dstid,withARM), inEdge's value]
+				//attention: StoD(as this place) => valid,  DtoS(as foreign place) => invalid!
+			}
+		});
+
+		//diffInEdgeData
+		var dataNum :Long = 0L;
+		for(team in diec.range())	//Team range
+			dataNum += diec(team);
+		val died = new MemoryChunk[Tuple3[Long,Long,E]](dataNum);
+		var dataIndex :Long = 0;
+		for (team in 0..(numTeam-1))
+		for (thread in 0..(numThreads-1)){
+			val src = diffInEdgeDataPerThread(thread)(team);
+			MemoryChunk.copy(src, 0L, died, dataIndex, src.size());
+			dataIndex += src.size();
+		}
+		assert (dataIndex == dataNum);
+		
+		//exchange differences
+		val result = mTeam.alltoallv(died, diec).val1;
+		diffInEdgeCountPerThread.del();
+		diec.del();
+		diffInEdgeDataPerThread.del();
+		died.del();
+
+		//---------- post process ( apply differences ) ----------
+		
+		//DtoS
+		//foreach differences
+		foreachVertexes(result.size(),(tid :Long, range :LongRange)=>{
+			for(i in range){
+				result(i) = new Tuple3(mStoD(result(i).val1),result(i).val2,result(i).val3);
+			}
+		});
+		
+		//sort (optimize => sort order (srcid --> dstid))
+		//by dstid
+		Algorithm.maskedStableSortTupleKey2(result);
+		//by srcid
+		Algorithm.stableSortTupleKey1(result);
+		
+		//EdgeProvider no code wo sai riyou suru tame ni offset to reqs wo wazawaza tsukuru
+		var mInEdgeModifyReqOffsets :MemoryChunk[MemoryChunk[Long]];
+		var mInEdgeModifyReqsWithAR :MemoryChunk[GrowableMemory[Tuple2[Long,E]]];
+		
+		
 	}
 	
 	public def updateInEdge() {
@@ -433,6 +530,8 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		mesComm.del();
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 	}
+	
+	
 	
 	// src will be destroyed
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],

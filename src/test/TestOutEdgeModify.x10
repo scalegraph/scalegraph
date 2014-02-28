@@ -69,7 +69,7 @@ public class TestOutEdgeModify {
 				//ID
 				val myId = ctx.realId();
 				//remove out edge
-				val e = 1L;//(myId+1)%ctx.numberOfVertices();	//global vertex num
+				val e = (ctx.superstep()+myId)%ctx.numberOfVertices();	//global vertex num
 
 				//super step ha 0 start rashii
 				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
@@ -79,8 +79,13 @@ public class TestOutEdgeModify {
 			//	}
 				
 				if(myId != 0L ){//&& (ctx.superstep() as Long)==myId){
-					sb.add(myId + ":\tRemove:\t" + e + "\n");
-					ctx.removeOutEdge(ctx.dstId(e));
+					if(e!=myId){
+						sb.add(myId + ":\tRemove:\t" + e + "\n");
+						ctx.removeOutEdge(ctx.dstId(e));
+					}else{
+						sb.add(myId + ":\tAdd   :\t" + e + "\n");
+						ctx.addOutEdge(ctx.dstId(e),0);
+					}
 				}
 				
 				//display current out edges
@@ -93,7 +98,7 @@ public class TestOutEdgeModify {
 					mesBuf().add(sb.toString());
 				}
 				
-				if(ctx.superstep()>=1){//ctx.numberOfVertices()-1){	//koko de vote hantei
+				if(ctx.superstep()>=ctx.numberOfVertices()-1){	//koko de vote hantei
 					ctx.voteToHalt();
 				}else{
 					//send dummy message

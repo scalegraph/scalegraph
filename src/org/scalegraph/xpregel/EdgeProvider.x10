@@ -28,9 +28,13 @@ import x10.compiler.Inline;
 
 class EdgeProvider [E] /*{ E haszero }*/{
 	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
-	public static val ADDBIT :Long= (1L<<61);
-	public static val MODBIT :Long= (2L<<61);
-	private static val NOINFOBITMASK = ~(ADDBIT | MODBIT);
+	private static val reqshift = 60;	//related to NativeAlgorithm/MaskedK1LessThan
+	public static val req_RMV :Long	=  (0L<<reqshift);	//use |
+	public static val req_ADD :Long	=  (1L<<reqshift);	//use |
+	public static val req_MOD :Long	=  (2L<<reqshift);	//use |
+	public static val req_INFO :Long	=  (7L<<reqshift);	//use &
+	public static val req_NOINFO :Long	= ~(7L<<reqshift);	//use &
+	
 	
 	//these contents are same to WorkerPlaceGtaph's
 	var mOutOffset :MemoryChunk[Long];
@@ -47,10 +51,11 @@ class EdgeProvider [E] /*{ E haszero }*/{
 
 	//the buffer used to return Edge info for User when called getEdgeId/Value
 	val mGetEdgeBuf :GrowableMemory[Long] = new GrowableMemory[Long](0L);
+	val mGetValBuf :GrowableMemory[E] = new GrowableMemory[E](0L);
 	//TODO: taiou
 	var mEdgeChanged:Boolean;
 	var mReqEdgeOptimized:Boolean;
-	var mStartSrcid :Long;
+	public val mStartSrcid :Long;
 	
 	//called from each threads
 	def this(
@@ -128,7 +133,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			//calc newOffset
 			var count:Long = 0L;
 			for(srcid in r) {
-				val orgn_length = outOffset(srcid + 1L) - outOffset(srcid);				//moto no length
+				val orgn_length = outOffset(srcid + 1L) - outOffset(srcid);			//moto no length
 				newOffset(srcid+1L) = orgn_length + e.calcEdgeNumDifferential(srcid);	//A/R length diff
 				//count
 				count += newOffset(srcid+1L);
@@ -206,7 +211,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		var newEdgeIndex :Long = 0L;
 		//yarukoto: oldEdge to req wo merge
 		for(i in 0L..(length-1L)){
-			val reqId = req(i).val1 & NOINFOBITMASK;
+			val reqId = req(i).val1 & req_NOINFO;
 			val reqValue = req(i).val2;
 			//judge ARM
 			val reqARM = ARM(req(i).val1);
@@ -220,12 +225,18 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			//copy unrelated edge
 			{
 				var copyLength :Long = 0L;
-				//TODO: NOINFOBITMASK hitsuyou?
+				//TODO: req_NOINFO hitsuyou?
 				//array bount exception taisaku no tame, taisyou no temae made copy
-				while((oldEdge(oldEdgeIndex+copyLength)&NOINFOBITMASK) < reqId)
+				val maxlen = oldEdge.size();
+				while((oldEdge(oldEdgeIndex+copyLength) & req_NOINFO) < reqId){		//koko
+					newEdge(newEdgeIndex + copyLength) = oldEdge(oldEdgeIndex + copyLength);
+					newVal(newEdgeIndex + copyLength) = oldVal(oldEdgeIndex + copyLength);
 					++copyLength;
-				MemoryChunk.copy(oldEdge,oldEdgeIndex,newEdge,newEdgeIndex,copyLength);
-				MemoryChunk.copy(oldVal,oldEdgeIndex,newVal,newEdgeIndex,copyLength);
+					if(oldEdgeIndex+copyLength >= maxlen)	//TODO:kitanai?
+						break;
+				}
+				//MemoryChunk.copy(oldEdge,oldEdgeIndex,newEdge,newEdgeIndex,copyLength);
+				//MemoryChunk.copy(oldVal,oldEdgeIndex,newVal,newEdgeIndex,copyLength);
 				oldEdgeIndex += copyLength;
 				newEdgeIndex += copyLength;
 			}
@@ -302,12 +313,12 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		for(reqIdx in reqStartIdx..reqEndIdx){						//reqIdx : katteni fueru
 			val targetid = mEdgeModifyReqWithAR(reqIdx).val1;
 			if(reqIdx!=reqEndIdx && 
-					((targetid&NOINFOBITMASK) == (mEdgeModifyReqWithAR(reqIdx+1).val1&NOINFOBITMASK)))	// optimize:reqIdx!=reqEndIdx  iru kedo..
+					((targetid&req_NOINFO) == (mEdgeModifyReqWithAR(reqIdx+1).val1&req_NOINFO)))	// optimize:reqIdx!=reqEndIdx  iru kedo..
 				continue;	//tyofuku jokyo
 			//TODO: vertex zentai wo miru hitsuyou ha nai!
 			//TODO find ni suru
 			//ayashii?
-			val search = Algorithm.linearSearch(mOutVertex, outIdx..outend, targetid & NOINFOBITMASK);
+			val search = Algorithm.linearSearch(mOutVertex, outIdx..outend, targetid & req_NOINFO);
 			Utils.debugPrintln("\tsearch", "range:"+outIdx+".."+outend+" targetid:"+targetid+" result:"+search);
 			if(search.val1){
 				outIdx = search.val2 + 1L;
@@ -320,7 +331,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 					break;
 				case 1://add
 					mEdgeModifyReqWithAR(reqSaveIdx++) = 
-						new Tuple2(mEdgeModifyReqWithAR(reqIdx).val1 & ~ADDBIT | MODBIT,
+						new Tuple2(mEdgeModifyReqWithAR(reqIdx).val1 & ~req_ADD | req_MOD,
 								mEdgeModifyReqWithAR(reqIdx).val2);
 					break;
 				default://mod
@@ -331,7 +342,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				*/
 				if(ARM(targetid) == 1) {
 					mEdgeModifyReqWithAR(reqSaveIdx++) = 
-						new Tuple2((mEdgeModifyReqWithAR(reqIdx).val1 & ~ADDBIT) | MODBIT,
+						new Tuple2((mEdgeModifyReqWithAR(reqIdx).val1 & req_NOINFO/*~req_ADD*/) | req_MOD,
 								mEdgeModifyReqWithAR(reqIdx).val2);
 				}
 				else {
@@ -377,7 +388,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	private static val ADDFRAG :byte = 1;
 	private static val MODFRAG :byte = 2;*/
 	private @Inline static def ARM(l:Long) :Int{
-		return ((l & ~NOINFOBITMASK) >> 61) as Int;
+		return ((l & req_INFO) >> reqshift) as Int;
 	}
 	
 	/** method parameter "srcid" is always rawSrcid. */
@@ -393,15 +404,16 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		printreqs(0xAF7E4);
 		val len = mOutOffset(srcid + 1L) - mOutOffset(srcid);
 		val lenWithDiff = len + calcEdgeNumDifferential(srcid);
-		val newEdge = new MemoryChunk[Long](lenWithDiff);
-		val newVal = new MemoryChunk[E](lenWithDiff);	// => buffer tsukao
+		
+		mGetEdgeBuf.setSize(lenWithDiff);	//buffer
+		mGetValBuf.setSize(lenWithDiff);
 		updateOutEdge_temp(
-				newEdge,
-				newVal,
+				mGetEdgeBuf.raw(),
+				mGetValBuf.raw(),
 				mOutVertex.subpart(mOutOffset(srcid),len),
 				mOutValue.subpart(mOutOffset(srcid),len),
 				srcid);
-		return new Tuple2[MemoryChunk[Long],MemoryChunk[E]](newEdge,newVal);
+		return new Tuple2[MemoryChunk[Long],MemoryChunk[E]](mGetEdgeBuf.raw(),mGetValBuf.raw());
 	}
 	
 	def outEdgesId(srcid :Long) :MemoryChunk[Long]{
@@ -452,14 +464,14 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	}
 
 	def addOutEdge(id :Long, value :E) {
-		mEdgeModifyReqWithAR.add(new Tuple2[Long,E](id | ADDBIT,value));
+		mEdgeModifyReqWithAR.add(new Tuple2[Long,E](id | req_ADD,value));
 		mEdgeChanged = true;
 	}
 
 	def addOutEdges(id :MemoryChunk[Long], value :MemoryChunk[E]) {
 		assert(id.size() == value.size());
 		for(i in id.range()){
-			mEdgeModifyReqWithAR.add(new Tuple2[Long,E](id(i) | ADDBIT, value(i)));
+			mEdgeModifyReqWithAR.add(new Tuple2[Long,E](id(i) | req_ADD, value(i)));
 		}
 		mEdgeChanged = true;
 	}
