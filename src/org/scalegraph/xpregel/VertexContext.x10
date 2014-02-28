@@ -67,8 +67,8 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		mEdgeProvider = new EdgeProvider[E](
 				worker.mOutEdge,
 				worker.mInEdge,
-				worker.mEdgeModifyReqOffsets(tid),
-				worker.mEdgeModifyReqsWithAR(tid),
+				worker.mOutEdgeModifyReqOffsets(tid),
+				worker.mOutEdgeModifyReqsWithAR(tid),
 				startSrcid);
 		mUCCMessages = mCtx.messageBuffer(tid);
 		mOut = worker.outBuffer(tid);

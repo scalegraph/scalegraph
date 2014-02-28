@@ -212,20 +212,66 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		//foreach differences
 		foreachVertexes(result.size(),(tid :Long, range :LongRange)=>{
 			for(i in range){
+				//optimize? write val1 directory
 				result(i) = new Tuple3(mStoD(result(i).val1),result(i).val2,result(i).val3);
 			}
 		});
 		
-		//sort (optimize => sort order (srcid --> dstid))
+		//sort (optimize => sort order (srcid --> (subdivided)dstid))
 		//by dstid
 		Algorithm.maskedStableSortTupleKey2(result);
 		//by srcid
 		Algorithm.stableSortTupleKey1(result);
 		
 		//EdgeProvider no code wo sai riyou suru tame ni offset to reqs wo wazawaza tsukuru
-		var mInEdgeModifyReqOffsets :MemoryChunk[MemoryChunk[Long]];
-		var mInEdgeModifyReqsWithAR :MemoryChunk[GrowableMemory[Tuple2[Long,E]]];
-		
+		val mInEdgeModifyReqOffsets :MemoryChunk[MemoryChunk[Long]];
+		{	//initialize (tyotto kitanai)
+			val tmpEdgeModifyReqOffsets = new MemoryChunk[MemoryChunk[Long]](numThreads);
+			//TODO: honrai ha iranai hazu
+			val tmp = new MemoryChunk[Long](numThreads);
+			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+				// (contains count) + end index
+				tmpEdgeModifyReqOffsets(tid) = new MemoryChunk[Long]((r.max -r.min +1L) +1L);
+				//tmpEdgeModifyReqOffsets no length ha koko de shika wakaranai(safe niha)
+				//shikamo, foreachVertexes ha zenbu no thread ni task wo warifuru wake deha nai node
+				//nullReference wo fusegu tame tyotto ganbaru
+				tmp(tid) = 777L;
+			});
+			for(i in tmpEdgeModifyReqOffsets.range()){
+				if(tmp(i) == 777L)
+					continue;
+				tmpEdgeModifyReqOffsets(i) = new MemoryChunk[Long](0);
+			}
+			mInEdgeModifyReqOffsets = tmpEdgeModifyReqOffsets;
+		}
+		val mInEdgeModifyReqsWithAR = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](numThreads);
+		// copy to mInEdgeModify (muda ga ooi
+		foreachVertexes(result.size(),(tid :Long, vrange :LongRange)=>{
+			//search index
+			//optimize? lower_bound
+			val resrange = result.range();
+			var start :Long = resrange.max+1L;
+			var end :Long = resrange.min-1L;
+			for(i in resrange)
+			if(result(i).val1 >= vrange.min){
+				start = result(i).val1;
+				break;
+			}
+			for(i in start..resrange.max)
+			if(result(i).val1 > vrange.max){
+				end = result(i).val1 - 1L;
+				break;
+			}
+			if(start>end)
+				mInEdgeModifyReqsWithAR(tid) = new GrowableMemory[Tuple2[Long,E]](0L);	//there is no diffInEdge at this tid
+			mInEdgeModifyReqsWithAR(tid) = new GrowableMemory[Tuple2[Long,E]](end - start + 1L);
+			var reqsIndex :Long = 0L;
+			for(i in start..end){
+				mInEdgeModifyReqsWithAR(tid)(reqsIndex++) = new Tuple2(result(i).val2,result(i).val3);	//[dstid withARM,value]
+			}
+			// TODO: kokokara
+			//mInEdgeModifyReqOffsets wo tsukuru result(i).val1 tsukau to yosasou
+		});
 		
 	}
 	
@@ -701,7 +747,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 		
-			// TODO:nanikore
+			// TODO: check
 			ectx.deleteMessages();
 			
 			// gather statistics
@@ -714,7 +760,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			EdgeProvider.updateOutEdge[V,E](mOutEdge, edgeProviderList, mIds);
 			// TODO: update in edges
 			
-			// delete gomi
+			// 
 			EdgeProvider.reInitializeEdgeProvider[E](edgeProviderList);
 			
 			
@@ -820,40 +866,4 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		
 		return outMem;
 	}
-	
-	/*public def getDiffInDstSize() :Long{
-		var l:Long = 0L;
-		for(i in mWDiffInDst.range()){
-			l += mWDiffInDst(i).size();
-		}
-		return l;
-	}*/
-	/*
-	private static def recursiveMergeSort[T](
-			sArg :MemoryChunk[T],
-			tmpArg :MemoryChunk[T],
-			left :Long,
-			length :Long,
-			getVal :(arg:MemoryChunk[T],index:Long) => Long){	//osoraku getVal ha inline tenkai sareru ...
-		//alltoall de okurareta junban ha hozon sareteiru rasii
-		//toriaezu...
-		if(length<2)
-			return;
-		val m :Long = length >> 1;
-		val n :Long = length - m;
-		recursiveMergeSort[T](sArg,tmpArg,left,m,getVal);
-		recursiveMergeSort[T](sArg,tmpArg,left+m,n,getVal);
-		var i :Long = left;
-		var j :Long = left + m;
-		var k :Long = left;
-		while (i<(left+m) && j<(left+m+n)){	//left+m toka ha cache ni nokoru kamo
-			if(left+m+n <= j || (i < left+m && getVal(sArg,i) <= getVal(sArg,j))){
-				tmpArg(k++) = sArg(i++);	//j ga hanigai nara matigai naku koko wo tooru
-			}else{
-				tmpArg(k++) = sArg(j++);	//i ga hanigai nara matigai naku koko wo tooru
-			}
-		}
-		MemoryChunk.copy(tmpArg, left, sArg, left, length);
-	}*/
-	
 }
