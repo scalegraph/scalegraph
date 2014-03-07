@@ -449,7 +449,8 @@ final class MessageCommunicator[M] { M haszero } {
 		mBCREnabled = BCEnabled;
 		
 		if(UCEnabled) {
-			if(here.id == 0) sw.lap("start to unicast message communication");
+			//if(here.id == 0) sw.lap("start to unicast message communication");
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": start to unicast message communication");
 			
 			mTeam.alltoall(mUCSCount, recvCount);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMM_COUNT); }
@@ -461,7 +462,8 @@ final class MessageCommunicator[M] { M haszero } {
 			
 			val recvSize = recvOffset(numPlaces);
 
-			if(here.id == 0) sw.lap("alltoallv...");
+//			if(here.id == 0) sw.lap("alltoallv...");
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": alltoallv...");
 			val UCRIdsTmp = MemoryChunk.make[Long](recvSize);
 			mTeam.alltoallv(mUCSIds, mUCSOffset, mUCSCount, UCRIdsTmp, recvOffset, recvCount);
 			mUCSIds.del();
@@ -477,7 +479,8 @@ final class MessageCommunicator[M] { M haszero } {
 			val UCRIds = MemoryChunk.make[Long](recvSize);
 			mUCRMessages = MemoryChunk.make[M](recvSize);
 
-			if(here.id == 0) sw.lap("sort...");
+//			if(here.id == 0) sw.lap("sort...");
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": sort...");
 			Parallel.sort(mIds.lgl, UCRIdsTmp, UCRMessagesTmp, UCRIds, mUCRMessages);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_SORT); }
 
@@ -489,7 +492,8 @@ final class MessageCommunicator[M] { M haszero } {
 			Parallel.makeOffset(UCRIds, mUCROffset);
 			UCRIds.del();
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UC_MAKE_OFFSET); }
-			if(here.id == 0) sw.lap("finished unicast message communication");
+//			if(here.id == 0) sw.lap("finished unicast message communication");
+			sw.lap("$ TIME-XPS3: place: " + here.id + ": finished unicast message communication");
 		}
 		
 		if(BCEnabled) {

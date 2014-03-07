@@ -196,6 +196,10 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		return data.pointer();
 	}
 
+	public static def explicitGC() :void{
+		MemoryChunkData.explicitGC();
+	}
+
 	/** Returens the number of elements.
 	 */
 	public def size() :Long = data.size;

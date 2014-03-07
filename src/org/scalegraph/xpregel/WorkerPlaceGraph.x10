@@ -32,6 +32,7 @@ import org.scalegraph.graph.id.IdStruct;
 
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.MemoryChunk;
 import x10.compiler.Native;
 import x10.io.Printer;
 import org.scalegraph.test.STest;
@@ -205,13 +206,17 @@ final class WorkerPlaceGraph[V,E] {
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],
 			aggregator :(MemoryChunk[A])=>A) :A
 	{
+				val sw = Config.get().stopWatch();
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		val root = (team.base.role()(0) == 0);
 		src(0) = aggregator(src);
+		sw.lap("$ TIME-XPS3: place: " + here.id  + ": computeAggregate aggregator");
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_AGGREGATE_COMPUTE); }
 		team.gather(0, src.subpart(0, 1), buffer);
+		sw.lap("$ TIME-XPS3: place: " + here.id  + ": computeAggregate gather");
 		if(root) buffer(0) = aggregator(buffer);
 		team.bcast(0, root ? buffer.subpart(0, 1) : buffer, src.subpart(0, 1));
+		sw.lap("$ TIME-XPS3: place: " + here.id  + ": computeAggregate bcast");
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_AGGREGATE_COMM); }
 		return src(0);
 	}
@@ -326,10 +331,15 @@ final class WorkerPlaceGraph[V,E] {
 		for(ss in 0..10000) {
 			ectx.mSuperstep = ss;
 
+			val finishCounter = MemoryChunk.make[Int](1, 0, true);
 			@Ifdef("PROF_XP") { mtimer.start(); }
 			sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": vertex processing started");
 			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 				sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": th: " + tid + ": vertex th processing started");
+if(finishCounter(0) != 0) {
+Console.OUT.println("!!!!!!!!!!");
+}
+
 				@Ifdef("PROF_XP") val thtimer = Config.get().profXPregel().timer(XP.MAIN_TH_FRAME, tid);
 				@Ifdef("PROF_XP") { thtimer.start(); }
 				
@@ -363,6 +373,7 @@ final class WorkerPlaceGraph[V,E] {
 			//	@Ifdef("PROF_XP") { STest.bufferedPrintln("$ XPS1: place: " + here.id + ": th: " + tid + ": ss: " + ss +
 			//			": InEdge: " + numLocalInEdges + ": OutEdge: " + numLocalOutEdges + ": Mes: " + numLocalMes); }
 				@Ifdef("PROF_XP") { thtimer.lap(XP.MAIN_TH_AGGREGATE); }
+				finishCounter.atomicAdd(0, 1);
 				sw.lap("$ TIME-XPS3: place: " + here.id + ": ss: " + ss + ": th: " + tid + ": vertex th processing finished");
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }

@@ -36,6 +36,11 @@ namespace org { namespace scalegraph { namespace util {
 
 		extern ExpMemGlobalState ExpMemState;
 
+			static void explicitGC(){
+					GC_gcollect();
+					printf("GC_gcollect is called\n");
+			}
+
 		x10_long get_gc_heap_size();
 
         struct ExplicitMemory{
@@ -76,7 +81,7 @@ namespace org { namespace scalegraph { namespace util {
 					}
 					ExpMemState.envThreshold+=tmpSize;
 				}
-				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
+				if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT||1){
 					printf("threashold:%ld%s\n",ExpMemState.envThreshold ,ExpMemState.envThreshold ? "" : "default");
 				}
 			}
@@ -156,6 +161,7 @@ namespace org { namespace scalegraph { namespace util {
 					x10aux::alloc_lock.lock();
 					GC_gcollect();
 					x10aux::alloc_lock.unlock();
+					printf("GC_gcollect is called\n");
 
 					pthread_mutex_lock(&ExpMemState.mutex);
 					ExpMemState.gcWait = false;

@@ -62,6 +62,9 @@ final struct MemoryChunkData[T] {
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean, filename :MemoryPointer[Byte], num :Int) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
+
+	@Native("c++", "org::scalegraph::util::explicitGC()")
+	public static native def explicitGC() :void;
 	
 	@Native("c++", "(#this).del()")
 	public def del() :void { }
