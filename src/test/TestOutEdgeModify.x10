@@ -62,15 +62,12 @@ public class TestOutEdgeModify {
 		//-----start of work
 		Console.OUT.println("start work");
 		xpregel.iterate[Long, Long](
-			(ctx :VertexContext[Long, Long, Long, Long ],
-					messages :MemoryChunk[Long] ) => {
-				//temp string
-				val sb = new StringBuilder();
-				//ID
-				val myId = ctx.realId();
+			(ctx :VertexContext[Long, Long, Long, Long ], messages :MemoryChunk[Long] ) => {
+				val sb = new StringBuilder();	//debug message
+				val myId = ctx.realId();		//ID
+				
 				//remove out edge
 				val e = (ctx.superstep()+myId)%ctx.numberOfVertices();	//global vertex num
-
 				//super step ha 0 start rashii
 				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
 				
@@ -78,7 +75,20 @@ public class TestOutEdgeModify {
 			//		sb.add("message:"+ messages(m)+"\n");
 			//	}
 				
-				if(myId != 0L ){//&& (ctx.superstep() as Long)==myId){
+				//display current out edges
+				val OEsId = ctx.outEdgesId();	//get dstid
+				for(eI in OEsId){
+					sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) + "\n");
+				}
+				sb.add("----------\n");
+				//display current in edges
+				val IEsId = ctx.inEdgesId();
+				for(eI in IEsId){
+					sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
+				}
+				
+				//add/remove
+				if(myId != 0L ){
 					if(e!=myId){
 						sb.add(myId + ":\tRemove:\t" + e + "\n");
 						ctx.removeOutEdge(ctx.dstId(e));
@@ -88,25 +98,17 @@ public class TestOutEdgeModify {
 					}
 				}
 				
-				//display current out edges
-				val OEsId = ctx.outEdgesId();	//get dstid
-				for(eI in OEsId){
-					sb.add(myId + "->" + ctx.realId(eI) + "\n");
-				}
+				atomic { mesBuf().add(sb.toString()); }
 				
-				atomic {	//atomic ga nai to hukusuu thread de shinu
-					mesBuf().add(sb.toString());
-				}
-				
-				if(ctx.superstep()>=ctx.numberOfVertices()-1){	//koko de vote hantei
+				//halt vote
+				if(ctx.superstep()>=ctx.numberOfVertices()-1){
 					ctx.voteToHalt();
 				}else{
 					//send dummy message
-					if(myId==0L){
+					if(myId==0L)
 						ctx.sendMessageToAllNeighbors(myId);
-					}else if(myId < ctx.superstep()){
+					else if(myId < ctx.superstep())
 						ctx.sendMessageToAllNeighbors(myId);
-					}
 				}
 			},
 			(values :MemoryChunk[Long]) => 0L,	//returns 0 with no cost

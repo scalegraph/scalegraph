@@ -172,8 +172,10 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			e.mOutOffset = newOffset;
 			e.mOutVertex = newVertex;
 			e.mOutValue = newValue;
-			for(i in e.mEdgeModifyReqOffset.range())
-				e.mEdgeModifyReqOffset(i) = e.mEdgeModifyReqWithAR.size();			//TODO: okashisou 0rest?
+		//	for(i in e.mEdgeModifyReqOffset.range())
+		//		e.mEdgeModifyReqOffset(i) = e.mEdgeModifyReqWithAR.size();			//TODO: okashisou 0rest?
+		//notice: furui shiyou
+			
 			//	e.mEdgeModifyReqWithAR = xx; <- henkou nashi
 			//TODO: amarinimo nagasugi tara reset shite mNeedsAllUpdateInEdge flag toka tateru
 			assert newOffset(r.max + 1L) == offsetPerThread(tid + 1L);
@@ -487,7 +489,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	
 	
 	
-	
+	//update outedge to tougou shitai NE
 	//this method intercepts EdgeProvider functions.
 	static def updateInEdge[V,E](
 			inEdge :GraphEdge[E],
@@ -503,7 +505,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		for(i in list.range()){
 			tempReqOff(i) = list(i).mEdgeModifyReqOffset;
 			tempReq(i) = list(i).mEdgeModifyReqWithAR;
-			//overwite
+			//overwrite
 			list(i).mEdgeModifyReqOffset = reqOffs(i);
 			list(i).mEdgeModifyReqWithAR = reqs(i);
 		}
@@ -515,7 +517,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 
 		val inOffset = inEdge.offsets;
 		val inVertex = inEdge.vertexes;
-		val inValue = inEdge.value;
+		val inValue = (inEdge.vertexes.size() == inEdge.value.size()) ? inEdge.value : new MemoryChunk[E](inEdge.vertexes.size());
 		val newOffset = new MemoryChunk[Long](numVertexes + 1L,0,false); //ensure not to be 0 initialized
 		
 		//optimize & calc newOffset's diff (== newVertex's index diff )
@@ -560,7 +562,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				//vertex goto ni update
 				val newlen=newOffset(srcid+1L)-newOffset(srcid);
 				val oldlen=inOffset(srcid+1L)-inOffset(srcid);
-				e.updateOutEdge_temp(
+				e.updateOutEdge_temp(									//koko!
 						newVertex.subpart(newOffset(srcid), newlen),
 						newValue.subpart(newOffset(srcid), newlen),
 						inVertex.subpart(inOffset(srcid), oldlen),

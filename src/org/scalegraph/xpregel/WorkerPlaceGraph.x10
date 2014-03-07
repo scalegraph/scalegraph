@@ -172,13 +172,13 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			var srcid :Long = 0;
 			for(i in mOutEdgeModifyReqsWithAR(tid).range()){
 				val target = mOutEdgeModifyReqsWithAR(tid)(i);
-				val dstid = target.val1;
+				val dstid = target.val1;	//inEdge's dst(dstid with ARM)
 				val team = mDtoV.r(dstid);
 				while(workoff(srcid+1)<=i)
 					++srcid;
 				workdata(team)(index(team)++) = new Tuple3[Long,Long,E](
 						dstid & EdgeProvider.req_NOINFO,
-						mStoD(e.mStartSrcid+srcid) | (dstid & EdgeProvider.req_INFO),
+						mStoD(e.mStartSrcid+srcid) | (dstid & EdgeProvider.req_INFO),	//koko totemo ayashii
 						target.val2);	//TODO: r de ii noka
 				//this Tuple3 means: [inEdge's src(dstid), inEdge's dst(dstid,withARM), inEdge's value]
 				//attention: StoD(as this place) => valid,  DtoS(as foreign place) => invalid!
@@ -210,9 +210,9 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		
 		//DtoS
 		//foreach differences
-		foreachVertexes(result.size(),(tid :Long, range :LongRange)=>{
+		foreachVertexes(result.size(),(tid :Long, range :LongRange)=>{	//Irregular usage! DO NOT COPY this line!
 			for(i in range){
-				//optimize? write val1 directory
+				//optimize? overwrite val1 directory
 				result(i) = new Tuple3(mStoD(result(i).val1),result(i).val2,result(i).val3);
 			}
 		});
@@ -224,56 +224,75 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		Algorithm.stableSortTupleKey1(result);
 		
 		//EdgeProvider no code wo sai riyou suru tame ni offset to reqs wo wazawaza tsukuru
-		val mInEdgeModifyReqOffsets :MemoryChunk[MemoryChunk[Long]];
-		{	//initialize (tyotto kitanai)
-			val tmpEdgeModifyReqOffsets = new MemoryChunk[MemoryChunk[Long]](numThreads);
-			//TODO: honrai ha iranai hazu
-			val tmp = new MemoryChunk[Long](numThreads);
-			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
-				// (contains count) + end index
-				tmpEdgeModifyReqOffsets(tid) = new MemoryChunk[Long]((r.max -r.min +1L) +1L);
-				//tmpEdgeModifyReqOffsets no length ha koko de shika wakaranai(safe niha)
-				//shikamo, foreachVertexes ha zenbu no thread ni task wo warifuru wake deha nai node
-				//nullReference wo fusegu tame tyotto ganbaru
-				tmp(tid) = 777L;
-			});
-			for(i in tmpEdgeModifyReqOffsets.range()){
-				if(tmp(i) == 777L)
-					continue;
-				tmpEdgeModifyReqOffsets(i) = new MemoryChunk[Long](0);
-			}
-			mInEdgeModifyReqOffsets = tmpEdgeModifyReqOffsets;
-		}
-		val mInEdgeModifyReqsWithAR = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](numThreads);
-		// copy to mInEdgeModify (muda ga ooi
-		foreachVertexes(result.size(),(tid :Long, vrange :LongRange)=>{
+		//offset
+		val InEdgeModifyReqOffsets = new MemoryChunk[MemoryChunk[Long]](numThreads,
+				(i:Long) => new MemoryChunk[Long](mOutEdgeModifyReqOffsets(i).size()));
+		//reqs
+		val InEdgeModifyReqsWithAR = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](numThreads, 0, true);
+
+		//kokokara updateInEdge yobu made ni inedgemodifyreqoffset to inedgemodifyreqwithar no seisei ni miss siteiru
+		//copy to mInEdgeModify*
+		foreachVertexes(numLocalVertexes,(tid :Long, vrange :LongRange)=>{
+			val resrange = result.range();
+			var start :Long = resrange.max + 1L;	//korede
+			var end :Long = resrange.max;			//tsujitsuma ga au
+			val e = list(tid);
+			val reqoff = InEdgeModifyReqOffsets(tid);
+			val reqs = InEdgeModifyReqsWithAR(tid);
+			assert(vrange.min == e.mStartSrcid);
+			
 			//search index
 			//optimize? lower_bound
-			val resrange = result.range();
-			var start :Long = resrange.max+1L;
-			var end :Long = resrange.min-1L;
 			for(i in resrange)
-			if(result(i).val1 >= vrange.min){
-				start = result(i).val1;
-				break;
-			}
+				if(result(i).val1 >= vrange.min){
+					start = i;
+					break;
+				}
+			//optimize? upper_bound
 			for(i in start..resrange.max)
-			if(result(i).val1 > vrange.max){
-				end = result(i).val1 - 1L;
-				break;
+				if(result(i).val1 > vrange.max){
+					end = i-1L;
+					break;
+				}
+			if(start>end){			//there is no diffInEdge at this tid
+				reqs.setSize(0L);
+				return;				//no need to run following process
+			}else{
+				//reqs initialize
+				val size = end - start + 1L;
+				reqs.setSize(size);	//hundle it like MemoryChunk
 			}
-			if(start>end)
-				mInEdgeModifyReqsWithAR(tid) = new GrowableMemory[Tuple2[Long,E]](0L);	//there is no diffInEdge at this tid
-			mInEdgeModifyReqsWithAR(tid) = new GrowableMemory[Tuple2[Long,E]](end - start + 1L);
 			var reqsIndex :Long = 0L;
+			val ssrc = e.mStartSrcid;		// == vrange.min
+			var tsrcid :Long = ssrc - 1L;	//saisyo ni "tsrcid < result(i).val1" hantei wo saseru tame "-1L"
 			for(i in start..end){
-				mInEdgeModifyReqsWithAR(tid)(reqsIndex++) = new Tuple2(result(i).val2,result(i).val3);	//[dstid withARM,value]
+				//make offset
+				while(tsrcid < result(i).val1/*==srcid*/){	//zenkai no val1 to ima no val1 ga tigatta ra offset no kawarime
+					++tsrcid;
+					reqoff(tsrcid - ssrc) = reqsIndex;
+				}
+				//make reqs
+				reqs(reqsIndex++) = new Tuple2(result(i).val2,result(i).val3);	//[dstid withARM,value]
 			}
-			// TODO: kokokara
-			//mInEdgeModifyReqOffsets wo tsukuru result(i).val1 tsukau to yosasou
+			//offset ume
+			++tsrcid;
+			for(i in (tsrcid - ssrc)..(reqoff.size()-1L))
+				reqoff(i) = reqsIndex;
+			//aaa(result,tid,list,vrange,InEdgeModifyReqOffsets,InEdgeModifyReqsWithAR);
 		});
-		
+		EdgeProvider.updateInEdge[V,E](mInEdge, list, mIds, InEdgeModifyReqOffsets, InEdgeModifyReqsWithAR);
 	}
+	
+/*	private def aaa(
+			result:MemoryChunk[Tuple3[Long, Long, E]],
+			tid:Long,
+			list :MemoryChunk[EdgeProvider[E]],
+			vrange:LongRange,
+			InEdgeModifyReqOffsets:MemoryChunk[MemoryChunk[Long]],
+			InEdgeModifyReqsWithAR:MemoryChunk[GrowableMemory[Tuple2[Long,E]]]
+	){
+		
+	} kako no ibutsu */
 	
 	public def updateInEdge() {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
@@ -758,8 +777,8 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_SQWEEZMES); }
 			// update out edges
 			EdgeProvider.updateOutEdge[V,E](mOutEdge, edgeProviderList, mIds);
-			// TODO: update in edges
-			
+			// update in edges
+			updateFewInEdge(edgeProviderList);
 			// 
 			EdgeProvider.reInitializeEdgeProvider[E](edgeProviderList);
 			
