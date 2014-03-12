@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ final class Team2Test extends STest {
 			val role = here.id;
 			val src = (role == root) ? MemoryChunk.make[Double](counts * (counts + team_size-1) * team_size / 2 , (i:Long)=> i as Double) : MemoryChunk.getNull[Double]();
 			val src_counts = MemoryChunk.make[Int](team_size, (i:Long)=> counts + i as Int);
-			team.barrier(role);
+			team.barrier();
 			val dst = team.scatterv[Double](root, src, src_counts);
 			message(here + ": scatterv: dst.size() = " + dst.size() );
 			for (i in dst.range()) {
@@ -59,7 +59,7 @@ final class Team2Test extends STest {
 		finish for (p in Place.places()) async at (p) {
 			val role = here.id;
 			val src = MemoryChunk.make[Double](role + 1, (i:Long)=> (role + 1) * role / 2 + 1 + i as Double);
-			team.barrier(role);
+			team.barrier();
 			val recv = team.gatherv[Double](root, src);
 			if(root == role){
 				for (i in recv.get2().range()) {
@@ -79,7 +79,7 @@ final class Team2Test extends STest {
 		finish for (p in Place.places()) async at (p) {
 			val role = here.id;
 			val src = MemoryChunk.make[Double](role + 1, (i:Long)=> (role + 1) * role / 2 + 1 + i as Double);
-			team.barrier(role);
+			team.barrier();
 			val recv = team.allgatherv[Double](src);
 			for (i in recv.get2().range()) {
 				message(here + ": allgatherv: dst_counts( " + i + " ) = " + recv.get2()(i));
@@ -98,7 +98,7 @@ final class Team2Test extends STest {
 			val role = here.id;
 			val src = MemoryChunk.make[Double]((role + 1 + role + team_size ) * team_size / 2 , (i:Long)=> role * 100 + i as Double);
 			val src_counts = MemoryChunk.make[Int](team_size, (i:Long)=> role + 1 + i as Int );
-			team.barrier(role);
+			team.barrier();
 			val recv = team.alltoallv[Double](src, src_counts);
 			for (i in recv.get2().range()) {
 				message(here + ": alltoallv: dst_counts( " + i + " ) = " + recv.get2()(i));
@@ -117,7 +117,7 @@ final class Team2Test extends STest {
 	        val role = here.id;
 	        val src = MemoryChunk.make[String]((role + 1 + role + team_size ) * team_size / 2 , (i:Long)=> "String");
 	        val src_counts = MemoryChunk.make[Int](team_size, (i:Long)=> role + 1 + i as Int );
-	        team.barrier(role);
+	        team.barrier();
 	        val recv = team.alltoallv[String](src, src_counts);
 	        for (i in recv.get2().range()) {
 	            message(here + ": alltoallv: dst_counts( " + i + " ) = " + recv.get2()(i));

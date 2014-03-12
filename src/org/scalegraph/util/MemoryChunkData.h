@@ -167,6 +167,8 @@ namespace org { namespace scalegraph { namespace util {
 					ExpMemState.gcWait = false;
 					if(!ExpMemState.envThreshold && ExpMemState.totalSize > ExpMemState.gcThreshold){
 						ExpMemState.gcThreshold = ExpMemState.totalSize * 3 / 2;
+					}else if( ExpMemState.envThreshold && (ExpMemState.totalSize > ExpMemState.envThreshold)){
+						ExpMemState.envThreshold = ExpMemState.totalSize * 3 / 2;
 					}
 					if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 						showAllData();

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -51,8 +51,9 @@ final class MaxFlowTest extends AlgorithmTest {
 		if(args(1).equals("check")) {
 			val mf = result.maxFlow;
 			
-			if(MathAppend.abs((mf+1.0) / ( Double.parse(args(2)) + 1.0 ) - 1.0) > 0.01   )
-				return false;
+			if(MathAppend.abs((mf+1.0) / ( Double.parse(args(2)) + 1.0 ) - 1.0) > 0.01   ) {
+				throw new IllegalArgumentException("Answer is wrong");
+			}
 			return true;
 		}
 		else {
