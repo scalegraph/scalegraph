@@ -1,14 +1,3 @@
-/* 
- *  This file is part of the ScaleGraph project (http://scalegraph.org).
- * 
- *  This file is licensed to You under the Eclipse Public License (EPL);
- *  You may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *      http://www.opensource.org/licenses/eclipse-1.0.php
- * 
- *  (C) Copyright ScaleGraph Team 2011-2012.
- */
-
 package test;
 
 import x10.util.Team;
@@ -25,9 +14,9 @@ import org.scalegraph.io.CSV;
 import org.scalegraph.util.SString;
 import org.scalegraph.io.NamedDistData;
 
-public final class SSSP extends AlgorithmTest {
+public class WeaklyConnectedComponent extends AlgorithmTest {
 	public static def main(args: Array[String](1)) {
-		new SSSP().execute(args);
+		new WeaklyConnectedComponent().execute(args);
 	}
 	
 	public def run(args :Array[String](1), g :Graph): Boolean {
@@ -39,28 +28,23 @@ public final class SSSP extends AlgorithmTest {
 		}
 		
 		val csr = g.createDistSparseMatrix[Double](
-				Config.get().distXPregel(), "weight", true, false);
+				Config.get().distXPregel(), "weight", false, false);
 		g.del();
 		Config.get().stopWatch().lap("Graph construction: ");
 		
-		val xpgraph = XPregelGraph.make[Double, Double](csr);
-
-		xpgraph.initVertexValue(Double.POSITIVE_INFINITY);
+		val xpgraph = XPregelGraph.make[Long, Double](csr);
 		
-		xpgraph.iterate[Double,Long]((ctx :VertexContext[Double, Double, Double, Long], messages :MemoryChunk[Double]) => {
-			var mindist :Double = (ctx.realId() == 0L) ? 0.0 : Double.POSITIVE_INFINITY;
-			for(i in messages.range())
-				if(mindist > messages(i)) mindist = messages(i);
-			// This is OK because operations on positive infinity produce sensible output.
-			if(mindist < ctx.value()) {
+		xpgraph.iterate[Long,Long]((ctx :VertexContext[Long, Double, Long, Long], messages :MemoryChunk[Long]) => {
+			val minid :Long;
+			if(ctx.superstep() == 0)
+				minid = ctx.realId();
+			else
+				minid = Math.min(MathAppend.min(messages), ctx.value());
+
+			if(minid < ctx.value()) {
 				//Console.OUT.println("V: " + ctx.id() + " is updated: " + ctx.value() + " -> " + mindist);
-				ctx.setValue(mindist);
-				val outEdge = ctx.outEdgesId();
-				val outEdgeValue = ctx.outEdgesValue();
-				for(i in outEdge.range()) {
-					ctx.sendMessage(outEdge(i), mindist + outEdgeValue(i));
-				//	Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
-				}
+				ctx.setValue(minid);
+				ctx.sendMessageToAllNeighbors(minid);
 			}
 			ctx.voteToHalt();
 		},
@@ -74,13 +58,13 @@ public final class SSSP extends AlgorithmTest {
 		
 		Config.get().stopWatch().lap("Finished: ");
 
-		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
+		xpgraph.once((ctx :VertexContext[Long, Double, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
 		val result = xpgraph.stealOutput[Double]();
 
 		if(args(0).equals("write")) {
-			CSV.write(new SString(args(1)), new NamedDistData(["sssp" as String], [result as Any]), true);
+			CSV.write(args(1), new NamedDistData(["wcc" as String], [result as Any]), true);
 			return true;
 		}
 		else if(args(0).equals("check")) {
@@ -92,5 +76,4 @@ public final class SSSP extends AlgorithmTest {
 			throw new IllegalArgumentException("Unknown command :" + args(0));
 		}
 	}
-	
 }
