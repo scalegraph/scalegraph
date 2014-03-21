@@ -37,7 +37,8 @@ public final class SSSP extends AlgorithmTest {
 			println("Usage: [write|check] <path>");
 			return false;
 		}
-		
+
+		val root = g.source()()(0);
 		val csr = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), "weight", true, false);
 		g.del();
@@ -48,7 +49,7 @@ public final class SSSP extends AlgorithmTest {
 		xpgraph.initVertexValue(Double.POSITIVE_INFINITY);
 		
 		xpgraph.iterate[Double,Long]((ctx :VertexContext[Double, Double, Double, Long], messages :MemoryChunk[Double]) => {
-			var mindist :Double = (ctx.realId() == 0L) ? 0.0 : Double.POSITIVE_INFINITY;
+			var mindist :Double = (ctx.realId() == root) ? 0.0 : Double.POSITIVE_INFINITY;
 			for(i in messages.range())
 				if(mindist > messages(i)) mindist = messages(i);
 			// This is OK because operations on positive infinity produce sensible output.
@@ -84,9 +85,7 @@ public final class SSSP extends AlgorithmTest {
 			return true;
 		}
 		else if(args(0).equals("check")) {
-			// return checkResult(result, args(1), 0.0001);
-			Console.ERR.println("Check Option is not Supported");
-			return false;
+			return checkResult(result, args(1), 0.0001);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown command :" + args(0));

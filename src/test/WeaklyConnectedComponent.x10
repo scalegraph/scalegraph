@@ -33,11 +33,14 @@ public class WeaklyConnectedComponent extends AlgorithmTest {
 		Config.get().stopWatch().lap("Graph construction: ");
 		
 		val xpgraph = XPregelGraph.make[Long, Double](csr);
+		xpgraph.updateInEdge();
 		
 		xpgraph.iterate[Long,Long]((ctx :VertexContext[Long, Double, Long, Long], messages :MemoryChunk[Long]) => {
 			val minid :Long;
-			if(ctx.superstep() == 0)
+			if(ctx.superstep() == 0) {
+				ctx.setValue(Long.MAX_VALUE);
 				minid = ctx.realId();
+			}
 			else
 				minid = Math.min(MathAppend.min(messages), ctx.value());
 
@@ -61,16 +64,14 @@ public class WeaklyConnectedComponent extends AlgorithmTest {
 		xpgraph.once((ctx :VertexContext[Long, Double, Any, Any]) => {
 			ctx.output(ctx.value());
 		});
-		val result = xpgraph.stealOutput[Double]();
+		val result = xpgraph.stealOutput[Long]();
 
 		if(args(0).equals("write")) {
 			CSV.write(args(1), new NamedDistData(["wcc" as String], [result as Any]), true);
 			return true;
 		}
 		else if(args(0).equals("check")) {
-			// return checkResult(result, args(1), 0.0001);
-			Console.ERR.println("Check Option is not Supported");
-			return false;
+			return checkResult(result, args(1), 0L);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown command :" + args(0));

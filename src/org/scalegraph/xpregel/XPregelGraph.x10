@@ -187,7 +187,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 				() => mWorkers().stealOutput[T](index));
 	}
 	
-	public def stealOutput[T]() = stealOutput[T](0);
+	public def stealOutput[T]() :DistMemoryChunk[T] = stealOutput[T](0);
 	
 	/** Returns the aggregated value by the last superstep of previous iteration.
 	 */
