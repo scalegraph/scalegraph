@@ -56,13 +56,13 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return aggVal < 0.001;
+			return superstep == 30;
 		});
 		sw.lap("PageRank Main Iterate (opt)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (opt):"); }
 	}
 	
-	def pagerank_opt_it30(xpregel :XPregelGraph[Double, Double]) {
+	def pagerank_default(xpregel :XPregelGraph[Double, Double]) {
 		val sw = Config.get().stopWatch();
 		
 		xpregel.updateInEdge();
@@ -85,7 +85,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return superstep == 29;
+			return aggVal < 0.001;
 		});
 		sw.lap("PageRank Main Iterate (opt)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (opt):"); }
@@ -114,7 +114,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return aggVal < 0.001;
+			return superstep == 30;
 		});
 		sw.lap("PageRank Main Iterate (naive)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (naive):"); }
@@ -144,7 +144,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return aggVal < 0.001;
+			return superstep == 30;
 		});
 		sw.lap("PageRank Main Iterate (combine)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (combine):"); }
@@ -220,7 +220,7 @@ final class XPregelPageRank extends AlgorithmTest {
 	public def run(args :Array[String](1), g :Graph): Boolean {
 
 		if(args.size < 3) {
-			println("Usage: [naive|opt|combine] [write|check] <path>");
+			println("Usage: [naive|opt|combine|default] [write|check] <path>");
 			return false;
 		}
 		
@@ -243,8 +243,8 @@ final class XPregelPageRank extends AlgorithmTest {
 		else if(args(0).equals("combine")) {
 			pagerank_combine(xpregel);
 		}
-		else if(args(0).equals("it30")) {
-			pagerank_opt_it30(xpregel);
+		else if(args(0).equals("default")) {
+			pagerank_default(xpregel);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown version parameter :" + args(0));
