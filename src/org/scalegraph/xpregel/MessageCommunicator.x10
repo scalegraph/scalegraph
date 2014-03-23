@@ -281,6 +281,7 @@ final class MessageCommunicator[M] { M haszero } {
 		val numCombinedMessages :Long;
 		if(combine != null) {
 			// compact
+			mUCSOffset(0) = 0;
 			for(p in 0..(numPlaces-1)) {
 				mUCSOffset(p + 1) = mUCSOffset(p) + mUCSCount(p);
 			}
