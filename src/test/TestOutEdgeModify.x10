@@ -64,12 +64,12 @@ public class TestOutEdgeModify {
 		xpregel.iterate[Long, Long](
 			(ctx :VertexContext[Long, Long, Long, Long ], messages :MemoryChunk[Long] ) => {
 				val sb = new StringBuilder();	//debug message
-				val myId = ctx.realId();		//ID
+				val myId = ctx.id();				//dstID
 				
 				//remove out edge
 				val e = (ctx.superstep()+myId)%ctx.numberOfVertices();	//global vertex num
 				//super step ha 0 start rashii
-				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
+				sb.add("---superstep "+(ctx.superstep())+" myId "+ myId + " ---\n");
 				
 			//	for (m in messages.range()){
 			//		sb.add("message:"+ messages(m)+"\n");
@@ -78,23 +78,25 @@ public class TestOutEdgeModify {
 				//display current out edges
 				val OEsId = ctx.outEdgesId();	//get dstid
 				for(eI in OEsId){
-					sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) + "\n");
+					sb.add("\t" + myId + "\t->\t" + eI + "\n");
 				}
 				sb.add("----------\n");
 				//display current in edges
 				val IEsId = ctx.inEdgesId();
 				for(eI in IEsId){
-					sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
+					sb.add("\t" + eI + "\t->\t" + myId +"\n");
 				}
+				sb.add("----------\n");
 				
 				//add/remove
-				if(myId != 0L ){
-					if(e!=myId){
-						sb.add(myId + ":\tRemove:\t" + e + "\n");
-						ctx.removeOutEdge(ctx.dstId(e));
+				val arid = ctx.dstId(e);
+				if(myId != 0L){
+					if(/*e*/arid!=myId){
+						sb.add(myId + ":\tRemove:\t" + arid + "\n");
+						ctx.removeOutEdge(arid);
 					}else{
-						sb.add(myId + ":\tAdd   :\t" + e + "\n");
-						ctx.addOutEdge(ctx.dstId(e),0);
+						sb.add(myId + ":\tAdd   :\t" + arid + "\n");
+						ctx.addOutEdge(arid,0);
 					}
 				}
 				

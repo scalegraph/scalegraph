@@ -25,6 +25,7 @@ import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.util.Bitmap;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Utils;
 import org.scalegraph.util.ProfilingDB;
 
 import org.scalegraph.blas.DistSparseMatrix;
@@ -133,24 +134,36 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	}
 	
 	public def updateFewInEdge(list :MemoryChunk[EdgeProvider[E]]){
+		//TODO:tokutei no jouken de koko ni hairu toki ni sude ni mOutEdgeModifyReqWithAR ga okashii. tyu-i
 		val numTeam = mTeam.size();
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
+		val threadRange = 0..(numThreads-1);
 		
 		//---------- pre process ( prepare for exchanging edge difference ) ----------
 		val diffInEdgeCountPerThread = new MemoryChunk[MemoryChunk[Int]](
-				numThreads,
-				(i:Long)=> new MemoryChunk[Int](numTeam));
+				numThreads, (i:Long)=> new MemoryChunk[Int](numTeam));
+		
+		//assert (debug)
+		//honrai ha iranai node kesu
+		val outModReqRange = new MemoryChunk[LongRange](numThreads);
+		for(tid in threadRange){
+			//comment kaijo
+		//	assert(mOutEdgeModifyReqsWithAR(tid).size()-1L == mOutEdgeModifyReqOffsets(tid)(mOutEdgeModifyReqOffsets(tid).size()-1L));
+	//		val outModReqRange = mOutEdgeModifyReqsWithAR(tid).range();	//douti
+			outModReqRange(tid) = 0L..(mOutEdgeModifyReqOffsets(tid)(mOutEdgeModifyReqOffsets(tid).size()-1L)-1L);
+		}
+		
 		//place goto ni otodoke suru data no kazu wo shiraberu
-		Parallel.iter(0..(numThreads-1), (tid:Int)=> {
+		Parallel.iter(threadRange, (tid:Int)=> {
 			val work = diffInEdgeCountPerThread(tid);
-			for(i in mOutEdgeModifyReqsWithAR(tid).range())
+			for(i in outModReqRange(tid)/*mOutEdgeModifyReqsWithAR(tid).range()*/)
 				++work(mDtoV.r(mOutEdgeModifyReqsWithAR(tid)(i).val1));	//TODO: r de ii noka
 		});
 		
 		//diffInEdgeCount	(kansei)
 		val diec = new MemoryChunk[Int](numTeam);
 		for(team in diec.range()){								//Team range
-			for(thread in diffInEdgeCountPerThread.range())	//Thread range
+			for(thread in threadRange)	//Thread range
 				diec(team) += diffInEdgeCountPerThread(thread)(team);	//sum
 		}
 		
@@ -164,18 +177,19 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		);
 		
 		//req ha optimize zumi dakara henkan shite tsukkomu dake?
-		Parallel.iter(0..(numThreads-1), (tid:Int)=> {
+		Parallel.iter(threadRange, (tid:Int)=> {
 			val e = list(tid);
 			val workdata = diffInEdgeDataPerThread(tid);	//ika "work(teamNum)(index)" de access suru
 			val workoff = mOutEdgeModifyReqOffsets(tid);
+			val maxSrcid = workoff.size()-2L;	//tettoribayai
 			val index = new MemoryChunk[Int](numTeam);
-			var srcid :Long = 0;
-			for(i in mOutEdgeModifyReqsWithAR(tid).range()){
+			var srcid :Long = 0L;
+			for(i in outModReqRange(tid)/*mOutEdgeModifyReqsWithAR(tid).range()*/){
 				val target = mOutEdgeModifyReqsWithAR(tid)(i);
 				val dstid = target.val1;	//inEdge's dst(dstid with ARM)
 				val team = mDtoV.r(dstid);
-				while(workoff(srcid+1)<=i)
-					++srcid;
+				while(srcid < maxSrcid && workoff(srcid+1)<=i)
+					srcid++;
 				workdata(team)(index(team)++) = new Tuple3[Long,Long,E](
 						dstid & EdgeProvider.req_NOINFO,
 						mStoD(e.mStartSrcid+srcid) | (dstid & EdgeProvider.req_INFO),	//koko totemo ayashii
@@ -192,7 +206,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val died = new MemoryChunk[Tuple3[Long,Long,E]](dataNum);
 		var dataIndex :Long = 0;
 		for (team in 0..(numTeam-1))
-		for (thread in 0..(numThreads-1)){
+		for (thread in threadRange){
 			val src = diffInEdgeDataPerThread(thread)(team);
 			MemoryChunk.copy(src, 0L, died, dataIndex, src.size());
 			dataIndex += src.size();
@@ -280,6 +294,8 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 				reqoff(i) = reqsIndex;
 			//aaa(result,tid,list,vrange,InEdgeModifyReqOffsets,InEdgeModifyReqsWithAR);
 		});
+		for(i in threadRange)
+			Utils.debugPrintSparseMatrix(InEdgeModifyReqOffsets(i),InEdgeModifyReqsWithAR(i).raw(),0L);	//kono jiten de okashii !
 		EdgeProvider.updateInEdge[V,E](mInEdge, list, mIds, InEdgeModifyReqOffsets, InEdgeModifyReqsWithAR);
 	}
 	
@@ -766,7 +782,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			});
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMPUTE); }
 		
-			// TODO: check
+			// delete existing (old) messages. (maybe)
 			ectx.deleteMessages();
 			
 			// gather statistics
@@ -775,10 +791,15 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 				ectx.sqweezeMessage(vctxs(th));
 			}
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_SQWEEZMES); }
+			
 			// update out edges
 			EdgeProvider.updateOutEdge[V,E](mOutEdge, edgeProviderList, mIds);
 			// update in edges
 			updateFewInEdge(edgeProviderList);
+			// update messageCommunicator's inedge
+			ectx.mInEdgesOffset = mInEdge.offsets;
+			ectx.mInEdgesVertex = mInEdge.vertexes;
+		//	ectx.mInEdgesMask = mInEdgesMask;		iranasou
 			// 
 			EdgeProvider.reInitializeEdgeProvider[E](edgeProviderList);
 			

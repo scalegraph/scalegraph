@@ -32,6 +32,7 @@ public class Utils {
 		}
 	}
 	
+	//betsu ni sparse ja nai tteiu
 	public static def debugPrintSparseMatrix[T](offset:MemoryChunk[Long], value:MemoryChunk[T], identity:Long){
 		@Ifdef("DEBUGPRINT") {
 			debugPrintln("debugPrintSparseMatrix", ""+identity);

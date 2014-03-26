@@ -219,13 +219,18 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				var copyLength :Long = 0L;
 				//TODO: req_NOINFO hitsuyou?
 				//array bound exception taisaku no tame, taisyou no temae made copy
-				val maxlen = oldEdge.size();
-				while((oldEdge(oldEdgeIndex+copyLength) & req_NOINFO) < reqId){		//koko
-					newEdge(newEdgeIndex + copyLength) = oldEdge(oldEdgeIndex + copyLength);
-					newVal(newEdgeIndex + copyLength) = oldVal(oldEdgeIndex + copyLength);
-					++copyLength;
-					if(oldEdgeIndex+copyLength >= maxlen)	//TODO:kitanai?
-						break;
+				val oldlen = oldEdge.size();
+				val newlen = newEdge.size();
+				var oldtarget :Long = oldEdgeIndex + copyLength;
+				var newtarget :Long = newEdgeIndex + copyLength;
+				//optimize: syounari ni naru hou dake < maxlen mireba ii? jouken motto kanryakuka
+				while(	oldtarget < oldlen && newtarget < newlen &&
+						(oldEdge(oldtarget) & req_NOINFO) < reqId){
+					newEdge(newtarget) = oldEdge(oldtarget);
+					newVal(newtarget) = oldVal(oldtarget);
+					copyLength++;
+					oldtarget = oldEdgeIndex + copyLength;
+					newtarget = newEdgeIndex + copyLength;
 				}
 				//MemoryChunk.copy(oldEdge,oldEdgeIndex,newEdge,newEdgeIndex,copyLength);
 				//MemoryChunk.copy(oldVal,oldEdgeIndex,newVal,newEdgeIndex,copyLength);
@@ -300,7 +305,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		val outend = mOutOffset(srcid+1L) - 1L;
 		Algorithm.maskedStableSortTupleKey1(mEdgeModifyReqWithAR.backingStore().subpart(reqStartIdx, reqEndIdx - reqStartIdx + 1));
 		
-		var reqSaveIdx :Long = mEdgeModifyReqOffset(localsrcid);	//reqSaveIdx : fuyasu
+	//	var reqSaveIdx :Long = mEdgeModifyReqOffset(localsrcid);	//reqSaveIdx : fuyasu
 		var outIdx :Long = mOutOffset(srcid);							//outIdx : mitukatta ka douka(fuyasanai)
 		for(reqIdx in reqStartIdx..reqEndIdx){						//reqIdx : katteni fueru
 			val targetid = mEdgeModifyReqWithAR(reqIdx).val1;
@@ -308,10 +313,10 @@ class EdgeProvider [E] /*{ E haszero }*/{
 					((targetid&req_NOINFO) == (mEdgeModifyReqWithAR(reqIdx+1).val1&req_NOINFO)))	// optimize:reqIdx!=reqEndIdx  iru kedo..
 				continue;	//tyofuku jokyo
 			//TODO: vertex zentai wo miru hitsuyou ha nai!
-			//TODO find ni suru
+			//TODO: find ni suru
 			//ayashii?
 			val search = Algorithm.linearSearch(mOutVertex, outIdx..outend, targetid & req_NOINFO);
-			Utils.debugPrintln("\tsearch", "range:"+outIdx+".."+outend+" targetid:"+targetid+" result:"+search);
+		//	Utils.debugPrintln("\tsearch", "range:"+outIdx+".."+outend+" targetid:"+targetid+" result:"+search);
 			if(search.val1){
 				outIdx = search.val2 + 1L;
 				//out ni atta
@@ -390,22 +395,28 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	//if this method is called after edge modify, process may be slow
 	//it is recommended to get edgelist before modifying or cache modifies on local
 	def outEdges(srcid :Long) :Tuple2[MemoryChunk[Long],MemoryChunk[E]] {
-		fixModifiedEdges(srcid);
-		printreqs(0xBEF04E);
-		optimizeReqEdge(srcid);
-		printreqs(0xAF7E4);
 		val len = mOutOffset(srcid + 1L) - mOutOffset(srcid);
-		val lenWithDiff = len + calcEdgeNumDifferential(srcid);
-		
-		mGetEdgeBuf.setSize(lenWithDiff);	//buffer
-		mGetValBuf.setSize(lenWithDiff);
-		updateOutEdge_temp(
-				mGetEdgeBuf.raw(),
-				mGetValBuf.raw(),
-				mOutVertex.subpart(mOutOffset(srcid),len),
-				mOutValue.subpart(mOutOffset(srcid),len),
-				srcid);
-		return new Tuple2[MemoryChunk[Long],MemoryChunk[E]](mGetEdgeBuf.raw(),mGetValBuf.raw());
+		if(mEdgeChanged){
+			fixModifiedEdges(srcid);
+			printreqs(0xBEF04E);
+			optimizeReqEdge(srcid);
+			printreqs(0xAF7E4);
+			val lenWithDiff = len + calcEdgeNumDifferential(srcid);
+			
+			mGetEdgeBuf.setSize(lenWithDiff);	//buffer
+			mGetValBuf.setSize(lenWithDiff);
+			updateOutEdge_temp(
+					mGetEdgeBuf.raw(),
+					mGetValBuf.raw(),
+					mOutVertex.subpart(mOutOffset(srcid),len),
+					mOutValue.subpart(mOutOffset(srcid),len),
+					srcid);
+			return new Tuple2[MemoryChunk[Long],MemoryChunk[E]](mGetEdgeBuf.raw(),mGetValBuf.raw());
+		}else{
+			return new Tuple2[MemoryChunk[Long],MemoryChunk[E]](
+					mOutVertex.subpart(mOutOffset(srcid),len),
+					mOutValue.subpart(mOutOffset(srcid),len));
+		}
 	}
 	
 	def outEdgesId(srcid :Long) :MemoryChunk[Long]{
@@ -476,7 +487,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	}
 	
 	private def printreqs(tid:Long){
-		Utils.debugPrintSparseMatrix(mEdgeModifyReqOffset, mEdgeModifyReqWithAR.raw(), tid);
+	//	Utils.debugPrintSparseMatrix(mEdgeModifyReqOffset, mEdgeModifyReqWithAR.raw(), tid);
 	}
 	
 	
@@ -500,6 +511,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 //		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		
 		/// stash
+		val arrat = new Array[Long](0);
 		val tempReqOff = new MemoryChunk[MemoryChunk[Long]](list.size());
 		val tempReq = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](list.size());
 		for(i in list.range()){
@@ -540,15 +552,13 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			offsetPerThread(tid + 1L) += count;
 		});
 		//convert count to offset
-		for(i in 0..(numThreads-1)) {
+		for(i in 0..(numThreads-1))
 			offsetPerThread(i + 1L) += offsetPerThread(i);
-		}
 		//calc new offset's value (== newVertex's index )
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			newOffset(r.min) = offsetPerThread(tid);	//not "+="
-			for(srcid in (r.min)..(r.max-1L)) {
+			for(srcid in (r.min)..(r.max-1L))
 				newOffset(srcid+1L) += newOffset(srcid);
-			}
 		});
 		newOffset(numVertexes) = offsetPerThread(numThreads);
 		val newNumEdgesNum = offsetPerThread(numThreads);
