@@ -305,7 +305,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		val outend = mOutOffset(srcid+1L) - 1L;
 		Algorithm.maskedStableSortTupleKey1(mEdgeModifyReqWithAR.backingStore().subpart(reqStartIdx, reqEndIdx - reqStartIdx + 1));
 		
-	//	var reqSaveIdx :Long = mEdgeModifyReqOffset(localsrcid);	//reqSaveIdx : fuyasu
+		var reqSaveIdx :Long = mEdgeModifyReqOffset(localsrcid);	//reqSaveIdx : fuyasu
 		var outIdx :Long = mOutOffset(srcid);							//outIdx : mitukatta ka douka(fuyasanai)
 		for(reqIdx in reqStartIdx..reqEndIdx){						//reqIdx : katteni fueru
 			val targetid = mEdgeModifyReqWithAR(reqIdx).val1;

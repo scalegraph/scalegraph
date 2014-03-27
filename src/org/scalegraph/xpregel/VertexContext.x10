@@ -59,6 +59,8 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 			worker :WorkerPlaceGraph[V, E],
 			ctx :MessageCommunicator[M],
 			tid :Long,
+			reqOff :MemoryChunk[Long],
+			req :GrowableMemory[Tuple2[Long,E]],
 			startSrcid :Long) {
 		mWorker = worker;
 		mCtx = ctx;
@@ -67,8 +69,8 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		mEdgeProvider = new EdgeProvider[E](
 				worker.mOutEdge,
 				worker.mInEdge,
-				worker.mOutEdgeModifyReqOffsets(tid),
-				worker.mOutEdgeModifyReqsWithAR(tid),
+				reqOff,
+				req,
 				startSrcid);
 		mUCCMessages = mCtx.messageBuffer(tid);
 		mOut = worker.outBuffer(tid);
