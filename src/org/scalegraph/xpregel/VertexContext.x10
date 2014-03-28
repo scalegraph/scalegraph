@@ -282,13 +282,6 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		outbuf.add(value);
 	}
 	
-	private @Inline def judgeFewInEdgeModify(v:Long) :Boolean{
-		return true;
-		//return mWorker.getDiffInDstSize() + v < (mWorker.mOutEdge.vertexes.size()>>4);
-	}
-	
-	//TODO: add modify edge value ???????
-	//(addOutEdge shitokeba optimizeReqEdges ga modify toshite kaisyaku shite kureru)
 }
 
 

@@ -26,6 +26,8 @@ import org.scalegraph.Config;
 
 import x10.compiler.Inline;
 
+/** method parameter "srcid" is always raw srcid. */
+
 class EdgeProvider [E] /*{ E haszero }*/{
 	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 	private static val reqshift = 60;	//related to NativeAlgorithm/MaskedK1LessThan
@@ -52,7 +54,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	val mGetValBuf :GrowableMemory[E] = new GrowableMemory[E](0L);
 	var mEdgeChanged:Boolean;
 	//TODO: apply this flag
-	var mReqEdgeOptimized:Boolean;
+//	var mReqEdgeOptimized:Boolean;
 	public val mStartSrcid :Long;
 	
 	//called from each threads
@@ -72,7 +74,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		mEdgeModifyReqWithAR = req;
 		mStartSrcid = startSrcid;
 		mEdgeChanged = false;
-		mReqEdgeOptimized = false;
+//		mReqEdgeOptimized = false;
 	}
 	
 	// call this method after inedgeUpdate
@@ -80,13 +82,13 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		val numThreads :Int = Runtime.NTHREADS;
 		Parallel.iter(0..(numThreads-1), (tid:Int)=> {
 			val e = list(tid);
-			//TODO: optimize
+			//zero reset
 			for(i in e.mEdgeModifyReqOffset.range()){
 				e.mEdgeModifyReqOffset(i) = 0L;
 			}
 			e.mEdgeModifyReqWithAR.setSize(0L);
 			e.mEdgeChanged = false;
-			e.mReqEdgeOptimized = false;
+//			e.mReqEdgeOptimized = false;
 		});
 	}
 	
@@ -119,10 +121,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		newOffset(0) = 0L;
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
-			
-			//-----debug
-		//	e.printreqs(tid);
-			//-----/debug
 			
 			// optimize whole ReqEdge in e
 			// calcEdgeNumDifferential de tsugi no index ga hitsuyou nanode ikki ni compute
@@ -157,7 +155,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
 			for(srcid in r) {
-				//vertex goto ni update
+				//update each vertex
 				val newlen=newOffset(srcid+1L)-newOffset(srcid);
 				val oldlen=outOffset(srcid+1L)-outOffset(srcid);
 				e.updateOutEdge_temp(
@@ -168,16 +166,10 @@ class EdgeProvider [E] /*{ E haszero }*/{
 					srcid
 				);
 			}
-			// kore hitsuyou
+			//needed
 			e.mOutOffset = newOffset;
 			e.mOutVertex = newVertex;
 			e.mOutValue = newValue;
-		//	for(i in e.mEdgeModifyReqOffset.range())
-		//		e.mEdgeModifyReqOffset(i) = e.mEdgeModifyReqWithAR.size();			//TODO: okashisou 0rest?
-		//notice: furui shiyou
-			
-			//	e.mEdgeModifyReqWithAR = xx; <- henkou nashi
-			//TODO: amarinimo nagasugi tara reset shite mNeedsAllUpdateInEdge flag toka tateru
 			assert newOffset(r.max + 1L) == offsetPerThread(tid + 1L);
 		});
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_2); }
@@ -208,12 +200,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			//judge ARM
 			val reqARM = ARM(req(i).val1);
 			
-		//	if(reqARM == 0)
-		//		continue;	//no operation is required
-			//TODO: NO!!!
-			//koko de nani ka syori wo shinai to shita de nanimo wakarazu copy shite simau!
-			//tsuide ni oldEdgeIndex ga kawaranai kara kazuga awazu ni assertion error!
-			
 			//copy unrelated edge
 			{
 				var copyLength :Long = 0L;
@@ -224,7 +210,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				var oldtarget :Long = oldEdgeIndex + copyLength;
 				var newtarget :Long = newEdgeIndex + copyLength;
 				//optimize: syounari ni naru hou dake < maxlen mireba ii? jouken motto kanryakuka
-				while(	oldtarget < oldlen && newtarget < newlen &&
+				while(oldtarget < oldlen && newtarget < newlen &&
 						(oldEdge(oldtarget) & req_NOINFO) < reqId){
 					newEdge(newtarget) = oldEdge(oldtarget);
 					newVal(newtarget) = oldVal(oldtarget);
@@ -279,7 +265,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		return count(1) - count(0);
 	}
 	
-	def optimizeReqEdge(srcid :LongRange){	//whole array (tsukatte mo yoi (ima tsukatte nai(true option iranakatta)))
+	def optimizeReqEdge(srcid :LongRange){
 		var dif :Long = 0L;
 		for(si in (srcid.min)..(srcid.max-1L)){
 			dif = optimizeReqEdge(si, dif, false);
@@ -299,27 +285,25 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	 */
 	private def optimizeReqEdge(srcid :Long, modDiffReqStartSavingOffset :Long, reduceBottom :Boolean) :Long{
 		val localsrcid = srcid - mStartSrcid;
-		val reqStartIdx = mEdgeModifyReqOffset(localsrcid);// not mEdgeModifyReqOffset(srcid), moto no offset wo toridashite iru
+		val reqStartIdx = mEdgeModifyReqOffset(localsrcid);						//not mEdgeModifyReqOffset(srcid)
 		mEdgeModifyReqOffset(localsrcid) += modDiffReqStartSavingOffset;
-		val reqEndIdx = mEdgeModifyReqOffset(localsrcid+1L) - 1L;				//koko
+		val reqEndIdx = mEdgeModifyReqOffset(localsrcid+1L) - 1L;
 		val outend = mOutOffset(srcid+1L) - 1L;
 		Algorithm.maskedStableSortTupleKey1(mEdgeModifyReqWithAR.backingStore().subpart(reqStartIdx, reqEndIdx - reqStartIdx + 1));
 		
-		var reqSaveIdx :Long = mEdgeModifyReqOffset(localsrcid);	//reqSaveIdx : fuyasu
-		var outIdx :Long = mOutOffset(srcid);							//outIdx : mitukatta ka douka(fuyasanai)
-		for(reqIdx in reqStartIdx..reqEndIdx){						//reqIdx : katteni fueru
+		var reqSaveIdx :Long = mEdgeModifyReqOffset(localsrcid);
+		var outIdx :Long = mOutOffset(srcid);
+		for(reqIdx in reqStartIdx..reqEndIdx){
 			val targetid = mEdgeModifyReqWithAR(reqIdx).val1;
 			if(reqIdx!=reqEndIdx && 
 					((targetid&req_NOINFO) == (mEdgeModifyReqWithAR(reqIdx+1).val1&req_NOINFO)))	// optimize:reqIdx!=reqEndIdx  iru kedo..
 				continue;	//tyofuku jokyo
 			//TODO: vertex zentai wo miru hitsuyou ha nai!
 			//TODO: find ni suru
-			//ayashii?
 			val search = Algorithm.linearSearch(mOutVertex, outIdx..outend, targetid & req_NOINFO);
-		//	Utils.debugPrintln("\tsearch", "range:"+outIdx+".."+outend+" targetid:"+targetid+" result:"+search);
 			if(search.val1){
 				outIdx = search.val2 + 1L;
-				//out ni atta
+				//exist in mOutVertex
 				/*
 				switch(ARM(targetid)){
 				case 0://rmv
@@ -346,7 +330,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 					mEdgeModifyReqWithAR(reqSaveIdx++) = mEdgeModifyReqWithAR(reqIdx);
 				}
 			}else{
-				//out ni nakatta
+				//not exist in mOutVertex
 				/*
 				switch(ARM(targetid)){
 				case 0://rmv
@@ -366,7 +350,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		
 		if(reduceBottom){
 			//no need to move mEdgeModifyReqWithAR contents because when reduceBottom is true, reqSaveIdx points end of contents.
-			/*MemoryChunk.copy(	//it must use memmove
+			/*MemoryChunk.copy(	//memmove
 					mEdgeModifyReqWithAR.backingStore(),
 					reqEndIdx + 1,
 					mEdgeModifyReqWithAR.backingStore(),
@@ -375,8 +359,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			mEdgeModifyReqWithAR.setSize(mEdgeModifyReqWithAR.backingStore().size() + reqSaveIdx - (reqEndIdx + 1));*/
 			
 			mEdgeModifyReqWithAR.setSize(reqSaveIdx);
-			//TODO: koko ni kagirazu mEdgeModifyReqWithAR no size ga tiisaku narutoki ha setsize suru
-			//			(fixModifydEdges de index no hou ga ookii size ni sarete shimau!!)
 			mEdgeModifyReqOffset(localsrcid + 1L) = reqSaveIdx;
 		}
 		return reqSaveIdx - mEdgeModifyReqOffset(localsrcid+1L);
@@ -388,19 +370,14 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		return ((l & req_INFO) >> reqshift) as Int;
 	}
 	
-	/** method parameter "srcid" is always rawSrcid. */
-	// TODO: kokokara: ika no srcid ga localsrcid to RawSrcid de gottya. naosou
-	
 	//return current edges id list
 	//if this method is called after edge modify, process may be slow
-	//it is recommended to get edgelist before modifying or cache modifies on local
+	//it is recommended to get edgelist before modifying, or cache modifies on local
 	def outEdges(srcid :Long) :Tuple2[MemoryChunk[Long],MemoryChunk[E]] {
 		val len = mOutOffset(srcid + 1L) - mOutOffset(srcid);
 		if(mEdgeChanged){
 			fixModifiedEdges(srcid);
-			printreqs(0xBEF04E);
 			optimizeReqEdge(srcid);
-			printreqs(0xAF7E4);
 			val lenWithDiff = len + calcEdgeNumDifferential(srcid);
 			
 			mGetEdgeBuf.setSize(lenWithDiff);	//buffer
@@ -446,7 +423,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	}
 	
 	def clearOutEdges(srcid :Long) {
-		// TODO:offset ga kono jiten de yuukou ka shiraberu
 		mEdgeModifyReqWithAR.setSize(mEdgeModifyReqOffset(srcid));	//delete requests
 		removeOutEdges(outEdgesId(srcid));
 		mEdgeChanged = true;
@@ -486,21 +462,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		mEdgeModifyReqOffset(localsrcid+1L) = mEdgeModifyReqWithAR.size();
 	}
 	
-	private def printreqs(tid:Long){
-	//	Utils.debugPrintSparseMatrix(mEdgeModifyReqOffset, mEdgeModifyReqWithAR.raw(), tid);
-	}
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	//update outedge to tougou shitai NE
 	//this method intercepts EdgeProvider functions.
 	static def updateInEdge[V,E](
 			inEdge :GraphEdge[E],
@@ -510,7 +471,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			reqs :MemoryChunk[GrowableMemory[Tuple2[Long,E]]]) /*{ V haszero, E haszero }*/{
 //		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		
-		/// stash
+		// stash
 		val arrat = new Array[Long](0);
 		val tempReqOff = new MemoryChunk[MemoryChunk[Long]](list.size());
 		val tempReq = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](list.size());
@@ -521,7 +482,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			list(i).mEdgeModifyReqOffset = reqOffs(i);
 			list(i).mEdgeModifyReqWithAR = reqs(i);
 		}
-		///
 		
 		val numThreads = Runtime.NTHREADS;
 		val numVertexes = ids.numberOfLocalVertexes();
@@ -536,11 +496,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		newOffset(0) = 0L;
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
-			
-			//-----debug
-		//	e.printreqs(tid);
-			//-----/debug
-			
 			//calc newOffset
 			var count:Long = 0L;
 			for(srcid in r) {
@@ -572,7 +527,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				//vertex goto ni update
 				val newlen=newOffset(srcid+1L)-newOffset(srcid);
 				val oldlen=inOffset(srcid+1L)-inOffset(srcid);
-				e.updateOutEdge_temp(									//koko!
+				e.updateOutEdge_temp(
 						newVertex.subpart(newOffset(srcid), newlen),
 						newValue.subpart(newOffset(srcid), newlen),
 						inVertex.subpart(inOffset(srcid), oldlen),
@@ -596,11 +551,10 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		inEdge.vertexes = newVertex;
 		inEdge.value = newValue;
 		
-		/// pop
+		// pop
 		for(i in list.range()){
 			list(i).mEdgeModifyReqOffset = tempReqOff(i);
 			list(i).mEdgeModifyReqWithAR = tempReq(i);
 		}
-		///
 	}
 }

@@ -32,47 +32,6 @@ public class Utils {
 		}
 	}
 	
-	//betsu ni sparse ja nai tteiu
-	public static def debugPrintSparseMatrix[T](offset:MemoryChunk[Long], value:MemoryChunk[T], identity:Long){
-		@Ifdef("DEBUGPRINT") {
-			debugPrintln("debugPrintSparseMatrix", ""+identity);
-			if(value.size()==0L){
-				Console.OUT.println("\t<empty>");
-				Console.OUT.flush();
-				return;
-			}
-			Console.OUT.print("\t{");
-			for(i in offset.range())
-				Console.OUT.print("("+i+","+offset(i)+"),");
-			Console.OUT.println("\b}");
-			
-			Console.OUT.print("\t{");
-			for(i in value.range())
-				Console.OUT.print("("+i+","+value(i)+"),");
-			Console.OUT.println("\b}");
-			
-			/*var offsetIndex :Long = 0L;
-			var vstartIndex :Long = 0L;
-			for(valueIndex in 0L..(value.size()-1L)){
-				while(offsetIndex < offset.size()-1 && 
-						valueIndex >= offset(offsetIndex+1L)){
-					++offsetIndex;
-					vstartIndex = offset(offsetIndex);
-				}
-				Console.OUT.println("\t("+offsetIndex+","+(valueIndex-vstartIndex)+")\t= "+value(valueIndex));
-			}*/
-			
-			/*for(offsetIndex in 0L..(offset.size()-2L)){
-				val vstartIndex:Long = offset(offsetIndex);
-				var valueIndex:Long = vstartIndex;
-				do{
-					Console.OUT.println("\t("+offsetIndex+","+(valueIndex-vstartIndex)+")\t= "+value(valueIndex));
-				}while(++valueIndex < offset(offsetIndex+1L));
-			}*/
-			Console.OUT.flush();
-		}
-	}
-	
 	@Native("c++", "(#T )(0)")
 	public static native def getDummyZeroValue[T]():T;
 
