@@ -179,7 +179,8 @@ public final class StronglyConnectedComponent2 {
 			ctx.setValue(value);
 			val ins = ctx.outEdgesId().size();
 			val outs = ctx.inEdgesId().size();
-			if((ins==1L && outs==0L) || (ins==0L && outs==1L)) {
+			//delete some conditions with no test(kishimoto)
+			if(outs==0L || ins==0L ) {
 				ctx.value().changeFrom(ctx.realId());
 				ctx.value().changeTo(ctx.realId());
 				ctx.value().changeEnd();
@@ -215,37 +216,27 @@ public final class StronglyConnectedComponent2 {
 								else ctx.aggregate(1);
 							}
 							if(curRec>0){
-				///				if(curRec%2==0) { 
-									if(ctx.value().prevFromId != ctx.value().prevToId) {
-										ctx.value().changePrev(ctx.realId());
-				///					}
+								if(ctx.value().prevFromId != ctx.value().prevToId) {
+									ctx.value().changePrev(ctx.realId());
 									
 								}
 								if(ctx.value().prevFromId != ctx.value().prevToId)  {
 									updateAll = true;
 								}
 								else {
-									// ctx.value().prevFromId == ctx.value().prevToId, 
-									// so, this vertex end procession.
 									if(ctx.value().prevFromId == ctx.realId() && ctx.value().ended==false) 
 										ctx.aggregate(1);
 									ctx.value().changeEnd();
 									ctx.voteToHalt();
 									return ;
 								}
-					///			if(curRec%2==0) {
-									ctx.value().changePAddress(ctx.id());
-					///			}
+								ctx.value().changePAddress(ctx.id());
 							}
 							if(updateAll) {
 								updateFrom = updateTo = true;
-					///			if(curRec%2==0) if(ctx.realId() < 100) updateFrom = updateTo = true;
-					///			if(curRec%2==1) if(ctx.realId() >=100) updateFrom = updateTo = true;
 							}
 							
 						}
-						//					 	Console.OUT.println(updateFrom + " "+ updateTo);
-						//						Console.OUT.println(ctx.realId()+" "+ctx.value().prevFromId+" "+ctx.value().prevToId+" "+ctx.value().fromId+" "+ctx.value().toId);
 						if(ctx.value().ended) {
 							ctx.voteToHalt();
 						}
@@ -255,16 +246,13 @@ public final class StronglyConnectedComponent2 {
 							if(mes.prevFromId == ctx.value().prevFromId && mes.prevToId == ctx.value().prevToId) {
 								if(mes.dir) {
 									if(ctx.value().toId>mes.id)  {
-										//										Console.OUT.println(ctx.value().fromId+" "+ctx.value().toId + " "+ mes.id+"a");
 										ctx.value().changeTo(mes.id);
 										ctx.value().changePAddress(mes.parentAddress);
-										//									    Console.OUT.println(ctx.value().fromId+" "+ctx.value().toId + " "+ mes.id+"b");
 										updateTo = true;
 									}
 								}
 								else {
 									if(ctx.value().fromId>mes.id) {
-										//val value = ctx.value();
 										ctx.value().changeFrom(mes.id);
 										updateFrom = true;
 									}
@@ -288,21 +276,21 @@ public final class StronglyConnectedComponent2 {
 
 					(values :MemoryChunk[Long]) => MathAppend.sum(values),
 					(superstep :Int, aggVal :Long) => {
-						//						Console.OUT.println("finalCheck" + superstep + " " + aggVal);
 						if(superstep==0)
 							if(cl.home==here)
 								cl()() = aggVal;
 						return (superstep >= 1000);
 					} );
 			sum += cl()();
-			if(recursion%2==1) {
-				if(recursion>1 && sum==0L) {
-					Console.OUT.println("endofRecursion" + recursion );
-					break;
-				}
-				numOfCluster += sum;
-				sum = 0;
+			
+			// delete "if" with no test(kishimoto). 
+			if(recursion>1 && sum==0L) {
+				Console.OUT.println("endofRecursion" + recursion );
+				break;
 			}
+			numOfCluster += sum;
+			sum = 0;
+			
 		}
 //		val hoge = xpregel.placeGroup();
 		val numOfVerteces = xpregel.ids().numberOfGlobalVertexes();
