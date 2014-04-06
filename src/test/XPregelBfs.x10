@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -198,7 +198,7 @@ final class XPregelBfs extends AlgorithmTest {
 		val sw = Config.get().stopWatch();
 		val numEdges = g.numberOfEdges();
 		val root = g.source()()(0);
-		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), false, true);
+		val edgeIndexMatrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), false, false);
 		sw.lap("Graph construction");
 		val xpregel = new XPregelGraph[Long, Byte](edgeIndexMatrix);
 		

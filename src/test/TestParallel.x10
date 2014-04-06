@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ public final class TestParallel {
     Console.OUT.println("Sort Test");
     val len = 20;
     val rand = new Random();
-    val randomInput = new MemoryChunk[Int](len);
+    val randomInput = MemoryChunk.make[Int](len);
     for ( j in randomInput.range()) {
       randomInput(j) = rand.nextInt();
     }
@@ -45,7 +45,7 @@ public final class TestParallel {
   static def partitionExample(): void{
     Console.OUT.println("Partite Test");
     val n = 15;
-    val input = new MemoryChunk[Int](n + 1, (i :Long)=> i as Int );
+    val input = MemoryChunk.make[Int](n + 1, (i :Long)=> i as Int );
 
     finish for (i in 1..n) {
       Console.OUT.println("n: " + i + ", input: " + input);
@@ -57,11 +57,11 @@ public final class TestParallel {
  static def scanExample(): void{
     Console.OUT.println("Scan Exapmle");
     val m = 50L;
-    val result = new MemoryChunk[Long](m+1);
+    val result = MemoryChunk.make[Long](m+1);
 
 	val c = 1L;
 	val d = 2L;
-	val input = new MemoryChunk[Long](m, (i:Long)=> c *(i%d == (d - 1) ? 1 : 0) );
+	val input = MemoryChunk.make[Long](m, (i:Long)=> c *(i%d == (d - 1) ? 1 : 0) );
 	
 	val retval = Parallel.scan(input.range(), result, 0L, (i:Long,x:Long)=> input(i) + x, (x:Long, y:Long)=> x+y);
 	

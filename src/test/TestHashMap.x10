@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -41,8 +41,8 @@ final class TestHashMap extends STest {
         Console.OUT.println("test1 start");
         var sum : Double = 0.;
         val t = new HashMap[Int, Int](n);
-        val ks = new MemoryChunk[Int](ne);
-        val vs = new MemoryChunk[Int](ne);
+        val ks = MemoryChunk.make[Int](ne);
+        val vs = MemoryChunk.make[Int](ne);
         for (i in (0..(ne - 1))) {
             ks(i as Long) = i as Int;
             vs(i as Long) = i as Int;
@@ -83,8 +83,8 @@ final class TestHashMap extends STest {
 
     def benchGet() {
         val t = new HashMap[Int, Int](n);
-        val ks = new MemoryChunk[Int](ne);
-        val vs = new MemoryChunk[Int](ne);
+        val ks = MemoryChunk.make[Int](ne);
+        val vs = MemoryChunk.make[Int](ne);
 
         for (i in ks.range()) {
             ks(i) = i as Int;
@@ -116,8 +116,8 @@ final class TestHashMap extends STest {
 
     def runNewKeys() {
         val t = new HashMap[Int, Int](100);
-        val ks = new MemoryChunk[Int](10);
-        val vs = new MemoryChunk[Int](10);
+        val ks = MemoryChunk.make[Int](10);
+        val vs = MemoryChunk.make[Int](10);
 
         for (i in ks.range()) {
             ks(i) = i as Int;
@@ -125,7 +125,7 @@ final class TestHashMap extends STest {
         }
         t.put(ks, vs);
 
-        val keys = new MemoryChunk[Int](10);
+        val keys = MemoryChunk.make[Int](10);
         keys(0) = 10;
         keys(1) = 10;
         keys(2) = 10;
@@ -150,8 +150,8 @@ final class TestHashMap extends STest {
 
     def benchNewKeys() {
         val t = new HashMap[Int, Int](n);
-        val ks = new MemoryChunk[Int](ne);
-        val vs = new MemoryChunk[Int](ne);
+        val ks = MemoryChunk.make[Int](ne);
+        val vs = MemoryChunk.make[Int](ne);
 
         for (i in ks.range()) {
             ks(i) = i as Int;
@@ -184,11 +184,11 @@ final class TestHashMap extends STest {
         val n1 = 50;
         val n2 = 50;
 
-        val ks1 = new MemoryChunk[Int](n1);
-        val vs1 = new MemoryChunk[Int](n1);
+        val ks1 = MemoryChunk.make[Int](n1);
+        val vs1 = MemoryChunk.make[Int](n1);
 
-        val ks2 = new MemoryChunk[Int](n2);
-        val vs2 = new MemoryChunk[Int](n2);
+        val ks2 = MemoryChunk.make[Int](n2);
+        val vs2 = MemoryChunk.make[Int](n2);
 
         for (i in (0..(n1 - 1))) {
             ks1(i as Long) = i as Int;
@@ -212,8 +212,8 @@ final class TestHashMap extends STest {
     def run4() {
         val t = new HashMap[Int, Int](10);
         val n1 = 5;
-        val ks1 = new MemoryChunk[Int](n1);
-        val vs1 = new MemoryChunk[Int](n1);
+        val ks1 = MemoryChunk.make[Int](n1);
+        val vs1 = MemoryChunk.make[Int](n1);
 
         for (i in (0..(n1 - 1))) {
             ks1(i as Long) = i as Int;
@@ -228,8 +228,8 @@ final class TestHashMap extends STest {
         val n = 100000;
         val e = 40000;
         val t = new HashMap[Long, Long](n);
-        val ks = new MemoryChunk[Long](e);
-        val vs  = new MemoryChunk[Long](e);
+        val ks = MemoryChunk.make[Long](e);
+        val vs  = MemoryChunk.make[Long](e);
         val r = new Random(1L);
         val sw = new StopWatch();
         for (i in 0..(e - 1)) {

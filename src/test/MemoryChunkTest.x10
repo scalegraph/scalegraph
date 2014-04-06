@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -40,10 +40,10 @@ final class MemoryChunkTest extends STest {
 	}
 
 	public def run(args: Array[String](1)): Boolean {
-    	val mc1 = new MemoryChunk[SampleStruct](10, (i :Long) => SampleStruct(i as Int, i));
-    	val mc2 = new MemoryChunk[SampleClass](10);
-    //	val mc2 = new MemoryChunk[SampleClass](10, (Long)=>new SampleClass());
-    	val mc3 = new MemoryChunk[Any](10, (i :Long)=>new SampleClass(i as Int, i));
+    	val mc1 = MemoryChunk.make[SampleStruct](10, (i :Long) => SampleStruct(i as Int, i));
+    	val mc2 = MemoryChunk.make[SampleClass](10);
+    //	val mc2 = MemoryChunk.make[SampleClass](10, (Long)=>new SampleClass());
+    	val mc3 = MemoryChunk.make[Any](10, (i :Long)=>new SampleClass(i as Int, i));
     //	for(i in mc2.range()) { mc2(i).a = i as Int; mc2(i).b = i; }
     	
     	at(here.next()) {

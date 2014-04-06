@@ -1,3 +1,15 @@
+/*
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
+
 package org.scalegraph.blas;
 
 import org.scalegraph.util.DistMemoryChunk;
@@ -38,8 +50,8 @@ public final class BLAS {
 					//	val columnTeam = Team2(B.dist().columnTeam());
 					val rowTeam = Team2(B.dist().rowTeam());
 					//
-					//	val refVector = new MemoryChunk[T](localWidth);
-					val refVector = new MemoryChunk[T](localHeight);
+					//	val refVector = MemoryChunk.make[T](localWidth);
+					val refVector = MemoryChunk.make[T](localHeight);
 					
 					//	columnTeam.allgather(A()(), refVector);
 					rowTeam.allgather(A()(), refVector);
@@ -104,9 +116,9 @@ public final class BLAS {
 				val columnTeam = Team2(A.dist().columnTeam());
 				val rowTeam = Team2(A.dist().rowTeam());
 				//
-				val refVector = new MemoryChunk[T](localWidth);
-				val tmpSendVector = new MemoryChunk[T](localHeight);
-				val tmpRecvVector = new MemoryChunk[T](localHeight);
+				val refVector = MemoryChunk.make[T](localWidth);
+				val tmpSendVector = MemoryChunk.make[T](localHeight);
+				val tmpRecvVector = MemoryChunk.make[T](localHeight);
 				
 				columnTeam.allgather(x(), refVector);
 				

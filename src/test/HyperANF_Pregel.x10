@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -90,14 +90,14 @@ final class HyperANF_Pregel extends STest {
 		if(B==5) alpha = 0.697;
 		else if(B==6) alpha = 0.769;
 		else alpha = 0.7213 / (1.00+1.073/M);
-		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](new MemoryChunk[Double](niter+2)));
+		val results: GlobalRef[Cell[MemoryChunk[Double]]] = new GlobalRef[Cell[MemoryChunk[Double]]](new Cell[MemoryChunk[Double]](MemoryChunk.make[Double](niter+2)));
 		xpregel.iterate[MemoryChunk[Byte],Double](
 				(ctx :VertexContext[MemoryChunk[Byte], Double, MemoryChunk[Byte], Double], messages :MemoryChunk[MemoryChunk[Byte]]) => {
 					bufferedPrintln("V[" + ctx.realId() + "] " + messages.size());
 
 					var counterB:MemoryChunk[Byte];
 					if(ctx.superstep()==0) {
-						val counterA = new MemoryChunk[Byte](M);
+						val counterA = MemoryChunk.make[Byte](M);
 						for(i in counterA.range()) counterA(i) = 0;
 						val rand = new Random(ctx.realId(ctx.id()), 1000);
 						val pos = rand.nextLong()%M;

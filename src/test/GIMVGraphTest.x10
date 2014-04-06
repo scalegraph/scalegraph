@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -208,7 +208,7 @@ final class GIMVGraphTest extends STest {
 		val end = (diff :Double) => true;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
+				() => MemoryChunk.make[Double](csr.ids().numberOfLocalVertexes2N()));
 		
 		GIMV.main2DCSR(csr, weight, vector, map, combine, assign, end);
 		
@@ -254,7 +254,7 @@ final class GIMVGraphTest extends STest {
 		val end = (diff :Double) => diff == 0.0;//Math.sqrt(diff) < 0.0001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
+				() => MemoryChunk.make[Double](csr.ids().numberOfLocalVertexes2N()));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val v = vector();
@@ -320,7 +320,7 @@ final class GIMVGraphTest extends STest {
 		val end = (diff :Double) => false;//Math.sqrt(diff) < 0.0001;
 		
 		val vector = new DistMemoryChunk[Double](team.placeGroup(),
-				() => new MemoryChunk[Double](csr.ids().numberOfLocalVertexes2N()));
+				() => MemoryChunk.make[Double](csr.ids().numberOfLocalVertexes2N()));
 		
 		team.placeGroup().broadcastFlat(() => {
 			val iv = 1.0 / n;

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ public class Random implements CustomSerialization {
 	}
 
 	public def serialize():x10.io.SerialData {
-		val arr = new MemoryChunk[Int](5);
+		val arr = MemoryChunk.make[Int](5);
 		arr(0) = state.z1;
 		arr(1) = state.z2;
 		arr(2) = state.z3;

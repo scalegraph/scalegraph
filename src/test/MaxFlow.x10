@@ -1,3 +1,15 @@
+/*
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
+
 package test;
 
 import x10.util.Team;
@@ -103,7 +115,7 @@ public class MaxFlow {
 		var height:Long;
 		var isExcessNonZero:Boolean;
 		private def this() {
-			this.adjVertex = new MemoryChunk[AdjVertex](0);
+			this.adjVertex = MemoryChunk.make[AdjVertex](0);
 			// excess = 0L;
 			excess = 0.0;
 			height = 0L;
@@ -216,7 +228,7 @@ public class MaxFlow {
 					}
 					if(ctx.superstep()==1) {
 						val sizeMes = messages.size();
-						var tmp:MemoryChunk[Long] = new MemoryChunk[Long](sizeMes);
+						var tmp:MemoryChunk[Long] = MemoryChunk.make[Long](sizeMes);
 						for(i in messages.range()) {
 							tmp(i) = messages(i).val1 * 2;
 							if(messages(i).isOutEdge) tmp(i)++;
@@ -231,7 +243,7 @@ public class MaxFlow {
 					}
 					if(ctx.superstep()==2) {
 						val sizeMes = messages.size();
-						var tmp:MemoryChunk[Long] = new MemoryChunk[Long](sizeMes);
+						var tmp:MemoryChunk[Long] = MemoryChunk.make[Long](sizeMes);
 						for(i in messages.range()) {
 							tmp(i) = messages(i).val1 * 2;
 							if(messages(i).isOutEdge) tmp(i)++;
@@ -240,7 +252,7 @@ public class MaxFlow {
 						algo.sort[Long, InitMessage](tmp,messages);
 
 						val mesSize = messages.size();
-						val adjVertex = new MemoryChunk[AdjVertex](mesSize);
+						val adjVertex = MemoryChunk.make[AdjVertex](mesSize);
 						for(i in messages.range()) {
 							adjVertex(i) = new AdjVertex(messages(i).val1, messages(i).val2, messages(i).isOutEdge, messages(i).capacity);
 						}
@@ -480,7 +492,7 @@ public class MaxFlow {
 								for(i in messages.range()) {
 									maxim = Math.max( maxim, messages(i) );
 								}
-								var count:MemoryChunk[Long] = new MemoryChunk[Long](maxim+2); 
+								var count:MemoryChunk[Long] = MemoryChunk.make[Long](maxim+2); 
 
 								for(i in count.range()) 
 									count(i) = 0L;

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -37,12 +37,15 @@ public final class OnedR {
 	/** Vertex ID to Source ID Converter */
 	public static final struct VtoS {
 		val lgr :Int;
+		val rmask :Long;
 		
 		public def this(ids :IdStruct) {
 			lgr = ids.lgr;
+			rmask = ((1L << lgr) - 1L);
 		}
 		
 		public operator this(id :Long) :Long = (id >> lgr);
+		public def r(id :Long) :Int = (id & rmask) as Int;
 	}
 
 	/** Destination ID to Vertex ID Converter */

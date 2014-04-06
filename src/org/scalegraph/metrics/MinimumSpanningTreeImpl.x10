@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ public final class MinimumSpanningTreeImpl {
 		    vertex.root = vid;
 		    
 		    if (ids.size() > 0) {
-		        val table = new MemoryChunk[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
+		        val table = MemoryChunk.make[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
 		        vertex.edgeTable = table;
 		    } else {
 		        vertex.edgeTable = MemoryChunk.getNull[EdgeInfo]();

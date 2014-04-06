@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -108,12 +108,11 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		}
 		val numThreads = Runtime.NTHREADS;
 		val numVertexes = ids.numberOfLocalVertexes();
-		val offsetPerThread = new MemoryChunk[Long](numThreads + 1L,0,true);
-
+		val offsetPerThread = MemoryChunk.make[Long](numThreads + 1L,0,true);
 		val outOffset = outEdge.offsets;
 		val outVertex = outEdge.vertexes;
 		val outValue = outEdge.value;
-		val newOffset = new MemoryChunk[Long](numVertexes + 1L,0,false); //ensure not to be 0 initialized
+		val newOffset = MemoryChunk.make[Long](numVertexes + 1L,0,false); //ensure not to be 0 initialized
 		
 		//optimize & calc newOffset's diff (== newVertex's index diff )
 		newOffset(0) = 0L;
@@ -269,7 +268,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		val start = mEdgeModifyReqOffset(localsrcid);// not mEdgeModifyReqOffset(srcid)
 		val end = mEdgeModifyReqOffset(localsrcid+1L) - 1L;
 		
-		val count = new MemoryChunk[Long](3, 0, true);
+		val count = MemoryChunk.make[Long](3, 0, true);
 		for(i in start..end) ++count(ARM(mEdgeModifyReqWithAR(i).val1));
 		return count(1) - count(0);
 	}
@@ -304,12 +303,17 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		var outIdx :Long = mOutOffset(srcid);							//outIdx : mitukatta ka douka(fuyasanai)
 		for(reqIdx in reqStartIdx..reqEndIdx){						//reqIdx : katteni fueru
 			val targetid = mEdgeModifyReqWithAR(reqIdx).val1;
+			// If there are multiple requests for the same vertex, we ignore all the requests except the last one.
+			// Therefore if the next requests is for the same vertex, skip the current request.
 			if(reqIdx!=reqEndIdx && 
 					((targetid&req_NOINFO) == (mEdgeModifyReqWithAR(reqIdx+1).val1&req_NOINFO)))	// optimize:reqIdx!=reqEndIdx  iru kedo..
 				continue;	//tyofuku jokyo
 			//TODO: vertex zentai wo miru hitsuyou ha nai!
 			//TODO find ni suru
 			//ayashii?
+			// (Ueno) I think he wanted to do 
+			// "search = std::lower_bound(mOutVertex.pointer() + outIdx, mOutVertex.pointer() + outend + 1, targetid & req_NOINFO);".
+			// His code increases the algorithm order. The algorithm order of above code is O(n) but the his code is O(n^2).
 			val search = Algorithm.linearSearch(mOutVertex, outIdx..outend, targetid & req_NOINFO);
 			Utils.debugPrintln("\tsearch", "range:"+outIdx+".."+outend+" targetid:"+targetid+" result:"+search);
 			if(search.val1){
@@ -333,11 +337,13 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				}
 				*/
 				if(ARM(targetid) == 1) {
+					// We convert the add request for the existing edge to a modify request.
 					mEdgeModifyReqWithAR(reqSaveIdx++) = 
 						new Tuple2((mEdgeModifyReqWithAR(reqIdx).val1 & req_NOINFO/*~req_ADD*/) | req_MOD,
 								mEdgeModifyReqWithAR(reqIdx).val2);
 				}
 				else {
+					// The other requests pass through.
 					mEdgeModifyReqWithAR(reqSaveIdx++) = mEdgeModifyReqWithAR(reqIdx);
 				}
 			}else{
@@ -353,6 +359,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 					mEdgeModifyReqWithAR(reqSaveIdx++) = mEdgeModifyReqWithAR(reqIdx);
 					break;
 				}*/
+				// We ignore the remove requests for the non existing edge.
 				if(ARM(targetid) != 0){
 					mEdgeModifyReqWithAR(reqSaveIdx++) = mEdgeModifyReqWithAR(reqIdx);
 				}
@@ -479,16 +486,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		Utils.debugPrintSparseMatrix(mEdgeModifyReqOffset, mEdgeModifyReqWithAR.raw(), tid);
 	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	//update outedge to tougou shitai NE
 	//this method intercepts EdgeProvider functions.
 	static def updateInEdge[V,E](
@@ -500,8 +497,8 @@ class EdgeProvider [E] /*{ E haszero }*/{
 //		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		
 		/// stash
-		val tempReqOff = new MemoryChunk[MemoryChunk[Long]](list.size());
-		val tempReq = new MemoryChunk[GrowableMemory[Tuple2[Long,E]]](list.size());
+		val tempReqOff = MemoryChunk.make[MemoryChunk[Long]](list.size());
+		val tempReq = MemoryChunk.make[GrowableMemory[Tuple2[Long,E]]](list.size());
 		for(i in list.range()){
 			tempReqOff(i) = list(i).mEdgeModifyReqOffset;
 			tempReq(i) = list(i).mEdgeModifyReqWithAR;

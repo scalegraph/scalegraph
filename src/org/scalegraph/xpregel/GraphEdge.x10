@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ final class GraphEdge [E] /*{ E haszero }*/ {
 		val numEdges = m.vertexes.size();
 		offsets = m.offsets;
 		vertexes = m.vertexes;
-		value = new MemoryChunk[E](numEdges);
+		value = MemoryChunk.make[E](numEdges);
 	}*/
 	
 	def this() { }

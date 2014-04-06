@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -429,17 +429,17 @@ public class FBIOSupport {
 		
 		public def this(numAttributes :Int, numBlocks :Int) {
 			this.numBlocks = numBlocks;
-			offsets = new MemoryChunk[Long](numBlocks + 1);
+			offsets = MemoryChunk.make[Long](numBlocks + 1);
 			chunkSizes = new Array[MemoryChunk[Long]](numBlocks,
-					(i:Int)=>new MemoryChunk[Long](numAttributes * 2));
-			numLocalBlocks = new MemoryChunk[Int](0);
+					(i:Int)=>MemoryChunk.make[Long](numAttributes * 2));
+			numLocalBlocks = MemoryChunk.make[Int](0);
 		}
 
 		public def this(team :Team, numBlocks :Int) {
 			this.numBlocks = numBlocks;
-			offsets = new MemoryChunk[Long](numBlocks + 1);
+			offsets = MemoryChunk.make[Long](numBlocks + 1);
 			chunkSizes = new Array[MemoryChunk[Long]](numBlocks);
-			numLocalBlocks = new MemoryChunk[Int](team.size());
+			numLocalBlocks = MemoryChunk.make[Int](team.size());
 		}
 		
 		public def toString() {

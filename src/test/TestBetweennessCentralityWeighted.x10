@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.test.AlgorithmTest;
 import org.scalegraph.api.BetweennessCentrality;
 import org.scalegraph.util.Dist2D;
+import org.scalegraph.Config;
 import org.scalegraph.io.CSV;
 
 final class TestBetweennessCentralityWeighted extends AlgorithmTest {
@@ -54,10 +55,30 @@ final class TestBetweennessCentralityWeighted extends AlgorithmTest {
 	        bc.weighted = true;
 	        bc.directed = directed;
 	        val matrix = g.createDistSparseMatrix[Double](
-	                Dist2D.make1D(g.team(), Dist2D.DISTRIBUTE_COLUMNS), bc.weightAttrName, bc.directed, true);
+	                Config.get().distXPregel(), bc.weightAttrName, bc.directed, true);
 	        val N = g.numberOfVertices();
 	        result = bc.execute(matrix, N);
 	    } 
+	    else if (args(0).equals("low_apprx")) {
+	        // Test low-level api with exact bc computation
+	        val bc = new BetweennessCentrality();
+	        val directed =true;
+	        bc.weighted =true;
+	        bc.source = [Long.parseLong(args(3))];
+	        bc.directed = directed;
+	        bc.exactBc = false;
+	        val team = g.team();
+	        val matrix = g.createDistSparseMatrix[Double](
+	                Config.get().distXPregel(),
+	                bc.weightAttrName, bc.directed, true); 
+	        g.del();
+	        Config.get().stopWatch().lap("Graph construction: ");
+	        val N = g.numberOfVertices(); 
+	        val sw = new org.scalegraph.util.StopWatch();
+	        sw.start();
+	        result = bc.execute(matrix, N);
+	        sw.lap("BC elasped time");
+	    }
 	    else {
 	        throw new IllegalArgumentException("Unknown level parameter :" + args(0));
 	    }

@@ -1,3 +1,15 @@
+/*
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ *  (C) Copyright ScaleGraph Team 2011-2012.
+ */
+
+
 package org.scalegraph.api;
 
 import x10.util.Team;
@@ -69,7 +81,7 @@ public final class PageRank {
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, false);
-		/// Config.get().stopWatch().lap("Graph construction");
+		Config.get().stopWatch().lap("Graph construction");
 		return execute(matrix);
 	}
 	
@@ -94,7 +106,7 @@ public final class PageRank {
 		val xpgraph = XPregelGraph.make[Double, Double](matrix);
 		xpgraph.updateInEdge();
 		
-		/// sw.lap("UpdateInEdge");
+		sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		xpgraph.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
@@ -110,9 +122,9 @@ public final class PageRank {
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
-			/// if (here.id == 0) {
-			///	sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
-			/// }
+			if (here.id == 0) {
+				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
+			}
 			return (superstep >= niter || aggVal < eps);
 		});
 
@@ -123,7 +135,7 @@ public final class PageRank {
 		});
 		val result = xpgraph.stealOutput[Double]();
 		
-		/// sw.lap("Retrieve output");
+		sw.lap("Retrieve output");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Retrieve Output:"); }
 		
 		return result;

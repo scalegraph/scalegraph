@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -32,18 +32,32 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.id.OnedC;
 
 /**
- * a main entry for processing 
- * graph with X-Pregel
- * 
- * V: Vertex value type
- * E: Edge value type
+ * A main entry for XPregelGraph, which is an optimized implementation of Google's Pregel.
+ * To use the XPregel, follow the instruction described below.
+ * <ul>
+ * <li>1. Load and create a distributed sparse matrix with a compatible distribution, 
+ * which can be obtain by Config.get().distXPregel() method.</li>
+ * <li>2. Create an XPregelGraph object. You can use a XPregelGraph.make method as well as a constructor of 
+ * XPregelGraph class.</li>
+ * <li>3. Invoke iterate(), once() and output() methods as many times as you want to.</li>
+ * <li>4. Take out the output with stealOutput() method.</li>
+ * </ul>
+ * @param <V> Vertex value type
+ * @param <E> Edge value type
  */
 public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterable[Vertex[V, E]]  {
+	/** The alias of region identification class for the profilier. */
 	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
 	
+	/**
+	 * Creates an instance with an unweighted graph,
+	 * If you want to input a weighted graph, use make() method.
+	 * 
+	 * @param edgeIndexMatrix an input graph
+	 */
 	public def this(edgeIndexMatrix :DistSparseMatrix[Long])
 	{
 		val team = Config.get().worldTeam();
@@ -57,7 +71,14 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		mTeam = new Team2(team);
 		mWorkers = workers;
 	}
-	
+
+	/**
+	 * Creates an instance with a weighted graph.
+	 * 
+	 * @param graph an weighted graph
+	 * @param <V> Vertex value type
+	 * @param <E> Edge value type
+	 */
 	public static def make[V, E](graph :DistSparseMatrix[E]) /*{V haszero, E haszero}*/ {
 		val team = Config.get().worldTeam();
 		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
@@ -66,6 +87,14 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		return g;
 	}
 	
+	/**
+	 * Created an instance with a weighted graph and an initial vertex value.
+	 * 
+	 * @param graph an weighted graph
+	 * @param iv an initial vertex value
+	 * @param <V> Vertex value type
+	 * @param <E> Edge value type
+	 */
 	public static def make[V, E](graph :DistSparseMatrix[E], iv :V) /*{V haszero, E haszero}*/ {
 		val team = Config.get().worldTeam();
 		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
@@ -94,14 +123,25 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		}
 	}
 	
+	/**
+	 * The XPregel logs are printed using the specified printer object.
+	 * If it is not provided, The XPregel logs are not printed.
+	 * 
+	 * @param printer The printer object that is used to output the XPregel logs
+	 * @param level The level of detail. With the lower level, the more detail logs are printed.
+	 */
 	public def setLogPrinter(printer :Printer, level :Int) {
 		ensurePlaceRoot();
 		mWorkers().mLogPrinter = printer;
 		mWorkers().mLogLevel = level;
 	}
 	
+	/**
+	 * Returns the vertex id converter which the XPregel is using.
+	 */
 	public def ids() = mWorkers().mIds;
 	
+	/** (Deprecated) */
 	public def initVertexValue(value : V)
 	{
 		ensurePlaceRoot();
@@ -116,7 +156,8 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
-	
+
+	/** (Deprecated) */
 	public def initEdgeValue(value : E)
 	{
 		ensurePlaceRoot();
@@ -187,7 +228,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 				() => mWorkers().stealOutput[T](index));
 	}
 	
-	public def stealOutput[T]() = stealOutput[T](0);
+	public def stealOutput[T]() :DistMemoryChunk[T] = stealOutput[T](0);
 	
 	/** Returns the aggregated value by the last superstep of previous iteration.
 	 */
@@ -240,6 +281,15 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	
 	/**
 	 * Execute superstep.
+	 * 
+	 * 
+	 * The combiner and aggregator are optional parameters. You can pass null for these two parameters.
+	 * 
+	 *  
+	 * @param compute A compute closure.
+	 * @param aggregator An aggreagator closure.
+	 * @param combiner A combiner closure. 
+	 * @param end An end closure. If the end closure returns true, the iteration is terminated.
 	 */
 	public def iterate[M,A](
 			compute :(VertexContext[V,E,M,A], MemoryChunk[M]) => void,

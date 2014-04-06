@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -62,8 +62,8 @@ public final class Remote {
 		}
 		scatterGather.sum();
 		val numRequests = scatterGather.sendCount();
-		val requests = new MemoryChunk[Long](numRequests);
-		val reqIdx = new MemoryChunk[Long](numRequests);
+		val requests = MemoryChunk.make[Long](numRequests);
+		val reqIdx = MemoryChunk.make[Long](numRequests);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
@@ -79,7 +79,7 @@ public final class Remote {
 		}
 		val recvRequests = scatterGather.scatter(requests);
 		val recvCount = scatterGather.recvCount();
-		val reply = new MemoryChunk[T](recvCount);
+		val reply = MemoryChunk.make[T](recvCount);
 		Parallel.iter(recvRequests.range(), (tid :Long, r :LongRange) => {
 			for(i in r)
 				reply(i) = src(recvRequests(i));
@@ -94,7 +94,7 @@ public final class Remote {
 	public static @Inline def get[T](team :Team, array :MemoryChunk[T],
 		range :LongRange, f: (index:Long, get:(Long, Int, Long)=>void)=>void)
 	{
-		val src = new MemoryChunk[T](array.size());
+		val src = MemoryChunk.make[T](array.size());
 		MemoryChunk.copy(array, 0L, src, 0L, array.size());
 		get(team, src, array, range, f);
 	}
@@ -118,8 +118,8 @@ public final class Remote {
 		}
 		scatterGather.sum();
 		val numRequests = scatterGather.sendCount();
-		val requests = new MemoryChunk[Long](numRequests);
-		val reqIdx = new MemoryChunk[Long](numRequests);
+		val requests = MemoryChunk.make[Long](numRequests);
+		val reqIdx = MemoryChunk.make[Long](numRequests);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
@@ -135,7 +135,7 @@ public final class Remote {
 		}
 		val recvRequests = scatterGather.scatter(requests);
 		val recvCount = scatterGather.recvCount();
-		val reply = new MemoryChunk[T](recvCount);
+		val reply = MemoryChunk.make[T](recvCount);
 		Parallel.iter(recvRequests.range(), (tid :Long, r :LongRange) => {
 			for(i in r)
 				reply(i) = getter(recvRequests(i));
@@ -172,8 +172,8 @@ public final class Remote {
 		}
 		scatterGather.sum();
 		val numRequests = scatterGather.sendCount();
-		val reqVal = new MemoryChunk[T](numRequests);
-		val reqIdx = new MemoryChunk[Long](numRequests);
+		val reqVal = MemoryChunk.make[T](numRequests);
+		val reqIdx = MemoryChunk.make[Long](numRequests);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
@@ -215,8 +215,8 @@ public final class Remote {
 		}
 		scatterGather.sum();
 		val numRequests = scatterGather.sendCount();
-		val reqVal = new MemoryChunk[T](numRequests);
-		val reqIdx = new MemoryChunk[Long](numRequests);
+		val reqVal = MemoryChunk.make[T](numRequests);
+		val reqIdx = MemoryChunk.make[Long](numRequests);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);

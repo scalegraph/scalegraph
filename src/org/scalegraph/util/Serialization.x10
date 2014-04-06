@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ public class Serialization {
 	public static def serialize[T](data :MemoryChunk[T], data_offset :Int, data_count :Int): MemoryChunk[Byte]
 	{
 		val ser_count = count_ser_size(0L, data, data_offset, data_count);
-		val ser_data = new MemoryChunk[Byte](ser_count);
+		val ser_data = MemoryChunk.make[Byte](ser_count);
 		write_ser_data(0L, data, data_offset, data_count, ser_data, 0, ser_count);
 
 		return ser_data;
@@ -48,7 +48,7 @@ public class Serialization {
 
 		ser_offsets(0) = 0;
 		for (i in 0..(places-2)) ser_offsets(i+1) = ser_offsets(i) + ser_counts(i);
-		val ser_data = new MemoryChunk[Byte](ser_size);
+		val ser_data = MemoryChunk.make[Byte](ser_size);
 		finish for (p in 0..(places-1)) async {
 			write_ser_data(p, data, data_offsets(p), data_counts(p), ser_data, ser_offsets(p), ser_counts(p));
 		}

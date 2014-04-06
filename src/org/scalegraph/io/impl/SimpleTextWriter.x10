@@ -1,5 +1,5 @@
 /*
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -45,8 +45,8 @@ public class SimpleTextWriter {
 		
 		public def this(fw :FileWriter, strClousure :MemoryChunk[(sb :SStringBuilder, idx :Long) => void]) {
 			val nthreads = Runtime.NTHREADS;
-			this.frontBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
-			this.backBuffer = new MemoryChunk[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
+			this.frontBuffer = MemoryChunk.make[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
+			this.backBuffer = MemoryChunk.make[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
 			this.fw = fw;
 			this.strClousure = strClousure;
 		}
@@ -121,7 +121,7 @@ public class SimpleTextWriter {
 
 		val typeId = data.typeId();
 		val colNum = typeId.size;
-		val atts = new MemoryChunk[CSVAttributeHandler](colNum,
+		val atts = MemoryChunk.make[CSVAttributeHandler](colNum,
 				(i :Long) => CSVAttributeHandler.create(typeId(i as Int), false));
 		val dmc = data.data();
 		

@@ -1,5 +1,5 @@
 /* 
- *  This file is part of the ScaleGraph project (https://sites.google.com/site/scalegraph/).
+ *  This file is part of the ScaleGraph project (http://scalegraph.org).
  * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
@@ -42,26 +42,18 @@ public final struct ScatterGather {
 		bufferWidth = Math.max(CACHE_LINE/4, nChunk);
 
 		val size = bufferWidth * (maxThreads*2 + 1) + (nChunk*2 + 1);
-		val dist = (new MemoryChunk[Long](size, CACHE_LINE)).distributor();
+		val dist = (MemoryChunk.make[Long](size, CACHE_LINE)).distributor();
 
 		threadCounts = dist.next(bufferWidth*maxThreads);
 		threadOffsets = dist.next(bufferWidth*(maxThreads+1));
 		sendCounts = dist.next(nChunk);
 		sendOffsets = dist.next(nChunk + 1);
 		dist.checkFinish();
-
-		for(i in threadCounts.range()) threadCounts(i) = 0;
-	}
-
-	public def reset() {
-		for(i in threadCounts.range()) threadCounts(i) = 0;
 	}
 
 	public def counts(tid :Int) {
 		val mc = threadCounts.subpart(bufferWidth*tid, bufferWidth);
-		@Ifndef("NO_BOUNDS_CHECKS") {
-			for(i in 0..(bufferWidth-1)) assert(mc(i) == 0L);
-		}
+		for(i in mc.range()) mc(i) = 0;
 		return mc;
 	}
 
@@ -130,14 +122,14 @@ public final struct ScatterGather {
 		}
 		team.alltoall(sendCounts, recvCounts);
 		Team2.countOffsets(recvCounts, recvOffsets, 0);
-		val recvData = new MemoryChunk[T](recvOffsets(teamSize));
+		val recvData = MemoryChunk.make[T](recvOffsets(teamSize));
 		team.alltoallv(sendData, sendOffsets, sendCounts, recvData, recvOffsets, recvCounts);
 		return recvData;
 	}
 
 	public def gather[T](sendData :MemoryChunk[T]) {
 		val teamSize = team.size();
-		val recvData = new MemoryChunk[T](sendOffsets(teamSize));
+		val recvData = MemoryChunk.make[T](sendOffsets(teamSize));
 		team.alltoallv(sendData, recvOffsets, recvCounts, recvData, sendOffsets, sendCounts);
 		return recvData;
 	}
