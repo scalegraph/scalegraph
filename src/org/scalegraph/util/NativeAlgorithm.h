@@ -16,8 +16,10 @@
 #include <stdint.h>
 
 #include <cstddef>
+#include <iterator>
 #include <algorithm>
 #include <functional>
+//#include <org/scalegraph/util/tuple/Tuple2.h>
 
 namespace org { namespace scalegraph { namespace util {
 
@@ -64,6 +66,46 @@ namespace org { namespace scalegraph { namespace util {
 		r2 = tmp;
 	}
 
+	/*template <typename T>
+		class pointer_single_iterator
+			: public std::iterator<std::random_access_iterator_tag, T>
+		{
+		public:
+			T* p;
+
+			typedef ptrdiff_t difference_type;
+			//typedef T reference;
+
+			pointer_single_iterator(T* v) : p(v) { }
+
+			// Can be default-constructed
+			pointer_single_iterator() { }
+			// Accepts equality/inequality comparisons
+			bool operator==(const pointer_single_iterator& ot) const { return p == ot.p; }
+			bool operator!=(const pointer_single_iterator& ot) const { return p != ot.p; }
+			// Can be dereferenced
+			T& operator*(){ return *p; }	//*p
+			// Can be incremented and decremented
+			pointer_single_iterator operator++(int) { pointer_single_iterator old(*this); ++p; return old; }
+			pointer_single_iterator operator--(int) { pointer_single_iterator old(*this); --p; return old; }
+			pointer_single_iterator& operator++() { ++p; return *this; }
+			pointer_single_iterator& operator--() { --p; return *this; }
+			// Supports arithmetic operators + and - between an iterator and an integer value, or subtracting an iterator from another
+			pointer_single_iterator operator+(const difference_type n) { pointer_single_iterator t(p+n); return t; }
+			pointer_single_iterator operator-(const difference_type n) { pointer_single_iterator t(p-n); return t; }
+			size_t operator-(const pointer_single_iterator& o) { return p - o.p; }	//yobareta gawa ga const de nai rashii zo!
+			// Supports inequality comparisons (<, >, <= and >=) between iterators
+			bool operator<(const pointer_single_iterator& o) { return p < o.p; }
+			bool operator>(const pointer_single_iterator& o) { return p > o.p; }
+			bool operator<=(const pointer_single_iterator& o) { return p <= o.p; }
+			bool operator>=(const pointer_single_iterator& o) { return p >= o.p; }
+			// Supports compound assinment operations += and -=
+			pointer_single_iterator& operator+=(const difference_type n) { p += n; return *this; }
+			pointer_single_iterator& operator-=(const difference_type n) { p -= n; return *this; }
+			// Supports offset dereference operator ([])
+			T& operator[](const difference_type n) { return p[n]; }
+		};*/
+
 	template <typename T1, typename T2>
 	class pointer_pair_iterator
 		: public std::iterator<std::random_access_iterator_tag,
@@ -109,6 +151,56 @@ namespace org { namespace scalegraph { namespace util {
 		reference operator[](const difference_type n) { return reference(first[n], second[n]); }
 	};
 
+	template <typename T>
+	struct K1LessThan{
+		bool operator() (const T& a, const T& b) const {
+			return a.FMGL(val1) < b.FMGL(val1);
+		}
+	};
+
+	template <typename T>
+	static void StableSort_TupleK1(T* pointer, size_t count){
+		std::stable_sort(pointer, pointer+count, K1LessThan<T>());
+	}
+
+	template <typename T>
+	struct MaskedK1LessThan{
+		bool operator() (const T& a, const T& b) const {
+			return (a.FMGL(val1) & ((1LL<<(sizeof(a.FMGL(val1))*8)-1)>>4))
+					< (b.FMGL(val1) & ((1LL<<(sizeof(a.FMGL(val1))*8)-1)>>4));
+		}
+	};
+
+	template <typename T>
+	static void MaskedStableSort_TupleK1(T* pointer, size_t count){
+		std::stable_sort(pointer, pointer+count, MaskedK1LessThan<T>());
+	}
+
+	template <typename T>
+	struct MaskedK2LessThan{
+		bool operator() (const T& a, const T& b) const {
+			return (a.FMGL(val2) & ((1LL<<(sizeof(a.FMGL(val2))*8)-1)>>4))
+					< (b.FMGL(val2) & ((1LL<<(sizeof(a.FMGL(val2))*8)-1)>>4));
+		}
+	};
+
+	template <typename T>
+	static void MaskedStableSort_TupleK2(T* pointer, size_t count){
+		std::stable_sort(pointer, pointer+count, MaskedK2LessThan<T>());
+	}
+
+	template <typename T>
+	struct K2LessThan{
+		bool operator() (const T& a, const T& b) const {
+			return a.FMGL(val2) < b.FMGL(val2);
+		}
+	};
+
+	template <typename T>
+	static void StableSort_TupleK2(T* pointer, size_t count){
+		std::stable_sort(pointer, pointer+count, K2LessThan<T>());
+	}
+
     template<typename IterKey>
     void sort1(IterKey* begin_key, size_t count)
     {
@@ -116,10 +208,10 @@ namespace org { namespace scalegraph { namespace util {
     }
 
     template<typename IterKey, typename Compare>
-        void sort1(IterKey* begin_key, size_t count, Compare comp)
-        {
-            std::sort(begin_key, begin_key + count, comp);
-        }
+	void sort1(IterKey* begin_key, size_t count, Compare comp)
+	{
+		std::sort(begin_key, begin_key + count, comp);
+	}
 
 	template<typename IterKey, typename IterValue>
 	void sort2(IterKey* begin_key, IterValue* begin_value, size_t count)

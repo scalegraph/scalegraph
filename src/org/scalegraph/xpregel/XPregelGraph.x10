@@ -38,7 +38,7 @@ import org.scalegraph.graph.id.OnedC;
  * V: Vertex value type
  * E: Edge value type
  */
-public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
+public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterable[Vertex[V, E]]  {
 	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
@@ -58,7 +58,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 		mWorkers = workers;
 	}
 	
-	public static def make[V, E](graph :DistSparseMatrix[E]) {V haszero, E haszero} {
+	public static def make[V, E](graph :DistSparseMatrix[E]) /*{V haszero, E haszero}*/ {
 		val team = Config.get().worldTeam();
 		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
 			(team.placeGroup(), () => new WorkerPlaceGraph[V, E](team, graph.ids())));
@@ -66,7 +66,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 		return g;
 	}
 	
-	public static def make[V, E](graph :DistSparseMatrix[E], iv :V) {V haszero, E haszero} {
+	public static def make[V, E](graph :DistSparseMatrix[E], iv :V) /*{V haszero, E haszero}*/ {
 		val team = Config.get().worldTeam();
 		val g = new XPregelGraph[V, E](team, PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]]
 		(team.placeGroup(), () => new WorkerPlaceGraph[V, E](team, graph.ids())));
@@ -154,7 +154,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 	 */
 	public def range() = 0L..(size()-1L);
 	
-	private static class VertexIterator[V, E] implements Iterator[Vertex[V, E]]
+	private static class VertexIterator[V, E] /*{ V haszero, E haszero }*/ implements Iterator[Vertex[V, E]] 
 	{
 		val mWorker :WorkerPlaceGraph[V, E];
 		var cur :Long;
@@ -245,7 +245,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 			compute :(VertexContext[V,E,M,A], MemoryChunk[M]) => void,
 			aggregator :(MemoryChunk[A])=>A,
 			combiner :(MemoryChunk[M]) => M,
-			end :(Int,A)=>Boolean){ M haszero, A haszero}
+			end :(Int,A)=>Boolean) { M haszero, A haszero}
 	{
 		ensurePlaceRoot();
 		if(compute == null) {
@@ -266,7 +266,7 @@ public final class XPregelGraph[V,E] implements Iterable[Vertex[V, E]] {
 	public def iterate[M,A](
 			compute :(ctx:VertexContext[V,E,M,A],messages:MemoryChunk[M]) => void, 
 			aggregator :(MemoryChunk[A])=>A,
-			end :(Int,A)=>Boolean){ M haszero, A haszero}
+			end :(Int,A)=>Boolean) { M haszero, A haszero}
 	{
 		ensurePlaceRoot();
 		if(compute == null) {

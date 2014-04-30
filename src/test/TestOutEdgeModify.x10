@@ -1,15 +1,3 @@
-/*
- *  This file is part of the ScaleGraph project (http://scalegraph.org).
- *
- *  This file is licensed to You under the Eclipse Public License (EPL);
- *  You may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *      http://www.opensource.org/licenses/eclipse-1.0.php
- *
- *  (C) Copyright ScaleGraph Team 2011-2012.
- */
-
-
 package test;
 
 import x10.util.Team;
@@ -35,7 +23,7 @@ import org.scalegraph.xpregel.XPregelGraph;
  *   3
  */
 
-public class TestEdgeModify {
+public class TestOutEdgeModify {
 	public static def main(args:Array[String](1)) {
 		
 		//-----initialize team
@@ -65,7 +53,7 @@ public class TestEdgeModify {
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + " [ms]");
 		
 		//set all vertex value as 0L 
-	//	xpregel.initVertexValue(0L);
+		xpregel.initVertexValue(0L);
 		
 		//make stringbuilder
 		Console.OUT.println("make stringBuilder");
@@ -74,46 +62,55 @@ public class TestEdgeModify {
 		//-----start of work
 		Console.OUT.println("start work");
 		xpregel.iterate[Long, Long](
-			(ctx :VertexContext[Long, Long, Long, Long ],
-					messages :MemoryChunk[Long] ) => {
-				//temp string
-				val sb = new StringBuilder();
-				//ID
-				val myId = ctx.realId();
+			(ctx :VertexContext[Long, Long, Long, Long ], messages :MemoryChunk[Long] ) => {
+				val sb = new StringBuilder();	//debug message
+				val myId = ctx.id();				//dstID
+				
 				//remove out edge
-				val e = (myId+1)%ctx.numberOfVertices();
-
+				val e = (ctx.superstep()+myId)%ctx.numberOfVertices();	//global vertex num
 				//super step ha 0 start rashii
-				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
+				sb.add("---superstep "+(ctx.superstep())+" myId "+ myId + " ---\n");
 				
-				for (m in messages){
-					sb.add("message:"+ m +"\n");
-				}
-				
-				if(myId != 0L && (ctx.superstep() as Long)==myId){
-					sb.add(myId + ":\tRemove:\t" + e + "\n");
-					removeOutEdge(ctx,ctx.dstId(e));
-				}
+			//	for (m in messages.range()){
+			//		sb.add("message:"+ messages(m)+"\n");
+			//	}
 				
 				//display current out edges
-				val OEsId = ctx.outEdgesId();
+				val OEsId = ctx.outEdgesId();	//get dstid
 				for(eI in OEsId){
-					sb.add(myId + "->" + ctx.realId(eI) + "\n");
+					sb.add("\t" + myId + "\t->\t" + eI + "\n");
+				}
+				sb.add("----------\n");
+				//display current in edges
+				val IEsId = ctx.inEdgesId();
+				for(eI in IEsId){
+					sb.add("\t" + eI + "\t->\t" + myId +"\n");
+				}
+				sb.add("----------\n");
+				
+				//add/remove
+				val arid = ctx.dstId(e);
+				if(myId != 0L){
+					if(/*e*/arid!=myId){
+						sb.add(myId + ":\tRemove:\t" + arid + "\n");
+						ctx.removeOutEdge(arid);
+					}else{
+						sb.add(myId + ":\tAdd   :\t" + arid + "\n");
+						ctx.addOutEdge(arid,0);
+					}
 				}
 				
-				atomic {	//atomic ga nai to hukusuu thread de shinu
-					mesBuf().add(sb.toString());
-				}
+				atomic { mesBuf().add(sb.toString()); }
 				
-				if(ctx.superstep()>=ctx.numberOfVertices()-1){	//koko de vote hantei
+				//halt vote
+				if(ctx.superstep()>=ctx.numberOfVertices()-1){
 					ctx.voteToHalt();
 				}else{
 					//send dummy message
-					if(myId==0L){
+					if(myId==0L)
 						ctx.sendMessageToAllNeighbors(myId);
-					}else if(myId < ctx.superstep()){
+					else if(myId < ctx.superstep())
 						ctx.sendMessageToAllNeighbors(myId);
-					}
 				}
 			},
 			(values :MemoryChunk[Long]) => 0L,	//returns 0 with no cost
@@ -135,27 +132,6 @@ public class TestEdgeModify {
 		Console.OUT.println("Finish application");	
 	}
 	
-	public static def removeOutEdge(ctx :VertexContext[Long, Long, Long, Long ],dstId :Long){
-		//Console.OUT.println("\tEnter removeOutEdge:dstId="+dstId);
-		val temp = ctx.outEdges();
-		val len = temp.get1().size();	//motono nagasa
-		//Console.OUT.println("\t len:="+len);
-		//temp ha outEdges no copy rashii
-		ctx.clearOutEdges();
-
-		//TODO:subpart tsukaou
-		//modified  len -> len-1
-		for(i in 0..(len - 1)) {		//length -> index
-			//Console.OUT.println("\t  i:="+i+" temp.get1()(i):="+temp.get1()(i));
-			if(temp.get1()(i)!=dstId){	//keshitakatta dst de nakereba
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" add:i="+i);
-				ctx.addOutEdge(temp.get1()(i),temp.get2()(i));
-			}else{
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" NoOp:i="+i);
-			}
-		}
-		//Console.OUT.println("\tQuit removeOutEdge:"+dstId);
-	}
 }	
 
 
