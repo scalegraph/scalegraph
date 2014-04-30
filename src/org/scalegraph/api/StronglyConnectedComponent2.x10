@@ -195,8 +195,7 @@ public final class StronglyConnectedComponent2 {
 		var sum:Long = 0;
 		while(recursion < niter ) {
 			if(niter==recursion+1) {
-				Console.OUT.println("OUT on recursion");
-				
+				throw new Exception("End of recursion. Please set more large niter.");
 			}
 			val end_hoge_time = System.currentTimeMillis();
 			//			Console.OUT.println("proc time: "+(end_hoge_time-start_read_time)+" millis");
@@ -283,7 +282,6 @@ public final class StronglyConnectedComponent2 {
 					} );
 			sum += cl()();
 			
-			// delete "if" with no test(kishimoto). 
 			if(recursion>1 && sum==0L) {
 				Console.OUT.println("endofRecursion" + recursion );
 				break;

@@ -208,6 +208,9 @@ public final class StronglyConnectedComponent {
 		var recursion:Int = 0;
 		var numOfCluster:Long = 0; 
 		while(recursion<niter) {
+			if(niter==recursion+1) {
+				throw new Exception("End of recursion. Please set more large niter.");
+			}
 			//			Console.OUT.println("recursion, maximalCluster" + recursion +" "+ numOfCluster);
 			recursion++;
 			/* phaseA : using BFSlike algorithm.
