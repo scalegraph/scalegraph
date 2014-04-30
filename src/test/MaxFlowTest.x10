@@ -24,16 +24,19 @@ final class MaxFlowTest extends AlgorithmTest {
 	}
 	
 	public def run(args :Array[String](1), g :Graph): Boolean {
-		if(args.size < 3) {
-			println("Usage: [high|low] [write|check] <path>");
+		if(args.size < 5) {
+			println("Usage: [high|low] check s t answer(s!=t)");
 			return false;
 		}
 		
-		
+		val sourceId = Long.parse(args(2));
+		val sinkId = long.parse(args(3));
+		if(sourceId == sinkId)
+			throw new IllegalArgumentException("sourceId == sinkId. Check args.");
 //		val result = org.scalegraph.api.MaxFlow.run(g);
 		val result :org.scalegraph.api.MaxFlow.Result;
 		if(args(0).equals("high")) {
-			result = org.scalegraph.api.MaxFlow.run(g);
+			result = org.scalegraph.api.MaxFlow.run(g, sourceId, sinkId);
 		}
 		else if(args(0).equals("low")) {
 //			val matrix = g.createDistSparseMatrix[Long](Config.get().distXPregel(), "weight", true, true);
@@ -42,7 +45,7 @@ final class MaxFlowTest extends AlgorithmTest {
 			val matrix = g.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 			val edgeValue = g.createDistAttribute[Double](matrix, false, "weight");
 			g.del();
-			result = org.scalegraph.api.MaxFlow.run(matrix, edgeValue);
+			result = org.scalegraph.api.MaxFlow.run(matrix, edgeValue, sourceId, sinkId);
 		}
 		else {
 			throw new IllegalArgumentException("Unknown level parameter :" + args(0));
@@ -51,7 +54,7 @@ final class MaxFlowTest extends AlgorithmTest {
 		if(args(1).equals("check")) {
 			val mf = result.maxFlow;
 			
-			if(MathAppend.abs((mf+1.0) / ( Double.parse(args(2)) + 1.0 ) - 1.0) > 0.01   ) {
+			if(MathAppend.abs((mf+1.0) / ( Double.parse(args(4)) + 1.0 ) - 1.0) > 0.01   ) {
 				throw new IllegalArgumentException("Answer is wrong");
 			}
 			return true;
