@@ -41,7 +41,7 @@ public final class MinimumSpanningTreeImpl {
     public static final class VertexValue {
         var root: Long;
         var edgeTable: MemoryChunk[EdgeInfo];
-        var incomingEdges: MemoryChunk[EdgeInfo];
+        var incomingEdges: MemoryChunk[Long];
         var n: Long;
         public def this() {
             root = -1;
@@ -163,7 +163,8 @@ public final class MinimumSpanningTreeImpl {
 		            val v = ctx.value();
 		            val selectedRoot = v.n;
 		            val myRoot = v.root;
-		            
+		            v.incomingEdges = MemoryChunk.make[Long](messages.size(), (i: Long) => messages(i).srcRoot);
+
 		            // Remove duplicate edge
 		            for (i in messages.range()) {
 		                val m = messages(i);
@@ -178,7 +179,7 @@ public final class MinimumSpanningTreeImpl {
 		                    // Console.OUT.printf("\t\tsel(%ld): (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), m.src, m.dst, m.srcRoot, m.dstRoot, m.w);
 		                }
 		            }
-		            v.incomingEdges = messages.clone();
+		            //v.incomingEdges = messages.clone();
 		            ctx.voteToHalt();
 		        }
 		    },
@@ -215,9 +216,9 @@ public final class MinimumSpanningTreeImpl {
 		            var shouldSendToSelectedNode: Boolean = true;
 		            for (i in incomingEdges.range()) {
 		                val e = incomingEdges(i);
-		                ctx.sendMessage(e.srcRoot, minimumRoot);
+		                ctx.sendMessage(e, minimumRoot);
 		                
-		                if (e.srcRoot == selectedRoot)
+		                if (e == selectedRoot)
 		                    shouldSendToSelectedNode = false;
 		            }
 		            
@@ -279,7 +280,7 @@ public final class MinimumSpanningTreeImpl {
 		                // Console.OUT.println("----------------> Delete: " + ctx.id());
 		                ctx.setVertexShouldBeActive(false);
 		                ctx.value().edgeTable = MemoryChunk.getNull[EdgeInfo]();
-		                ctx.value().incomingEdges = MemoryChunk.getNull[EdgeInfo]();
+		                ctx.value().incomingEdges = MemoryChunk.getNull[Long]();
 		                ctx.voteToHalt();
 		            } else {
 		                for (i in messages.range()) {
