@@ -563,7 +563,8 @@ public final struct Team2 {
 	public def alltoallv[T] (src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		val role = base.role()(0);
 		
-		@Ifdef("__CPP__") {
+	//	@Ifdef("__CPP__") {
+	//	#warning "motonimodose!"
 			if (Serialization.needToSerialize[T]()) {
 				val places = size();
 				val ser_offs = MemoryChunk.make[Int](places);
@@ -586,7 +587,7 @@ public final struct Team2 {
 			else {
 				finish nativeAlltoallv(base.id(), role, src, src_offs, src_counts, dst, dst_offs, dst_counts);
 			}
-		}
+	//	}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
 			val dstp = dst.raw();

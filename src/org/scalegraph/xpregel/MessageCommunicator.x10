@@ -128,8 +128,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val start = mUCROffset(srcid);
 			val length = mUCROffset(srcid + 1) - start;
 			return mUCRMessages.subpart(start, length);
-		}
-		else if(mBCREnabled) {
+		} else if(mBCREnabled) {
 			// broadcast messages
 			val bmp = mBCRHasMessage;
 			val offset = mBCROffset;
@@ -156,7 +155,7 @@ final class MessageCommunicator[M] { M haszero } {
 		return MemoryChunk.make[M]();
 	}
 	
-	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) { M haszero, A haszero } {
+	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) { /*V haszero, E haszero,*/ M haszero, A haszero } {
 		mNumActiveVertexes += ctx.mNumActiveVertexes; ctx.mNumActiveVertexes = 0L;
 		mBCSInputCount += ctx.mBCSInputCount; ctx.mBCSInputCount = 0L;
 	}

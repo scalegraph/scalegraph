@@ -1,15 +1,3 @@
-/*
- *  This file is part of the ScaleGraph project (http://scalegraph.org).
- *
- *  This file is licensed to You under the Eclipse Public License (EPL);
- *  You may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *      http://www.opensource.org/licenses/eclipse-1.0.php
- *
- *  (C) Copyright ScaleGraph Team 2011-2012.
- */
-
-
 package test;
 
 import x10.util.Team;
@@ -27,15 +15,8 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
-/*
- *   1
- *  /|\
- * 4-0-2
- *  \|/
- *   3
- */
 
-public class TestEdgeModify {
+public class TestShowEdge {
 	public static def main(args:Array[String](1)) {
 		
 		//-----initialize team
@@ -64,9 +45,6 @@ public class TestEdgeModify {
 		xpregel.updateInEdge();
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + " [ms]");
 		
-		//set all vertex value as 0L 
-	//	xpregel.initVertexValue(0L);
-		
 		//make stringbuilder
 		Console.OUT.println("make stringBuilder");
 		val mesBuf = PlaceLocalHandle.make[StringBuilder](team.placeGroup(), ()=> new StringBuilder());
@@ -80,44 +58,33 @@ public class TestEdgeModify {
 				val sb = new StringBuilder();
 				//ID
 				val myId = ctx.realId();
-				//remove out edge
-				val e = (myId+1)%ctx.numberOfVertices();
-
-				//super step ha 0 start rashii
-				sb.add("---superstep "+ctx.superstep()+" myId "+ myId + " ---\n");
 				
-				for (m in messages){
-					sb.add("message:"+ m +"\n");
+				for (m in messages.range()){
+					sb.add("message:"+ messages(m)+"\n");
 				}
 				
-				if(myId != 0L && (ctx.superstep() as Long)==myId){
-					sb.add(myId + ":\tRemove:\t" + e + "\n");
-					removeOutEdge(ctx,ctx.dstId(e));
+				//display current in edges
+				sb.add("-- ss:"+ctx.superstep()+" id:"+ myId + 
+						" dstid:" + ctx.dstId(myId) + " --\n\tInEdges:\n");
+				val IEsId = ctx.inEdgesId();
+				for(eI in IEsId){
+					sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
 				}
-				
 				//display current out edges
+				sb.add("\tOutEdges:\n");
 				val OEsId = ctx.outEdgesId();
 				for(eI in OEsId){
-					sb.add(myId + "->" + ctx.realId(eI) + "\n");
+					sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
 				}
 				
 				atomic {	//atomic ga nai to hukusuu thread de shinu
 					mesBuf().add(sb.toString());
 				}
 				
-				if(ctx.superstep()>=ctx.numberOfVertices()-1){	//koko de vote hantei
-					ctx.voteToHalt();
-				}else{
-					//send dummy message
-					if(myId==0L){
-						ctx.sendMessageToAllNeighbors(myId);
-					}else if(myId < ctx.superstep()){
-						ctx.sendMessageToAllNeighbors(myId);
-					}
-				}
+				ctx.voteToHalt();
 			},
 			(values :MemoryChunk[Long]) => 0L,	//returns 0 with no cost
-			(superstep :Int, aggVal :Long) => (superstep > 1000)	//tekitou
+			(superstep :Int, aggVal :Long) => (superstep > 1)	//tekitou
 		);
 		//-----end of work
 
@@ -127,34 +94,12 @@ public class TestEdgeModify {
 		val ps=team.places();
 		for(p in ps) at(ps(p)) {// ...
 			atomic{
-			Console.OUT.println(p + ":\n" + mesBuf().toString());
+				Console.OUT.println(p + ":\n" + mesBuf().toString());
 			}
 		}
 		
 		Console.OUT.println("Finish after =" + (end_time-start_time));
 		Console.OUT.println("Finish application");	
-	}
-	
-	public static def removeOutEdge(ctx :VertexContext[Long, Long, Long, Long ],dstId :Long){
-		//Console.OUT.println("\tEnter removeOutEdge:dstId="+dstId);
-		val temp = ctx.outEdges();
-		val len = temp.get1().size();	//motono nagasa
-		//Console.OUT.println("\t len:="+len);
-		//temp ha outEdges no copy rashii
-		ctx.clearOutEdges();
-
-		//TODO:subpart tsukaou
-		//modified  len -> len-1
-		for(i in 0..(len - 1)) {		//length -> index
-			//Console.OUT.println("\t  i:="+i+" temp.get1()(i):="+temp.get1()(i));
-			if(temp.get1()(i)!=dstId){	//keshitakatta dst de nakereba
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" add:i="+i);
-				ctx.addOutEdge(temp.get1()(i),temp.get2()(i));
-			}else{
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" NoOp:i="+i);
-			}
-		}
-		//Console.OUT.println("\tQuit removeOutEdge:"+dstId);
 	}
 }	
 
