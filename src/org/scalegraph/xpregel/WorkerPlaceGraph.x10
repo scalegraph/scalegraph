@@ -101,13 +101,23 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		/// }
 	}
 	
-	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long]) {
-		this(team, edgeIndexMatrix.ids());
+	public def setOutEdge(edgeIndexMatrix :DistSparseMatrix[Long]) {
+		if(edgeIndexMatrix.ids().equals(mIds) == false) {
+			throw new Exception("Number of vertexes in the graph or the distribution of the graph is different.");
+		}
 		mOutEdge.offsets = edgeIndexMatrix().offsets;
 		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
-		mOutEdge.value = MemoryChunk.make[E](mOutEdge.vertexes.size());
+		if(mOutEdge.value.size() != edgeIndexMatrix().vertexes.size()) {
+			mOutEdge.value = MemoryChunk.make[E](edgeIndexMatrix().vertexes.size());
+		}
 	}
 	
+	public def setOutEdgeWithValue(graph :DistSparseMatrix[E]) {
+		if(graph.ids().equals(mIds) == false) {
+			throw new Exception("Number of vertexes in the graph or the distribution of the graph is different.");
+		}
+		mOutEdge.set(graph());
+	}
 
 	public def updateFewInEdge(list :MemoryChunk[EdgeProvider[E]]){
 		val numTeam = mTeam.size();
