@@ -10,6 +10,8 @@
  */
 package org.scalegraph.util;
 
+import x10.compiler.Native;
+
 import x10.compiler.Ifdef;
 import x10.util.Timer;
 import org.scalegraph.Config;
@@ -29,4 +31,10 @@ public class Utils {
 			Console.OUT.flush();
 		}
 	}
+	
+	@Native("c++", "(#T )(0)")
+	public static native def getDummyZeroValue[T]():T;
+
+//	@Native("c++", "reinterpret_cast<<#T >>(#v)")
+//	public static native def forceCastTo[T](v:Any):T;
 }

@@ -17,12 +17,15 @@ import x10.compiler.Ifdef;
 
 import org.scalegraph.Config;
 
+import org.scalegraph.util.Algorithm;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.tuple.Tuple2;
+import org.scalegraph.util.tuple.Tuple3;
 import org.scalegraph.util.Bitmap;
 import org.scalegraph.util.Team2;
 import org.scalegraph.util.Parallel;
+import org.scalegraph.util.Utils;
 import org.scalegraph.util.ProfilingDB;
 
 import org.scalegraph.blas.DistSparseMatrix;
@@ -36,7 +39,10 @@ import x10.compiler.Native;
 import x10.io.Printer;
 import org.scalegraph.test.STest;
 
-final class WorkerPlaceGraph[V,E] {
+// "haszero" cause x10compiler to type incomprehensibility.
+// when you want to get DUMMY value(may not be default), use Utils.getDummyZeroValue[T]();.
+
+final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	static val MAX_OUTPUT_NUMBER = 8;
 	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 	
@@ -64,11 +70,14 @@ final class WorkerPlaceGraph[V,E] {
 	var mLogLevel :Int;
 	var mLogPrinter :Printer;
 	var mEnableStatistics :Boolean = true;
+	//not using
+	var mNeedsAllUpdateInEdge :Boolean = true;
 	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_r = team.role()(0);
 		mTeam = new Team2(team);
 		mIds = ids;
+		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		
 		mVtoD = new OnedR.VtoD(ids);
 		mDtoV = new OnedR.DtoV(ids);
@@ -76,11 +85,9 @@ final class WorkerPlaceGraph[V,E] {
 		mStoD = new OnedR.StoD(ids, rank_r);
 		mStoV = new OnedR.StoV(ids, rank_r);
 		
-		val numVertexes = mIds.numberOfLocalVertexes();
-		
-		mVertexValue = MemoryChunk.make[V](numVertexes);
-		mVertexActive = new Bitmap(numVertexes, true);
-		mVertexShouldBeActive = new Bitmap(numVertexes, true);
+		mVertexValue = MemoryChunk.make[V](numLocalVertexes);
+		mVertexActive = new Bitmap(numLocalVertexes, true);
+		mVertexShouldBeActive = new Bitmap(numLocalVertexes, true);
 
 		mOutEdge = new GraphEdge[E]();
 		mInEdge = new GraphEdge[E]();
@@ -101,7 +108,158 @@ final class WorkerPlaceGraph[V,E] {
 		mOutEdge.value = MemoryChunk.make[E](mOutEdge.vertexes.size());
 	}
 	
+
+	public def updateFewInEdge(list :MemoryChunk[EdgeProvider[E]]){
+		val numTeam = mTeam.size();
+		val numLocalVertexes = mIds.numberOfLocalVertexes();
+		val threadRange = 0..(numThreads-1);
+		
+		//---------- pre process ( prepare for exchanging edge difference ) ----------
+		val diffInEdgeCountPerThread = MemoryChunk.make[MemoryChunk[Int]](
+				numThreads, (i:Long)=> MemoryChunk.make[Int](numTeam,0,true));
+		
+		val outModReqRange = MemoryChunk.make[LongRange](numThreads,0,true);
+		//place goto ni otodoke suru data no kazu wo shiraberu
+		Parallel.iter(threadRange, (tid:Int)=> {
+			if(list(tid).mEdgeModifyReqOffset.size()>0){
+				assert(list(tid).mEdgeModifyReqWithAR.size() == list(tid).mEdgeModifyReqOffset(list(tid).mEdgeModifyReqOffset.size()-1L));
+			}
+			outModReqRange(tid) = list(tid).mEdgeModifyReqWithAR.range();
+			
+			for(i in outModReqRange(tid)/*mOutEdgeModifyReqsWithAR(tid).range()*/)
+				++diffInEdgeCountPerThread(tid)(mDtoV.r(list(tid).mEdgeModifyReqWithAR(i).val1));	//TODO: r de ii noka
+		});
+		
+		//diffInEdgeCount	(kansei)
+		val diec = MemoryChunk.make[Int](numTeam,0,true);
+		for(team in diec.range()){								//Team range
+			for(thread in threadRange)	//Thread range
+				diec(team) += diffInEdgeCountPerThread(thread)(team);	//sum
+		}
+		
+		//...Tuple3[Long,Long,E] diffInEdgeDataPerThread[numThreads][teamNum][diffInEdgeCountPerThread(i)(j)]
+		val diffInEdgeDataPerThread = MemoryChunk.make[MemoryChunk[MemoryChunk[Tuple3[Long,Long,E]]]](
+				numThreads, (i:Long)=> MemoryChunk.make[MemoryChunk[Tuple3[Long,Long,E]]](
+						numTeam, (j:Long) => MemoryChunk.make[Tuple3[Long,Long,E]](diffInEdgeCountPerThread(i)(j),0,true)
+				)
+		);
+		
+		Parallel.iter(threadRange, (tid:Int)=> {
+			val e = list(tid);
+			val workdata = diffInEdgeDataPerThread(tid);	//"work(teamNum)(index)" de access
+			val workoff = list(tid).mEdgeModifyReqOffset;
+			val maxSrcid = workoff.size()-2L;	//tettoribayai
+			val index = MemoryChunk.make[Int](numTeam,0,true);
+			var srcid :Long = 0L;
+			for(i in outModReqRange(tid)/*mOutEdgeModifyReqsWithAR(tid).range()*/){
+				val target = list(tid).mEdgeModifyReqWithAR(i);
+				val dstid = target.val1;	//inEdge's dst(dstid with ARM)
+				val team = mDtoV.r(dstid);
+				while(srcid < maxSrcid && workoff(srcid+1)<=i)
+					srcid++;
+				workdata(team)(index(team)++) = new Tuple3[Long,Long,E](
+						dstid & EdgeProvider.req_NOINFO,
+						mStoD(e.mStartSrcid+srcid) | (dstid & EdgeProvider.req_INFO),
+						target.val2);
+				//this Tuple3 means: [inEdge's src(dstid), inEdge's dst(dstid,withARM), inEdge's value]
+				//attention: StoD(as this place) => valid,  DtoS(as foreign place) => invalid
+			}
+		});
+
+		//diffInEdgeData
+		var dataNum :Long = 0L;
+		for(team in diec.range())	//Team range
+			dataNum += diec(team);
+		val died = MemoryChunk.make[Tuple3[Long,Long,E]](dataNum);
+		var dataIndex :Long = 0;
+		for (team in 0..(numTeam-1))
+			for (thread in threadRange){
+				val src = diffInEdgeDataPerThread(thread)(team);
+				MemoryChunk.copy(src, 0L, died, dataIndex, src.size());
+				dataIndex += src.size();
+			}
+		assert (dataIndex == dataNum);
+		
+		//exchange differences
+		val result = mTeam.alltoallv(died, diec).val1;
+		diffInEdgeCountPerThread.del();	diec.del();
+		diffInEdgeDataPerThread.del();		died.del();
+
+		//---------- post process ( apply differences ) ----------
+		
+		//foreach differences
+		foreachVertexes(result.size(),(tid :Long, range :LongRange)=>{	//Irregular usage! DO NOT COPY this line!
+			for(i in range)	//optimize? overwrite val1 directory
+				result(i) = new Tuple3(mDtoS(result(i).val1),result(i).val2,result(i).val3);	//DtoS
+		});
+		
+		//sort (optimize => sort order (srcid --> (subdivided)dstid))
+		Algorithm.maskedStableSortTupleKey2(result);	//dstid
+		Algorithm.stableSortTupleKey1(result);		//srcid
+		
+		//EdgeProvider no code wo sai riyou suru tame ni offset to reqs wo wazawaza tsukuru
+		//offset
+		val InEdgeModifyReqOffsets = MemoryChunk.make[MemoryChunk[Long]](numThreads,
+				(tid:Long) => MemoryChunk.make[Long](list(tid).mEdgeModifyReqOffset.size(),0,true));
+		//reqs
+		val InEdgeModifyReqsWithAR = MemoryChunk.make[GrowableMemory[Tuple2[Long,E]]](numThreads, 0, true);
+
+		//copy to mInEdgeModify*
+		foreachVertexes(numLocalVertexes,(tid :Long, vrange :LongRange)=>{
+			val resrange = result.range();
+			var start :Long = resrange.max + 1L;
+			var end :Long = resrange.max;
+			val e = list(tid);
+			val reqoff = InEdgeModifyReqOffsets(tid);
+			val reqs = InEdgeModifyReqsWithAR(tid);
+			assert(vrange.min == e.mStartSrcid);
+			
+			//search index
+			//optimize? lower_bound
+			for(i in resrange)
+				if(result(i).val1 >= vrange.min){
+					start = i;
+					break;
+				}
+			//optimize? upper_bound
+			for(i in start..resrange.max){
+				if(result(i).val1 > vrange.max){
+					end = i-1L;
+					break;
+				}
+			}
+			if(start>end){			//there is no diffInEdge at this tid
+				reqs.setSize(0L);
+				return;				//no need to run following process
+			}else{
+				//reqs initialize
+				val size = end - start + 1L;
+				reqs.setSize(size);	//hundle it like MemoryChunk
+			}
+			var reqsIndex :Long = 0L;
+			val ssrc = e.mStartSrcid;		// == vrange.min
+			var tsrcid :Long = ssrc - 1L;	//saisyo ni "tsrcid < result(i).val1" hantei wo saseru tame "-1L"
+			for(i in start..end){
+				//make offset
+				while(tsrcid < result(i).val1/*==srcid*/){	//zenkai no val1 to ima no val1 ga tigatta ra offset no kawarime
+					++tsrcid;
+					reqoff(tsrcid - ssrc) = reqsIndex;
+				}
+				//make reqs
+				reqs(reqsIndex++) = new Tuple2(result(i).val2,result(i).val3);	//[dstid withARM,value]
+			}
+			//offset ume
+			++tsrcid;
+			for(i in (tsrcid - ssrc)..(reqoff.size()-1L))
+				reqoff(i) = reqsIndex;
+		});
+		EdgeProvider.updateInEdge[V,E](mInEdge, list, mIds, InEdgeModifyReqOffsets, InEdgeModifyReqsWithAR);
+		InEdgeModifyReqOffsets.del();
+		InEdgeModifyReqsWithAR.del();
+	}
+	
 	public def updateInEdge() {
+		
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		@Ifdef("PROF_XP") { mtimer.start(); }
 		val sw = Config.get().stopWatch();
@@ -141,6 +299,10 @@ final class WorkerPlaceGraph[V,E] {
 
 		mInEdge.offsets = mesComm.mUCROffset;
 		mInEdge.vertexes = mesComm.mUCRMessages;
+		//sort mInEdge.vertexes (needed for fewInEdgeUpdate)
+				Parallel.iter(0L..(numLocalVertexes-1L), (i :Long) => {
+					Algorithm.sort(mInEdge.vertexes.subpart(mInEdge.offsets(i), mInEdge.offsets(i+1) - mInEdge.offsets(i)));
+				});
 		mesComm.mUCROffset = MemoryChunk.make[Long]();
 		mesComm.mUCRMessages = MemoryChunk.make[Long]();
 		mesComm.del();
@@ -201,9 +363,12 @@ final class WorkerPlaceGraph[V,E] {
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATEINEDGE); }
 	}
 	
+	
+	
 	// src will be destroyed
 	private static def computeAggregate[A](team :Team2, src :MemoryChunk[A], buffer :MemoryChunk[A],
 			aggregator :(MemoryChunk[A])=>A) :A
+			/*{A haszero }*/	//added
 	{
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		val root = (team.base.role()(0) == 0);
@@ -255,8 +420,7 @@ final class WorkerPlaceGraph[V,E] {
 		// if there are no active vertex nor messages, we terminate computation.
 		if(recvStt(STT_ACTIVE_VERTEX) == 0L &&
 				recvStt(STT_RAW_MESSAGE) == 0L &&
-				recvStt(STT_VERTEX_MESSAGE) == 0L)
-		{
+				recvStt(STT_VERTEX_MESSAGE) == 0L){
 			return true;
 		}
 		
@@ -276,7 +440,9 @@ final class WorkerPlaceGraph[V,E] {
 		
 		return false;
 	}
-			
+	
+	// This method doesn't necessarilly split all works to all threads.
+	// Use this method to initialize containers used in this method.
 	static def foreachVertexes(numLocalVertexes :Long, task :(Long, LongRange) => void) {
 		// Split the range of bitmat words to ensure the processing thread-safe.
 		Parallel.iter(0..(Bitmap.numWords(numLocalVertexes)-1), (tid :Long, r_word :LongRange) => {
@@ -303,15 +469,54 @@ final class WorkerPlaceGraph[V,E] {
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mIds, numThreads);
-		val vctxs = MemoryChunk.make[VertexContext[V, E, M, A]](numThreads,
-				(i :Long) => new VertexContext[V, E, M, A](this, ectx, i));
-		val edgeProviderList = MemoryChunk.make[EdgeProvider[E]](numThreads,
+		
+		val vctxs = MemoryChunk.make[VertexContext[V, E, M, A]](numThreads);
+		val localSrcids = MemoryChunk.make[Long](numThreads,0,true);
+		
+		//val edgeProviderList = new MemoryChunk[EdgeProvider[E]](numThreads);
+		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+		//	vctxs(tid) = new VertexContext[V, E, M, A](this, ectx, tid, r.min);
+		//	edgeProviderList(tid) = vctxs(tid).mEdgeProvider;
+			localSrcids(tid) = r.min;
+		});
+		
+		//debugging
+		// conpute taisyou no data ga sukunai baai foreachVertex ga subete no thread de hashiru toha kagiranai node
+		{
+
+			val mOutEdgeModifyReqOffsets = MemoryChunk.make[MemoryChunk[Long]](numThreads);
+			//for debug
+			//honrai ha iranai hazu
+			val tmp = MemoryChunk.make[Long](numThreads);
+			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+				// (contains count) + end index
+				mOutEdgeModifyReqOffsets(tid) = MemoryChunk.make[Long]((r.max -r.min +1L) +1L, 0, true);
+				tmp(tid) = 777L;
+			});
+			for(i in mOutEdgeModifyReqOffsets.range()){
+				if(tmp(i) == 777L)
+					continue;
+				mOutEdgeModifyReqOffsets(i) = MemoryChunk.make[Long](0);
+			}
+			val mOutEdgeModifyReqsWithAR = MemoryChunk.make[GrowableMemory[Tuple2[Long,E]]](
+					numThreads, (i :Long) => new GrowableMemory[Tuple2[Long,E]](0L));
+			for(tid in 0..(numThreads-1)){
+				vctxs(tid) = new VertexContext[V, E, M, A](
+						this, ectx, tid,
+						mOutEdgeModifyReqOffsets(tid),
+						mOutEdgeModifyReqsWithAR(tid),
+						localSrcids(tid));
+			}
+		}
+		
+		val edgeProviderList = MemoryChunk.make[EdgeProvider[E]](numThreads as Long,
 				(i:Long) => vctxs(i).mEdgeProvider);
+		
 		val intermedAggregateValue = MemoryChunk.make[A](numThreads);
 		val aggregateBuffer = MemoryChunk.make[A](root ? mTeam.size() : 0);
 		val statistics = MemoryChunk.make[Long](STT_MAX*2);
 		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
-
+		
 		ectx.mInEdgesOffset = mInEdge.offsets;
 		ectx.mInEdgesVertex = mInEdge.vertexes;
 		ectx.mInEdgesMask = mInEdgesMask;
@@ -347,7 +552,7 @@ final class WorkerPlaceGraph[V,E] {
 						
 						compute(vc, mes);
 
-						if(ep.mEdgeChanged) ep.fixModifiedEdges(srcid);
+						if(ep.mEdgeChanged) ep.fixModifiedEdges(srcid);	//TODO: uncomment
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
@@ -365,18 +570,52 @@ final class WorkerPlaceGraph[V,E] {
 			@Ifdef("PROF_XP") { STest.bufferedPrintln("$ MEM-XPS2: place: " + here.id + ": ss: " + ss +
 					": TotalMem: " + MemoryChunk.getMemSize() + ": GCMem: " + MemoryChunk.getGCMemSize() + ": ExpMem: " + MemoryChunk.getExpMemSize()); }
 			if(here.id == 0) sw.lap("vertex processing finished");
-			
+		
+			// delete existing (old) messages.
 			ectx.deleteMessages();
 			
 			// gather statistics
 			for(th in 0..(numThreads-1)) {
+				//first message process is here 
 				ectx.sqweezeMessage(vctxs(th));
 			}
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_SQWEEZMES); }
 			
 			// update out edges
 			if(here.id == 0) sw.lap("update out edge");
-			EdgeProvider.updateOutEdge[E](mOutEdge, edgeProviderList, mIds);
+			EdgeProvider.updateOutEdge[V,E](mOutEdge, edgeProviderList, mIds);
+			// update in edges
+			updateFewInEdge(edgeProviderList);
+			// update messageCommunicator's inedge
+			ectx.mInEdgesOffset = mInEdge.offsets;
+			ectx.mInEdgesVertex = mInEdge.vertexes;
+			
+			EdgeProvider.reInitializeEdgeProvider[E](edgeProviderList);
+			
+			
+			//-----directionOptimization
+			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
+			if(0L < numAllBCSCount && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/50)){	//TODO: modify /20
+				val BCbmp=ectx.mBCCHasMessage;
+				foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+					val vc = vctxs(tid);
+					for (dosrcid in r){
+						if(BCbmp(dosrcid)){
+							vc.mSrcid = dosrcid;
+							val OEsId = vc.outEdgesId();
+							val tempmes=ectx.mBCCMessages(dosrcid);
+							for(eI in OEsId){
+								vc.sendMessage(eI, tempmes);
+							}
+						}
+					}
+				});
+				ectx.mBCCHasMessage.clear(false);
+				ectx.mBCCMessages.del();
+				ectx.mBCCMessages = MemoryChunk.make[M](mIds.numberOfLocalVertexes());
+				ectx.mBCSInputCount=0L;
+			}
+			//-----
 			
 			// aggregate
 			if(here.id == 0) sw.lap("aggregate...");
@@ -387,7 +626,6 @@ final class WorkerPlaceGraph[V,E] {
 			for(i in vctxs.range()) vctxs(i).mAggregatedValue = aggVal;
 			statistics(STT_END_COUNT) = end(ss, aggVal) ? 1L : 0L;
 
-			//
 			val terminate = gatherInformation(mTeam, ectx, statistics, mEnableStatistics, combiner);
 
 			if(here.id() == 0 && mLogPrinter != null) {

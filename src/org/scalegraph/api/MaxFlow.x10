@@ -37,22 +37,16 @@ final public class MaxFlow {
 	 * Default: "weight"
 	 */
 	public var weights :String = "weight";
-	
-	/** The name of source and sink Vertex id.
-	 * Default: 0(source), 1(sink)
-	 */
-	public var sourceVertexId:Long = 0;
-	public var sinkVertexId:Long = 1;
-	
+		
 	/** The name of error.
 	 * 
 	 */
 	public var eps:Double = 1e-6;
 	
 	/** The name of the number of recursion that preflow-push-relavel do.
-	 * Default : 1000
+	 * Default : 100000
 	 */
-    public var recursionLimit:Long = 1000;
+    public var recursionLimit:Long = 100000;
     /**
      * A class storing the result from MaxFlow
      */
@@ -145,11 +139,8 @@ final public class MaxFlow {
     		isExcessNonZero = v;
     	}
     }
-    private static def execute(param:MaxFlow, matrix:DistSparseMatrix[Long], edgeValue :DistMemoryChunk[Double]): Result {
-
+    private static def execute(param:MaxFlow, matrix:DistSparseMatrix[Long], edgeValue :DistMemoryChunk[Double], sourceVertexId:Long, sinkVertexId:Long): Result {
     	val team = param.team;
-    	val sourceVertexId = param.sourceVertexId;
-    	val sinkVertexId = param.sinkVertexId;
     	val weights = param.weights;
     	val recursionLimit = param.recursionLimit;
     	val eps = param.eps;
@@ -174,7 +165,7 @@ final public class MaxFlow {
 
     	xpregel.updateInEdgeAndValue();
     	
-    	//phase 1 : set edge information
+    	//step 1 : set edge information
     	xpregel.once((ctx :VertexContext[MFVertex, MFEdge, Any, Any]) => {
     		val outEdgesId = ctx.outEdgesId();
     		val outEdgesValue = ctx.outEdgesValue();
@@ -196,7 +187,7 @@ final public class MaxFlow {
     						ctx.setVertexShouldBeActive(true);
     						ctx.voteToHalt();
     					}
-    					if(ctx.realId() == sinkVertexId) {
+    					if(ctx.realId() == ctx.dstId(sinkVertexId)) {
     						ctx.setVertexShouldBeActive(false);
     						for(i in ctx.inEdgesId().range()) 
     							ctx.sendMessage(ctx.inEdgesId()(i), true );
@@ -253,6 +244,8 @@ final public class MaxFlow {
     	val flowNum: GlobalRef[Cell[Double]] = new GlobalRef[Cell[Double]](new Cell[Double](0));
     	var recursion:Long = 1;
     	while(recursion<=recursionLimit) {
+    		if(recursion == recursionLimit)
+    			throw new Exception("Recursion is very big. Check recursionLimit.");
     		recursion++;
     		val currentRecursion = recursion;
     		//step 4 : main iteration of preflow push relavel
@@ -315,7 +308,7 @@ final public class MaxFlow {
     		
     		// step 5 : Excessing vertex determine where flowing to and how volume flow have.
     		if(recursion%10!=0L) {
-    			sw.lap("step5");
+//    			sw.lap("recursion = " + recursion);
     			val updatedNum: GlobalRef[Cell[Long]] = new GlobalRef[Cell[Long]](new Cell[Long](0));
     			xpregel.iterate[FlowMessage,Long](
     					(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
@@ -452,9 +445,7 @@ final public class MaxFlow {
     								// if(ctx.value().excess>0L) {
     								if(ctx.value().excess>eps) {
     									ctx.setVertexShouldBeActive(true);
-    									val vval = ctx.value();
-    									vval.setIsExcessNonZero(true);
-    									ctx.setValue(vval);
+    									ctx.value().setIsExcessNonZero(true);
     								}
     								else ctx.setVertexShouldBeActive(false);
     							}
@@ -476,26 +467,26 @@ final public class MaxFlow {
     }
 
    
-    public def execute(matrix :DistSparseMatrix[Long], edgeValue :DistMemoryChunk[Double]): Result {
-    	return execute(this, matrix, edgeValue);
+    public def execute(matrix :DistSparseMatrix[Long], edgeValue :DistMemoryChunk[Double], s:Long, t:Long): Result {
+    	return execute(this, matrix, edgeValue, s, t);
     }
     
-    public def execute(g :Graph):Result {
+    public def execute(g :Graph, s:Long, t:Long):Result {
     	// Since graph object has its own team, we shold use graph's one.
     	this.team = g.team();	
     	val matrix = g.createDistEdgeIndexMatrix(Config.get().distXPregel(), true, true);
     	val edgeValue = g.createDistAttribute[Double](matrix, false, "weight");
-    	val result = execute(this, matrix, edgeValue);
+    	val result = execute(this, matrix, edgeValue, s, t);
     	// result.? = g.retrieveEdgeAttribute(matrix, result.?);
     	return result;
     }
     
     
-    public static def run(g :Graph): Result {
-        return new MaxFlow().execute(g);
+    public static def run(g :Graph, s:Long, t:Long): Result {
+        return new MaxFlow().execute(g, s, t);
     }
     
-    public static def run(matrix :DistSparseMatrix[Long] ,dm:DistMemoryChunk[Double]): Result {
-        return  new MaxFlow().execute(matrix, dm);
+    public static def run(matrix :DistSparseMatrix[Long] ,dm:DistMemoryChunk[Double], s:Long, t:Long): Result {
+        return  new MaxFlow().execute(matrix, dm, s, t);
     }
 }

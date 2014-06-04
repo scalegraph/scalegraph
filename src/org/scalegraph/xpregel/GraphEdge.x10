@@ -14,7 +14,7 @@ package org.scalegraph.xpregel;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.blas.SparseMatrix;
 
-final class GraphEdge [E] {
+final class GraphEdge [E] /*{ E haszero }*/ {
 	var offsets :MemoryChunk[Long];
 	var vertexes :MemoryChunk[Long];
 	var value : MemoryChunk[E];
