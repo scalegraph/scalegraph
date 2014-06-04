@@ -28,6 +28,7 @@ import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 import x10.util.Pair;
 import org.scalegraph.util.DistMemoryChunk;
+import org.scalegraph.util.Algorithm;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph.VertexType;
 import org.scalegraph.graph.EdgeList;
@@ -112,6 +113,7 @@ public final class MinimumSpanningTreeImpl {
 		        vertex.edgeTable = MemoryChunk.getNull[EdgeInfo]();
 		        ctx.setVertexShouldBeActive(false);
 		    }
+		    //ctx.clearOutEdges();
 		    ctx.voteToHalt();
 		},
 		null,
@@ -221,7 +223,7 @@ public final class MinimumSpanningTreeImpl {
 		                if (e == selectedRoot)
 		                    shouldSendToSelectedNode = false;
 		            }
-		            
+		            //incomingEdges.del();
 		            // avoid sending message another node that is already selected
 		            if (shouldSendToSelectedNode) {
 		                ctx.sendMessage(selectedRoot, minimumRoot);
@@ -257,6 +259,7 @@ public final class MinimumSpanningTreeImpl {
 		                ctx.sendMessage(e.dstRoot, e);
 		                // Console.OUT.printf("\t\t%ld: (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), e.src, e.dst, e.srcRoot, e.dstRoot, e.w);
 		            }
+		            v.edgeTable.del();// = MemoryChunk.getNull[EdgeInfo]();
 		        } else if (ctx.superstep() == 1) {
 		            
 		            // redirect edges to its root - i.e. pointer jumping
@@ -287,9 +290,75 @@ public final class MinimumSpanningTreeImpl {
 		                    val e = messages(i);
 		                    // Console.OUT.printf("\t\t%ld: (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), e.src, e.dst, e.srcRoot, e.dstRoot, e.w);
 		                }
+		                
+		                if(messages.size()==1l){
+		                	ctx.value().edgeTable = messages.clone();
+		                }else{
+		                	
+		                	val ind = MemoryChunk.make[Long](messages.size(), (i: Long) => messages(i).dstRoot);
+		                	Algorithm.sort(ind, messages);
+		                	ind.del();
+		                	var cnt :Long = 0, minInd :Long = 0, minW :Double = messages(0).w;
+		                	val tmp = MemoryChunk.make[EdgeInfo](messages.size());
+		                	for( i in 0..(messages.size()-1)){
+		                		if( minW > messages(i).w){
+		                			minW = messages(i).w;
+		                			minInd = i;
+		                		}
+		                		if( i == messages.size()-1){
+		                			tmp(cnt++) = messages(minInd);
+		                		}else if( messages(i).dstRoot != messages(i+1).dstRoot){
+		                			tmp(cnt++) = messages(minInd);
+		                			minInd = i+1;
+		                			minW = messages(i+1).w;
+		                		}
+		                	}
+		                	ctx.value().edgeTable = tmp.subpart(0, cnt).clone();
+		                	tmp.del();
+		                	
+		                	// val tmp = MemoryChunk.make[EdgeInfo](messages.size());
+		                	// val useflags = MemoryChunk.make[boolean](messages.size());
+		                	// //		                Console.OUT.println("\"");
+		                	// for( i in useflags.range()){
+		                	// 	useflags(i) = true;
+		                	// }
+		                	// var cnt : Long = 0l;
+		                	// //		                Console.OUT.println(""+messages.size());
+		                	// for( i in messages.range()){
+		                	// 	val src = messages(i).srcRoot, dst = messages(i).dstRoot, w = messages(i).w;
+		                	// 	var use :boolean = true;
+		                	// 	if(!useflags(i)){
+		                	// 		continue;
+		                	// 	}
+		                	// 	
+		                	// 	//for( j in messages.range()){}
+		                	// 	//if(i>=j || !useflags(j) ){}
+		                	// 	for( j in (i+1)..(messages.size()-1) ){
+		                	// 		if(!useflags(j) ){
+		                	// 			continue;
+		                	// 		}
+		                	// 		
+		                	// 		if(src == messages(j).srcRoot && dst == messages(j).dstRoot){
+		                	// 			if(w >= messages(j).w ){
+		                	// 				use = false;
+		                	// 				break;
+		                	// 			}else{
+		                	// 				useflags(j) = false;
+		                	// 			}	
+		                	// 		}
+		                	// 	}
+		                	// 	if(use){
+		                	// 		tmp(cnt++) = messages(i);
+		                	// 	}
+		                	// }
+		                	// ctx.value().edgeTable = tmp.subpart(0, cnt).clone();
+		                	// tmp.del();
+		                	// useflags.del();
+		                }
+		                
 		                // Gathering
 		                ctx.aggregate(1);
-		                ctx.value().edgeTable = messages.clone();
+		                //ctx.value().edgeTable = messages.clone();
 		                ctx.voteToHalt();
 		            }
 		        }
