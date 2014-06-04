@@ -88,9 +88,11 @@ namespace org { namespace scalegraph { namespace util {
 
 				if(ptr) {
 					if(containPtrs) {
-						GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+						//GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+						GC_FREE(ptr);
+					}else{
+						::free(ptr);
 					}
-					::free(ptr);
 				}
 			}
 
@@ -149,7 +151,12 @@ namespace org { namespace scalegraph { namespace util {
 				}
 				pthread_mutex_unlock(&ExpMemState.mutex);
 
-				char* allocMem = x10aux::system_alloc<char>(size);
+				char* allocMem;// = x10aux::system_alloc<char>(size);
+				if(containPtrs){
+					allocMem = (char*)GC_MALLOC_UNCOLLECTABLE(size);
+				}else{
+					allocMem = x10aux::system_alloc<char>(size);
+				}
 
 				if(allocMem==NULL){
 					pthread_mutex_lock(&ExpMemState.mutex);
@@ -161,9 +168,9 @@ namespace org { namespace scalegraph { namespace util {
 				}
 
 				x10aux::alloc_lock.lock();
-				if(containPtrs){
-					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
-				}
+//				if(containPtrs){
+//					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
+//				}
 				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
 				x10aux::alloc_lock.unlock();
 
@@ -239,7 +246,7 @@ public:
                 //}
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
-                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP ){
                         ELEM* allocMem = x10aux::alloc<ELEM>(size, containsPtrs);
                         if (zeroed) {
                                 memset(allocMem, 0, size);
