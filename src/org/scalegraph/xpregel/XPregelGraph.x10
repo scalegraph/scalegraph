@@ -284,7 +284,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	/**
 	 * Execute only one superstep
 	 */
-	public def once(compute :(ctx:VertexContext[V,E,Any,Any]) => void)
+	public def once(compute :(ctx:VertexContext[V,E,Byte,Byte]) => void)
 	{
 		ensurePlaceRoot();
 		if(compute == null) {
@@ -295,9 +295,9 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		team_.placeGroup().broadcastFlat( () => {
 			try {
 				val actual_compute =
-					(ctx:VertexContext[V,E,Any,Any],messages:MemoryChunk[Any])
+					(ctx:VertexContext[V,E,Byte,Byte],messages:MemoryChunk[Byte])
 					=> { compute(ctx); };
-				workers_().run[Any,Any](actual_compute, null, null, (Int,Any) => true);
+				workers_().run[Byte,Byte](actual_compute, null, null, (Int,Byte) => true);
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}

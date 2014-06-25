@@ -10,7 +10,7 @@
  */
 
 package org.scalegraph.util;
-
+import org.scalegraph.Config;
 import x10.compiler.Native;
 import x10.compiler.Inline;
 import x10.compiler.Ifdef;
@@ -102,7 +102,7 @@ public final struct Team2 {
 
 	private static def nativeAlltoallv[T] (id:Int, role:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_alltoallv(id, role, src->pointer(), src_offs->pointer(), src_counts->pointer(), dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_alltoallv(id, role, src->pointer(), src_offs->pointer(), src_counts->pointer(), dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), ::org::scalegraph::util::MCData_Impl<TPMGL(T)>::returnSize() /*sizeof(TPMGL(T))*/, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1); // for MPI transport
 	}
 
@@ -563,9 +563,9 @@ public final struct Team2 {
 	public def alltoallv[T] (src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		val role = base.role()(0);
 		
-	//	@Ifdef("__CPP__") {
-	//	#warning "motonimodose!"
+		@Ifdef("__CPP__") {
 			if (Serialization.needToSerialize[T]()) {
+				val sw = Config.get().stopWatch();
 				val places = size();
 				val ser_offs = MemoryChunk.make[Int](places);
 				val ser_counts = MemoryChunk.make[Int](places);
@@ -583,11 +583,12 @@ public final struct Team2 {
                 deser_counts.del();
                 deser_offs.del();
                 deser_dst.del();
+
 			}
 			else {
 				finish nativeAlltoallv(base.id(), role, src, src_offs, src_counts, dst, dst_offs, dst_counts);
 			}
-	//	}
+		}
 		@Ifndef("__CPP__") {
 			val srcp = src.raw();
 			val dstp = dst.raw();

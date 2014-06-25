@@ -130,7 +130,7 @@ public final class PageRank {
 
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate:"); }
 		
-		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
+		xpgraph.once((ctx :VertexContext[Double, Double, Byte, Byte]) => {
 			ctx.output(ctx.value());
 		});
 		val result = xpgraph.stealOutput[Double]();

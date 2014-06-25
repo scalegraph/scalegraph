@@ -75,7 +75,7 @@ public final class SSSP extends AlgorithmTest {
 		
 		Config.get().stopWatch().lap("Finished: ");
 
-		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
+		xpgraph.once((ctx :VertexContext[Double, Double, Byte, Byte]) => {
 			ctx.output(ctx.value());
 		});
 		val result = xpgraph.stealOutput[Double]();
