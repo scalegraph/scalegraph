@@ -41,7 +41,7 @@ public final class MinimumSpanningTreeImpl {
     public static final class VertexValue {
         var root: Long;
         var edgeTable: MemoryChunk[EdgeInfo];
-        var incomingEdges: MemoryChunk[EdgeInfo];
+        var incomingEdges: MemoryChunk[Long];
         var n: Long;
         public def this() {
             root = -1;
@@ -49,12 +49,15 @@ public final class MinimumSpanningTreeImpl {
         }
     }
     
-    public static struct EdgeInfo {
-        val src: Long;
-        val dst: Long;
-        val srcRoot: Long;
-        val dstRoot: Long;
-        val w: Double;
+    public static class EdgeInfo {
+        var src: Long;
+        var dst: Long;
+        var srcRoot: Long;
+        var dstRoot: Long;
+        var w: Double;
+        
+        public def this(){
+        }
         
         public def this(s: Long, d: Long, sr: Long, dr: Long, w_: Double) {
             src = s;
@@ -64,11 +67,26 @@ public final class MinimumSpanningTreeImpl {
             w = w_;
         }
         
-        @Native("c++", "(#this)->FMGL(srcRoot) = #r")
-        public native def setSrcRoot(r: Long): void;
+        public def init(s: Long, d: Long, sr: Long, dr: Long, w_: Double) {
+        	src = s;
+        	dst = d;
+        	srcRoot = sr;
+        	dstRoot = dr;
+        	w = w_;
+        }
         
-        @Native("c++", "(#this)->FMGL(dstRoot) = #r")
-        public native def setDstRoot(r: Long): void;
+        // @Native("c++", "(#this)->FMGL(srcRoot) = #r")
+        // public native def setSrcRoot(r: Long): void;
+        // 
+        // @Native("c++", "(#this)->FMGL(dstRoot) = #r")
+        // public native def setDstRoot(r: Long): void;
+        
+        public def setSrcRoot(r: Long){
+        	srcRoot = r;
+        }
+        public def setDstRoot(r: Long){
+        	dstRoot = r;
+        }
     }
     
     public static struct BroadcastMessage {
@@ -106,8 +124,12 @@ public final class MinimumSpanningTreeImpl {
 		    vertex.root = vid;
 		    
 		    if (ids.size() > 0) {
-		        val table = MemoryChunk.make[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
-		        vertex.edgeTable = table;
+		        //val table = MemoryChunk.make[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
+		    	val table = MemoryChunk.make[EdgeInfo](ids.size() );
+		    	for(i in ids.range()){
+		    		table(i).init(vid, ids(i), vid, ids(i), weight(i));
+		    	}
+		    	vertex.edgeTable = table;
 		    } else {
 		        vertex.edgeTable = MemoryChunk.getNull[EdgeInfo]();
 		        ctx.setVertexShouldBeActive(false);
@@ -163,7 +185,8 @@ public final class MinimumSpanningTreeImpl {
 		            val v = ctx.value();
 		            val selectedRoot = v.n;
 		            val myRoot = v.root;
-		            
+		            v.incomingEdges = MemoryChunk.make[Long](messages.size(), (i: Long) => messages(i).srcRoot);
+
 		            // Remove duplicate edge
 		            for (i in messages.range()) {
 		                val m = messages(i);
@@ -178,7 +201,7 @@ public final class MinimumSpanningTreeImpl {
 		                    // Console.OUT.printf("\t\tsel(%ld): (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), m.src, m.dst, m.srcRoot, m.dstRoot, m.w);
 		                }
 		            }
-		            v.incomingEdges = messages.clone();
+		            //v.incomingEdges = messages.clone();
 		            ctx.voteToHalt();
 		        }
 		    },
@@ -215,9 +238,9 @@ public final class MinimumSpanningTreeImpl {
 		            var shouldSendToSelectedNode: Boolean = true;
 		            for (i in incomingEdges.range()) {
 		                val e = incomingEdges(i);
-		                ctx.sendMessage(e.srcRoot, minimumRoot);
+		                ctx.sendMessage(e, minimumRoot);
 		                
-		                if (e.srcRoot == selectedRoot)
+		                if (e == selectedRoot)
 		                    shouldSendToSelectedNode = false;
 		            }
 		            
@@ -279,7 +302,7 @@ public final class MinimumSpanningTreeImpl {
 		                // Console.OUT.println("----------------> Delete: " + ctx.id());
 		                ctx.setVertexShouldBeActive(false);
 		                ctx.value().edgeTable = MemoryChunk.getNull[EdgeInfo]();
-		                ctx.value().incomingEdges = MemoryChunk.getNull[EdgeInfo]();
+		                ctx.value().incomingEdges = MemoryChunk.getNull[Long]();
 		                ctx.voteToHalt();
 		            } else {
 		                for (i in messages.range()) {

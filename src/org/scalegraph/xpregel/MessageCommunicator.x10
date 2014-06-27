@@ -473,6 +473,7 @@ final class MessageCommunicator[M] { M haszero } {
 			
 			mUCSCount.del();
 			mUCSOffset.del();
+			if(here.id == 0) sw.lap("before sort...");
 
 			val UCRIdsBuf = MemoryChunk.make[Long](recvSize);
 			val UCRMessagesBuf = MemoryChunk.make[M](recvSize);

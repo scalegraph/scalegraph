@@ -56,7 +56,11 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	//TODO: apply this flag
 //	var mReqEdgeOptimized:Boolean;
 	public val mStartSrcid :Long;
+	def this(){
+		mStartSrcid=0l;
+	}
 	
+
 	//called from each threads
 	def this(
 			outEdge :GraphEdge[E],

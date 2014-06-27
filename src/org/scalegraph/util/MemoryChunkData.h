@@ -118,9 +118,12 @@ namespace org { namespace scalegraph { namespace util {
 
 				if(ptr) {
 					if(containPtrs) {
-						GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+						//GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+						GC_FREE(ptr);
+					}else{
+						::free(ptr);
 					}
-					::free(ptr);
+//					::free(ptr);
 				}
 			}
 
@@ -182,7 +185,12 @@ namespace org { namespace scalegraph { namespace util {
 				}
 				pthread_mutex_unlock(&ExpMemState.mutex);
 
-				char* allocMem = x10aux::system_alloc<char>(size);
+				char* allocMem;// = x10aux::system_alloc<char>(size);
+				if(containPtrs){
+					allocMem = (char*)GC_MALLOC_UNCOLLECTABLE(size);
+				}else{
+					allocMem = x10aux::system_alloc<char>(size);
+				}
 
 				if(allocMem==NULL){
 					pthread_mutex_lock(&ExpMemState.mutex);
@@ -194,9 +202,9 @@ namespace org { namespace scalegraph { namespace util {
 				}
 
 				x10aux::alloc_lock.lock();
-				if(containPtrs){
-					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
-				}
+//				if(containPtrs){
+//					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
+//				}
 				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
 				x10aux::alloc_lock.unlock();
 
@@ -272,7 +280,7 @@ public:
                 //}
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
-                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP ){
                         ELEM* allocMem = x10aux::alloc<ELEM>(size, containsPtrs);
                         if (zeroed) {
                                 memset(allocMem, 0, size);
@@ -302,12 +310,15 @@ public:
 };
 
 // base case for struct and interface types
-template<class T, typename SFINAE = void> class MCData_Impl : public MCData_Base<MCData_Impl<T>, T> {
+template<class T> class MCData_Impl : public MCData_Base<MCData_Impl<T>, T> {
 public:
         typedef MCData_Impl<T> THIS;
         typedef MCData_Base<MCData_Impl<T>, T> BASE;
         typedef T ELEM;
         typedef T TYPE;
+        static int returnSize(){
+        	return sizeof(ELEM);
+        }
 
         MCData_Impl()
                 : BASE()
@@ -379,16 +390,19 @@ public:
 
 // specialized for class types
 // class type is determined whether it has default constructor (constructor that have no parameters)
-template <typename T, void(T::*)()>
-struct MCData_sfinae_helper { typedef void type; };
+//template <typename T, void(T::*)()>
+//struct MCData_sfinae_helper { typedef void type; };
 
-template<class T> class MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type>
-        : public MCData_Base<MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type>, T> {
+template<class T> class MCData_Impl<T*>
+        : public MCData_Base<MCData_Impl<T*>, T> {
 public:
-        typedef MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type> THIS;
+        typedef MCData_Impl<T*> THIS;
         typedef MCData_Base<THIS, T> BASE;
         typedef T ELEM;
         typedef T* TYPE;
+        static int returnSize(){
+        	return sizeof(ELEM);
+        }
 
         MCData_Impl()
                 : BASE()

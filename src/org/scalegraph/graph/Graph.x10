@@ -729,8 +729,8 @@ import org.scalegraph.id.Type;
 		return new DistSparseMatrix(dist2d, () => {
 			val sw = Config.get().stopWatch();
 			val scatterGather = new DistScatterGather(team_);
-			val srcList__ = srcList_();
-			val dstList__ = dstList_();
+			val srcList__ = transpose ? dstList_() : srcList_();
+			val dstList__ = transpose ? srcList_() : dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
 					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = MemoryChunk.make[Int](dist2d.allTeam().size());
