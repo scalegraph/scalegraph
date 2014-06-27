@@ -202,7 +202,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		
 		pagerank_opt(xpregel);
 		
-		xpregel.once((ctx :VertexContext[Double, Double, Any, Any]) => {
+		xpregel.once((ctx :VertexContext[Double, Double, Byte, Byte]) => {
 			ctx.output(ctx.value());
 		});
 		
@@ -250,7 +250,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			throw new IllegalArgumentException("Unknown version parameter :" + args(0));
 		}
 		
-		xpregel.once((ctx :VertexContext[Double, Double, Any, Any]) => {
+		xpregel.once((ctx :VertexContext[Double, Double, Byte, Byte]) => {
 			ctx.output(ctx.value());
 		});
 		
