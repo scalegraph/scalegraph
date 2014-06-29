@@ -16,6 +16,9 @@
 #include <string.h>
 #include <vector>
 
+#include <sys/types.h> 
+#include <unistd.h>
+
 #include <gc_allocator.h>
 #include <fbio_fmt.h>
 
