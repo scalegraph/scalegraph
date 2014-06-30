@@ -166,7 +166,7 @@ final public class MaxFlow {
     	xpregel.updateInEdgeAndValue();
     	
     	//step 1 : set edge information
-    	xpregel.once((ctx :VertexContext[MFVertex, MFEdge, Any, Any]) => {
+    	xpregel.once((ctx :VertexContext[MFVertex, MFEdge, Byte, Byte]) => {
     		val outEdgesId = ctx.outEdgesId();
     		val outEdgesValue = ctx.outEdgesValue();
     		for(i in outEdgesValue.range()) {
