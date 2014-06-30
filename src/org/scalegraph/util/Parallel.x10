@@ -491,6 +491,7 @@ public final class Parallel {
     	val logChunks = Math.min(7, rangeScale);
     	val numChunks = 1 << logChunks;
     	val numShift = rangeScale - logChunks;
+    	if(here.id == 0) Config.get().stopWatch().lap("sort [thread local add ver] numChunks=" + numChunks + ", numShift=" + numShift);
     	val sg = new ScatterGather(numChunks);
     	
     	assert (key.size() == v.size());
@@ -504,6 +505,7 @@ public final class Parallel {
     		}
     	});
     	
+    	if(here.id == 0) Config.get().stopWatch().lap("sort count");
     	sg.sum();
     	
     	Parallel.iter(0..(key.size()-1), (tid :Long, r :LongRange) => {
@@ -514,6 +516,7 @@ public final class Parallel {
     			v_tmp(dstIndex) = v(i);
     		}
     	});
+    	if(here.id == 0) Config.get().stopWatch().lap("sort copy");
     	
     	sg.check(key.size() as Int);
     	
@@ -535,6 +538,7 @@ public final class Parallel {
     					key.subpart(off, len), v.subpart(off, len) );
     		}
     	}
+    	if(here.id == 0) Config.get().stopWatch().lap("sort end");
     }    
 
 
@@ -586,7 +590,7 @@ public final class Parallel {
     	val logChunks = Math.min(7, rangeScale);
     	val numChunks = 1 << logChunks;
     	val numShift = rangeScale - logChunks;
-    	//Config.get().stopWatch().lap("sort [thread local add ver] numChunks=" + numChunks + ", numShift=" + numShift);
+    	if(here.id == 0) Config.get().stopWatch().lap("sort [thread local add ver] numChunks=" + numChunks + ", numShift=" + numShift);
     	val sg = new ScatterGather(numChunks);
     	
     	assert (key.size() == v1.size());
@@ -595,7 +599,7 @@ public final class Parallel {
     	assert (key.size() == v1_tmp.size());
     	assert (key.size() == v2_tmp.size());
     	
-    	//Config.get().stopWatch().lap("sort: initialize");
+    	if(here.id == 0) Config.get().stopWatch().lap("sort: initialize");
     	
     	Parallel.iter(0..(key.size()-1), (tid :Long, r :LongRange) => {
     		val counts = sg.counts(tid as Int);
@@ -604,11 +608,11 @@ public final class Parallel {
     		}
     	});
     	
-    	//Config.get().stopWatch().lap("sort: count");
+    	if(here.id == 0) Config.get().stopWatch().lap("sort: count");
     	
     	sg.sum();
     	
-    	//Config.get().stopWatch().lap("sort: calc offset");
+    	if(here.id == 0) Config.get().stopWatch().lap("sort: calc offset");
     	
     	Parallel.iter(0..(key.size()-1), (tid :Long, r :LongRange) => {
     		val offsets = sg.offsets(tid as Int);
@@ -620,11 +624,11 @@ public final class Parallel {
     		}
     	});
     	
-    	//Config.get().stopWatch().lap("sort: copy");
+    	if(here.id == 0) Config.get().stopWatch().lap("sort: copy");
     	
     	sg.check(key.size() as Int);
     	
-    	//Config.get().stopWatch().lap("sort: check offset");
+    	if(here.id == 0) Config.get().stopWatch().lap("sort: check offset");
     	
     	val taskCounter = MemoryChunk.make[Int](1);
     	taskCounter(0)=0;
@@ -643,7 +647,7 @@ public final class Parallel {
     					key.subpart(off, len), v1.subpart(off, len), v2.subpart(off, len));
     		}
     	}
-    	//Config.get().stopWatch().lap("sort end");
+    	if(here.id == 0) Config.get().stopWatch().lap("sort end");
      }
     
     
