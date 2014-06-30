@@ -63,6 +63,10 @@ final public class MaxFlow {
 
     private static class FlowMessage {
     	// val flow:Long;
+    	def this(){
+    		flow=0;
+    		fromId=0;
+    	}
     	val flow:Double;
     	val fromId:Long;
     	// def this(f:Long, i:Long) {
@@ -74,6 +78,11 @@ final public class MaxFlow {
 
     private static class ValueMessage {
     	// val excess:Long;
+    	def this(){
+    		excess=0;
+    		height=0;
+    		id=0;
+    	}
     	val excess:Double;
     	val height:Long;
     	val id:Long;
@@ -86,6 +95,7 @@ final public class MaxFlow {
     }
     
     private static class MFEdge {
+    	def this(){}
     	var capacity:Double;
     	var flow:Double;
     	var fromId:Long;
