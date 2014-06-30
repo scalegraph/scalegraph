@@ -21,7 +21,7 @@ fetch: $(ARPACK_ARCHIVE) $(PAR_METIS_ARCHIVE)
 $(OUTPATH)/ScaleGraph.jar: $(ARPACK_LIB) $(PAR_METIS_LIB)
 	@ mkdir -p x10lib/lib
 	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -o ScaleGraph -d $(OUTPATH)/include $(X10FILES)
-	cd src && jar cvf $(OUTPATH)/ScaleGraph.jar {org,x10}
+	cd src && jar cvf $(OUTPATH)/ScaleGraph.jar org x10
 
 ARPACK: $(ARPACK_ARCHIVE)
 	for x in $^;do tar xf $$x;done
