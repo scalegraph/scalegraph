@@ -101,13 +101,23 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		/// }
 	}
 	
-	public def this(team :Team, edgeIndexMatrix :DistSparseMatrix[Long]) {
-		this(team, edgeIndexMatrix.ids());
+	public def setOutEdge(edgeIndexMatrix :DistSparseMatrix[Long]) {
+		if(edgeIndexMatrix.ids().equals(mIds) == false) {
+			throw new Exception("Number of vertexes in the graph or the distribution of the graph is different.");
+		}
 		mOutEdge.offsets = edgeIndexMatrix().offsets;
 		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
-		mOutEdge.value = MemoryChunk.make[E](mOutEdge.vertexes.size());
+		if(mOutEdge.value.size() != edgeIndexMatrix().vertexes.size()) {
+			mOutEdge.value = MemoryChunk.make[E](edgeIndexMatrix().vertexes.size());
+		}
 	}
 	
+	public def setOutEdgeWithValue(graph :DistSparseMatrix[E]) {
+		if(graph.ids().equals(mIds) == false) {
+			throw new Exception("Number of vertexes in the graph or the distribution of the graph is different.");
+		}
+		mOutEdge.set(graph());
+	}
 
 	public def updateFewInEdge(list :MemoryChunk[EdgeProvider[E]]){
 		val numTeam = mTeam.size();
@@ -546,6 +556,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 				@Ifdef("PROF_XP") { thtimer.start(); }
 				for(srcid in r) {
 					vc.mSrcid = srcid;
+					vc.releaseAllIterators();
 					val mes = ectx.message(srcid, mesTempBuffer);
 					@Ifdef("PROF_XP") { numLocalMes += mes.size(); }
 					if(mes.size() > 0 || mVertexActive(srcid)) {
@@ -602,10 +613,13 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 					for (dosrcid in r){
 						if(BCbmp(dosrcid)){
 							vc.mSrcid = dosrcid;
-							val OEsId = vc.outEdgesId();
+							// val OEsId = vc.outEdgesId();
 							val tempmes=ectx.mBCCMessages(dosrcid);
-							for(eI in OEsId){
-								vc.sendMessage(eI, tempmes);
+							// for(eI in OEsId){
+							// 	vc.sendMessage(eI, tempmes);
+							// }
+							for (edgeId in vc) {
+								vc.sendMessage(edgeId, tempmes);
 							}
 						}
 					}
