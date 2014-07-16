@@ -122,11 +122,15 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		//optimize & calc newOffset's diff (== newVertex's index diff )
 		newOffset(0) = 0L;
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
+			if(r.min > r.max) {
+				return;
+			}
+			
 			val e = list(tid);
 			
 			// // optimize whole ReqEdge in e
 			// // calcEdgeNumDifferential de tsugi no index ga hitsuyou nanode ikki ni compute
-			// e.optimizeReqEdge(r);
+			e.optimizeReqEdge(r);
 
 			//calc newOffset
 			var count :Long = 0L;
@@ -146,6 +150,9 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		// here, newOffset contains NOT offsets but counts. Convert each of them to offset
 		// calc new offset's value (== newVertex's index )
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
+			if(r.min > r.max) {
+				return;
+			}
 			newOffset(r.min) = offsetPerThread(tid);	//not "+="
 			for(srcid in (r.min)..(r.max - 1L)) {
 				newOffset(srcid + 1L) += newOffset(srcid);
@@ -159,6 +166,9 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_1); }
 
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
+			if(r.min > r.max) {
+				return;
+			}
 			val e = list(tid);
 			
 			//update each vertex
@@ -213,27 +223,26 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			
 			//copy unrelated edge
 			{
-				// var copyLength :Long = 0L;
+				var copyLength :Long = 0L;
 				//TODO: req_NOINFO hitsuyou?
 				//array bound exception taisaku no tame, taisyou no temae made copy
 				val oldlen = oldEdge.size();
 				val newlen = newEdge.size();
-				var oldtarget :Long = oldEdgeIndex;
-				var newtarget :Long = newEdgeIndex;
-				
+				var oldtarget :Long = oldEdgeIndex + copyLength;
+				var newtarget :Long = newEdgeIndex + copyLength;
 				//optimize: syounari ni naru hou dake < maxlen mireba ii? jouken motto kanryakuka
 				while(oldtarget < oldlen && newtarget < newlen &&
 						(oldEdge(oldtarget) & req_NOINFO) < reqId){
 					newEdge(newtarget) = oldEdge(oldtarget);
 					newVal(newtarget) = oldVal(oldtarget);
-					// copyLength++;
-					oldtarget++;	// = oldEdgeIndex + copyLength;
-					newtarget++;	// = newEdgeIndex + copyLength;
+					copyLength++;
+					oldtarget = oldEdgeIndex + copyLength;
+					newtarget = newEdgeIndex + copyLength;
 				}
 				//MemoryChunk.copy(oldEdge,oldEdgeIndex,newEdge,newEdgeIndex,copyLength);
 				//MemoryChunk.copy(oldVal,oldEdgeIndex,newVal,newEdgeIndex,copyLength);
-				oldEdgeIndex = oldtarget;
-				newEdgeIndex = newtarget;
+				oldEdgeIndex += copyLength;
+				newEdgeIndex += copyLength;
 			}
 			
 			// switch
@@ -284,21 +293,21 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		return count(1) - count(0);
 	}
 	
-	// def optimizeReqEdge(srcid :LongRange){
-	// 	var dif :Long = 0L;
-	// 	
-	// 	if (srcid.min <= srcid.max) {
-	// 		for(si in (srcid.min)..(srcid.max-1L)){
-	// 			dif = optimizeReqEdge(si, dif, false);
-	// 		}
-	// 		assert(srcid.max >= mStartSrcid);
-	// 		optimizeReqEdge(srcid.max, dif, true);
-	// 	}
-	// }
-	// 
-	// def optimizeReqEdge(srcid :Long){
-	// 	optimizeReqEdge(srcid, 0L, true);
-	// }
+	def optimizeReqEdge(srcid :LongRange){
+		var dif :Long = 0L;
+		
+		if (srcid.min <= srcid.max) {
+			for(si in (srcid.min)..(srcid.max-1L)){
+				dif = optimizeReqEdge(si, dif, false);
+			}
+			assert(srcid.max >= mStartSrcid);
+			optimizeReqEdge(srcid.max, dif, true);
+		}
+	}
+	
+	def optimizeReqEdge(srcid :Long){
+		optimizeReqEdge(srcid, 0L, true);
+	}
 	
 	/**
 	 * sort and reduce reqEdges
@@ -307,11 +316,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	 * @param reduceBottom when it param is true, use memcpy to reduce bottom empty space, and modify next offset 
 	 * @return next modDiffReqStartSavingOffset
 	 */
-	private def optimizeReqEdge(srcid :Long, modDiffReqStartSavingOffset :Long, reduceBottom :Boolean) :Long{
-		if(1 != 2) {
-			return 0;
-		}		
-		
+	private def optimizeReqEdge(srcid :Long, modDiffReqStartSavingOffset :Long, reduceBottom :Boolean) :Long{		
 		val localsrcid = srcid - mStartSrcid;		
 		val reqStartIdx = mEdgeModifyReqOffset(localsrcid);	//not mEdgeModifyReqOffset(srcid)
 		mEdgeModifyReqOffset(localsrcid) += modDiffReqStartSavingOffset;
@@ -544,6 +549,9 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		//optimize & calc newOffset's diff (== newVertex's index diff )
 		newOffset(0) = 0L;
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
+			if(r.min > r.max) {
+				return;
+			}
 			val e = list(tid);
 			//calc newOffset
 			var count:Long = 0L;
@@ -551,9 +559,10 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				val orgn_length = inOffset(srcid + 1L) - inOffset(srcid);			//moto no length
 				newOffset(srcid+1L) = orgn_length + e.calcEdgeNumDifferential(srcid);	//A/R length diff
 				
-				// if (newOffset(srcid) < 0L) {
-				// 	throw new Exception("error ddd : " + newOffset(srcid) + ", " + srcid + ", " + inOffset(srcid) + ", " + inOffset(srcid + 1)); 
-				// }
+				if (newOffset(srcid+1L) < 0L) {
+					Console.OUT.println("Error");
+					// throw new Exception("error ddd : " + newOffset(srcid) + ", " + srcid + ", " + inOffset(srcid) + ", " + inOffset(srcid + 1)); 
+				}
 				
 				//count
 				count += newOffset(srcid+1L);
@@ -565,6 +574,9 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			offsetPerThread(i + 1L) += offsetPerThread(i);
 		//calc new offset's value (== newVertex's index )
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
+			if(r.min > r.max) {
+				return;
+			}
 			newOffset(r.min) = offsetPerThread(tid);	//not "+="
 			for(srcid in (r.min)..(r.max-1L))
 				newOffset(srcid+1L) += newOffset(srcid);
@@ -576,15 +588,20 @@ class EdgeProvider [E] /*{ E haszero }*/{
 //		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_1); }
 		
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
+			if(r.min > r.max) {
+				return;
+			}
 			val e = list(tid);
 			for(srcid in r) {
 				//vertex goto ni update
+				val x = newOffset(srcid+1L);
+				val y = newOffset(srcid);
 				val newlen=newOffset(srcid+1L)-newOffset(srcid);
 				val oldlen=inOffset(srcid+1L)-inOffset(srcid);
 				
-				if (newlen < 0) {
-					throw new Exception("newlen is negative : " + newlen + ", " + srcid + ", " + newOffset(srcid) + ", " + newOffset(srcid + 1L));
-				}
+				// if (newlen < 0) {
+				// 	throw new Exception("newlen is negative : " + newlen + ", " + srcid + ", " + newOffset(srcid) + ", " + newOffset(srcid + 1L));
+				// }
 				
 				e.updateOutEdge_temp(
 						newVertex.subpart(newOffset(srcid), newlen),

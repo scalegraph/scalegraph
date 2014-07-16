@@ -43,8 +43,8 @@ public class EdgeARMTest {
 		val outputPath = "arm-%d";
 		
 		// Generate an Erdos-Renyi random graph
-		val scale = 2;
-		val edgeFactor = 1;
+		val scale = 10;
+		val edgeFactor = 5;
 		val rnd = new Random(2, 3);
 		val edgeList = GraphGenerator.genRandomGraph(scale, edgeFactor, rnd);
 		val g = Graph.make(edgeList);
@@ -79,6 +79,8 @@ public class EdgeARMTest {
 		val team = param.team;
 		val sw = Config.get().stopWatch();
 		
+		Console.OUT.println("Start UpdateInEdge");
+		
 		// compute PageRank
 		val xpgraph = XPregelGraph.make[Double, Double](matrix);
 		xpgraph.updateInEdge();
@@ -86,13 +88,18 @@ public class EdgeARMTest {
 		sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
+		Console.OUT.println("Hello!akjvnajkdnv");
+		
 		xpgraph.iterate[Long, Long]((ctx :VertexContext[Double, Double, Long, Long], messages :MemoryChunk[Long]) => {
 			sw.lap("superstep " + ctx.superstep());
 			var sum :Long = 0;
 			switch (ctx.superstep()) {
 			case 0:
+				ctx.setValue(ctx.numberOfOutEdges() * 10000.0);
 				for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next()) {
 					iter.remove();
+					// Console.OUT.println("Revoving\n\n");
+					// Console.OUT.println("value : " + iter.curValue());
 				}				
 				break;
 			case 1:
@@ -104,7 +111,7 @@ public class EdgeARMTest {
 					sum += m;
 				}
 				assert (sum == messages.size());
-				ctx.setValue(ctx.value() + messages.size() + 0.01);
+				ctx.setValue(ctx.value() + messages.size() + 0.1);
 				break;
 			case 3:
 				ctx.voteToHalt();

@@ -103,7 +103,6 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 	
 	private val iterPool : GrowableMemory[EdgeIterator[E]];
 	private var numUsedIters :Long;
-	// private var numConstructedIters :Long;
 	
 	//////////////////////////////////////////////////////////
 	
@@ -204,16 +203,8 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		numUsedIters++;
 		
 		if (iterPool.size() <= idx) {
-			// iterPool.grow(idx + 1);
 			iterPool.setSize(idx + 1);
-			
-			// if (numConstructedIters < numUsedIters) {			
-				iterPool(idx) = new EdgeIterator(ids, values, mEdgeProvider);
-			// 	numConstructedIters++;
-			// } else {
-			// 	iterPool(idx).reconstruct(ids, values, mEdgeProvider);
-			// }
-			
+			iterPool(idx) = new EdgeIterator(ids, values, mEdgeProvider);
 			return iterPool(idx);
 		} else {
 			iterPool(idx).reconstruct(ids, values, mEdgeProvider);
