@@ -25,7 +25,6 @@ public class EVO extends AlgorithmTest{
                     step = 1;
 
                     var ambassador: Long = ctx.dstId(getRandomAmbassador(ctx.outEdgesId().size()));
-                    Console.OUT.println("ambassador :"+ ambassador);
 //                    vtx.addOutEdge(ambassador, 1);
                     while(step < stepThreshold){
                         val x = (1/(1-p));

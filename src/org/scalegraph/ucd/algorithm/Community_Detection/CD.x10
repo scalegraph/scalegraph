@@ -70,7 +70,6 @@ public class CD extends AlgorithmTest{
                             }
 
                             labelScore = labelMaxScore.getOrThrow(ctx.value()) - delta;
-                            Console.OUT.println("The Score is : "+ctx.value()+" for vertex : "+ctx.id());
 
                         isLabelChanged =true;
                         ctx.sendMessageToAllNeighbors(labelScore);

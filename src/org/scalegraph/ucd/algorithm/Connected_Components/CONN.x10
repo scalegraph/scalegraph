@@ -31,13 +31,12 @@ public class CONN extends AlgorithmTest{
                 val neighbours = ctx.outEdges().get1();
 
                 for(i in neighbours.range()){
-                Console.OUT.println("Inside for loop with : "+neighbours(i));
                 //find the min value here only.
                    // ctx.aggregate(neighbours(i));
                     // aggregate doesn't seems to work after every iteration.
 
                     calculateMinLabel(neighbours(i));
-                    Console.OUT.println("min Vertex value = "+minLabelRef()());
+
                     //minLabel = aggVal;//???????? use PlaceLocalHandle class
 
                     if (minLabelRef()() != ctx.id()){
