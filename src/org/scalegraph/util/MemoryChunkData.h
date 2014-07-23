@@ -21,6 +21,19 @@
 
 #define MCDEFARGS 0, false, (x10_byte*)(void*)__FILE__, __LINE__
 
+
+namespace x10 {
+	namespace lang {
+		class Place;
+	}
+    namespace util {
+    	extern void IMC_copyToBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                               x10::lang::Place dstPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    	extern void IMC_copyFromBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                                 x10::lang::Place srcPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    }
+}
+
 namespace org { namespace scalegraph { namespace util {
 		struct ExplicitMemory;
 
@@ -357,6 +370,9 @@ public:
                 memmove(dst.FMGL(pointer) + dstIndex, src.FMGL(pointer) + srcIndex, numElems * sizeof(T));
         }
 
+        static void asyncCopy(MCData_Impl<T> src, void* dst, x10_long dstIndex, x10aux::place dstPlace);
+        static void asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T> dst);
+
         static void _serialize(MCData_Impl<T> this_, x10aux::serialization_buffer& buf) {
                 x10_long size = this_->FMGL(size);
                 void* data = this_->FMGL(pointer);
@@ -451,6 +467,9 @@ public:
                 }
         }
 
+        static void asyncCopy(MCData_Impl<T*> src, void* dst, x10_long dstIndex, x10aux::place dstPlace);
+        static void asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T*> dst);
+
         static void _serialize(THIS this_, x10aux::serialization_buffer& buf) {
                 if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT) printf("serialize\n");
                 x10_long size = this_->FMGL(size);
@@ -483,6 +502,7 @@ public:
 #ifndef ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
 #define ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
 #include <x10/lang/Any.h>
+#include <x10/lang/Place.h>
 #include <x10/lang/String.h>
 #include <x10/lang/UnsupportedOperationException.h>
 
@@ -558,6 +578,26 @@ template<class THIS, typename ELEM>void MCData_Base<THIS, ELEM>::_initRTT() {
     const char *baseName = "org.scalegraph.util.MemoryChunk.Data";
     rtt.initStageTwo(baseName, x10aux::RuntimeType::struct_kind, 2, parents, 1, params, variances);
 }
+
+template<class T> void MCData_Impl<T>::asyncCopy(MCData_Impl<T> src, void* dst, x10_long dstIndex, x10aux::place dstPlace)
+{
+	::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+}
+template<class T> void MCData_Impl<T>::asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T> dst)
+{
+	::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+}
+
+template<class T> void MCData_Impl<T*>::asyncCopy(MCData_Impl<T*> src, void* dst, x10_long dstIndex, x10aux::place dstPlace)
+{
+	::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+}
+
+template<class T> void MCData_Impl<T*>::asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T*> dst)
+{
+	::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+}
+
 
 } } } // namespace org { namespace scalegraph { namespace util {
 
