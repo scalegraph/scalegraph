@@ -3,8 +3,13 @@ TMPDIR		= $(PWD)/tmp
 X10FILES	= $(shell find $(SG_PREFIX)/src/org -name '*.x10')
 
 LIBPATH		= $(SG_PREFIX)/lib
-LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-postarg -lmpifort -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
 OUTPATH		= $(SG_PREFIX)/x10lib
+
+# MVAPICH2
+LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
+
+# MPICH2
+#LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-postarg -lmpifort -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
 
 # PARPACK
 ARPACK_ARCHIVE = arpack96.tar.gz patch.tar.gz parpack96.tar.gz ppatch.tar.gz
@@ -15,13 +20,18 @@ PAR_METIS_ARCHIVE       = parmetis-4.0.3.tar.gz
 PAR_METIS_FOLDER = $(patsubst %.tar.gz,%, $(PAR_METIS_ARCHIVE))
 PAR_METIS_LIB = $(LIBPATH)/libparmetis.so
 
-all: $(OUTPATH)/ScaleGraph.jar
+all: $(OUTPATH)/ScaleGraph.jar $(OUTPATH)/ScaleGraphd.jar
 fetch: $(ARPACK_ARCHIVE) $(PAR_METIS_ARCHIVE)
 
 $(OUTPATH)/ScaleGraph.jar: $(ARPACK_LIB) $(PAR_METIS_LIB)
 	@ mkdir -p x10lib/lib
-	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -o ScaleGraph -d $(OUTPATH)/include $(X10FILES)
-	cd src && jar cvf $(OUTPATH)/ScaleGraph.jar {org,x10}
+	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -cxx-prearg -g -O -NO_CHECKS -define NO_BOUNDS_CHECKS -o ScaleGraph -d $(OUTPATH)/include $(X10FILES)
+	cd src && jar cvf $(OUTPATH)/ScaleGraph.jar org x10
+
+$(OUTPATH)/ScaleGraphd.jar: $(ARPACK_LIB) $(PAR_METIS_LIB)
+	@ mkdir -p x10lib/lib
+	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -cxx-prearg -g -o ScaleGraphd -d $(OUTPATH)/include $(X10FILES)
+	cd src && jar cvf $(OUTPATH)/ScaleGraphd.jar org x10
 
 ARPACK: $(ARPACK_ARCHIVE)
 	for x in $^;do tar xf $$x;done
@@ -33,7 +43,7 @@ $(ARPACK_LIB): ARPACK
 	echo $(ARPACK_LIB)
 	sed -i -e "24s/^/\*/g" ARPACK/UTIL/second.f
 	cat ARPACK/ARMAKES/ARmake.MPI-SUN4 > ARPACK/ARmake.inc
-	cd ARPACK && $(MAKE) HOME=$(SG_PREFIX) FC=gfortran FFLAGS="-O -fPIC" PFC=mpif77 PFFLAGS="-O -fPIC" MAKE=make all
+	cd ARPACK && make HOME=$(SG_PREFIX) FC=gfortran FFLAGS="-O -fPIC" PFC=mpif77 PFFLAGS="-O -fPIC" MAKE=make all
 	@ mkdir -p lib
 	cp ARPACK/libarpack_SUN4.a $(LIBPATH)/libarpack.a
 	cp ARPACK/parpack_MPI-SUN4.a $(LIBPATH)/libparpack.a
