@@ -3,8 +3,13 @@ TMPDIR		= $(PWD)/tmp
 X10FILES	= $(shell find $(SG_PREFIX)/src/org -name '*.x10')
 
 LIBPATH		= $(SG_PREFIX)/lib
-LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-postarg -lmpifort -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
 OUTPATH		= $(SG_PREFIX)/x10lib
+
+# MVAPICH2
+LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
+
+# MPICH2
+#LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-postarg -lmpifort -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
 
 # PARPACK
 ARPACK_ARCHIVE = arpack96.tar.gz patch.tar.gz parpack96.tar.gz ppatch.tar.gz
