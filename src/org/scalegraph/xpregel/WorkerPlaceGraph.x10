@@ -41,7 +41,7 @@ final class WorkerPlaceGraph[V,E] {
 	private static type XP = org.scalegraph.id.ProfilingID.XPregel;
 	
 	val mTeam :Team2;
-	val mIds :IdStruct;
+	var mIds :IdStruct;
 
 	val mVtoD :OnedR.VtoD;
 	val mDtoV :OnedR.DtoV;
@@ -50,8 +50,8 @@ final class WorkerPlaceGraph[V,E] {
 	val mStoV :OnedR.StoV;
 	
 	var mVertexValue :MemoryChunk[V];
-	val mVertexActive :Bitmap;
-	val mVertexShouldBeActive :Bitmap;
+	var mVertexActive :Bitmap;
+	var mVertexShouldBeActive :Bitmap;
 	
 	val mOutEdge :GraphEdge[E];
 	val mInEdge :GraphEdge[E];
@@ -99,6 +99,47 @@ final class WorkerPlaceGraph[V,E] {
 		mOutEdge.offsets = edgeIndexMatrix().offsets;
 		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
 		mOutEdge.value = MemoryChunk.make[E](mOutEdge.vertexes.size());
+	}
+	
+	/**
+	 * Add new vertices in the graph
+	 */
+	public def addVertex(newIds :IdStruct, newVal :V) {
+		val numOldVertexes = mIds.numberOfLocalVertexes();
+		val numNewVertexes = newIds.numberOfLocalVertexes();
+		
+		val newVertexValue = MemoryChunk.make[V](numNewVertexes);
+		MemoryChunk.copy(mVertexValue, newVertexValue.subpart(0, numOldVertexes));
+		mVertexValue = newVertexValue;
+		mVertexActive = new Bitmap(numNewVertexes, true);
+		mVertexShouldBeActive = new Bitmap(numNewVertexes, true);
+		
+		// initialize new vertex with newVal
+		for(i in numOldVertexes..(numNewVertexes-1)) {
+			mVertexValue(i) = newVal;
+		}
+
+		growEdge(mOutEdge, mIds, newIds);
+		if(mInEdge.offsets.size() > 0)
+			growEdge(mInEdge, mIds, newIds);
+		
+		mIds = newIds;
+	}
+	
+	private static def growEdge[E](edge :GraphEdge[E], oldIds :IdStruct, newIds :IdStruct) {
+		val numNewVertices = newIds.numberOfLocalVertexes();
+		val DtoV = new OnedR.DtoV(oldIds);
+		val VtoD = new OnedR.VtoD(newIds);
+		val newOffsets = MemoryChunk.make[Long](numNewVertices+1);
+		MemoryChunk.copy(edge.offsets, newOffsets.subpart(0l, edge.offsets.size()));
+		val lastIndex = edge.vertexes.size();
+		for(i in edge.offsets.size()..numNewVertices) {
+			newOffsets(i) = lastIndex;
+		}
+		for(i in edge.vertexes.range()) {
+			edge.vertexes(i) = VtoD(DtoV(edge.vertexes(i)));
+		}
+		edge.offsets = newOffsets;
 	}
 	
 	public def updateInEdge() {
