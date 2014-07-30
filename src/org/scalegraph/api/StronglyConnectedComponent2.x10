@@ -112,7 +112,6 @@ public final class StronglyConnectedComponent2 {
 		var numOfChild:Long;
 		var parentAddress:Long;
 		private def this(){
-		
 		}
 		private def this (fromId_:Long, toId_:Long, parentAddress_:Long) {
 			fromId = fromId_;

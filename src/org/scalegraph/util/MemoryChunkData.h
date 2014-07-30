@@ -375,6 +375,7 @@ public:
         static MCData_Impl<T> _deserialize(x10aux::deserialization_buffer& buf) {
                 x10_long size = buf.read<x10_long>();
                 MCData_Impl<T> allocMem = _make(size, 0, false);
+//                MCData_Impl<T> allocMem = tfunc<T>::_template_make(size, 0, false);
            bool containsPtrs = x10aux::getRTT<T>()->containsPtrs;
                 if(containsPtrs) {
                         for(x10_long i = 0; i < size; ++i) {
@@ -386,6 +387,56 @@ public:
                 }
                 return allocMem;
         }
+};
+
+template<class T> struct MakeStruct{
+	static MCData_Impl<T> make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			MCData_Impl<T> this_ = MCData_Base<MCData_Impl<T>, T>::_make(numElements, alignment, zeroed, filename, line);
+			return this_;
+	}
+	static MCData_Impl<T> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			return MCData_Base<MCData_Impl<T>, T>::_make(numElements, alignment, zeroed, filename, line);
+	}
+	static MCData_Impl<T> make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			MCData_Impl<T> this_ = MCData_Base<MCData_Impl<T>, T>::_make(numElements, alignment, zeroed);
+			return this_;
+	}
+	static MCData_Impl<T> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			return MCData_Base<MCData_Impl<T>, T>::make(numElements, alignment, zeroed);
+	}
+};
+template<class T> struct MakeStruct<T*>{
+	static MCData_Impl<T*> make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed, filename, line);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+					elem->_constructor();
+			}
+			return this_;
+	}
+	//to avoid compile error (some T doesn't have _constructor())
+	static MCData_Impl<T*> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed, filename, line);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+			}
+			return this_;
+	}
+	static MCData_Impl<T*> make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+					elem->_constructor();
+			}
+			return this_;
+	}
+	static MCData_Impl<T*> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+			}
+			return this_;
+	}
 };
 
 // specialized for class types
@@ -412,22 +463,22 @@ public:
                 : BASE(pointer__, size__, memobj__)
         { }
 
-        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
-                THIS this_ = BASE::_make(numElements, alignment, zeroed);
-                for(x10_long i = 0; i < numElements; ++i) {
-                        T* elem = new (&this_.FMGL(pointer)[i]) T();
-                        elem->_constructor();
-                }
-                return this_;
-        }
-        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
-                THIS this_ = BASE::_make(numElements, alignment, zeroed, filename, line);
-                for(x10_long i = 0; i < numElements; ++i) {
-                        T* elem = new (&this_.FMGL(pointer)[i]) T();
-                        elem->_constructor();
-                }
-                return this_;
-        }
+//        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+//                THIS this_ = BASE::_make(numElements, alignment, zeroed);
+//                for(x10_long i = 0; i < numElements; ++i) {
+//                        T* elem = new (&this_.FMGL(pointer)[i]) T();
+//                        elem->_constructor();
+//                }
+//                return this_;
+//        }
+//        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+//                THIS this_ = BASE::_make(numElements, alignment, zeroed, filename, line);
+//                for(x10_long i = 0; i < numElements; ++i) {
+//                        T* elem = new (&this_.FMGL(pointer)[i]) T();
+//                        elem->_constructor();
+//                }
+//                return this_;
+//        }
 
         x10_boolean isValid() { return (this->FMGL(memobj) == NULL) || (this->FMGL(memobj)->allocHead != NULL); }
 
@@ -466,9 +517,16 @@ public:
         static THIS _deserialize(x10aux::deserialization_buffer& buf) {
                 if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT) printf("deserialize\n");
                 x10_long size = buf.read<x10_long>();
-                THIS allocMem = _make(size, 0, false);
+                //THIS allocMem = _make(size, 0, false);
+                //THIS allocMem = MakeStruct<T*>::make(size, 0, false);
+                MCData_Impl<T*> allocMem = MCData_Base<MCData_Impl<T*>, T>::_make(size, 0, false);
+//                			for(x10_long i = 0; i < numElements; ++i) {
+//                					T* elem = new (&this_.FMGL(pointer)[i]) T();
+//                					elem->_constructor();
+//                			}
                 for(x10_long i = 0; i < size; ++i) {
                     T* elem = new (&allocMem->FMGL(pointer)[i]) T();
+                    //elem -> _constructor();
                     buf.record_reference(elem);
                     elem->_deserialize_body(buf);
                 }
@@ -563,3 +621,4 @@ template<class THIS, typename ELEM>void MCData_Base<THIS, ELEM>::_initRTT() {
 
 #endif // ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_IMPLEMENTATION
 #endif // ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
+
