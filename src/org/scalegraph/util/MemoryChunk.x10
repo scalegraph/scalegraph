@@ -428,6 +428,20 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		MemoryChunkData.copy(src.data, srcIndex, dst.data, dstIndex, numElems);
 	}
 	
+	/** Copies the elements of the MemoryChunks
+	 * @param src The source data
+	 * @param dst The destination memory
+	 */
+	public static def copy[T](src:MemoryChunk[T], dst:MemoryChunk[T]):void {
+		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!src.data.isValid() || !dst.data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
+			if(src.size() != dst.size())
+				throw new ArrayIndexOutOfBoundsException("copy: out of range");
+		}
+		MemoryChunkData.copy(src.data, 0l, dst.data, 0l, src.size());
+	}
+	
 	/** Creates and returns an empty memory chunk.
 	 */
 	public static def getNull[T]() = MemoryChunk.make[T](0);

@@ -100,8 +100,8 @@ public final struct DistSparseMatrix[T] {
 			val m = data()().matrix;
 			val values_ = m.values;
 			val ids = data()().ids;
-			val StoV = Twod.StoV(ids, dist.c());
-			val DtoV = Twod.DtoV(ids, dist.r());
+			val StoV = Twod.StoV(ids, dist.r());
+			val DtoV = Twod.DtoV(ids, dist.c());
 			var dstIdx :Long = 0L;
 			var cachedOffset :Long = m.offsets(0);
 			
