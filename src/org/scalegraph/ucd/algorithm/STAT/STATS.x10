@@ -60,9 +60,7 @@ public class STATS extends AlgorithmTest{
                 ctx.sendMessageToAllNeighbors(ctx.outEdges().get1());
             }
             else if(ctx.superstep() == 1) {
-                Console.OUT.println("I am here");
                 for(i in messages.range()) {
-                Console.OUT.println("I am IN here");
                     val neighbours = messages(i);
 
                     if(here.id == 0){
