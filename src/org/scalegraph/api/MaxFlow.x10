@@ -167,15 +167,25 @@ final public class MaxFlow {
     	
     	//step 1 : set edge information
     	xpregel.once((ctx :VertexContext[MFVertex, MFEdge, Any, Any]) => {
-    		val outEdgesId = ctx.outEdgesId();
-    		val outEdgesValue = ctx.outEdgesValue();
-    		for(i in outEdgesValue.range()) {
-    			outEdgesValue(i).setVertexId( ctx.id(), outEdgesId(i), i );
-    			outEdgesValue(i).setFromExcess(0);
-    			outEdgesValue(i).setFromHeight(0);
-    			outEdgesValue(i).setToExcess(0);
-    			outEdgesValue(i).setToHeight(0);
-    		}
+    		var ii :Int = 0;
+    		for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next(), ii++) {
+    			iter.curValue().setVertexId( ctx.id(), iter.curId(), ii);
+    			iter.curValue().setFromExcess(0);
+    			iter.curValue().setFromHeight(0);
+    			iter.curValue().setToExcess(0);
+    			iter.curValue().setToHeight(0);
+    		}		
+    		
+    		// val outEdgesId = ctx.outEdgesId();
+    		// val outEdgesValue = ctx.outEdgesValue();
+    		// 
+    		// for(i in outEdgesValue.range()) {
+    		// 	outEdgesValue(i).setVertexId( ctx.id(), outEdgesId(i), i );
+    		// 	outEdgesValue(i).setFromExcess(0);
+    		// 	outEdgesValue(i).setFromHeight(0);
+    		// 	outEdgesValue(i).setToExcess(0);
+    		// 	outEdgesValue(i).setToHeight(0);
+    		// }
     	});
     	
     	//step 2 : BFS from sink ( because of setting initial height )

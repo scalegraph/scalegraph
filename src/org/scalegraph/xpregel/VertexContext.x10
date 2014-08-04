@@ -237,6 +237,8 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		return getIteratorBase(mEdgeProvider.inEdgesId(mSrcid), mEdgeProvider.inEdgesValue(mSrcid));
 	}
 	
+	public def numberOfInEdges() = mEdgeProvider.inEdgesId(mSrcid).size();
+	
 	/**
 	 * replace the out edges for the current vertex with the given edges
 	 */

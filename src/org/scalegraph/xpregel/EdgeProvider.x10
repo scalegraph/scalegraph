@@ -559,10 +559,10 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				val orgn_length = inOffset(srcid + 1L) - inOffset(srcid);			//moto no length
 				newOffset(srcid+1L) = orgn_length + e.calcEdgeNumDifferential(srcid);	//A/R length diff
 				
-				if (newOffset(srcid+1L) < 0L) {
-					Console.OUT.println("Error");
-					// throw new Exception("error ddd : " + newOffset(srcid) + ", " + srcid + ", " + inOffset(srcid) + ", " + inOffset(srcid + 1)); 
-				}
+				// if (newOffset(srcid+1L) < 0L) {
+				// 	Console.OUT.println("Error");
+				// 	// throw new Exception("error ddd : " + newOffset(srcid) + ", " + srcid + ", " + inOffset(srcid) + ", " + inOffset(srcid + 1)); 
+				// }
 				
 				//count
 				count += newOffset(srcid+1L);

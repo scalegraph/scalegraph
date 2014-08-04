@@ -18,20 +18,7 @@ import org.scalegraph.util.MathAppend;
 
 public class EdgeARMTest {
 	
-	/** The team that provides place group the calculation will take on.
-	 * If the graph object provides different team, this variable is overridden with Graph's one. 
-	 * Default: Config.get().worldTeam()
-	 */
 	public var team :Team = Config.get().worldTeam();
-	
-	/** If directed is true, the graph is considered directed graph.
-	 * Default: true
-	 */
-	public var directed :Boolean = true;
-		
-	/** The name of the attribute used to give edge weights for the calculation of weighted PageRank.
-	 * Default: "weight"
-	 */
 	public var weights :String = "weight";
 
 	public static def main(args: Array[String]) {

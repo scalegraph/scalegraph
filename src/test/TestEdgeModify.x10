@@ -96,10 +96,13 @@ public class TestEdgeModify {
 				}
 				
 				//display current out edges
-				val OEsId = ctx.outEdgesId();
-				for(eI in OEsId){
+				for(eI in ctx) {
 					sb.add(myId + "->" + ctx.realId(eI) + "\n");
 				}
+				// val OEsId = ctx.outEdgesId();				
+				// for(eI in OEsId){
+				// 	sb.add(myId + "->" + ctx.realId(eI) + "\n");
+				// }
 				
 				atomic {	//atomic ga nai to hukusuu thread de shinu
 					mesBuf().add(sb.toString());
@@ -137,21 +140,29 @@ public class TestEdgeModify {
 	
 	public static def removeOutEdge(ctx :VertexContext[Long, Long, Long, Long ],dstId :Long){
 		//Console.OUT.println("\tEnter removeOutEdge:dstId="+dstId);
-		val temp = ctx.outEdges();
-		val len = temp.get1().size();	//motono nagasa
+		// val temp = ctx.outEdges();
+		val len = ctx.numberOfOutEdges();	//motono nagasa
 		//Console.OUT.println("\t len:="+len);
 		//temp ha outEdges no copy rashii
 		ctx.clearOutEdges();
 
 		//TODO:subpart tsukaou
 		//modified  len -> len-1
-		for(i in 0..(len - 1)) {		//length -> index
-			//Console.OUT.println("\t  i:="+i+" temp.get1()(i):="+temp.get1()(i));
-			if(temp.get1()(i)!=dstId){	//keshitakatta dst de nakereba
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" add:i="+i);
-				ctx.addOutEdge(temp.get1()(i),temp.get2()(i));
-			}else{
-				//Console.OUT.println("\t deleteId:dstId="+dstId+" NoOp:i="+i);
+		// for(i in 0..(len - 1)) {		//length -> index
+		// 	//Console.OUT.println("\t  i:="+i+" temp.get1()(i):="+temp.get1()(i));
+		// 	if(temp.get1()(i)!=dstId){	//keshitakatta dst de nakereba
+		// 		//Console.OUT.println("\t deleteId:dstId="+dstId+" add:i="+i);
+		// 		ctx.addOutEdge(temp.get1()(i),temp.get2()(i));
+		// 	}else{
+		// 		//Console.OUT.println("\t deleteId:dstId="+dstId+" NoOp:i="+i);
+		// 	}
+		// }
+		
+		for(val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+			if(it.curId() != dstId) {
+				ctx.addOutEdge(it.curId(), it.curValue());
+			} else {
+				
 			}
 		}
 		//Console.OUT.println("\tQuit removeOutEdge:"+dstId);
