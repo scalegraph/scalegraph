@@ -177,10 +177,10 @@ public final class StronglyConnectedComponent2 {
 		xpregel.once((ctx :VertexContext[SCCVertex, Double, Any, Any]) => {
 			val value = new SCCVertex(ctx.realId(), ctx.realId(), ctx.id());
 			ctx.setValue(value);
-			val ins = ctx.outEdgesId().size();
-			val outs = ctx.inEdgesId().size();
+			// val ins = ctx.outEdgesId().size();
+			// val outs = ctx.inEdgesId().size();
 			//delete some conditions with no test(kishimoto)
-			if(outs==0L || ins==0L ) {
+			if(ctx.numberOfOutEdges()==0L || ctx.numberOfInEdges()==0L ) {
 				ctx.value().changeFrom(ctx.realId());
 				ctx.value().changeTo(ctx.realId());
 				ctx.value().changeEnd();
@@ -260,14 +260,20 @@ public final class StronglyConnectedComponent2 {
 						}
 						if(updateTo){
 							val mes = new MessageA(ctx.value().prevFromId, ctx.value().prevToId, ctx.value().toId, ctx.value().parentAddress, true);
-							for(i in ctx.outEdgesId().range()) {
-								ctx.sendMessage(ctx.outEdgesId()(i), mes);
+							// for(i in ctx.outEdgesId().range()) {
+							// 	ctx.sendMessage(ctx.outEdgesId()(i), mes);
+							// }
+							for(id in ctx) {
+								ctx.sendMessage(id, mes);
 							}
 						}
 						if(updateFrom){
 							val mes = new MessageA(ctx.value().prevFromId, ctx.value().prevToId, ctx.value().fromId,-1L, false);
-							for(i in ctx.inEdgesId().range()) {
-								ctx.sendMessage(ctx.inEdgesId()(i), mes);	
+							// for(i in ctx.inEdgesId().range()) {
+							// 	ctx.sendMessage(ctx.inEdgesId()(i), mes);	
+							// }
+							for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+								ctx.sendMessage(it.curId(), mes);
 							}
 						}
 						ctx.voteToHalt();

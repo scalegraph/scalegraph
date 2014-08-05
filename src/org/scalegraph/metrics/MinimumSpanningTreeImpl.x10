@@ -97,17 +97,24 @@ public final class MinimumSpanningTreeImpl {
 		// Phase I: Create edge table
 		xpregel.iterate[EdgeInfo,Double]((ctx :VertexContext[VertexValue, Double, EdgeInfo, Double], messages :MemoryChunk[EdgeInfo]) => {
 		    
-		    val obj = ctx.outEdges();
-		    val ids = obj.get1();
-		    val weight = obj.get2();
+		    // val obj = ctx.outEdges();
+		    // val ids = obj.get1();
+		    // val weight = obj.get2();
 		    
 		    val vertex = ctx.value();
 		    val vid = ctx.id();
 		    vertex.root = vid;
 		    
-		    if (ids.size() > 0) {
-		        val table = MemoryChunk.make[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
-		        vertex.edgeTable = table;
+		    if (ctx.numberOfOutEdges() > 0) {
+		        // val table = MemoryChunk.make[EdgeInfo](ids.size(), (i: Long) => new EdgeInfo(vid, ids(i), vid, ids(i), weight(i)));
+		    	val table = MemoryChunk.make[EdgeInfo](ctx.numberOfOutEdges());
+		    	
+		    	var i :int = 0;
+		    	for (val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next(), i++) {
+		    		table(i) = new EdgeInfo(vid, it.curId(), vid, it.curId(), it.curValue());
+		    	}
+		    	
+		    	vertex.edgeTable = table;
 		    } else {
 		        vertex.edgeTable = MemoryChunk.getNull[EdgeInfo]();
 		        ctx.setVertexShouldBeActive(false);

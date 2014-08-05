@@ -230,7 +230,7 @@ public final class StronglyConnectedComponent {
 							 * program force to end this node.
 							 * ( In "if(ctx.value().front && ctx.value().back)" this node is setted halted.  )
 							 */
-							if(ctx.outEdgesId().size()==0L && ctx.inEdgesId().size()==0L && ctx.id()!=0L) {
+							if(ctx.numberOfOutEdges()==0L && ctx.numberOfInEdges()==0L && ctx.id()!=0L) {
 								val newInfo = new SCCVertex(ctx.id(), true,true,-1L,1L);
 								ctx.setValue(newInfo);
 							}
@@ -253,10 +253,18 @@ public final class StronglyConnectedComponent {
 						
 						//sending message from leader.
 						if(ctx.superstep()==0 && ctx.id() == ctx.value().leaderId) {
-							for(i in ctx.outEdgesId().range()) 
-								ctx.sendMessage(ctx.outEdgesId()(i), mesF);
-							for(i in ctx.inEdgesId().range())
-								ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+							// for(i in ctx.outEdgesId().range()) 
+							// 	ctx.sendMessage(ctx.outEdgesId()(i), mesF);
+							// for(i in ctx.inEdgesId().range())
+							// 	ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+							
+							for (val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+								ctx.sendMessage(it.curId(), mesF);
+							}
+							for (val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+								ctx.sendMessage(it.curId(), mesT);
+							}
+							
 							val newInfo = new SCCVertex(ctx.value().leaderId, true, true, -1L, 0L);
 							ctx.setValue(newInfo);
 						}
@@ -276,14 +284,21 @@ public final class StronglyConnectedComponent {
 							}
 							
 							if(existFront && !ctx.value().front) {
-								for(i in ctx.outEdgesId().range()) 
-									ctx.sendMessage(ctx.outEdgesId()(i), mesF);
-							}
-							if(existBack && !ctx.value().back) {
-								for(i in ctx.inEdgesId().range()) {
-									ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+								// for(i in ctx.outEdgesId().range()) 
+								// 	ctx.sendMessage(ctx.outEdgesId()(i), mesF);
+								for (val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+									ctx.sendMessage(it.curId(), mesF);
 								}
 							}
+							if(existBack && !ctx.value().back) {
+								// for(i in ctx.inEdgesId().range()) {
+								// 	ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+								// }
+								for (val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+									ctx.sendMessage(it.curId(), mesT);
+								}
+							}
+							
 							val newInfo = 
 								new SCCVertex(ctx.value().leaderId, existFront | ctx.value().front  , existBack | ctx.value().back, -1L , 0L);
 							ctx.setValue(newInfo);
@@ -391,10 +406,17 @@ public final class StronglyConnectedComponent {
 						}
 						if(update) {
 							val mes = new MessageC(ctx.value().leaderId, ctx.value().minimId);
-							for(i in ctx.outEdgesId().range())
-								ctx.sendMessage(ctx.outEdgesId()(i), mes);
-							for(i in ctx.inEdgesId().range())
-								ctx.sendMessage(ctx.inEdgesId()(i), mes);
+							// for(i in ctx.outEdgesId().range())
+							// 	ctx.sendMessage(ctx.outEdgesId()(i), mes);
+							// for(i in ctx.inEdgesId().range())
+							// 	ctx.sendMessage(ctx.inEdgesId()(i), mes);
+							
+							for (val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+								ctx.sendMessage(it.curId(), mes);
+							}
+							for (val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+								ctx.sendMessage(it.curId(), mes);
+							}
 						}
 						ctx.voteToHalt();
 					},
