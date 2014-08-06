@@ -578,24 +578,65 @@ template<class THIS, typename ELEM>void MCData_Base<THIS, ELEM>::_initRTT() {
     const char *baseName = "org.scalegraph.util.MemoryChunk.Data";
     rtt.initStageTwo(baseName, x10aux::RuntimeType::struct_kind, 2, parents, 1, params, variances);
 }
+/*
+ * namespace x10 {
+	namespace lang {
+		class Place;
+	}
+    namespace util {
+    	extern void IMC_copyToBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                               x10::lang::Place dstPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    	extern void IMC_copyFromBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                                 x10::lang::Place srcPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    }
+}
+ */
 
 template<class T> void MCData_Impl<T>::asyncCopy(MCData_Impl<T> src, void* dst, x10_long dstIndex, x10aux::place dstPlace)
 {
-	::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+	x10_long l = 0, r = src.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst + dstIndex, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
 }
 template<class T> void MCData_Impl<T>::asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T> dst)
 {
-	::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+	x10_long l = 0, r = dst.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
 }
 
 template<class T> void MCData_Impl<T*>::asyncCopy(MCData_Impl<T*> src, void* dst, x10_long dstIndex, x10aux::place dstPlace)
 {
-	::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+	x10_long l = 0, r = src.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst + dstIndex, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
 }
 
 template<class T> void MCData_Impl<T*>::asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T*> dst)
 {
-	::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+	x10_long l = 0, r = dst.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
 }
 
 

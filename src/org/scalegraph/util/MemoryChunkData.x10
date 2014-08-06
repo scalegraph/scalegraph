@@ -138,6 +138,6 @@ final struct MemoryChunkData[T] {
 	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::asyncCopy(#src, (void*)(#dst).FMGL(data), #dstIndex, (#dst).FMGL(mc).location)")
 	public static native def asyncCopy[T](src :MemoryChunkData[T], dst :GlobalMemoryChunk[T], dstIndex :Long):void;
 	
-	 @Native("c++", "org::scalegraph::util::MCData_Impl<#T >::asyncCopy((void*)(#src).FMGL(data), #srcIndex, (#src).FMGL(mc).location, #dst)")
-	 public static native def asyncCopy[T](src :GlobalMemoryChunk[T], srcIndex :Long, dst :MemoryChunkData[T]):void;
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::asyncCopy((void*)(#src).FMGL(data), #srcIndex, (#src).FMGL(mc).location, #dst)")
+	public static native def asyncCopy[T](src :GlobalMemoryChunk[T], srcIndex :Long, dst :MemoryChunkData[T]):void;
 }
