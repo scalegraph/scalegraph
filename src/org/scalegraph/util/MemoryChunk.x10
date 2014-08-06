@@ -441,6 +441,14 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		}
 		MemoryChunkData.copy(src.data, 0l, dst.data, 0l, src.size());
 	}
+
+	public static def asyncCopy[T](src :MemoryChunk[T], dst :GlobalMemoryChunk[T], dstIndex :Long) {
+		MemoryChunkData.asyncCopy(src.data, dst, dstIndex);
+	}
+	
+	public static def asyncCopy[T](src :GlobalMemoryChunk[T], srcIndex :Long, dst :MemoryChunk[T]) {
+		MemoryChunkData.asyncCopy(src, srcIndex, dst.data);
+	}
 	
 	/** Creates and returns an empty memory chunk.
 	 */
