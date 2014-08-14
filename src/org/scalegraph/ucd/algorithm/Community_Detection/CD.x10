@@ -1,4 +1,5 @@
 package org.scalegraph.ucd.algorithm.Community_Detection;
+import x10.compiler.Ifdef;
 import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.util.MemoryChunk;
@@ -19,6 +20,7 @@ public class CD extends AlgorithmTest{
         var  maxScore: Float;
 
         public def perform_CD(g: XPregelGraph[Float, Double], delta: Float){
+		val sw = Config.get().stopWatch();
              maxScore = -100;
              g.iterate((ctx :VertexContext[Float, Double, Float, Long], messages :MemoryChunk[Float]) => {
                    var isLabelChanged: Boolean = true;
@@ -31,7 +33,6 @@ public class CD extends AlgorithmTest{
                         isLabelChanged = false;
                         val eq2 = getNewLabel(ctx);
                         val neighbourLabel = ctx.value();
-
                         if(neighboursLabels.containsKey(neighbourLabel)){
                             aggScore = neighboursLabels.getOrThrow(neighbourLabel);
                             aggScore = aggScore + eq2;
@@ -73,13 +74,17 @@ public class CD extends AlgorithmTest{
 
                         isLabelChanged =true;
                         ctx.sendMessageToAllNeighbors(labelScore);
+//Console.OUT.println("The Label score is :"+labelScore+" and vertex id is "+ctx.id());
                    }
              },
              null,
              ((superstep :Int, aggVal :Long)=>{
                                        return true;
              }));
+sw.lap("CD Main Iterate (debug)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("CD Main Iterate (debug):"); }
         }
+
         private def getNewLabel(vtx: VertexContext[Float, Double, Float, Long]): Float{
             val label = vtx.value();
             val function = vtx.outEdgesId().size();
@@ -87,10 +92,10 @@ public class CD extends AlgorithmTest{
         }
 
         public def run(args :Array[String](1), g :Graph): Boolean {
-
+val sw = Config.get().stopWatch();
                // create sparse matrix
                val csr = g.createDistSparseMatrix[Double](Config.get().dist1d(), "weight", true, true);
-
+sw.lap("Graph construction");
                // create xpregel instance
                val xpregel = XPregelGraph.make[Float, Double](csr);
 

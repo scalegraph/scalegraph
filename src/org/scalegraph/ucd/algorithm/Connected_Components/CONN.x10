@@ -1,4 +1,5 @@
 package org.scalegraph.ucd.algorithm.Connected_Components;
+import x10.compiler.Ifdef;
 import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.util.MemoryChunk;
@@ -13,8 +14,10 @@ public class CONN extends AlgorithmTest{
     val minLabelRef = new GlobalRef[Cell[Long]](new Cell[Long](0l));
 
     public def perform_CONN(g :XPregelGraph[Long, Double]){
+val sw = Config.get().stopWatch();
         g.updateInEdge();
-
+		sw.lap("Update In Edge");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
         g.iterate[Long,Long]((ctx :VertexContext[Long, Double, Long, Long], messages :MemoryChunk[Long]) => {
 
             //var label: Long = 0L;
@@ -53,10 +56,13 @@ public class CONN extends AlgorithmTest{
         ((superstep :Int, aggVal :Long) => {
             return true;
         }));
+		sw.lap("CONN Main Iterate (debug)");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("CONN Main Iterate (debug):"); }
 }
 
 
         private def calculateMinLabel(neighbour: Long){
+
             if(neighbour < minLabelRef()()){
             minLabelRef()() = neighbour;
             }

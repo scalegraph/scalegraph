@@ -1,0 +1,26 @@
+threashold:0default
+  org.scalegraph.ucd.algorithm.STAT.STATS: |
+ARGS: [rmat,20,-]
+Generate RMAT[scale=20,edgefactor=16]: 3116.972000000000207 ms: 3116.972000000000207 ms elapsed: Memory: 269.555264000000022 MB
+Generate random edge value: 209.239000000000004 ms: 3326.210999999999785 ms elapsed: Memory: 403.772991999999988 MB
+Complete making graph: 13.648 ms: 3339.858999999999924 ms elapsed: Memory: 403.772991999999988 MB
+start graph construction: 0.129 ms: 3339.987999999999829 ms elapsed: Memory: 403.772991999999988 MB
+count edge finished: 26.059999999999999 ms: 3366.047999999999774 ms elapsed: Memory: 403.772991999999988 MB
+complete creating send data: 69.478999999999999 ms: 3435.527000000000044 ms elapsed: Memory: 806.426176000000055 MB
+finished converting edge format: 177.396999999999991 ms: 3612.923999999999978 ms elapsed: Memory: 806.426176000000055 MB
+$ MEM-CONS-MAX: place: 0: TotalMem: 1217467976: GCMem: 1118208: ExpMem: 1216349768
+start first step sorting: 0.136 ms: 3613.059999999999945 ms elapsed: Memory: 1217.467975999999908 MB
+sort [thread local add ver] numChunks=128, numShift=13: 0.107 ms: 3613.166999999999916 ms elapsed: Memory: 1217.467975999999908 MB
+sort: initialize: 0.085 ms: 3613.251999999999953 ms elapsed: Memory: 1217.479311999999936 MB
+sort: count: 15.48 ms: 3628.731999999999971 ms elapsed: Memory: 1217.479311999999936 MB
+sort: calc offset: 0.085 ms: 3628.817000000000007 ms elapsed: Memory: 1217.479311999999936 MB
+sort: copy: 157.582999999999998 ms: 3786.400000000000091 ms elapsed: Memory: 1217.479311999999936 MB
+sort: check offset: 0.086 ms: 3786.485999999999876 ms elapsed: Memory: 1217.479311999999936 MB
+sort end: 201.587999999999994 ms: 3988.074000000000069 ms elapsed: Memory: 1217.479311999999936 MB
+finished first step sorting: 0.084 ms: 3988.157999999999902 ms elapsed: Memory: 1217.479311999999936 MB
+finished making offsets: 31.43 ms: 4019.588000000000193 ms elapsed: Memory: 680.608399999999961 MB
+finished second step sorting: 80.105000000000004 ms: 4099.693000000000211 ms elapsed: Memory: 680.608399999999961 MB
+$ MEM-CONS-FIN: place: 0: TotalMem: 680608400: GCMem: 1118208: ExpMem: 679490192
+Graph construction: 0.143 ms: 4099.83600000000024 ms elapsed: Memory: 680.608399999999961 MB
+Pass
+
