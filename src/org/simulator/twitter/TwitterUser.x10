@@ -1,5 +1,3 @@
-package org.simulator.twitter;
-
 public class TwitterUser {
 	public var userID: Long;
 	public var location: String;
