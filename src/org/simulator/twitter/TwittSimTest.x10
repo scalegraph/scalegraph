@@ -3,7 +3,6 @@ package org.simulator.twitter;
 
 import org.scalegraph.Config;
 import org.scalegraph.id.Type;
-//import org.scalegraph.io.CSV;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.xpregel.VertexContext;
@@ -54,34 +53,28 @@ public class TwittSimTest {
 	  
 	  // for each iteration
 	  xpregel.iterate[Double,Double]((ctx :VertexContext[TwitterUser, Double, Double, Double], messages :MemoryChunk[Double]) => {
-				  val value :Double;
-				  val following :MemoryChunk[Long];
-				  //val itr : Iterator[Long];
-				  if(ctx.superstep() == 0){
-				     simulator.tweet(ctx);
-				  }else{
-				  val step = ctx.superstep();
-				  following = (ctx.outEdges()).get1(); //outEdges return a Tuple2, get1() returns memorychunk of distId`s
-				  if(following.size() > step){
-				  val destid = following(step) % following.size();
-				  simulator.directMessage(ctx, destid);
-				  }
+		val value :Double;
+		val following :MemoryChunk[Long];
+		//val itr : Iterator[Long];
+		if(ctx.superstep() == 0){
+		  simulator.tweet(ctx);
+		}else{
+		  val step = ctx.superstep();
+		  following = (ctx.outEdges()).get1(); //outEdges return a Tuple2, get1() returns memorychunk of distId`s
+		  if(following.size() > step){
+			val destid = following(step) % following.size();
+			simulator.directMessage(ctx, destid);
+		  }
 				  
-				  ctx.setValue(null);
-				  //            	itr = following.iterator();
-				  //            	if(itr.hasNext()){
-				  //            		ctx.sendMessage(itr.next(), individual);  //put message id here
-				  //            		value = 1;
-				  //            		ctx.setValue(value);
-				  //            	}
-				  }
-				  if(ctx.superstep() >= 5){
-				  ctx.voteToHalt();
-				  }
-				  },
-				  (values :MemoryChunk[Double]) => MathAppend.sum(values),
-				  // stop computation if it is more than 5 steps or quadratic error is less than 0.0001
-				  (superstep :Int, aggVal :Double) => (superstep >= 5));
-				  }
-				  
-			}
+		ctx.setValue(null);
+		}
+		if(ctx.superstep() >= 5){
+		  ctx.voteToHalt();
+		}
+	 },
+	 (values :MemoryChunk[Double]) => MathAppend.sum(values),
+	 // stop computation if it is more than 5 steps or quadratic error is less than 0.0001
+	 (superstep :Int, aggVal :Double) => (superstep >= 5));
+	 }
+
+}
