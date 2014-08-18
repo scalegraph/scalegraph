@@ -1,5 +1,5 @@
 /*
- * 012.
+ * This class provides a basic API that can be used to develop algorithms to analyze Twitter network
  */
 
 
@@ -8,7 +8,6 @@
 
 import org.scalegraph.Config;
 import org.scalegraph.id.Type;
-//import org.scalegraph.io.CSV;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.xpregel.VertexContext;
@@ -23,7 +22,7 @@ import org.scalegraph.xpregel.*;
 
 
 
-//M intends to signify the Type of message to be exchanged between nodes
+
 public class TwitterSimulator1{
 	
 	val directMessage : Double;
@@ -62,10 +61,6 @@ public class TwitterSimulator1{
 	}
 	
 		
-	def reTweet(){
-		
-	}
-	
 	
 	
     
