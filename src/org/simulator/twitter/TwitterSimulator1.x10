@@ -18,7 +18,7 @@ import x10.lang.Iterator;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
-import org.simulator.twitter.TwitterUser;
+//import org.simulator.twitter.TwitterUser;
 import org.scalegraph.xpregel.*;
 
 

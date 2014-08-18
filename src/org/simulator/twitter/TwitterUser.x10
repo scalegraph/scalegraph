@@ -1,4 +1,4 @@
-package org.simulator.twitter;
+//package org.simulator.twitter;
 
 public class TwitterUser {
 	public var userID: Long;

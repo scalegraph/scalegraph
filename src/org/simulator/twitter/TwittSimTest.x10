@@ -1,5 +1,3 @@
-package org.simulator.twitter;
-
 
 import org.scalegraph.Config;
 import org.scalegraph.id.Type;
@@ -13,9 +11,9 @@ import x10.lang.Iterator;
 import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
-import org.simulator.twitter.TwitterUser;
+//import org.simulator.twitter.TwitterUser;
 import org.scalegraph.xpregel.*;
-
+import org.simulator.twitter.*;
 
 public class TwittSimTest {
 	
@@ -32,7 +30,7 @@ public class TwittSimTest {
 	  
 	  
 	  // Generate RMAT graph
-	  val scale = 21;
+	  val scale = 5;
 	  val edgeFactor = 15;
 	  val rnd = new Random(2, 3);
 	  val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
