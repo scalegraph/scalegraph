@@ -3,7 +3,7 @@
  */
 
 
-package org.simulator.twitter;
+//	package org.simulator.twitter;
 
 
 import org.scalegraph.Config;
@@ -19,81 +19,59 @@ import org.scalegraph.util.random.Random;
 import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
 import org.simulator.twitter.TwitterUser;
+import org.scalegraph.xpregel.*;
 
 
 
-public class TwitterSimulator1 {																																																																																																																																																																
+//M intends to signify the Type of message to be exchanged between nodes
+public class TwitterSimulator1{
+	
+	val directMessage : Double;
+	val tweet : Double;
+	val attribute : Double;
+	val direction : Double;
+	val mutual : Double;
+	
+	//default construction will initialize default values to message types
+	def this(){
+		
+		directMessage =1;
+		tweet =2;
+		attribute = 3;
+		direction = 4;
+		mutual = 5;
+		
+	}
+	//Parameterized constructor to enable user to set message values
+	/*def this(directMessage : Double, tweet : Double, attribute : Double, direction : Double, mutual : Double){
+		this.directMessage = directMessage;
+		this.tweet = tweet;
+		this.attribute = attribute;
+		this.direction = direction;
+		this.mutual = mutual;
+	}*/
+	
+	//in Tweet, message is passed to all neighbors
+	def tweet(ctx : VertexContext[TwitterUser, Double, Double, Double]){
+		ctx.sendMessageToAllNeighbors(tweet);
+	}
+	
+	//This method sends a direct message to the passed destId
+	def directMessage(ctx : VertexContext[TwitterUser, Double, Double, Double], destId: Long){
+		ctx.sendMessage(destId, directMessage);
+	}
+	
+		
+	def reTweet(){
+		
+	}
+	
+	
+	
     
-    public static def main(args:Array[String]) {
     	
-    	val config = Config.get();
-    	val team = config.worldTeam();
-    	val dist = config.dist2d();
-    	val weightAttr = "weight";																																																																		
-    	val outputPath = "pagerank-%d";
-    	val tweetCount = 0;																																																																														
-    	
-    	val individual =1;																													
-    	val broadcast =2;
-    	val attribute = 3;
-    	val direction = 4;
-    	val mutual = 5;
-    	
-    	// Generate RMAT graph
-    	val scale = 10;
-    	val edgeFactor = 3;
-    	val rnd = new Random(2, 3);
-    	val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
-    	val g = Graph.make(edgeList);
-    	
-	// Set edge attribute "weight" to create sparse matrix
-	val weights = GraphGenerator.genRandomEdgeValue(scale, edgeFactor, rnd);
-    	g.setEdgeAttribute[Double](weightAttr, weights);
-    	
-    	// create sparse matrix
-    	val csr = g.createDistSparseMatrix[Double](Config.get().dist1d(), "weight", true, true);
-    	
-    
-    	
-    	
-    	// create xpregel instance
-        val xpregel = XPregelGraph.make[TwitterUser, Double](csr);
-        
-        xpregel.updateInEdge();   //Not sure if we need to update in edges in twitter network. We should (followers) but needs more discussion
-        
-        // for each iteration
-        xpregel.iterate[Double,Double]((ctx :VertexContext[TwitterUser, Double, Double, Double], messages :MemoryChunk[Double]) => {
-            val value :Double;
-            val following :MemoryChunk[Long];
-            val itr : Iterator[Long];
-            if(ctx.superstep() == 0){
-            	ctx.sendMessageToAllNeighbors(broadcast); //Send MulticastTweet
-            }else{
-		val step = ctx.superstep();
-            	following = (ctx.outEdges()).get1(); //outEdges return a Tuple2, get1() returns memorychunk of distId`s
-		if(following.size() > step){
-			val destid = following(step) % following.size();
-			ctx.sendMessage(destid, individual);
-		}
-				
-		ctx.setValue(new TwitterUser());
-
-//            	itr = following.iterator();
-//            	if(itr.hasNext()){
-//            		ctx.sendMessage(itr.next(), individual);  //put message id here
-//            		value = 1;
-//            		ctx.setValue(value);
-//            	}
-            }
-            if(ctx.superstep() >= 5){
-            	ctx.voteToHalt();
-            }
-         },
-         (values :MemoryChunk[Double]) => MathAppend.sum(values),
-        // stop computation if it is more than 5 steps or quadratic error is less than 0.0001
-        (superstep :Int, aggVal :Double) => (superstep >= 5));
-    }
 }
+
 
 
 
