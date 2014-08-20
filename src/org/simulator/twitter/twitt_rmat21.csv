@@ -1,0 +1,53 @@
+threashold:0default
+threashold:0default
+start graph construction: 2623.365999999999985 ms: 2623.365999999999985 ms elapsed: Memory: 403.772991999999988 MB
+count edge finished: 30.486999999999998 ms: 2653.853000000000065 ms elapsed: Memory: 403.772991999999988 MB
+complete creating send data: 82.683999999999997 ms: 2736.536999999999807 ms elapsed: Memory: 806.426176000000055 MB
+finished converting edge format: 2036.077999999999975 ms: 4772.614999999999782 ms elapsed: Memory: 806.436423999999988 MB
+$ MEM-CONS-MAX: place: 0: TotalMem: 1217488472: GCMem: 1118208: ExpMem: 1216370264
+start first step sorting: 0.261 ms: 4772.876000000000204 ms elapsed: Memory: 1217.488472000000002 MB
+sort [thread local add ver] numChunks=128, numShift=13: 0.187 ms: 4773.063000000000102 ms elapsed: Memory: 1217.488472000000002 MB
+sort: initialize: 0.174 ms: 4773.23700000000008 ms elapsed: Memory: 1217.49980800000003 MB
+sort: count: 25.007000000000001 ms: 4798.243999999999687 ms elapsed: Memory: 1217.49980800000003 MB
+sort: calc offset: 0.175 ms: 4798.418999999999869 ms elapsed: Memory: 1217.49980800000003 MB
+sort: copy: 184.038999999999987 ms: 4982.457999999999629 ms elapsed: Memory: 1217.49980800000003 MB
+sort: check offset: 0.153 ms: 4982.610999999999876 ms elapsed: Memory: 1217.49980800000003 MB
+sort end: 352.562000000000012 ms: 5335.172999999999774 ms elapsed: Memory: 1217.49980800000003 MB
+finished first step sorting: 0.141 ms: 5335.314000000000306 ms elapsed: Memory: 1217.49980800000003 MB
+finished making offsets: 48.215000000000003 ms: 5383.529000000000451 ms elapsed: Memory: 680.615231999999992 MB
+finished second step sorting: 111.852999999999994 ms: 5495.381999999999607 ms elapsed: Memory: 680.615231999999992 MB
+$ MEM-CONS-FIN: place: 0: TotalMem: 680615232: GCMem: 1118208: ExpMem: 679497024
+start to update in edge: 23.587 ms: 5518.969000000000051 ms elapsed: Memory: 731.738688000000025 MB
+vertex processing start: 0.445 ms: 5519.41399999999976 ms elapsed: Memory: 740.274752000000035 MB
+vertex processing finished: 181.86099999999999 ms: 5701.274999999999636 ms elapsed: Memory: 1310.672375999999986 MB
+start to process unicast messages: 0.166 ms: 5701.440999999999804 ms elapsed: Memory: 1310.672375999999986 MB
+copying dest id: 7.3 ms: 5708.740999999999985 ms elapsed: Memory: 1310.675792000000001 MB
+copying message value: 47.421999999999997 ms: 5756.162999999999556 ms elapsed: Memory: 1226.793128000000024 MB
+finished message processing: 36.088000000000001 ms: 5792.251000000000204 ms elapsed: Memory: 1226.793128000000024 MB
+start to unicast message communication: 0.159 ms: 5792.409999999999854 ms elapsed: Memory: 1226.793128000000024 MB
+alltoallv...: 0.215 ms: 5792.625 ms elapsed: Memory: 1226.793128000000024 MB
+before sort...: 1358.557999999999993 ms: 7151.182999999999993 ms elapsed: Memory: 1226.902295999999978 MB
+sort...: 12.961 ms: 7164.144000000000233 ms elapsed: Memory: 1277.34994400000005 MB
+sort [thread local add ver] numChunks=128, numShift=13: 0.189 ms: 7164.332999999999629 ms elapsed: Memory: 1277.34994400000005 MB
+sort count: 36.345999999999997 ms: 7200.679000000000087 ms elapsed: Memory: 1277.361280000000079 MB
+sort copy: 83.695999999999998 ms: 7284.375 ms elapsed: Memory: 1277.361280000000079 MB
+sort end: 265.709000000000003 ms: 7550.083999999999833 ms elapsed: Memory: 1277.361280000000079 MB
+finished unicast message communication: 43.652999999999999 ms: 7593.73700000000008 ms elapsed: Memory: 882.922712000000047 MB
+finished broadcast message communication: 0.124 ms: 7593.860999999999876 ms elapsed: Memory: 882.922712000000047 MB
+finished to update in edge: 108.424000000000007 ms: 7702.284999999999854 ms elapsed: Memory: 882.922712000000047 MB
+$ MEM-XPS0: place: 0: TotalMem: 882922712: GCMem: 26812416: ExpMem: 856110296
+start xpregel iteration: 0.303 ms: 7702.587999999999738 ms elapsed: Memory: 882.922712000000047 MB
+vertex processing started: 1.654 ms: 7704.242000000000189 ms elapsed: Memory: 899.847415999999953 MB
+Sent Tweet: 0.164 ms: 7704.405999999999949 ms elapsed: Memory: 899.847415999999953 MB
+Sent Tweet: 0.01 ms: 7704.421000000000276 ms elapsed: Memory: 899.847415999999953 MB
+Sent Tweet: 0.0 ms: 7704.411000000000058 ms elapsed: Memory: 899.847415999999953 MB
+Sent Tweet: 0.005 ms: 7704.411000000000058 ms elapsed: Memory: 899.847415999999953 MB
+Sent Tweet: -3411.986778999999842 ms: -3411.986778999999842 ms elapsed: Memory: 899.717752000000019 MB
+Sent Tweet: 0.093 ms: -3411.880779000000075 ms elapsed: Memory: 899.717752000000019 MB
+Sent Tweet: 0.004 ms: -3411.973778999999922 ms elapsed: Memory: 899.717752000000019 MB
+$ MEM-CONS-MAX: place: 1: TotalMem: 1217447480: GCMem: 1118208: ExpMem: 1216329272
+$ MEM-CONS-FIN: place: 1: TotalMem: 680601568: GCMem: 1118208: ExpMem: 679483360
+$ MEM-XPS0: place: 1: TotalMem: 882793048: GCMem: 26812416: ExpMem: 855980632
+Sent Tweet: 0.009 ms: -3411.977778999999828 ms elapsed: Memory: 899.717752000000019 MB
+[mpiexec@sc02.sc.cs.titech.ac.jp] Sending Ctrl-C to processes as requested
+[mpiexec@sc02.sc.cs.titech.ac.jp] Press Ctrl-C again to force abort

@@ -1,5 +1,5 @@
 /*
- * 012.
+ * This class provides a basic API that can be used to develop algorithms to analyze Twitter network
  */
 
 
@@ -8,7 +8,6 @@
 
 import org.scalegraph.Config;
 import org.scalegraph.id.Type;
-//import org.scalegraph.io.CSV;
 import org.scalegraph.util.*;
 import org.scalegraph.util.tuple.*;
 import org.scalegraph.xpregel.VertexContext;
@@ -20,10 +19,10 @@ import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.graph.Graph;
 //import org.simulator.twitter.TwitterUser;
 import org.scalegraph.xpregel.*;
+import org.scalegraph.io.CSV;
+import x10.compiler.Ifdef;
 
 
-
-//M intends to signify the Type of message to be exchanged between nodes
 public class TwitterSimulator1{
 	
 	val directMessage : Double;
@@ -53,19 +52,23 @@ public class TwitterSimulator1{
 	
 	//in Tweet, message is passed to all neighbors
 	def tweet(ctx : VertexContext[TwitterUser, Double, Double, Double]){
+		val sw = Config.get().stopWatch();
 		ctx.sendMessageToAllNeighbors(tweet);
+		sw.lap("Sent Tweet");
+		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Sent Tweet");}
 	}
 	
 	//This method sends a direct message to the passed destId
 	def directMessage(ctx : VertexContext[TwitterUser, Double, Double, Double], destId: Long){
+		val sw = Config.get().stopWatch();
 		ctx.sendMessage(destId, directMessage);
+		sw.lap("Sent DirectMessage");
+		@Ifdef("PROF_XP"){Config.get().dumpProfXPregel("Sent DirectMessage");}
 	}
 	
+
+
 		
-	def reTweet(){
-		
-	}
-	
 	
 	
     
