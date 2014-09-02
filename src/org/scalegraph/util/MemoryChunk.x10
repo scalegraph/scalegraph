@@ -16,9 +16,10 @@ import x10.compiler.Ifdef;
 import x10.compiler.Ifndef;
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
+import x10.lang.Runtime;
 
 import x10.util.IndexedMemoryChunk;
-
+import x10.util.concurrent.AtomicBoolean;
 /** High performance array. The followings are the advantages of MemoryChunk compared with x10.lang.Array.<br>
  * <p><dl><dt>Indexing with Long</dt> <dd>The maximum length of x10.lang.Array is 2^31 since it uses Int for indexing.
  * In constract, the maximum length of MemoryChunk, which uses Long for indexing, is 2^63.</dd>
@@ -316,7 +317,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 			if(!data.isValid())
 				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
-				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
+				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk ChunkSize="+data.size);
 		}
 		data(index) = value;
 		return value;
@@ -336,7 +337,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 			if(!data.isValid())
 				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
 			if(index < 0 || index >= data.size)
-				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
+				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk in atomicAdd CS="+data.size);
 		}
 		return data.atomicAdd(index, value);
 	}
@@ -441,13 +442,62 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		}
 		MemoryChunkData.copy(src.data, 0l, dst.data, 0l, src.size());
 	}
-
+	
 	public static def asyncCopy[T](src :MemoryChunk[T], dst :GlobalMemoryChunk[T], dstIndex :Long) {
 		MemoryChunkData.asyncCopy(src.data, dst, dstIndex);
 	}
-	
+
 	public static def asyncCopy[T](src :GlobalMemoryChunk[T], srcIndex :Long, dst :MemoryChunk[T]) {
 		MemoryChunkData.asyncCopy(src, srcIndex, dst.data);
+	}
+
+	public static def syncCopyWithHash(src :MemoryChunk[Long], dst :GlobalMemoryChunk[Long], dstIndex :Long) {
+		var h1:Long = 0L;
+		val m = 1000000009L;
+		if (src.size() < dst.size-dstIndex) {
+			Console.OUT.println("size error");
+		}
+		assert(src.size() >= dst.size);
+		for (i in 0..(dst.size-1)) {
+			h1 *= m;
+			h1 += src(i);
+		}
+		finish MemoryChunk.asyncCopy(src, dst, dstIndex);
+		
+		val h2 = at (dst.home()) {
+			var h:Long = 0L;
+			for (i in 0..(dst.size-1)) {
+				h *= m;
+				h += dst()(dstIndex+i);
+			}
+			h
+		};
+		if (h1 != h2) {
+			Console.OUT.println("hashError");
+		}
+	}
+	public static def syncCopyWithHash(src :GlobalMemoryChunk[Long], srcIndex :Long, dst :MemoryChunk[Long]) {
+		assert(dst.size() >= src.size);
+		val m = 1000000009L;
+		val h1 = at(src.home()) {
+			var h:Long = 0L;
+			for (i in 0..(src.size-1)) {
+				h *= m;
+				h += src()(srcIndex+i);
+			}
+			h
+		};
+		
+		finish MemoryChunk.asyncCopy(src, srcIndex, dst);
+		
+		var h:Long = 0L;
+		for (i in 0..(src.size-1)) {
+			h *= m;
+			h += dst(i);
+		}
+		if (h != h1) {
+			Console.OUT.println("hashError");
+		}
 	}
 	
 	/** Creates and returns an empty memory chunk.
