@@ -22,7 +22,7 @@ import x10.compiler.Native;
 
 import org.scalegraph.util.Parallel;
 import org.scalegraph.util.DistScatterGather;
-import org.scalegraph.util.HashMap;
+import x10.util.HashMap;
 import org.scalegraph.util.GrowableMemory;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
@@ -153,7 +153,7 @@ import org.scalegraph.util.DistMemoryChunk;
 			}
 			return translated;
 		}
-	
+/*	
 	    private def parallelPutLocalAndTranslate(vertices: MemoryChunk[T], translated :MemoryChunk[Long]) {
 	        val newKeys = table.newKeys(vertices, -1L);
 	        val newIds = MemoryChunk.make[Long](newKeys.size());
@@ -168,7 +168,7 @@ import org.scalegraph.util.DistMemoryChunk;
 	        MemoryChunk.copy(_translated, 0L, translated, 0L, _translated.size());
 	        return translated;
 	    }
-	
+*/	
 		private def putLocal(vertices: MemoryChunk[T]) {
 			//		val count_origin = count.getAndAdd(vertices.size);
 			for (i in vertices.range()) {
