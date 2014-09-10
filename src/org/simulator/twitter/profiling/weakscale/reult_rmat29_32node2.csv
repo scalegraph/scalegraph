@@ -1,0 +1,143 @@
+Warning: Permanently added the RSA host key for IP address '10.1.3.136' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.3.137' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.3.138' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.3.139' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.3.140' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.1' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.2' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.3' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.4' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.5' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.6' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.8' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.12' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.18' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.11' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.16' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.10' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.26' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.22' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.27' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.20' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.13' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.14' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.19' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.25' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.23' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.15' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.17' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.21' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.28' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.24' to the list of known hosts.
+Warning: Permanently added the RSA host key for IP address '10.1.4.29' to the list of known hosts.
+  ComplexContagion: |
+ARGS: [rmat,29,-,84]
+Generate RMAT[scale=29,edgefactor=16]: 650380.596672000014223 ms: 650380.596672000014223 ms elapsed: Memory: 2148.27007999999978 MB
+Generate random edge value: 20731.045242000000144 ms: 671111.641914000036195 ms elapsed: Memory: 3222.011903999999959 MB
+Complete making graph: 8852.182629000000816 ms: 679963.82454299996607 ms elapsed: Memory: 3222.011903999999959 MB
+start graph construction: 2.147283 ms: 679965.971826000022702 ms elapsed: Memory: 3222.28000800000018 MB
+count edge finished: 18877.647451000000729 ms: 698843.619276999961585 ms elapsed: Memory: 3222.28000800000018 MB
+complete creating send data: 39146.162852000001294 ms: 737989.782129000057466 ms elapsed: Memory: 6443.505479999999807 MB
+finished converting edge format: 42017.673984000000928 ms: 780007.456113000051118 ms elapsed: Memory: 6442.526568000000225 MB
+start first step sorting: 1.430777 ms: 780008.886889999965206 ms elapsed: Memory: 9729.881999999999607 MB
+finished first step sorting: 186992.488722999987658 ms: 967001.375613000011072 ms elapsed: Memory: 9729.887192000000141 MB
+finished making offsets: 5442.842314999999871 ms: 972444.217928000027314 ms elapsed: Memory: 5436.225112000000081 MB
+finished second step sorting: 49133.090462000000116 ms: 1021577.308390000020154 ms elapsed: Memory: 5436.225112000000081 MB
+start to update in edge: 21745.473828999998659 ms: 1043322.782219000044279 ms elapsed: Memory: 5505.431128000000172 MB
+vertex processing start: 5.000527 ms: 1043327.782745999982581 ms elapsed: Memory: 5573.720664000000397 MB
+vertex processing finished: 28652.305924000000232 ms: 1071980.088669999968261 ms elapsed: Memory: 11546.499671999999919 MB
+start to process unicast messages: 0.174256 ms: 1071980.262925999937579 ms elapsed: Memory: 11546.499671999999919 MB
+copying dest id: 0.499927 ms: 1071980.762853000080213 ms elapsed: Memory: 12619.915192000000388 MB
+copying message value: 899.088874000000033 ms: 1072879.851726999972016 ms elapsed: Memory: 5992.712583999999879 MB
+finished message processing: 390.862635000000012 ms: 1073270.714362000115216 ms elapsed: Memory: 5992.712583999999879 MB
+start to unicast message communication: 0.160008 ms: 1073270.874370000092313 ms elapsed: Memory: 5992.712583999999879 MB
+alltoallv...: 3064.445212999999967 ms: 1076335.319582999916747 ms elapsed: Memory: 5992.712583999999879 MB
+sort...: 1679.488689000000022 ms: 1078014.808271999936551 ms elapsed: Memory: 8139.308039999999892 MB
+finished unicast message communication: 173052.536275999998907 ms: 1251067.344548000022769 ms elapsed: Memory: 4986.352232000000186 MB
+finished broadcast message communication: 0.144992 ms: 1251067.489539999980479 ms elapsed: Memory: 4986.352232000000186 MB
+finished to update in edge: 0.083531 ms: 1251067.573070999933407 ms elapsed: Memory: 4986.352232000000186 MB
+start xpregel iteration: 6548.608838000000105 ms: 1257616.181909000035375 ms elapsed: Memory: 4986.352232000000186 MB
+vertex processing started: 4.464917 ms: 1257620.646825999952853 ms elapsed: Memory: 5054.641768000000411 MB
+------!!!----256978380=256978380 here id:12
+vertex processing finished: 5985.440303999999742 ms: 1263606.087130000116304 ms elapsed: Memory: 5188.858471999999892 MB
+update out edge: 0.129277 ms: 1263606.216407000087202 ms elapsed: Memory: 5188.858471999999892 MB
+aggregate...: 0.085626 ms: 1263606.302032999927178 ms elapsed: Memory: 5188.858471999999892 MB
+1  0
+start to process broadcast messages: 745.351460999999972 ms: 1264351.653493999969214 ms elapsed: Memory: 5188.858471999999892 MB
+creating in edge mask: 0.099804 ms: 1264351.75329799996689 ms elapsed: Memory: 5188.858471999999892 MB
+alltoall...: 21596.128003999998327 ms: 1285947.881302000023425 ms elapsed: Memory: 5323.076200000000426 MB
+in edge mask creation finished: 5832.945932999999968 ms: 1291780.82723499997519 ms elapsed: Memory: 5255.967335999999705 MB
+copying messages: 1043.325998000000027 ms: 1292824.153233000077307 ms elapsed: Memory: 5323.076200000000426 MB
+finished message processing: 56326.27085100000113 ms: 1349150.42408400005661 ms elapsed: Memory: 5323.076200000000426 MB
+start broadcast message communication: 8613.010361000000557 ms: 1357763.434445000020787 ms elapsed: Memory: 5323.076200000000426 MB
+alltoallv...: 0.270567 ms: 1357763.705011999933049 ms elapsed: Memory: 5323.076200000000426 MB
+scan...: 72.340235000000007 ms: 1357836.045246999943629 ms elapsed: Memory: 5323.076200000000426 MB
+finished broadcast message communication: 1199.911835999999994 ms: 1359035.957083000103012 ms elapsed: Memory: 5390.185072000000218 MB
+vertex processing started: 0.132839 ms: 1359036.08992199995555 ms elapsed: Memory: 5390.185072000000218 MB
+vertex processing finished: 34830.818262000000686 ms: 1393866.9081840000581 ms elapsed: Memory: 5390.185072000000218 MB
+update out edge: 10.898457000000001 ms: 1393877.806641000090167 ms elapsed: Memory: 5255.967335999999705 MB
+aggregate...: 0.087861 ms: 1393877.894501999951899 ms elapsed: Memory: 5255.967335999999705 MB
+6  1
+start to process broadcast messages: 2893.222780999999941 ms: 1396771.117282999912277 ms elapsed: Memory: 5255.967335999999705 MB
+copying messages: 1043.704400000000078 ms: 1397814.8216830000747 ms elapsed: Memory: 5323.076200000000426 MB
+finished message processing: 56354.70834399999876 ms: 1454169.5300270000007 ms elapsed: Memory: 5323.076200000000426 MB
+start broadcast message communication: 8587.189241000000038 ms: 1462756.719267999986187 ms elapsed: Memory: 5323.076200000000426 MB
+alltoallv...: 0.939582 ms: 1462757.658850000007078 ms elapsed: Memory: 5323.076200000000426 MB
+scan...: 73.315645000000004 ms: 1462830.974494999973103 ms elapsed: Memory: 5323.076200000000426 MB
+finished broadcast message communication: 1196.52828599999998 ms: 1464027.502780999988317 ms elapsed: Memory: 5390.185072000000218 MB
+vertex processing started: 0.129277 ms: 1464027.632057999959216 ms elapsed: Memory: 5390.185072000000218 MB
+vertex processing finished: 34113.562863999999536 ms: 1498141.194921999936923 ms elapsed: Memory: 5390.185072000000218 MB
+update out edge: 10.975569999999999 ms: 1498152.170491999946535 ms elapsed: Memory: 5255.967335999999705 MB
+aggregate...: 0.082064 ms: 1498152.252555999904871 ms elapsed: Memory: 5255.967335999999705 MB
+191  2
+start to process broadcast messages: 2936.399534000000131 ms: 1501088.652089999988675 ms elapsed: Memory: 5255.967335999999705 MB
+copying messages: 1042.633724000000029 ms: 1502131.285814000060782 ms elapsed: Memory: 5323.076200000000426 MB
+finished message processing: 56251.935056000002078 ms: 1558383.220870000077412 ms elapsed: Memory: 5323.076200000000426 MB
+start broadcast message communication: 8663.223700000000463 ms: 1567046.444570000050589 ms elapsed: Memory: 5323.076200000000426 MB
+alltoallv...: 0.400333 ms: 1567046.844902999931946 ms elapsed: Memory: 5323.076200000000426 MB
+scan...: 72.701313999999996 ms: 1567119.546217000111938 ms elapsed: Memory: 5323.076200000000426 MB
+finished broadcast message communication: 1197.720276000000013 ms: 1568317.266493000090122 ms elapsed: Memory: 5390.185072000000218 MB
+vertex processing started: 0.130325 ms: 1568317.396817999891937 ms elapsed: Memory: 5390.185072000000218 MB
+vertex processing finished: 34046.502509999998438 ms: 1602363.899327999912202 ms elapsed: Memory: 5390.185072000000218 MB
+update out edge: 10.905233000000001 ms: 1602374.804561000084504 ms elapsed: Memory: 5255.967335999999705 MB
+aggregate...: 0.099245 ms: 1602374.90380600001663 ms elapsed: Memory: 5255.967335999999705 MB
+21381  3
+start to process broadcast messages: 2971.820924999999988 ms: 1605346.724730999907479 ms elapsed: Memory: 5255.967335999999705 MB
+copying messages: 1042.996896000000106 ms: 1606389.721627000020817 ms elapsed: Memory: 5323.076200000000426 MB
+finished message processing: 56299.607515000003332 ms: 1662689.329142000060529 ms elapsed: Memory: 5323.175032000000101 MB
+start broadcast message communication: 8628.197425000000294 ms: 1671317.526566999964416 ms elapsed: Memory: 5323.175032000000101 MB
+alltoallv...: 0.39265 ms: 1671317.919217000016943 ms elapsed: Memory: 5323.175032000000101 MB
+scan...: 72.798610999999994 ms: 1671390.717827999964356 ms elapsed: Memory: 5323.183463999999731 MB
+finished broadcast message communication: 1197.78779099999997 ms: 1672588.505618999945 ms elapsed: Memory: 5390.292336000000432 MB
+vertex processing started: 0.140521 ms: 1672588.646140000084415 ms elapsed: Memory: 5390.292336000000432 MB
+vertex processing finished: 33286.662566999999399 ms: 1705875.308706999989226 ms elapsed: Memory: 5390.292336000000432 MB
+update out edge: 10.910475999999999 ms: 1705886.219183000037447 ms elapsed: Memory: 5255.967335999999705 MB
+aggregate...: 0.080039 ms: 1705886.299221999943256 ms elapsed: Memory: 5255.967335999999705 MB
+2948037  4
+start to process broadcast messages: 3794.500601000000188 ms: 1709680.799823000095785 ms elapsed: Memory: 5255.967335999999705 MB
+copying messages: 1039.968605000000025 ms: 1710720.768427999923006 ms elapsed: Memory: 5323.076200000000426 MB
+finished message processing: 56287.651121000002604 ms: 1767008.419548999983817 ms elapsed: Memory: 5337.477248000000145 MB
+start broadcast message communication: 8747.78312299999925 ms: 1775756.202672000043094 ms elapsed: Memory: 5337.477248000000145 MB
+alltoallv...: 0.34858 ms: 1775756.551252000033855 ms elapsed: Memory: 5337.477248000000145 MB
+scan...: 90.394407999999999 ms: 1775846.945659999968484 ms elapsed: Memory: 5337.389656000000286 MB
+finished broadcast message communication: 1198.535660999999891 ms: 1777045.481321000028402 ms elapsed: Memory: 5404.498528000000078 MB
+vertex processing started: 0.141639 ms: 1777045.622960000066087 ms elapsed: Memory: 5404.498528000000078 MB
+vertex processing finished: 35323.520049999999173 ms: 1812369.143009999999776 ms elapsed: Memory: 5404.513888000000406 MB
+update out edge: 10.466979 ms: 1812379.609989000018686 ms elapsed: Memory: 5255.982696000000033 MB
+aggregate...: 0.089328 ms: 1812379.69931700010784 ms elapsed: Memory: 5255.982696000000033 MB
+113077786  5
+start to process broadcast messages: 4910.341417999999976 ms: 1817290.04073500004597 ms elapsed: Memory: 5255.982696000000033 MB
+copying messages: 1040.251252000000022 ms: 1818330.291987000033259 ms elapsed: Memory: 5323.091559999999845 MB
+finished message processing: 60248.511394000001019 ms: 1878578.803380999946967 ms elapsed: Memory: 5663.431760000000395 MB
+start broadcast message communication: 7977.100362000000132 ms: 1886555.903743000002578 ms elapsed: Memory: 5663.431760000000395 MB
+alltoallv...: 0.310656 ms: 1886556.214398999931291 ms elapsed: Memory: 5663.431760000000395 MB
+scan...: 325.698587999999972 ms: 1886881.9129870000761 ms elapsed: Memory: 5663.290375999999924 MB
+finished broadcast message communication: 1196.799600000000055 ms: 1888078.712587000103667 ms elapsed: Memory: 5730.399247999999716 MB
+vertex processing started: 0.143664 ms: 1888078.856250999961048 ms elapsed: Memory: 5730.399247999999716 MB
+vertex processing finished: 67538.211427000002004 ms: 1955617.067678000079468 ms elapsed: Memory: 5730.463759999999638 MB
+update out edge: 38.037027000000002 ms: 1955655.104705000063404 ms elapsed: Memory: 5256.047207999999955 MB
+aggregate...: 0.108534 ms: 1955655.213238999946043 ms elapsed: Memory: 5256.047207999999955 MB
+387678693  6
+half reached at:5
+Pass
+

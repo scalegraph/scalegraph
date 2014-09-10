@@ -1,0 +1,3 @@
+  ComplexContagion: |
+ARGS: [rmat,27,-,90]
+Generate RMAT[scale=27,edgefactor=16]: 601613.902656999998726 ms: 601613.902656999998726 ms elapsed: Memory: 2148.27007999999978 MB

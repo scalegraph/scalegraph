@@ -1,0 +1,31 @@
+-bash: line 1: 30578 Terminated              /var/spool/PBS/mom_priv/jobs/1376617.t2zpbs01.SC
+================================================
+[Your accounting ID]
+ group id            : t2gcresteu
+------------------------------------------------
+[Job information]
+ job id              : 1376617.t2zpbs01
+ queue               : S
+ num of used node(s) : 8
+ used node(s) list   : 
+  t2a000001  t2a000004  t2a000005  t2a000006
+  t2a000007  t2a000008  t2a000014  t2a000015
+ used cpu(s)         : 192
+ specified walltime  : 03:00:00 (10800 sec)
+ used walltime       : 00:49:13 (2953 sec)
+ used memory         : 5804kb
+ job exit status     : 271
+------------------------------------------------
+[Accounting factors]
+ x 4.0 by group
+ x 1.0 by queue
+ x 1.0 by job priority
+ x 1.0 by job walltime extension
+ = 4.00 is the total accounting factor
+------------------------------------------------
+[Expense information]
+ consumed TSUBAME point         : 25177 / 3600 point(s)
+ consumed budgets with this job : 280 yen
+If you specified the walltime exactly,
+ this job will cost 18900 / 3600 TSUBAME point(s) which is equivalent to 210 yen.
+================================================
