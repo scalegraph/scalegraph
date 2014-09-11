@@ -35,7 +35,7 @@ public def run(args :Array[String](1), graph :Graph):Boolean {
 //graph construction
 rnd.skip(Long.parse(args(0)));
 
-val simulator = new TwitterSimulator1
+val simulator = new TwitterSimulator();
 
 val csr = graph.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", true, false);
 //val csr = graph.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", false, false);
