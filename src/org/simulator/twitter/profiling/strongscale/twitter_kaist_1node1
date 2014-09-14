@@ -1,0 +1,9 @@
+  ComplexContagion: |
+ARGS: [file,/work1/t2gcresteu/scalegraph/graph/twitter_kaist.csv,-,50393960]
+Read graph[path=/work1/t2gcresteu/scalegraph/graph/twitter_kaist.csv]: 275418.409874000004493 ms: 275418.409874000004493 ms elapsed: Memory: 20445.599104000000807 MB
+Generate the edge weights: 112291.139051000005566 ms: 387709.548925000010058 ms elapsed: Memory: 17779.697727999999188 MB
+start graph construction: 0.419758 ms: 387709.968683000013698 ms elapsed: Memory: 17779.697727999999188 MB
+count edge finished: 108899.598526000001584 ms: 496609.56720900000073 ms elapsed: Memory: 17779.697727999999188 MB
+complete creating send data: 219898.934577000007266 ms: 716508.501785999978893 ms elapsed: Memory: 35553.763456000000588 MB
+finished converting edge format: 132999.249574999994365 ms: 849507.751361000002362 ms elapsed: Memory: 36055.157392000000982 MB
+start first step sorting: 15.094925999999999 ms: 849522.846286999993026 ms elapsed: Memory: 54599.052519999997457 MB

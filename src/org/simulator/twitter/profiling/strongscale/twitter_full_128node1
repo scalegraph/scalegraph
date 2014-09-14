@@ -1,0 +1,41 @@
+  ComplexContagion: |
+ARGS: [file,/work1/t2gcresteu/scalegraph/graph/twitter/,-,21447363]
+Read graph[path=/work1/t2gcresteu/scalegraph/graph/twitter/]: 124406.925199999997858 ms: 124406.925199999997858 ms elapsed: Memory: 26.747343999999998 MB
+Generate the edge weights: 49812.725316999996721 ms: 174219.650517000001855 ms elapsed: Memory: 25.18188 MB
+start graph construction: 10.820062999999999 ms: 174230.470579999993788 ms elapsed: Memory: 25.190144 MB
+count edge finished: 134.217818999999992 ms: 174364.688399000006029 ms elapsed: Memory: 25.190144 MB
+complete creating send data: 266.28837900000002 ms: 174630.976778000011109 ms elapsed: Memory: 47.865271999999997 MB
+finished converting edge format: 174395.641761000006227 ms: 349026.618538999988232 ms elapsed: Memory: 2745.691952000000128 MB
+start first step sorting: 1.92473 ms: 349028.543269000016153 ms elapsed: Memory: 5499.748199999999997 MB
+finished first step sorting: 152319.042416000011144 ms: 501347.585684999998193 ms elapsed: Memory: 5499.753391999999621 MB
+finished making offsets: 4480.38731800000005 ms: 505827.973003000020981 ms elapsed: Memory: 1872.417648000000099 MB
+finished second step sorting: 58854.989242000003287 ms: 564682.962244999944232 ms elapsed: Memory: 1872.417648000000099 MB
+start to update in edge: 64459.736879999996745 ms: 629142.699125000042841 ms elapsed: Memory: 1901.055479999999989 MB
+vertex processing start: 2.669746 ms: 629145.368871000013314 ms elapsed: Memory: 1929.787784000000102 MB
+vertex processing finished: 25555.597712999999203 ms: 654700.966584000037983 ms elapsed: Memory: 4452.95412800000031 MB
+start to process unicast messages: 0.17747 ms: 654701.144054000033066 ms elapsed: Memory: 4452.95412800000031 MB
+copying dest id: 0.493021 ms: 654701.637074999976903 ms elapsed: Memory: 5359.790116000000125 MB
+copying message value: 420.554530999999997 ms: 655122.191605999949388 ms elapsed: Memory: 4817.492019999999684 MB
+finished message processing: 325.00329099999999 ms: 655447.194896999979392 ms elapsed: Memory: 4817.492019999999684 MB
+start to unicast message communication: 0.15568 ms: 655447.350576999946497 ms elapsed: Memory: 4817.494072000000415 MB
+alltoallv...: 45037.712236999999732 ms: 700485.062813999946229 ms elapsed: Memory: 4817.494072000000415 MB
+sort...: 107852.489409000001615 ms: 808337.552222999976948 ms elapsed: Memory: 5451.225524000000405 MB
+finished unicast message communication: 158446.860748000006424 ms: 966784.412970999954268 ms elapsed: Memory: 2831.851876000000175 MB
+finished broadcast message communication: 0.144435 ms: 966784.557405999978073 ms elapsed: Memory: 2831.849823999999899 MB
+finished to update in edge: 0.077666 ms: 966784.63507199997548 ms elapsed: Memory: 2831.849823999999899 MB
+start xpregel iteration: 48343.363139000000956 ms: 1015127.998210999998264 ms elapsed: Memory: 2831.849823999999899 MB
+vertex processing started: 2.321091 ms: 1015130.319301999988966 ms elapsed: Memory: 2860.584175999999843 MB
+vertex processing finished: 1978.12171699999999 ms: 1017108.441019000019878 ms elapsed: Memory: 2927.692015999999967 MB
+update out edge: 0.127254 ms: 1017108.568272999953479 ms elapsed: Memory: 2927.692015999999967 MB
+aggregate...: 0.082624 ms: 1017108.65089699998498 ms elapsed: Memory: 2927.692015999999967 MB
+------!!!----852107472=852107472 here id:208
+1  0
+finished broadcast message communication: 611.866154000000051 ms: 1017720.517051000031643 ms elapsed: Memory: 2927.692015999999967 MB
+vertex processing started: 0.088771 ms: 1017720.60582199995406 ms elapsed: Memory: 2927.692015999999967 MB
+vertex processing finished: 2099.045148000000154 ms: 1019819.650969999958761 ms elapsed: Memory: 2927.692015999999967 MB
+update out edge: 0.123553 ms: 1019819.774523000000045 ms elapsed: Memory: 2927.692015999999967 MB
+aggregate...: 0.072497 ms: 1019819.847019999986514 ms elapsed: Memory: 2927.692015999999967 MB
+1  1
+Peak Amount is: 1, on step: 0 but Half Amount doesn't reached.
+Pass
+

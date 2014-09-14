@@ -1,0 +1,11 @@
+  ComplexContagion: |
+ARGS: [file,/work1/t2gcresteu/scalegraph/graph/twitter/,-,21447363]
+Read graph[path=/work1/t2gcresteu/scalegraph/graph/twitter/]: 113884.932363999992958 ms: 113884.932363999992958 ms elapsed: Memory: 3201.002527999999984 MB
+Generate the edge weights: 39123.519852999997966 ms: 153008.452217000012752 ms elapsed: Memory: 3187.854895999999826 MB
+start graph construction: 3.785346 ms: 153012.23756300000241 ms elapsed: Memory: 3187.858552000000145 MB
+count edge finished: 30076.788565999999264 ms: 183089.026129000005312 ms elapsed: Memory: 3187.858552000000145 MB
+complete creating send data: 74292.618539999995846 ms: 257381.644669000001159 ms elapsed: Memory: 9555.841239999999743 MB
+finished converting edge format: 726684.310385999968275 ms: 984065.955055000027642 ms elapsed: Memory: 14061.775104000000283 MB
+start first step sorting: 1.578029 ms: 984067.533083999995142 ms elapsed: Memory: 25003.06267200000002 MB
+[t2a001065:mpi_rank_103][async_thread] Got unknown event 17 ... continuing ...
+[t2a001065:mpi_rank_39][async_thread] Got unknown event 17 ... continuing ...

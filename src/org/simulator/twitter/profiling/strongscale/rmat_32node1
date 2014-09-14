@@ -1,0 +1,710 @@
+  ComplexContagion: |
+ARGS: [rmat,32,-,84]
+Generate RMAT[scale=32,edgefactor=16]: 2735767.333680999930948 ms: 2735767.333680999930948 ms elapsed: Memory: 8590.987263999999413 MB
+Generate random edge value: 102412.72865499999898 ms: 2838180.062336000148207 ms elapsed: Memory: 12885.954560000000129 MB
+Complete making graph: 35216.098033000002033 ms: 2873396.160368999931961 ms elapsed: Memory: 12885.954560000000129 MB
+start graph construction: 4.650686 ms: 2873400.811054999940097 ms elapsed: Memory: 12886.781511999999566 MB
+count edge finished: 82086.934706999993068 ms: 2955487.745761999860406 ms elapsed: Memory: 12886.781511999999566 MB
+complete creating send data: 187129.865359999996144 ms: 3142617.611122000031173 ms elapsed: Memory: 25771.683400000001711 MB
+x10.lang.MultipleExceptions
+        at x10::lang::CheckedThrowable::fillInStackTrace()
+        at x10aux::throwException(x10::lang::CheckedThrowable*)
+        at x10::lang::FinishState__RootFinish::waitForFinish()
+        at x10::lang::Runtime::stopFinish(x10::lang::FinishState*)
+        at org::scalegraph::test::STest::execute(x10::array::Array<x10::lang::String*>*)
+        at ComplexContagion::main(x10::array::Array<x10::lang::String*>*)
+        at x10::lang::Activity::run()
+        at x10::lang::Runtime__Worker::loop()
+        at x10::lang::Runtime__Worker::__apply()
+        at x10::lang::Runtime__Pool::__apply(int)
+        at x10::lang::Runtime::start(x10::lang::VoidFun_0_0*)
+        at 
+        at GC_inner_start_routine
+        at GC_call_with_stack_base
+        at 
+        at clone
+Caused by 
+| x10.lang.MultipleExceptions
+|         at x10::lang::CheckedThrowable::fillInStackTrace()
+|         at x10aux::throwException(x10::lang::CheckedThrowable*)
+|         at x10::lang::FinishState__RootFinish::waitForFinish()
+|         at x10::lang::Runtime::stopFinish(x10::lang::FinishState*)
+|         at x10::lang::PlaceLocalHandle<x10::lang::Cell<org::scalegraph::blas::DistSparseMatrix__Data<double> >*> x10::lang::PlaceLocalHandle<void>::make<x10::lang::Cell<org::scalegraph::blas::DistSparseMatrix__Data<double> >*>(x10::array::PlaceGroup*, x10::lang::Fun_0_0<x10::lang::Cell<org::scalegraph::blas::DistSparseMatrix__Data<double> >*>*)
+|         at org::scalegraph::blas::DistSparseMatrix<double>::_constructor(org::scalegraph::util::Dist2D, x10::lang::Fun_0_0<org::scalegraph::util::tuple::Tuple2<org::scalegraph::graph::id::IdStruct, org::scalegraph::blas::SparseMatrix<double> > >*)
+|         at org::scalegraph::blas::DistSparseMatrix<double>::_make(org::scalegraph::util::Dist2D, x10::lang::Fun_0_0<org::scalegraph::util::tuple::Tuple2<org::scalegraph::graph::id::IdStruct, org::scalegraph::blas::SparseMatrix<double> > >*)
+|         at org::scalegraph::blas::DistSparseMatrix<double> org::scalegraph::graph::Graph::createDistSparseMatrix<double>(org::scalegraph::util::Dist2D, x10::lang::String*, bool, bool)
+|         at ComplexContagion::run(x10::array::Array<x10::lang::String*>*, org::scalegraph::graph::Graph*)
+|         at org::scalegraph::test::AlgorithmTest::run(x10::array::Array<x10::lang::String*>*)
+|         at org::scalegraph::test::STest::execute(x10::array::Array<x10::lang::String*>*)
+|         at ComplexContagion::main(x10::array::Array<x10::lang::String*>*)
+|         at x10::lang::Activity::run()
+|         at x10::lang::Runtime__Worker::loop()
+|         at x10::lang::Runtime__Worker::__apply()
+|         at x10::lang::Runtime__Pool::__apply(int)
+|         at x10::lang::Runtime::start(x10::lang::VoidFun_0_0*)
+|         at 
+|         at GC_inner_start_routine
+|         at GC_call_with_stack_base
+|         at 
+|         at clone
+| Caused by 
+| | x10.lang.WrappedThrowable
+| |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+| | x10.lang.MultipleExceptions
+| |         at No stacktrace recorded.
+| | Caused by 
+| | | x10.lang.WrappedThrowable
+| | |         at No stacktrace recorded.
+
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   EXIT CODE: 1
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+[proxy:0:17@t2a004019] HYD_pmcd_pmip_control_cmd_cb (./pm/pmiserv/pmip_cb.c:913): assert (!closed) failed
+[proxy:0:17@t2a004019] HYDT_dmxu_poll_wait_for_event (./tools/demux/demux_poll.c:77): callback returned error status
+[proxy:0:17@t2a004019] main (./pm/pmiserv/pmip.c:206): demux engine error waiting for event
+[proxy:0:21@t2a004023] HYD_pmcd_pmip_control_cmd_cb (./pm/pmiserv/pmip_cb.c:913): assert (!closed) failed
+[proxy:0:21@t2a004023] HYDT_dmxu_poll_wait_for_event (./tools/demux/demux_poll.c:77): callback returned error status
+[proxy:0:21@t2a004023] main (./pm/pmiserv/pmip.c:206): demux engine error waiting for event
+[proxy:0:44@t2a004046] HYD_pmcd_pmip_control_cmd_cb (./pm/pmiserv/pmip_cb.c:913): assert (!closed) failed
+[proxy:0:44@t2a004046] HYDT_dmxu_poll_wait_for_event (./tools/demux/demux_poll.c:77): callback returned error status
+[proxy:0:44@t2a004046] main (./pm/pmiserv/pmip.c:206): demux engine error waiting for event
+[proxy:0:38@t2a004040] HYD_pmcd_pmip_control_cmd_cb (./pm/pmiserv/pmip_cb.c:913): assert (!closed) failed
+[proxy:0:38@t2a004040] HYDT_dmxu_poll_wait_for_event (./tools/demux/demux_poll.c:77): callback returned error status
+[proxy:0:38@t2a004040] main (./pm/pmiserv/pmip.c:206): demux engine error waiting for event
+[proxy:0:41@t2a004043] HYD_pmcd_pmip_control_cmd_cb (./pm/pmiserv/pmip_cb.c:913): assert (!closed) failed
+[proxy:0:41@t2a004043] HYDT_dmxu_poll_wait_for_event (./tools/demux/demux_poll.c:77): callback returned error status
+[proxy:0:41@t2a004043] main (./pm/pmiserv/pmip.c:206): demux engine error waiting for event
