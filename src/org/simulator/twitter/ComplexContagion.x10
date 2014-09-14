@@ -18,12 +18,9 @@ import org.scalegraph.io.NamedDistData;
 
 public final class ComplexContagion extends AlgorithmTest {
 val rnd = new org.scalegraph.util.random.Random(1, 2);
-//val baseID = new GlobalRef[Cell[Long]](new Cell[Long](0l));
 var baseID: Long;
 var startID: Long;
-//var niter:Int= 200;
 var numInfected :Long ;
-//50% infected recording
 var hAmount:Long;
 var setStart: Boolean;
 
@@ -32,13 +29,11 @@ new ComplexContagion().execute(args);
 }
 
 public def run(args :Array[String](1), graph :Graph):Boolean {
-//graph construction
 rnd.skip(Long.parse(args(0)));
 
 val simulator = new TwitterSimulator();
 
 val csr = graph.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", true, false);
-//val csr = graph.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", false, false);
 val xpgraph = XPregelGraph.make[Long, Double](csr);
 graph.del();
 xpgraph.updateInEdge();
@@ -52,17 +47,7 @@ xpgraph.iterate[Long, Long]((ctx :VertexContext[Long, Double, Long, Long], messa
     hAmount = ctx.numberOfVertices()/2;
     if (setStart == false)
    {
-///
-//    finish {
-//   if (here.id==0)  {
-//  for (p in Place.places())
-//         at(p) baseID = ctx.placeBaseVertexId();
-//                 }
-//      }
-///
-
     startID = rnd.nextLong() % ctx.numberOfVertices();//+baseID;
-//    Console.OUT.println("startID is :"+ startID+" and hereID is :"+here.id);
     setStart = true;
    }
     if (ctx.realId()!=startID) value = 0l;
@@ -87,7 +72,6 @@ xpgraph.iterate[Long, Long]((ctx :VertexContext[Long, Double, Long, Long], messa
     ctx.setValue(value);
   }
   else  value = MathAppend.sum(messages);
-  // Console.OUT.println(ctx.realId() + " " + value+" " + ctx.value()+ " here id:"+ here.id);
   if (ctx.value() == 0l)
   {
     if (value > 1l )  ///Complex Contagion
