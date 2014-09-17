@@ -152,8 +152,8 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		team_.placeGroup().broadcastFlat( () => {
 			try {
 				val w = workers_().mOutEdge;
-				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-					for(i in r) w.value(i) = value;
+				Parallel.iter(w.values.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.values(i) = value;
 				});
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
@@ -171,7 +171,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	 */
 	public @Inline operator this(index :Long) {
 		@Ifndef("NO_BOUNDS_CHECKS") {
-			if(index < 0 || index > size())
+			if(index < 0 || index >= size())
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
 		return Vertex[V, E](mWorkers(), index);
@@ -204,7 +204,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	/** Returns local edge data */
 	public def edgeIds() = mWorkers().mOutEdge.vertexes;
 	/** Returns local edge data */
-	public def edgeValues() = mWorkers().mOutEdge.value;
+	public def edgeValues() = mWorkers().mOutEdge.values;
 	
 	/** Detatch the index-th ouput and return it as a DistMemoryChunk.
 	 */

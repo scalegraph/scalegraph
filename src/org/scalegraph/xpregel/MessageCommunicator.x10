@@ -52,8 +52,9 @@ final class MessageCommunicator[M] { M haszero } {
 	val mStoD :OnedR.StoD;
 	val mStoV :OnedR.StoV;
 
-	var mInEdgesOffset :MemoryChunk[Long];
-	var mInEdgesVertex :MemoryChunk[Long];
+	val mInEdge :GraphEdgeBase;
+//	var mInEdgesOffset :MemoryChunk[Long];
+//	var mInEdgesVertex :MemoryChunk[Long];
 	var mInEdgesMask :Bitmap;
 
 	var mUCREnabled :Boolean;
@@ -85,10 +86,11 @@ final class MessageCommunicator[M] { M haszero } {
 	
 	var mNumActiveVertexes :Long;
 	
-	def this(team :Team2, ids :IdStruct, numThreads :Int)
+	def this(team :Team2, inEdge :GraphEdgeBase, ids :IdStruct, numThreads :Int)
 	{
 		val rank_c = team.base.role()(0);
 		mTeam = team;
+		mInEdge = inEdge;
 		mIds = ids;
 		mNumThreads = numThreads;
 		mSuperstep = 0;
@@ -133,13 +135,13 @@ final class MessageCommunicator[M] { M haszero } {
 			val bmp = mBCRHasMessage;
 			val offset = mBCROffset;
 			val mes = mBCRMessages;
-			val start = mInEdgesOffset(srcid);
-			val end = mInEdgesOffset(srcid + 1);
+			val start = mInEdge.offsets(srcid);
+			val end = mInEdge.offsets(srcid + 1);
 			val length = end - start;
 			
 			buffer.setSize(0);
 			for(i in 0..(length-1)) {
-				val dst = mInEdgesVertex(start + i);
+				val dst = mInEdge.vertexes(start + i);
 				
 				if(bmp(dst)) { // TODO: optimize
 					val wordOffset = Bitmap.offset(dst);
@@ -327,8 +329,8 @@ final class MessageCommunicator[M] { M haszero } {
 		val tmpMask = new Bitmap(numVertexesBC, false);
 		if(mInEdgesMask == null) mInEdgesMask = new Bitmap(numVertexesBC);
 		
-		Parallel.iter(mInEdgesVertex.range(), (tid :Long, r :LongRange) => {
-			for(i in r) tmpMask.atomicSet(mInEdgesVertex(i));
+		Parallel.iter(mInEdge.vertexes.range(), (tid :Long, r :LongRange) => {
+			for(i in r) tmpMask.atomicSet(mInEdge.vertexes(i));
 		});
 		
 		// unpack bitmap if it is needed

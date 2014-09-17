@@ -107,8 +107,8 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		}
 		mOutEdge.offsets = edgeIndexMatrix().offsets;
 		mOutEdge.vertexes = edgeIndexMatrix().vertexes;
-		if(mOutEdge.value.size() != edgeIndexMatrix().vertexes.size()) {
-			mOutEdge.value = MemoryChunk.make[E](edgeIndexMatrix().vertexes.size());
+		if(mOutEdge.values.size() != edgeIndexMatrix().vertexes.size()) {
+			mOutEdge.values = MemoryChunk.make[E](edgeIndexMatrix().vertexes.size());
 		}
 	}
 	
@@ -116,7 +116,10 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		if(graph.ids().equals(mIds) == false) {
 			throw new Exception("Number of vertexes in the graph or the distribution of the graph is different.");
 		}
-		mOutEdge.set(graph());
+		mOutEdge.offsets = graph().offsets;
+		mOutEdge.vertexes = graph().vertexes;
+		mOutEdge.values = graph().values;
+//		mOutEdge.set(graph());
 	}
 
 	public def updateFewInEdge(list :MemoryChunk[EdgeProvider[E]]){
@@ -276,7 +279,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		if(here.id == 0) sw.lap("start to update in edge");
 		
 		val numThreads = Runtime.NTHREADS;
-		val mesComm = new MessageCommunicator[Long](mTeam, mIds, numThreads);
+		val mesComm = new MessageCommunicator[Long](mTeam, mInEdge, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedR.StoD(mIds, mTeam.base.role()(0));
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
@@ -324,7 +327,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		@Ifdef("PROF_XP") { mtimer.start(); }
 		val numThreads = Runtime.NTHREADS;
-		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mIds, numThreads);
+		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mInEdge, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val StoD = new OnedR.StoD(mIds, mTeam.base.role()(0));
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
@@ -335,7 +338,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			val UCCMessages = mesComm.messageBuffer(tid);
 			val offset = mOutEdge.offsets;
 			val id = mOutEdge.vertexes;
-			val value = mOutEdge.value;
+			val value = mOutEdge.values;
 			for(vid in r) {
 				val vid_ = StoD(vid);
 				for(i in offset(vid)..(offset(vid + 1) - 1)) {
@@ -366,7 +369,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 
 		mInEdge.offsets = mesComm.mUCROffset;
 		mInEdge.vertexes = id;
-		mInEdge.value = value;
+		mInEdge.values = value;
 		
 		mesComm.mUCROffset = MemoryChunk.make[Long]();
 		mesComm.del();
@@ -478,7 +481,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val root = (mTeam.base.role()(0) == 0);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
-			new MessageCommunicator[M](mTeam, mIds, numThreads);
+			new MessageCommunicator[M](mTeam, mInEdge, mIds, numThreads);
 		
 		val vctxs = MemoryChunk.make[VertexContext[V, E, M, A]](numThreads);
 		val localSrcids = MemoryChunk.make[Long](numThreads,0,true);
@@ -500,7 +503,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			val tmp = MemoryChunk.make[Long](numThreads);
 			foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 				// (contains count) + end index
-				mOutEdgeModifyReqOffsets(tid) = MemoryChunk.make[Long]((r.max -r.min +1L) +1L, 0, true);
+				mOutEdgeModifyReqOffsets(tid) = MemoryChunk.make[Long]((r.max - r.min +1L) +1L, 0, true);
 				tmp(tid) = 777L;
 			});
 			for(i in mOutEdgeModifyReqOffsets.range()){
@@ -527,9 +530,9 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val statistics = MemoryChunk.make[Long](STT_MAX*2);
 		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
 		
-		ectx.mInEdgesOffset = mInEdge.offsets;
-		ectx.mInEdgesVertex = mInEdge.vertexes;
-		ectx.mInEdgesMask = mInEdgesMask;
+		//ectx.mInEdgesOffset = mInEdge.offsets;
+		//ectx.mInEdgesVertex = mInEdge.vertexes;
+		//ectx.mInEdgesMask = mInEdgesMask;
 
 		// initialize halt flag
 		val vertexActvieBitmap = mVertexActive.raw();
@@ -598,11 +601,10 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			// update in edges
 			updateFewInEdge(edgeProviderList);
 			// update messageCommunicator's inedge
-			ectx.mInEdgesOffset = mInEdge.offsets;
-			ectx.mInEdgesVertex = mInEdge.vertexes;
+			//ectx.mInEdgesOffset = mInEdge.offsets;
+			//ectx.mInEdgesVertex = mInEdge.vertexes;
 			
 			EdgeProvider.reInitializeEdgeProvider[E](edgeProviderList);
-			
 			
 			//-----directionOptimization
 			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);

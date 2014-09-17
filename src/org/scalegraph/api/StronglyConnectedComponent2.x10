@@ -172,7 +172,7 @@ public final class StronglyConnectedComponent2 {
 //		val csr = graph.createDistEdgeIndexMatrix(Config.get().dist1d(), true, true);
 //		val xpregel = new XPregelGraph[SCCVertex, Long](matrix);		
 		val xpregel = XPregelGraph.make[SCCVertex, Double](matrix);
-		xpregel.updateInEdge();
+		xpregel.updateInEdgeAndValue();
 		var numOfVertices:Long;
 		xpregel.once((ctx :VertexContext[SCCVertex, Double, Any, Any]) => {
 			val value = new SCCVertex(ctx.realId(), ctx.realId(), ctx.id());
