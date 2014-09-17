@@ -21,6 +21,19 @@
 
 #define MCDEFARGS 0, false, (x10_byte*)(void*)__FILE__, __LINE__
 
+
+namespace x10 {
+	namespace lang {
+		class Place;
+	}
+    namespace util {
+    	extern void IMC_copyToBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                               x10::lang::Place dstPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    	extern void IMC_copyFromBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                                 x10::lang::Place srcPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    }
+}
+
 namespace org { namespace scalegraph { namespace util {
 		struct ExplicitMemory;
 
@@ -118,9 +131,12 @@ namespace org { namespace scalegraph { namespace util {
 
 				if(ptr) {
 					if(containPtrs) {
-						GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+						//GC_remove_roots(allocHead, (char*)allocHead + byteSize );
+						GC_FREE(ptr);
+					}else{
+						::free(ptr);
 					}
-					::free(ptr);
+//					::free(ptr);
 				}
 			}
 
@@ -182,7 +198,12 @@ namespace org { namespace scalegraph { namespace util {
 				}
 				pthread_mutex_unlock(&ExpMemState.mutex);
 
-				char* allocMem = x10aux::system_alloc<char>(size);
+				char* allocMem;// = x10aux::system_alloc<char>(size);
+				if(containPtrs){
+					allocMem = (char*)GC_MALLOC_UNCOLLECTABLE(size);
+				}else{
+					allocMem = x10aux::system_alloc<char>(size);
+				}
 
 				if(allocMem==NULL){
 					pthread_mutex_lock(&ExpMemState.mutex);
@@ -194,9 +215,9 @@ namespace org { namespace scalegraph { namespace util {
 				}
 
 				x10aux::alloc_lock.lock();
-				if(containPtrs){
-					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
-				}
+//				if(containPtrs){
+//					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
+//				}
 				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
 				x10aux::alloc_lock.unlock();
 
@@ -272,7 +293,7 @@ public:
                 //}
 
                 bool containsPtrs = x10aux::getRTT<ELEM>()->containsPtrs;
-                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP){
+                if(size <  __ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_SIZETHRESHOLD || !__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_USEEXP ){
                         ELEM* allocMem = x10aux::alloc<ELEM>(size, containsPtrs);
                         if (zeroed) {
                                 memset(allocMem, 0, size);
@@ -302,12 +323,15 @@ public:
 };
 
 // base case for struct and interface types
-template<class T, typename SFINAE = void> class MCData_Impl : public MCData_Base<MCData_Impl<T>, T> {
+template<class T> class MCData_Impl : public MCData_Base<MCData_Impl<T>, T> {
 public:
         typedef MCData_Impl<T> THIS;
         typedef MCData_Base<MCData_Impl<T>, T> BASE;
         typedef T ELEM;
         typedef T TYPE;
+        static int returnSize(){
+        	return sizeof(ELEM);
+        }
 
         MCData_Impl()
                 : BASE()
@@ -346,6 +370,9 @@ public:
                 memmove(dst.FMGL(pointer) + dstIndex, src.FMGL(pointer) + srcIndex, numElems * sizeof(T));
         }
 
+        static void asyncCopy(MCData_Impl<T> src, void* dst, x10_long dstIndex, x10aux::place dstPlace);
+        static void asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T> dst);
+
         static void _serialize(MCData_Impl<T> this_, x10aux::serialization_buffer& buf) {
                 x10_long size = this_->FMGL(size);
                 void* data = this_->FMGL(pointer);
@@ -364,6 +391,7 @@ public:
         static MCData_Impl<T> _deserialize(x10aux::deserialization_buffer& buf) {
                 x10_long size = buf.read<x10_long>();
                 MCData_Impl<T> allocMem = _make(size, 0, false);
+//                MCData_Impl<T> allocMem = tfunc<T>::_template_make(size, 0, false);
            bool containsPtrs = x10aux::getRTT<T>()->containsPtrs;
                 if(containsPtrs) {
                         for(x10_long i = 0; i < size; ++i) {
@@ -377,18 +405,71 @@ public:
         }
 };
 
+template<class T> struct MakeStruct{
+	static MCData_Impl<T> make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			MCData_Impl<T> this_ = MCData_Base<MCData_Impl<T>, T>::_make(numElements, alignment, zeroed, filename, line);
+			return this_;
+	}
+	static MCData_Impl<T> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			return MCData_Base<MCData_Impl<T>, T>::_make(numElements, alignment, zeroed, filename, line);
+	}
+	static MCData_Impl<T> make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			MCData_Impl<T> this_ = MCData_Base<MCData_Impl<T>, T>::_make(numElements, alignment, zeroed);
+			return this_;
+	}
+	static MCData_Impl<T> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			return MCData_Base<MCData_Impl<T>, T>::make(numElements, alignment, zeroed);
+	}
+};
+template<class T> struct MakeStruct<T*>{
+	static MCData_Impl<T*> make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed, filename, line);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+					elem->_constructor();
+			}
+			return this_;
+	}
+	//to avoid compile error (some T doesn't have _constructor())
+	static MCData_Impl<T*> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed, filename, line);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+			}
+			return this_;
+	}
+	static MCData_Impl<T*> make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+					elem->_constructor();
+			}
+			return this_;
+	}
+	static MCData_Impl<T*> make_nocons(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+			MCData_Impl<T*> this_ = MCData_Base<MCData_Impl<T*>, T>::_make(numElements, alignment, zeroed);
+			for(x10_long i = 0; i < numElements; ++i) {
+					T* elem = new (&this_.FMGL(pointer)[i]) T();
+			}
+			return this_;
+	}
+};
+
 // specialized for class types
 // class type is determined whether it has default constructor (constructor that have no parameters)
-template <typename T, void(T::*)()>
-struct MCData_sfinae_helper { typedef void type; };
+//template <typename T, void(T::*)()>
+//struct MCData_sfinae_helper { typedef void type; };
 
-template<class T> class MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type>
-        : public MCData_Base<MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type>, T> {
+template<class T> class MCData_Impl<T*>
+        : public MCData_Base<MCData_Impl<T*>, T> {
 public:
-        typedef MCData_Impl<T*, typename MCData_sfinae_helper<T, &T::_constructor>::type> THIS;
+        typedef MCData_Impl<T*> THIS;
         typedef MCData_Base<THIS, T> BASE;
         typedef T ELEM;
         typedef T* TYPE;
+        static int returnSize(){
+        	return sizeof(ELEM);
+        }
 
         MCData_Impl()
                 : BASE()
@@ -398,22 +479,22 @@ public:
                 : BASE(pointer__, size__, memobj__)
         { }
 
-        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
-                THIS this_ = BASE::_make(numElements, alignment, zeroed);
-                for(x10_long i = 0; i < numElements; ++i) {
-                        T* elem = new (&this_.FMGL(pointer)[i]) T();
-                        elem->_constructor();
-                }
-                return this_;
-        }
-        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
-                THIS this_ = BASE::_make(numElements, alignment, zeroed, filename, line);
-                for(x10_long i = 0; i < numElements; ++i) {
-                        T* elem = new (&this_.FMGL(pointer)[i]) T();
-                        elem->_constructor();
-                }
-                return this_;
-        }
+//        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed) {
+//                THIS this_ = BASE::_make(numElements, alignment, zeroed);
+//                for(x10_long i = 0; i < numElements; ++i) {
+//                        T* elem = new (&this_.FMGL(pointer)[i]) T();
+//                        elem->_constructor();
+//                }
+//                return this_;
+//        }
+//        static THIS _make(x10_long numElements, x10_int alignment, x10_boolean zeroed, const char* filename, int line) {
+//                THIS this_ = BASE::_make(numElements, alignment, zeroed, filename, line);
+//                for(x10_long i = 0; i < numElements; ++i) {
+//                        T* elem = new (&this_.FMGL(pointer)[i]) T();
+//                        elem->_constructor();
+//                }
+//                return this_;
+//        }
 
         x10_boolean isValid() { return (this->FMGL(memobj) == NULL) || (this->FMGL(memobj)->allocHead != NULL); }
 
@@ -437,6 +518,9 @@ public:
                 }
         }
 
+        static void asyncCopy(MCData_Impl<T*> src, void* dst, x10_long dstIndex, x10aux::place dstPlace);
+        static void asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T*> dst);
+
         static void _serialize(THIS this_, x10aux::serialization_buffer& buf) {
                 if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT) printf("serialize\n");
                 x10_long size = this_->FMGL(size);
@@ -452,9 +536,16 @@ public:
         static THIS _deserialize(x10aux::deserialization_buffer& buf) {
                 if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT) printf("deserialize\n");
                 x10_long size = buf.read<x10_long>();
-                THIS allocMem = _make(size, 0, false);
+                //THIS allocMem = _make(size, 0, false);
+                //THIS allocMem = MakeStruct<T*>::make(size, 0, false);
+                MCData_Impl<T*> allocMem = MCData_Base<MCData_Impl<T*>, T>::_make(size, 0, false);
+//                			for(x10_long i = 0; i < numElements; ++i) {
+//                					T* elem = new (&this_.FMGL(pointer)[i]) T();
+//                					elem->_constructor();
+//                			}
                 for(x10_long i = 0; i < size; ++i) {
                     T* elem = new (&allocMem->FMGL(pointer)[i]) T();
+                    //elem -> _constructor();
                     buf.record_reference(elem);
                     elem->_deserialize_body(buf);
                 }
@@ -469,6 +560,7 @@ public:
 #ifndef ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
 #define ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
 #include <x10/lang/Any.h>
+#include <x10/lang/Place.h>
 #include <x10/lang/String.h>
 #include <x10/lang/UnsupportedOperationException.h>
 
@@ -544,8 +636,70 @@ template<class THIS, typename ELEM>void MCData_Base<THIS, ELEM>::_initRTT() {
     const char *baseName = "org.scalegraph.util.MemoryChunk.Data";
     rtt.initStageTwo(baseName, x10aux::RuntimeType::struct_kind, 2, parents, 1, params, variances);
 }
+/*
+ * namespace x10 {
+	namespace lang {
+		class Place;
+	}
+    namespace util {
+    	extern void IMC_copyToBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                               x10::lang::Place dstPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    	extern void IMC_copyFromBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+                                 x10::lang::Place srcPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    }
+}
+ */
+
+template<class T> void MCData_Impl<T>::asyncCopy(MCData_Impl<T> src, void* dst, x10_long dstIndex, x10aux::place dstPlace)
+{
+	x10_long l = 0, r = src.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst + dstIndex, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+}
+template<class T> void MCData_Impl<T>::asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T> dst)
+{
+	x10_long l = 0, r = dst.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+}
+
+template<class T> void MCData_Impl<T*>::asyncCopy(MCData_Impl<T*> src, void* dst, x10_long dstIndex, x10aux::place dstPlace)
+{
+	x10_long l = 0, r = src.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst + dstIndex, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+}
+
+template<class T> void MCData_Impl<T*>::asyncCopy(void* src, x10_long srcIndex, x10aux::place srcPlace, MCData_Impl<T*> dst)
+{
+	x10_long l = 0, r = dst.FMGL(size);
+	x10_long mx = (1L<<30)/sizeof(T);
+	while (l < r) {
+		x10_long c = (r-l < mx) ? r-l : mx;
+		::x10::util::IMC_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+		l += c;
+	}
+	//::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+}
+
 
 } } } // namespace org { namespace scalegraph { namespace util {
 
 #endif // ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_IMPLEMENTATION
 #endif // ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_H_NODEPS
+

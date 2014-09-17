@@ -27,6 +27,7 @@ import org.scalegraph.util.MathAppend;
 import org.scalegraph.io.NamedDistData;
 import org.scalegraph.id.Type;
 import org.scalegraph.io.FileWriter;
+import x10.util.ArrayList;
 
 public class CSVWriter {
 	private static type IO = org.scalegraph.id.ProfilingID.IO;
@@ -43,11 +44,12 @@ public class CSVWriter {
 		private var frontBuffer :MemoryChunk[SStringBuilder];
 		private var backBuffer :MemoryChunk[SStringBuilder];
 		private val fw :FileWriter;
-		private val strClousure :MemoryChunk[(sb :SStringBuilder, idx :Long) => void];
+//		private val strClousure :MemoryChunk[(sb :SStringBuilder, idx :Long) => void];
+		private val strClousure :ArrayList[(sb :SStringBuilder, idx :Long) => void];
 		private val monitor = new Monitor();
 		private var numLauchTasks :Int = 0;
 		
-		public def this(fw :FileWriter, strClousure :MemoryChunk[(sb :SStringBuilder, idx :Long) => void]) {
+		public def this(fw :FileWriter, strClousure :ArrayList/*MemoryChunk*/[(sb :SStringBuilder, idx :Long) => void]) {
 			val nthreads = Runtime.NTHREADS;
 			this.frontBuffer = MemoryChunk.make[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
 			this.backBuffer = MemoryChunk.make[SStringBuilder](nthreads, (i :Long) => new SStringBuilder());
@@ -86,7 +88,7 @@ public class CSVWriter {
 				@Ifdef("PROF_IO") { mtimer.start(); }
 				val buf = backBuffer(tid);
 				val numColumns = strClousure.size();
-				if(numColumns == 0L) return ;
+				if(numColumns == 0) return ;
 				for(i in r) {
 					for(c in 0..(numColumns-2)) {
 						strClousure(c)(buf, i);
@@ -145,8 +147,8 @@ public class CSVWriter {
 
 		val typeId = data.typeId();
 		val colNum = typeId.size;
-		val atts = MemoryChunk.make[CSVAttributeHandler](colNum,
-				(i :Long) => CSVAttributeHandler.create(typeId(i as Int), false));
+		val atts = new Array[CSVAttributeHandler](colNum,
+				(i :Int) => CSVAttributeHandler.create(typeId(i), false));
 		val dmc = data.data();
 		@Ifdef("PROF_IO") { mtimer_.lap(IO.MAIN_PREPARE); }
 		
@@ -157,7 +159,8 @@ public class CSVWriter {
 				val teamRole = team.role()(0);
 				val teamSize = team.size();
 			
-				val makeStringClosures = new GrowableMemory[(sb :SStringBuilder, idx :Long) => void]();
+				//val makeStringClosures = new GrowableMemory[(sb :SStringBuilder, idx :Long) => void]();
+				val makeStringClosures = new ArrayList[(sb :SStringBuilder, idx :Long) => void]();
 
 				if(putIdFlag){
 					makeStringClosures.add((sb :SStringBuilder, idx :Long) => {
@@ -187,7 +190,9 @@ public class CSVWriter {
 					fw.write(ssb.result().bytes());
 				}
 			
-				val writer = new ParallelWriter(fw, makeStringClosures.raw());
+				//val writer = new ParallelWriter(fw, makeStringClosures.raw());
+				//val writer = new ParallelWriter(fw, MemoryChunk.make[(sb :SStringBuilder, idx :Long) => void](makeStringClosures.toIndexedMemoryChunk(), 0, makeStringClosures.size()) );
+				val writer = new ParallelWriter(fw, makeStringClosures);
 				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_PREPARE); }
 				writer.write(atts(0).localSizeOf(dmc(0)));
 				fw.close();

@@ -53,7 +53,16 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 	var mNumActiveVertexes :Long = 0L;
 	var mBCSInputCount :Long = 0L;
 	
-//	var mDiffInDst :GrowableMemory[Long];
+	def this() {
+		mWorker = null;
+		mCtx = null;
+		mEdgeProvider = null;
+		mUCCMessages = MemoryChunk.make[MessageBuffer[M]]();
+		mOut = MemoryChunk.make[GrowableMemory[Int]]();
+	}
+	
+
+	//	var mDiffInDst :GrowableMemory[Long];
 //	var mDiffInSrcWithAR :GrowableMemory[Long];
 	
 	//////////////////////////////////////////////////////////

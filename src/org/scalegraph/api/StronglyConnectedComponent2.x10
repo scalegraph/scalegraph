@@ -111,6 +111,8 @@ public final class StronglyConnectedComponent2 {
 		var ended:Boolean;
 		var numOfChild:Long;
 		var parentAddress:Long;
+		private def this(){
+		}
 		private def this (fromId_:Long, toId_:Long, parentAddress_:Long) {
 			fromId = fromId_;
 			toId = toId_;
@@ -174,7 +176,7 @@ public final class StronglyConnectedComponent2 {
 		val xpregel = XPregelGraph.make[SCCVertex, Double](matrix);
 		xpregel.updateInEdgeAndValue();
 		var numOfVertices:Long;
-		xpregel.once((ctx :VertexContext[SCCVertex, Double, Any, Any]) => {
+		xpregel.once((ctx :VertexContext[SCCVertex, Double, Byte, Byte]) => {
 			val value = new SCCVertex(ctx.realId(), ctx.realId(), ctx.id());
 			ctx.setValue(value);
 			// val ins = ctx.outEdgesId().size();
@@ -318,7 +320,7 @@ public final class StronglyConnectedComponent2 {
 			iter++;
 			
 		}
-		xpregel.once((ctx :VertexContext[SCCVertex, Double, Any, Any]) => {
+		xpregel.once((ctx :VertexContext[SCCVertex, Double, Byte, Byte]) => {
 			ctx.output(0, ctx.value().prevFromId);
 			ctx.output(1, ctx.value().numOfChild);
 			//Console.OUT.println(ctx.realId() + " " + ctx.value().prevFromId + " " + ctx.value().numOfChild);

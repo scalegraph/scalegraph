@@ -54,12 +54,23 @@ final struct MemoryChunkData[T] {
 	public static def make[T](backing :IndexedMemoryChunk[T]) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, 0L, backing.length());
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed)")
+	//@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed)")
+	@Native("c++", "org::scalegraph::util::MakeStruct<#T >::make(#numElements, #alignment, #zeroed)")
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed, (char*)#filename, #num)")
+	//@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed, (char*)#filename, #num)")
+	@Native("c++", "org::scalegraph::util::MakeStruct<#T >::make(#numElements, #alignment, #zeroed, (char*)#filename, #num)")
 	public static def make[T](numElements :Long, alignment :Int, zeroed :Boolean, filename :MemoryPointer[Byte], num :Int) :MemoryChunkData[T] {
+		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
+	}
+	
+	@Native("c++", "org::scalegraph::util::MakeStruct<#T >::make_nocons(#numElements, #alignment, #zeroed)")
+	public static def make_nocons[T](numElements :Long, alignment :Int, zeroed :Boolean) :MemoryChunkData[T] {
+		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
+	}
+	@Native("c++", "org::scalegraph::util::MakeStruct<#T >::make_nocons(#numElements, #alignment, #zeroed, (char*)#filename, #num)")
+	public static def make_nocons[T](numElements :Long, alignment :Int, zeroed :Boolean, filename :MemoryPointer[Byte], num :Int) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](allocateFlat[T](numElements, alignment, zeroed), 0L, numElements);
 	}
 	
@@ -70,7 +81,12 @@ final struct MemoryChunkData[T] {
 	public def isValid() :Boolean = true;
 	
 	@NativeRep("c++", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", "typename org::scalegraph::util::MCData_Impl<#T >::ELEM*", null)
-	static struct Pointer[T] { }
+	static struct Pointer[T] {
+		@Native("c++", "(x10_long)(#this)")
+		public native def toLong() :Long;
+		@Native("c++", "(int)(#this)")
+		public native def hashCode() :Int;
+	}
 	
 	@Native("c++", "(#this).FMGL(pointer)")
 	public native def pointer() :Pointer[T];
@@ -129,4 +145,10 @@ final struct MemoryChunkData[T] {
 	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::copy(#src, #srcIndex, #dst, #dstIndex, #numElems)")
 	public static native def copy[T](src:MemoryChunkData[T], srcIndex:Long,
 			dst:MemoryChunkData[T], dstIndex:Long, numElems:Long):void;
+	
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::asyncCopy(#src, (void*)(#dst).FMGL(data), #dstIndex, (#dst).FMGL(mc).location)")
+	public static native def asyncCopy[T](src :MemoryChunkData[T], dst :GlobalMemoryChunk[T], dstIndex :Long):void;
+	
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::asyncCopy((void*)(#src).FMGL(data), #srcIndex, (#src).FMGL(mc).location, #dst)")
+	public static native def asyncCopy[T](src :GlobalMemoryChunk[T], srcIndex :Long, dst :MemoryChunkData[T]):void;
 }

@@ -64,23 +64,14 @@ public final struct SparseMatrix[T] {
 	 * @param values The edge values corresponds to the edge list.
 	 * @param ids IdStruct that provides the distribution information.
 	 */
-	public def this(origin_ :MemoryChunk[Long], target_ :MemoryChunk[Long], values_: MemoryChunk[T], ids :IdStruct) {
+	public def this(origin :MemoryChunk[Long], target :MemoryChunk[Long], values_: MemoryChunk[T], ids :IdStruct) {
 		val sw = Config.get().stopWatch();
 
-		if(origin_.size() == 0L) { // shortcut
+		if(origin.size() == 0L) { // shortcut
 			this.offsets = MemoryChunk.getNull[Long]();
 			this.vertexes = MemoryChunk.getNull[Long]();
 			this.values = MemoryChunk.getNull[T]();
 			return ;
-		}
-
-		val origin :MemoryChunk[Long];
-		val target :MemoryChunk[Long];
-		if(!ids.transpose) {
-			origin = origin_; target = target_;
-		}
-		else {
-			origin = target_; target = origin_;
 		}
 
 		Parallel.iter(origin.range(), (tid :Long, r :LongRange):void => {

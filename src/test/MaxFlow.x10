@@ -100,6 +100,7 @@ public class MaxFlow {
 	}
 
 	private static class MFEdge {
+		def this(){}
 		// var capacity:Long;
 		var capacity:Double;
 //		def this(val cap:Long) {

@@ -36,6 +36,11 @@ public class CSVAttributeHandler {
 	public val typeId :Int;
 	public val doubleQuoated :Boolean;
 	
+	public def this(){
+		typeId = 0;
+		doubleQuoated = false;
+	}
+	
 	public def this(typeId :Int, doubleQuoated :Boolean) {
 		this.typeId = typeId;
 		this.doubleQuoated = doubleQuoated;

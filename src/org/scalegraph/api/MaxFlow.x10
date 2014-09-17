@@ -63,6 +63,10 @@ final public class MaxFlow {
 
     private static class FlowMessage {
     	// val flow:Long;
+    	def this(){
+    		flow=0;
+    		fromId=0;
+    	}
     	val flow:Double;
     	val fromId:Long;
     	// def this(f:Long, i:Long) {
@@ -74,6 +78,11 @@ final public class MaxFlow {
 
     private static class ValueMessage {
     	// val excess:Long;
+    	def this(){
+    		excess=0;
+    		height=0;
+    		id=0;
+    	}
     	val excess:Double;
     	val height:Long;
     	val id:Long;
@@ -86,6 +95,7 @@ final public class MaxFlow {
     }
     
     private static class MFEdge {
+    	def this(){}
     	var capacity:Double;
     	var flow:Double;
     	var fromId:Long;
@@ -166,7 +176,8 @@ final public class MaxFlow {
     	xpregel.updateInEdgeAndValue();
     	
     	//step 1 : set edge information
-    	xpregel.once((ctx :VertexContext[MFVertex, MFEdge, Any, Any]) => {
+
+    	xpregel.once((ctx :VertexContext[MFVertex, MFEdge, Byte, Byte]) => {
     		var ii :Int = 0;
     		for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next(), ii++) {
     			iter.curValue().setVertexId( ctx.id(), iter.curId(), ii);
@@ -175,17 +186,6 @@ final public class MaxFlow {
     			iter.curValue().setToExcess(0);
     			iter.curValue().setToHeight(0);
     		}		
-    		
-    		// val outEdgesId = ctx.outEdgesId();
-    		// val outEdgesValue = ctx.outEdgesValue();
-    		// 
-    		// for(i in outEdgesValue.range()) {
-    		// 	outEdgesValue(i).setVertexId( ctx.id(), outEdgesId(i), i );
-    		// 	outEdgesValue(i).setFromExcess(0);
-    		// 	outEdgesValue(i).setFromHeight(0);
-    		// 	outEdgesValue(i).setToExcess(0);
-    		// 	outEdgesValue(i).setToHeight(0);
-    		// }
     	});
     	
     	//step 2 : BFS from sink ( because of setting initial height )

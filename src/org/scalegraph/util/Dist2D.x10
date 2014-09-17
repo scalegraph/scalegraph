@@ -240,13 +240,8 @@ public final struct Dist2D {
      */
     public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, transpose :Boolean) {
     	var R:Int, C:Int;
-    	if(!transpose) {
-	    	R = R();
-	    	C = C();
-    	} else {
-    		R = C();
-    		C = R();
-    	}
+    	R = R();
+    	C = C();
     	val size = R * C;
     	val avgNumberOfLocalVertices = (numberOfVertices + size - 1) / size;
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))

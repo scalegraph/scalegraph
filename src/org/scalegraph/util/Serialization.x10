@@ -9,6 +9,7 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 package org.scalegraph.util;
+import org.scalegraph.Config;
 
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
@@ -40,18 +41,22 @@ public class Serialization {
 	{
 		val places = data_counts.size();
 		var ser_size: Int = 0;
-		
+		val sw = Config.get().stopWatch();
+		if(here.id == 0) sw.lap("before finish for async");
 		finish for (p in 0..(places-1)) async {
 			ser_counts(p) = count_ser_size(p, data, data_offsets(p), data_counts(p));
 			ser_size += ser_counts(p);
 		}
+		if(here.id == 0) sw.lap("after finish for async");
 
 		ser_offsets(0) = 0;
 		for (i in 0..(places-2)) ser_offsets(i+1) = ser_offsets(i) + ser_counts(i);
 		val ser_data = MemoryChunk.make[Byte](ser_size);
+		if(here.id == 0) sw.lap("before finish for async");
 		finish for (p in 0..(places-1)) async {
 			write_ser_data(p, data, data_offsets(p), data_counts(p), ser_data, ser_offsets(p), ser_counts(p));
 		}
+		if(here.id == 0) sw.lap("after finish for async");
 		
 		return ser_data;
 	}
