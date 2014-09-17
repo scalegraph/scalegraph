@@ -3,7 +3,8 @@ TMPDIR		= $(PWD)/tmp
 X10FILES	= $(shell find $(SG_PREFIX)/src/org -name '*.x10')
 
 LIBPATH		= $(SG_PREFIX)/lib
-LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-postarg -lmpifort -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
+LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
+#LIBS            = -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-postarg -lmpifort -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
 OUTPATH		= $(SG_PREFIX)/x10lib
 
 # PARPACK
