@@ -254,7 +254,7 @@ import org.scalegraph.util.DistMemoryChunk;
 			}
 			if(withPut) {
 				// update max vertex ID if assigning new number is enabled
-				maxVertexID = team.reduce(teamRank, 0, table.size() as Long * teamSize + teamRank, Team.MAX);
+				maxVertexID = table.size();
 				// update name attribute
 				vertexNamesAtt() = vertexNames.raw();
 			}
