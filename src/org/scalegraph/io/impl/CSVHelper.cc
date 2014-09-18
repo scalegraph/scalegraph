@@ -500,8 +500,7 @@ void CSVParseElements(x10_byte** elemPtrs, int lines, GrowableMemory<T>* outBuf)
 				printf("Warning: CSV Parser: Value range over.\n");
 			}
 			if(*endptr != '\0') {
-				printf("Error: CSV Parser: Format error.\n");
-				printf("endprt:%c",*endptr);
+				printf("Error in CSV Parser: Format error near %s\n",endptr);
 			}
 		}
 	}
