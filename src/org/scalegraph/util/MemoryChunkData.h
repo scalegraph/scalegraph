@@ -136,7 +136,6 @@ namespace org { namespace scalegraph { namespace util {
 					}else{
 						::free(ptr);
 					}
-//					::free(ptr);
 				}
 			}
 

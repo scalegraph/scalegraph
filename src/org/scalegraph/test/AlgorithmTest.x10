@@ -91,13 +91,14 @@ public abstract class AlgorithmTest extends STest {
 			sw.lap("Complete making graph");
 			return g;
 		}
-		else if (args(0).equals("file")) {
+		else if (args(0).equals("file") || args(0).equals("file-renumbering")) {
 			val randomEdge :Boolean = (args.size > 2) ? args(2).equals("random") : true;
 			val edgeConstVal = randomEdge ? 0.0 : Double.parse(args(2));
 			val colTypes = [Type.Long as Int, Type.Long];
 
+			val renumbering = args(0).equals("file-renumbering");
 			val sw = Config.get().stopWatch();
-			val g = Graph.make(CSV.read(args(1), colTypes, true));
+			val g = Graph.make(CSV.read(args(1), colTypes, true), renumbering);
 			sw.lap("Read graph[path=" + args(1) + "]");
 			@Ifdef("PROF_IO") { Config.get().dumpProfIO("Graph Load (AlgorithmTest):"); }
 			val srcList = g.source();
