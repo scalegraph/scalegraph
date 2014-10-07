@@ -118,7 +118,7 @@ public final class PageRank {
 
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
-			ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
+			ctx.sendMessageToAllNeighbors(value / ctx.numberOfOutEdges());
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {

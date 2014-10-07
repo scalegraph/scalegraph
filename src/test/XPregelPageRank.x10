@@ -49,7 +49,7 @@ final class XPregelPageRank extends AlgorithmTest {
 
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
-			ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
+			ctx.sendMessageToAllNeighbors(value / ctx.numberOfOutEdges());
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
@@ -78,7 +78,7 @@ final class XPregelPageRank extends AlgorithmTest {
 
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
-			ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
+			ctx.sendMessageToAllNeighbors(value / ctx.numberOfOutEdges());
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
@@ -104,10 +104,10 @@ final class XPregelPageRank extends AlgorithmTest {
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
 			
-			val next = value / ctx.outEdgesId().size();
-			val outEdges = ctx.outEdgesId();
-			for(i in outEdges.range())
-				ctx.sendMessage(outEdges(i), next);
+			val next = value / ctx.numberOfOutEdges();
+			// val outEdges = ctx.outEdgesId();
+			for(id in ctx)
+				ctx.sendMessage(id, next);
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(superstep :Int, aggVal :Double) => {
@@ -133,10 +133,10 @@ final class XPregelPageRank extends AlgorithmTest {
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
 			
-			val next = value / ctx.outEdgesId().size();
-			val outEdges = ctx.outEdgesId();
-			for(i in outEdges.range())
-				ctx.sendMessage(outEdges(i), next);
+			val next = value / ctx.numberOfOutEdges();
+			// val outEdges = ctx.outEdgesId();
+			for(id in ctx)
+				ctx.sendMessage(id, next);
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
 		(messages :MemoryChunk[Double]) => MathAppend.sum(messages),

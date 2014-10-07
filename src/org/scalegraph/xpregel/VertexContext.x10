@@ -17,6 +17,7 @@ import org.scalegraph.util.tuple.Tuple2;
 import org.scalegraph.util.Bitmap;
 
 import x10.compiler.Inline;
+import x10.compiler.NonEscaping;
 
 /**
  * Provides XPregel framework service for compute kernels. <br>
@@ -31,7 +32,7 @@ import x10.compiler.Inline;
  * M: Message value type
  * A: Aggreator value type
  */
-public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M haszero, A haszero } {
+public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M haszero, A haszero } implements Iterable[Long] {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
@@ -55,6 +56,56 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 //	var mDiffInDst :GrowableMemory[Long];
 //	var mDiffInSrcWithAR :GrowableMemory[Long];
 	
+	//////////////////////////////////////////////////////////
+	
+	public static class EdgeIterator[E] implements Iterator[Long] {
+		var ids :MemoryChunk[Long];
+		var values :MemoryChunk[E];
+		var parent :EdgeProvider[E];
+		
+		var cur :Long;
+		
+		static def make[E](ids :MemoryChunk[Long], values :MemoryChunk[E], parent :EdgeProvider[E]) {
+			return new EdgeIterator[E](ids, values, parent);
+		}
+		
+		def this(ids :MemoryChunk[Long], values :MemoryChunk[E], parent :EdgeProvider[E]) {
+			reconstruct(ids,values,parent);
+		}
+		
+		@NonEscaping
+		final def reconstruct(ids :MemoryChunk[Long], values :MemoryChunk[E], parent :EdgeProvider[E]) {
+			this.ids = ids;
+			this.values = values;
+			this.parent = parent;
+			this.cur = 0L;
+		}
+		
+		public def release() {
+			this.parent = null;
+			this.cur = 0L;
+		}
+		
+		public def hasNext() :Boolean = (cur < ids.size());
+		public def next() :Long = ids(cur++);
+		
+		public def curId() :Long = ids(cur);
+		public def curValue() :E = values(cur);
+		
+		public def remove() {
+			parent.removeOutEdge(curId());
+		}
+		
+		public def modifyValue(newValue :E) {
+			parent.modifyOutEdge(curId(), newValue);
+		}
+	}
+	
+	private val iterPool : GrowableMemory[EdgeIterator[E]];
+	private var numUsedIters :Long;
+	
+	//////////////////////////////////////////////////////////
+	
 	def this(
 			worker :WorkerPlaceGraph[V, E],
 			ctx :MessageCommunicator[M],
@@ -74,6 +125,17 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 				startSrcid);
 		mUCCMessages = mCtx.messageBuffer(tid);
 		mOut = worker.outBuffer(tid);
+		
+		iterPool = new GrowableMemory[EdgeIterator[E]]();
+		numUsedIters = 0L;
+		// numConstructedIters = 0L;
+	}
+	
+	def releaseAllIterators() {
+		// for (i in iterPool.range()) {
+		// 	iterPool(i).release();	// no need?
+		// }
+		numUsedIters = 0L;
 	}
 	
 	/**
@@ -121,30 +183,61 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 	 */
 	public def setValue(value :V) { mWorker.mVertexValue(mSrcid) = value; }
 	
-	/**
-	 * returns <vertex dst ids, values>
-	 */
-	public def outEdges() = mEdgeProvider.outEdges(mSrcid);
+// 	/**
+// 	 * returns <vertex dst ids, values>
+// 	 */
+// 	public def outEdges() = mEdgeProvider.outEdges(mSrcid);
+// 	
+// 	/**
+// 	 * get out edges for the current vertex
+// 	 */
+// 	public def outEdgesId() = mEdgeProvider.outEdgesId(mSrcid);
+// 
+// 	/**
+// 	 * get out edges for the current vertex
+// 	 */
+// 	public def outEdgesValue() = mEdgeProvider.outEdgesValue(mSrcid);
 	
-	/**
-	 * get out edges for the current vertex
-	 */
-	public def outEdgesId() = mEdgeProvider.outEdgesId(mSrcid);
+	private def getIteratorBase(ids :MemoryChunk[Long], values :MemoryChunk[E]) {
+		val idx = numUsedIters;
+		numUsedIters++;
+		
+		if (iterPool.size() <= idx) {
+			iterPool.setSize(idx + 1);
+			iterPool(idx) = new EdgeIterator(ids, values, mEdgeProvider);
+			return iterPool(idx);
+		} else {
+			iterPool(idx).reconstruct(ids, values, mEdgeProvider);
+			return iterPool(idx);
+		}
+	}
+	
+	public def getOutEdgesIterator() {
+		val outEdges = mEdgeProvider.outEdges(mSrcid);
+		return getIteratorBase(outEdges.get1(), outEdges.get2());
+	}
 
-	/**
-	 * get out edges for the current vertex
-	 */
-	public def outEdgesValue() = mEdgeProvider.outEdgesValue(mSrcid);
+	public def iterator():x10.lang.Iterator[x10.lang.Long] {
+		return getOutEdgesIterator();
+	}
 	
-	/**
-	 * get in edges for the current vertex
-	 */
-	public def inEdgesId() = mEdgeProvider.inEdgesId(mSrcid);
+	public def numberOfOutEdges() = mEdgeProvider.outEdges(mSrcid).get1().size();
 	
-	/**
-	 * get in edges for the current vertex
-	 */
-	public def inEdgesValue() = mEdgeProvider.inEdgesValue(mSrcid);
+	// /**
+	//  * get in edges for the current vertex
+	//  */
+	// public def inEdgesId() = mEdgeProvider.inEdgesId(mSrcid);
+	// 
+	// /**
+	//  * get in edges for the current vertex
+	//  */
+	// public def inEdgesValue() = mEdgeProvider.inEdgesValue(mSrcid);
+	
+	public def getInEdgesIterator() {
+		return getIteratorBase(mEdgeProvider.inEdgesId(mSrcid), mEdgeProvider.inEdgesValue(mSrcid));
+	}
+	
+	public def numberOfInEdges() = mEdgeProvider.inEdgesId(mSrcid).size();
 	
 	/**
 	 * replace the out edges for the current vertex with the given edges
@@ -162,19 +255,19 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		mEdgeProvider.clearOutEdges(mSrcid);
 	}
 	
-	/**
-	 * remove out edges for the current vertex
-	 */
-	public def removeOutEdge(id :Long) {
-		mEdgeProvider.removeOutEdge(id);
-	}
+	// /**
+	//  * remove out edges for the current vertex
+	//  */
+	// public def removeOutEdge(id :Long) {
+	// 	mEdgeProvider.removeOutEdge(id);
+	// }
 	
-	/**
-	 * remove out edges for the current vertex
-	 */
-	public def removeOutEdges(id :MemoryChunk[Long]) {
-		mEdgeProvider.removeOutEdges(id);
-	}
+	// /**
+	//  * remove out edges for the current vertex
+	//  */
+	// public def removeOutEdges(id :MemoryChunk[Long]) {
+	// 	mEdgeProvider.removeOutEdges(id);
+	// }
 	
 	/**
 	 * add out edge to the current vertex
@@ -281,7 +374,4 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		val outbuf = WorkerPlaceGraph.castTo[T](mOut(index));
 		outbuf.add(value);
 	}
-	
 }
-
-

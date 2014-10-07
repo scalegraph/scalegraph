@@ -68,7 +68,7 @@ final class XPregelBfs extends AlgorithmTest {
 			
 			// debug print
 			bufferedPrint("Send message to: ");
-			for(v in ctx.outEdgesId())
+			for(v in ctx)
 				bufferedPrint(ctx.realId(v) + ",");
 			bufferedPrint("\n");
 			flush();
@@ -139,9 +139,12 @@ final class XPregelBfs extends AlgorithmTest {
 			}
 			ctx.setValue(pred);
 			
-			val outEdges = ctx.outEdgesId();
-			for(i in outEdges.range())
-				ctx.sendMessage(outEdges(i), ctx.realId());
+			// val outEdges = ctx.outEdgesId();
+			// for(i in outEdges.range())
+			// 	ctx.sendMessage(outEdges(i), ctx.realId());
+			for (id in ctx) {
+				ctx.sendMessage(id, ctx.realId());
+			}
 		},
 		null, // aggregator
 		null, // combiner
@@ -173,9 +176,12 @@ final class XPregelBfs extends AlgorithmTest {
 			}
 			ctx.setValue(pred);
 			
-			val outEdges = ctx.outEdgesId();
-			for(i in outEdges.range())
-				ctx.sendMessage(outEdges(i), ctx.realId());
+			// val outEdges = ctx.outEdgesId();
+			// for(i in outEdges.range())
+			// 	ctx.sendMessage(outEdges(i), ctx.realId());
+			for (id in ctx) {
+				ctx.sendMessage(id, ctx.realId());
+			}
 		},
 		null, // aggregator
 		(messages :MemoryChunk[Long]) => messages(0),
