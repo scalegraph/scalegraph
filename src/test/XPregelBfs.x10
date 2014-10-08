@@ -231,7 +231,7 @@ final class XPregelBfs extends AlgorithmTest {
 		
 		bufferedPrintln("Root: " + root + ", # of edges: " + numEdges);
 
-		xpregel.once((ctx :VertexContext[Long, Byte, Any, Any]) => {
+		xpregel.once((ctx :VertexContext[Long, Byte, Byte, Byte]) => {
 			ctx.output(ctx.value());
 		});
 		val result = xpregel.stealOutput[Long]();

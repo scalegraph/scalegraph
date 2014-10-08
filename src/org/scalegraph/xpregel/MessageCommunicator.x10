@@ -236,7 +236,10 @@ final class MessageCommunicator[M] { M haszero } {
 			Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 				val pstart = mesOffset(p);
 				val plength = mesOffset(p+1) - pstart;
-				if(plength == 0) return ; // short cut
+				if(plength == 0) {
+					mUCSCount(p) = 0;
+					return ; // short cut
+				}
 				
 				val mesLocal = mesTmp.subpart(pstart, plength);
 				val idsLocal = idsTmp.subpart(pstart, plength);
@@ -475,6 +478,7 @@ final class MessageCommunicator[M] { M haszero } {
 			
 			mUCSCount.del();
 			mUCSOffset.del();
+			if(here.id == 0) sw.lap("before sort...");
 
 			val UCRIdsBuf = MemoryChunk.make[Long](recvSize);
 			val UCRMessagesBuf = MemoryChunk.make[M](recvSize);

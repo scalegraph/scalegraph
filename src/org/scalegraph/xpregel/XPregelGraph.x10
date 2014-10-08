@@ -129,6 +129,25 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	
 	public def ids() = mWorkers().mIds;
 	
+	public def addVertex(numVertices :Long, newVal :V) {
+		ensurePlaceRoot();
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				val newLocalVertices = (numVertices / team_.size()) +
+					((numVertices % team_.size()) > team_.role() ? 1l : 0l);
+				val numNewLocalVertices = w.mIds.numberOfLocalVertexes() + newLocalVertices;
+				val numGlobalVertices = team_.allreduce(numNewLocalVertices, Team.MAX) * team_.size();
+				val newIds = Config.get().dist1d().getIds(numGlobalVertices, numNewLocalVertices, false);
+				
+				w.addVertex(newIds, newVal);
+				
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
+	}
+	
 	public def initVertexValue(value : V)
 	{
 		ensurePlaceRoot();
@@ -311,7 +330,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	/**
 	 * Execute only one superstep
 	 */
-	public def once(compute :(ctx:VertexContext[V,E,Any,Any]) => void)
+	public def once(compute :(ctx:VertexContext[V,E,Byte,Byte]) => void)
 	{
 		ensurePlaceRoot();
 		if(compute == null) {
@@ -322,9 +341,9 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		team_.placeGroup().broadcastFlat( () => {
 			try {
 				val actual_compute =
-					(ctx:VertexContext[V,E,Any,Any],messages:MemoryChunk[Any])
+					(ctx:VertexContext[V,E,Byte,Byte],messages:MemoryChunk[Byte])
 					=> { compute(ctx); };
-				workers_().run[Any,Any](actual_compute, null, null, (Int,Any) => true);
+				workers_().run[Byte,Byte](actual_compute, null, null, (Int,Byte) => true);
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}

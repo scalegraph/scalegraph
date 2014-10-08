@@ -61,7 +61,7 @@ public class WeaklyConnectedComponent extends AlgorithmTest {
 		
 		Config.get().stopWatch().lap("Finished: ");
 
-		xpgraph.once((ctx :VertexContext[Long, Double, Any, Any]) => {
+		xpgraph.once((ctx :VertexContext[Long, Double, Byte, Byte]) => {
 			ctx.output(ctx.value());
 		});
 		val result = xpgraph.stealOutput[Long]();

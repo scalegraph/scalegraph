@@ -31,7 +31,7 @@ final class MemoryChunkTest extends STest {
 		var a:Int;
 		var b:Long;
 
-		def this() { a = -1; b = -1L; }
+		//def this() { a = -1; b = -1L; }
 		def this(a_ :Int, b_ :Long) {
 			a = a_; b = b_;
 		}
@@ -40,15 +40,15 @@ final class MemoryChunkTest extends STest {
 	}
 
 	public def run(args: Array[String](1)): Boolean {
-    	val mc1 = MemoryChunk.make[SampleStruct](10, (i :Long) => SampleStruct(i as Int, i));
-    	val mc2 = MemoryChunk.make[SampleClass](10);
+    //	val mc1 = MemoryChunk.make[SampleStruct](10, (i :Long) => SampleStruct(i as Int, i));
+    //	val mc2 = MemoryChunk.make[SampleClass](10);
     //	val mc2 = MemoryChunk.make[SampleClass](10, (Long)=>new SampleClass());
-    	val mc3 = MemoryChunk.make[Any](10, (i :Long)=>new SampleClass(i as Int, i));
+    	val mc3 = MemoryChunk.make[SampleClass](10, (i :Long)=>new SampleClass(i as Int, i));
     //	for(i in mc2.range()) { mc2(i).a = i as Int; mc2(i).b = i; }
     	
     	at(here.next()) {
-    		Console.OUT.println("mc1\n" + mc1);
-    		Console.OUT.println("mc2\n" + mc2);
+    	//	Console.OUT.println("mc1\n" + mc1);
+    	///	Console.OUT.println("mc2\n" + mc2);
     		Console.OUT.println("mc3\n" + mc3);
     	}
     	return true;

@@ -83,7 +83,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	}
 
 	private def this(size :Long, init :(Long) => T, filename :MemoryPointer[Byte], num :Int) {
-		data = MemoryChunkData.make[T](size, 0, false, filename, num);
+		data = MemoryChunkData.make_nocons[T](size, 0, false, filename, num);
 		for(i in 0L..(size-1L)) {
 			data(i) = init(i);
 		}
@@ -99,6 +99,13 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		this.data = data;
 	}
 	
+	private def this(data :MemoryChunkData[T], size :Long, init :(Long) => T, filename :MemoryPointer[Byte], num :Int) {
+		for(i in 0L..(size-1L)) {
+			data(i) = init(i);
+		}
+		this.data = data;
+	}
+	
 	/** Creates an empty memory chunk.
 	 */
 	public def this() {
@@ -110,26 +117,36 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	/** Creates a memory chunk with the specified number of elements. This method is equivalent to this(size, 0, false).
 	 * @param size The number of elements
 	 */
-	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, 0, false, (x10_byte*)(void*)__FILE__, __LINE__)")
+	//@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, 0, false, (x10_byte*)(void*)__FILE__, __LINE__)")
+	//public static native def make[T](size :Long) :MemoryChunk[T];
+
+	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(org::scalegraph::util::MakeStruct<#T >::make(#size, 0, false, (char*)(void*)__FILE__, __LINE__))")
 	public static native def make[T](size :Long) :MemoryChunk[T];
+
 	
 	/** Creates memory chunk with the specified size and alignment.
 	 * @param size The number of elements
 	 * @param alignment The alignment for the backing memory
 	 */
-	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, false, (x10_byte*)(void*)__FILE__, __LINE__)")
+	//@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, false, (x10_byte*)(void*)__FILE__, __LINE__)")
+	//public static native def make[T](size :Long, alignment :Int) :MemoryChunk[T];
+	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(org::scalegraph::util::MakeStruct<#T >::make(#size, #alignment, false, (char*)(void*)__FILE__, __LINE__))")
 	public static native def make[T](size :Long, alignment :Int) :MemoryChunk[T];
-	
+
 	/** Creates memory chunk with the specified size and alignment.
 	 * @param size The number of elements
 	 * @param alignment The alignment for the backing memory
 	 * @param zeroed Whether the allocated memory is filled with zero or not.
 	 */
-	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, #zeroed, (x10_byte*)(void*)__FILE__, __LINE__)")
+	//@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #alignment, #zeroed, (x10_byte*)(void*)__FILE__, __LINE__)")
+	//public static native def make[T](size :Long, alignment :Int, zeroed :Boolean) :MemoryChunk[T];
+	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(org::scalegraph::util::MakeStruct<#T >::make(#size, #alignment, #zeroed, (char*)(void*)__FILE__, __LINE__))")
 	public static native def make[T](size :Long, alignment :Int, zeroed :Boolean) :MemoryChunk[T];
 
 	@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(#size, #init, (x10_byte*)(void*)__FILE__, __LINE__)")
 	public static native def make[T](size :Long, init :(Long) => T) :MemoryChunk[T];
+	//@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(org::scalegraph::util::MakeStruct<#T >::make_nocons(#size, 0, false, (char*)(void*)__FILE__, __LINE__),#size, #init, (x10_byte*)(void*)__FILE__, __LINE__)")
+	//public static native def make[T](size :Long, init :(Long) => T) :MemoryChunk[T];
 	
 	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk.
 	 * @param imc IndexedMemoryChunk whose subsection is used
@@ -409,6 +426,28 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 				throw new ArrayIndexOutOfBoundsException("copy: out of range");
 		}
 		MemoryChunkData.copy(src.data, srcIndex, dst.data, dstIndex, numElems);
+	}
+	
+	/** Copies the elements of the MemoryChunks
+	 * @param src The source data
+	 * @param dst The destination memory
+	 */
+	public static def copy[T](src:MemoryChunk[T], dst:MemoryChunk[T]):void {
+		@Ifndef("NO_BOUNDS_CHECKS") {
+			if(!src.data.isValid() || !dst.data.isValid())
+				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
+			if(src.size() != dst.size())
+				throw new ArrayIndexOutOfBoundsException("copy: out of range");
+		}
+		MemoryChunkData.copy(src.data, 0l, dst.data, 0l, src.size());
+	}
+
+	public static def asyncCopy[T](src :MemoryChunk[T], dst :GlobalMemoryChunk[T], dstIndex :Long) {
+		MemoryChunkData.asyncCopy(src.data, dst, dstIndex);
+	}
+	
+	public static def asyncCopy[T](src :GlobalMemoryChunk[T], srcIndex :Long, dst :MemoryChunk[T]) {
+		MemoryChunkData.asyncCopy(src, srcIndex, dst.data);
 	}
 	
 	/** Creates and returns an empty memory chunk.

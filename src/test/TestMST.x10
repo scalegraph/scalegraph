@@ -47,7 +47,7 @@ final class TestMST extends AlgorithmTest {
 	    }
 	    else if(args(0).equals("low")) {
 	        val team = g.team();
-	        val matrix = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", false, true);
+	        val matrix = g.createDistSparseMatrix[Double](Config.get().distXPregel(), "weight", false, false);
 	        g.del();
 
 	        result = MinimumSpanningTree.run(matrix);

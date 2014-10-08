@@ -397,7 +397,7 @@ public class StronglyConnectedComponent {
 				},
 				(values :MemoryChunk[Long]) => MathAppend.sum(values),
 				(superstep :Int, aggVal :Long) => (superstep >= 2) );
-		xpregel.once((ctx :VertexContext[SCCVertex, Long, Any, Any]) => {
+		xpregel.once((ctx :VertexContext[SCCVertex, Long, Byte, Byte]) => {
 			ctx.output(0, ctx.value().leaderId);
 			var plus:Long = 0L;
 			if(ctx.realId() == ctx.value().leaderId && ctx.value().childCnt==0L)

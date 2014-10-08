@@ -52,7 +52,11 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	//TODO: apply this flag
 //	var mReqEdgeOptimized:Boolean;
 	public val mStartSrcid :Long;
+//	def this(){
+//		mStartSrcid=0l;
+//	}
 	
+
 	//called from each threads
 	def this(
 			outEdge :GraphEdge[E],
@@ -62,12 +66,6 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			startSrcid :Long) {
 		mOutEdge = outEdge;
 		mInEdge = inEdge;
-//		mOutOffset = outEdge.offsets;
-//		mOutVertex = outEdge.vertexes;
-//		mOutValue = outEdge.value;
-//		mInOffset = inEdge.offsets;
-//		mInVertex = inEdge.vertexes;
-//		mInValue = inEdge.value;
 		mEdgeModifyReqOffset = reqOff;	//TODO: update in/outedge de update sareruyou ni suru
 		mEdgeModifyReqWithAR = req;
 		mStartSrcid = startSrcid;
@@ -412,6 +410,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	// it is recommended to get edgelist before modifying, or cache modifies on local
 	def outEdges(srcid :Long) :Tuple2[MemoryChunk[Long], MemoryChunk[E]] {
 		val len = mOutEdge.offsets(srcid + 1L) - mOutEdge.offsets(srcid);
+
 		if (mEdgeChanged) {			
 			fixModifiedEdges(srcid);
 			// optimizeReqEdge(srcid);
@@ -448,6 +447,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	}
 
 	def inEdgesValue(srcid :Long) {
+		if (mInEdge.values.size() == 0L) return MemoryChunk[E]();
 		val start = mInEdge.offsets(srcid);
 		val length = mInEdge.offsets(srcid + 1L) - start;
 		return mInEdge.values.subpart(start, length);
