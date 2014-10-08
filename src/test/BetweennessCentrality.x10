@@ -26,11 +26,11 @@ public class BetweennessCentrality {
 	
 	static struct Message {
 		val id :Long;
-		val cost :Edge;
+		val dist :Edge;
 		
-		public def this(id :Long, cost :Edge) {
+		public def this(id :Long, dist :Edge) {
 			this.id = id;
-			this.cost = cost;
+			this.dist = dist;
 		}		
 	}
 	
@@ -94,41 +94,38 @@ public class BetweennessCentrality {
 	}
 	
 	private def computeFromSource(s :Long, xpgraph: XPregelGraph[Vertex, Edge]){
-		val inf = (1L << 60) as Edge;
+		val INF = (1L << 60) as Edge;
 		// val eps = 0.00001 as Double;
 		
-		// compute minimum distances		
+		///
+		// compute minimum distances and sigmas
+		///
+		
+		xpgraph.once((ctx :VertexContext[Vertex, Edge, Any, Any]) => {
+			ctx.setValue(new Vertex(ctx.id() == s ? (0 as Edge) : INF));
+			if (ctx.id() == s) {
+				ctx.value().sigma = 1;
+			}
+		});
+		
 		xpgraph.iterate[Message, Long]((ctx :VertexContext[Vertex, Edge, Message, Long], messages :MemoryChunk[Message]) => {
-			if(ctx.superstep() == 0) {
-				if(ctx.id() == s) {
-					ctx.setValue(new Vertex(0));
+			val oldDist = ctx.value().dist;
+			
+			for (message in messages) {
+				if (ctx.value().dist < message.dist) {
+					ctx.value().dist = message.dist;
 					ctx.value().sigma = 1;
-					ctx.sendMessageToAllNeighbors(new Message(ctx.id(), 0));
-				} else {				
-					ctx.setValue(new Vertex(inf));
+				} else if (ctx.value().dist == message.dist) {
+					ctx.value().sigma++;
+				}
+			}
+			
+			if (ctx.value().dist != oldDist) {
+				for (val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+					val nextDist = ctx.value().dist + it.curValue();
+					ctx.sendMessage(it.curId(), new Message(it.curId(), nextDist));
 				}
 			} else {
-				val prevDist = ctx.value().dist;
-				var dist :Edge = prevDist;
-				for(m :Message in messages) {
-					val idx = getInEdgeVertexIndex(ctx.inEdgesId(), m.id);
-					
-					if (dist > m.cost + ctx.inEdgesValue()(idx)) {
-						dist = m.cost + ctx.inEdgesValue()(idx);
-					}
-				}
-				
-				if(dist < prevDist) {
-					if(dist == prevDist) {
-						ctx.value().sigma++;
-					} else {
-						ctx.value().sigma = 1;
-					}
-					
-					ctx.value().dist = dist;
-					ctx.sendMessageToAllNeighbors(new Message(ctx.id(), dist));
-				}
-				
 				ctx.voteToHalt();
 			}
 		},
@@ -137,9 +134,10 @@ public class BetweennessCentrality {
 			return false;
 		});
 		
-		Console.OUT.println("ended ..........");
+		///
+		/// compute predeccesors and successors
+		///
 		
-		// compute predeccesors and successors		
 		xpgraph.iterate[Message, Long]((ctx :VertexContext[Vertex, Edge, Message, Long], messages :MemoryChunk[Message]) => {
 			if(ctx.superstep() == 0) {
 				ctx.sendMessageToAllNeighbors(new Message(ctx.id(), ctx.value().dist));
@@ -147,10 +145,15 @@ public class BetweennessCentrality {
 				ctx.clearOutEdges();
 				val dist = ctx.value().dist;
 				for (m :Message in messages) {
-					val idx = getInEdgeVertexIndex(ctx.inEdgesId(), m.id);
-					if(dist == m.cost + ctx.inEdgesValue()(idx)) {
-						// m.id is predeccesor
-						ctx.addOutEdge(m.id, 0);
+					for (val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+						if (it.curId() == m.id) {
+							val value = it.curValue();							
+							if (dist == m.cost + value) {
+								// m.id is predeccesor
+								ctx.addOutEdge(m.id, 0);
+							}							
+							break;
+						}
 					}
 				}
 			}
@@ -168,7 +171,7 @@ public class BetweennessCentrality {
 		// message's type is Double
 		xpgraph.iterate[Double, Long]((ctx :VertexContext[Vertex, Edge, Double, Long], messages :MemoryChunk[Double]) => {
 			if(ctx.superstep() == 0) {
-				Console.OUT.println(ctx.id() + " : num predecessors = " + ctx.outEdgesId().size());
+				Console.OUT.println(ctx.id() + " : num predecessors = " + ctx.numberOfOutEdges());
 			}
 			
 			for(val message in messages) {
@@ -176,7 +179,7 @@ public class BetweennessCentrality {
 				ctx.value().longVal++;
 			}
 			
-			val numSuccessors = ctx.inEdgesId().size();
+			val numSuccessors = ctx.numberOfInEdges();
 			if((ctx.superstep() > 0 || numSuccessors == 0L) && (ctx.value().longVal == numSuccessors)) {
 				Console.OUT.println("sending ... ");
 				ctx.sendMessageToAllNeighbors((1.0 + ctx.value().delta) / ctx.value().sigma);
@@ -199,18 +202,7 @@ public class BetweennessCentrality {
 		
 		return result;
 	}
-	
-	private static def getInEdgeVertexIndex(inEdgesId :MemoryChunk[Long], id :Long) {		
-		var idx :Long = 0;
-		for(;idx < inEdgesId.size(); idx++) {
-			if(inEdgesId(idx) == id) {
-				break;
-			}
-		}
 		
-		return idx;		
-	}
-	
 	public static def main(args: Array[String]) {
 		val config = Config.get();
 		val team = config.worldTeam();
