@@ -26,6 +26,13 @@ public class Serialization {
 
 	@Native("c++", "x10aux::getRTT<TPMGL(T) >()->containsPtrs")
 	public static def needToSerialize[T] () : Boolean = false;
+	
+	private static def checkSize(size :Long) :void {
+		if(size > Int.MAX_VALUE) {
+			throw new UnsupportedOperationException("The data size exceeded the limitation of uderlying implementation." +
+					" The collective communication data size must less than 2^31 bytes.");
+		}
+	}
 
 	public static def serialize[T](data :MemoryChunk[T], data_offset :Int, data_count :Int): MemoryChunk[Byte]
 	{
@@ -39,12 +46,13 @@ public class Serialization {
 	public static def serialize[T](data :MemoryChunk[T], data_offsets :MemoryChunk[Int], data_counts :MemoryChunk[Int], ser_offsets :MemoryChunk[Int], ser_counts :MemoryChunk[Int]): MemoryChunk[Byte]
 	{
 		val places = data_counts.size();
-		var ser_size: Int = 0;
+		var ser_size: Long = 0;
 		
 		finish for (p in 0..(places-1)) async {
 			ser_counts(p) = count_ser_size(p, data, data_offsets(p), data_counts(p));
 			ser_size += ser_counts(p);
 		}
+		checkSize(ser_size);
 
 		ser_offsets(0) = 0;
 		for (i in 0..(places-2)) ser_offsets(i+1) = ser_offsets(i) + ser_counts(i);
