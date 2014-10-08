@@ -50,6 +50,8 @@ public class Serialization {
 		
 		finish for (p in 0..(places-1)) async {
 			ser_counts(p) = count_ser_size(p, data, data_offsets(p), data_counts(p));
+		}
+		for (p in 0..(places-1)) {
 			ser_size += ser_counts(p);
 		}
 		checkSize(ser_size);
