@@ -52,14 +52,14 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 	// statictics
 	var mNumActiveVertexes :Long = 0L;
 	var mBCSInputCount :Long = 0L;
-	
+	/*
 	def this() {
 		mWorker = null;
 		mCtx = null;
 		mEdgeProvider = null;
 		mUCCMessages = MemoryChunk.make[MessageBuffer[M]]();
 		mOut = MemoryChunk.make[GrowableMemory[Int]]();
-	}
+	}*/
 	
 
 	//	var mDiffInDst :GrowableMemory[Long];
@@ -73,15 +73,23 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		var parent :EdgeProvider[E];
 		
 		var cur :Long;
-		
+
 		static def make[E](ids :MemoryChunk[Long], values :MemoryChunk[E], parent :EdgeProvider[E]) {
 			return new EdgeIterator[E](ids, values, parent);
 		}
 		
+		def this() {
+
+		}
+
 		def this(ids :MemoryChunk[Long], values :MemoryChunk[E], parent :EdgeProvider[E]) {
 			reconstruct(ids,values,parent);
 		}
-		
+
+		def init(ids :MemoryChunk[Long], values :MemoryChunk[E], parent :EdgeProvider[E]) {
+			reconstruct(ids,values,parent);
+		}
+
 		@NonEscaping
 		final def reconstruct(ids :MemoryChunk[Long], values :MemoryChunk[E], parent :EdgeProvider[E]) {
 			this.ids = ids;
@@ -213,7 +221,7 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		
 		if (iterPool.size() <= idx) {
 			iterPool.setSize(idx + 1);
-			iterPool(idx) = new EdgeIterator(ids, values, mEdgeProvider);
+			iterPool(idx).init(ids, values, mEdgeProvider);// = new EdgeIterator(ids, values, mEdgeProvider);
 			return iterPool(idx);
 		} else {
 			iterPool(idx).reconstruct(ids, values, mEdgeProvider);
