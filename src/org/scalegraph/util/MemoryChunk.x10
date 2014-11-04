@@ -263,7 +263,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		@Ifndef("NO_BOUNDS_CHECKS") {
 			if(!data.isValid())
 				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
-			if(offset < 0 || offset + size > data.size)
+			if(offset < 0 || size < 0 || offset + size > data.size)
 				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
 		}
 		return MemoryChunk[T](data.subpart(offset, size));

@@ -218,14 +218,24 @@ public class MaxFlow {
 					if(ctx.superstep()==0) {
 						if(ctx.realId() == sourceVertexId) ctx.setVertexShouldBeActive(true);
 						if(ctx.realId() == sinkVertexId)  ctx.setVertexShouldBeActive(true);
-						for(i in ctx.outEdgesId().range() ) {
-							val mes = new InitMessage(ctx.id(), 0L, true, ctx.outEdgesValue()(i).capacity) ;
-							ctx.sendMessage(ctx.outEdgesId()(i), mes);
+						
+						for(val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next()) {
+							val mes = new InitMessage(ctx.id(), 0L, true, iter.curValue().capacity) ;
+							ctx.sendMessage(iter.curId(), mes);
 						}
-						for(i in ctx.inEdgesId().range()) {
+						for(val iter = ctx.getInEdgesIterator(); iter.hasNext(); iter.next()) {
 							val mes = new InitMessage(ctx.id(), 0L, false, 0);
-							ctx.sendMessage(ctx.inEdgesId()(i), mes);
+							ctx.sendMessage(iter.curId(), mes);
 						}
+						
+						// for(i in ctx.outEdgesId().range() ) {
+						// 	val mes = new InitMessage(ctx.id(), 0L, true, ctx.outEdgesValue()(i).capacity) ;
+						// 	ctx.sendMessage(ctx.outEdgesId()(i), mes);
+						// }
+						// for(i in ctx.inEdgesId().range()) {
+						// 	val mes = new InitMessage(ctx.id(), 0L, false, 0);
+						// 	ctx.sendMessage(ctx.inEdgesId()(i), mes);
+						// }
 					}
 					if(ctx.superstep()==1) {
 						val sizeMes = messages.size();
@@ -275,8 +285,12 @@ public class MaxFlow {
 						}
 						if(ctx.realId() == sinkVertexId) {
 							ctx.setVertexShouldBeActive(false);
-							for(i in ctx.inEdgesId().range()) 
-								ctx.sendMessage(ctx.inEdgesId()(i), true );
+							
+							for(val iter = ctx.getInEdgesIterator(); iter.hasNext(); iter.next()) {
+								ctx.sendMessage(iter.curId(), true);
+							}							
+							// for(i in ctx.inEdgesId().range()) 
+							// 	ctx.sendMessage(ctx.inEdgesId()(i), true );
 						}
 					}
 					else {
@@ -284,8 +298,11 @@ public class MaxFlow {
 							val vval = ctx.value();
 							vval.setHeight(ctx.superstep());
 							ctx.setValue(vval);
-							for(i in ctx.inEdgesId().range()) 
-								ctx.sendMessage(ctx.inEdgesId()(i) , true);
+							for(val iter = ctx.getInEdgesIterator(); iter.hasNext(); iter.next()) {
+								ctx.sendMessage(iter.curId(), true);
+							}
+							// for(i in ctx.inEdgesId().range()) 
+							// 	ctx.sendMessage(ctx.inEdgesId()(i) , true);
 						}
 					}
 					ctx.voteToHalt();

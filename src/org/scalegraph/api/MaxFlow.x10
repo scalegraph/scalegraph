@@ -176,16 +176,16 @@ final public class MaxFlow {
     	xpregel.updateInEdgeAndValue();
     	
     	//step 1 : set edge information
+
     	xpregel.once((ctx :VertexContext[MFVertex, MFEdge, Byte, Byte]) => {
-    		val outEdgesId = ctx.outEdgesId();
-    		val outEdgesValue = ctx.outEdgesValue();
-    		for(i in outEdgesValue.range()) {
-    			outEdgesValue(i).setVertexId( ctx.id(), outEdgesId(i), i );
-    			outEdgesValue(i).setFromExcess(0);
-    			outEdgesValue(i).setFromHeight(0);
-    			outEdgesValue(i).setToExcess(0);
-    			outEdgesValue(i).setToHeight(0);
-    		}
+    		var ii :Int = 0;
+    		for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next(), ii++) {
+    			iter.curValue().setVertexId( ctx.id(), iter.curId(), ii);
+    			iter.curValue().setFromExcess(0);
+    			iter.curValue().setFromHeight(0);
+    			iter.curValue().setToExcess(0);
+    			iter.curValue().setToHeight(0);
+    		}		
     	});
     	
     	//step 2 : BFS from sink ( because of setting initial height )
@@ -199,15 +199,23 @@ final public class MaxFlow {
     					}
     					if(ctx.realId() == ctx.dstId(sinkVertexId)) {
     						ctx.setVertexShouldBeActive(false);
-    						for(i in ctx.inEdgesId().range()) 
-    							ctx.sendMessage(ctx.inEdgesId()(i), true );
+    						    						
+    						// for(i in ctx.inEdgesId().range()) 
+    						// 	ctx.sendMessage(ctx.inEdgesId()(i), true );
+    						
+    						for (val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+    							ctx.sendMessage(it.curId(), true);
+    						}
     					}
     				}
     				else {
     					if(messages.size()>0 && ctx.value().height==0L && ctx.realId()!=sinkVertexId) {
     						ctx.value().setHeight(ctx.superstep());
-    						for(i in ctx.inEdgesId().range()) 
-    							ctx.sendMessage(ctx.inEdgesId()(i) , true);
+    						// for(i in ctx.inEdgesId().range()) 
+    						// 	ctx.sendMessage(ctx.inEdgesId()(i) , true);
+    						for (val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+    							ctx.sendMessage(it.curId(), true);
+    						}
     					}
     				}
     				ctx.voteToHalt();
@@ -219,19 +227,29 @@ final public class MaxFlow {
     	//step 3 : initialization of preflow push relabel. 
     	xpregel.iterate[FlowMessage,Long](
     			(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
-    				val outEdgesId = ctx.outEdgesId();
-    				val outEdgesValue = ctx.outEdgesValue();
+    				// val outEdgesId = ctx.outEdgesId();
+    				// val outEdgesValue = ctx.outEdgesValue();
     				val vertexValue = ctx.value();
     				
     				if(ctx.superstep()==0 && ctx.realId()==sourceVertexId) {
-    					for(i in outEdgesId.range()) {
-    						val toId = outEdgesId(i);
-    						val flow = outEdgesValue(i).capacity;
+    					// for(i in outEdgesId.range()) {
+    					// 	val toId = outEdgesId(i);
+    					// 	val flow = outEdgesValue(i).capacity;
+    					// 	val mes = new FlowMessage(flow, -1);
+    					// 	outEdgesValue(i).setFlow(flow);
+    					// 	if(flow>eps)
+    					// 		ctx.sendMessage(toId, mes);
+    					// }
+    					
+    					for (val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+    						val toId = it.curId();
+    						val flow = it.curValue().capacity;
     						val mes = new FlowMessage(flow, -1);
-    						outEdgesValue(i).setFlow(flow);
+    						it.curValue().setFlow(flow);
     						if(flow>eps)
     							ctx.sendMessage(toId, mes);
     					}
+    					
     					vertexValue.setHeight(ctx.numberOfVertices());
     					ctx.setVertexShouldBeActive(true);
     				}
@@ -264,8 +282,8 @@ final public class MaxFlow {
     		xpregel.updateInEdgeAndValue();
     		xpregel.iterate[ValueMessage,Long](
     				(ctx :VertexContext[MFVertex, MFEdge, ValueMessage, Long ], messages :MemoryChunk[ValueMessage ] ) => {
-    					val outEdgesValue = ctx.outEdgesValue();
-    					val inEdgesValue = ctx.inEdgesValue();
+    					// val outEdgesValue = ctx.outEdgesValue();
+    					// val inEdgesValue = ctx.inEdgesValue();
     					val vertexValue = ctx.value();
     					if(ctx.superstep()==0) {
     						ctx.setVertexShouldBeActive(ctx.value().excess > eps);
@@ -283,28 +301,50 @@ final public class MaxFlow {
     						if(goNext) {
     							ctx.setVertexShouldBeActive(true);
     							return ;
+    						}    						   						
+    						
+//     						for(i in outEdgesValue.range())  {
+//     							outEdgesValue(i).setFromExcess(vertexValue.excess);
+//     							outEdgesValue(i).setFromHeight(vertexValue.height);
+//     						}
+// 
+//     						for(i in inEdgesValue.range()) {
+//     							val toId = inEdgesValue(i).fromId;    		
+//     							val edgeId = inEdgesValue(i).index;
+//     							val mes = new ValueMessage(vertexValue.excess, vertexValue.height, edgeId);
+//     							ctx.sendMessage(toId, mes);
+//     						}
+    						
+    						for(val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+    							it.curValue().setFromExcess(vertexValue.excess);
+    							it.curValue().setFromHeight(vertexValue.height);
     						}
     						
-    						for(i in outEdgesValue.range())  {
-    							outEdgesValue(i).setFromExcess(vertexValue.excess);
-    							outEdgesValue(i).setFromHeight(vertexValue.height);
-    						}
-
-    						for(i in inEdgesValue.range()) {
-    							val toId = inEdgesValue(i).fromId;    		
-    							val edgeId = inEdgesValue(i).index;
+    						for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+    							val toId = it.curValue().fromId;    		
+    							val edgeId = it.curValue().index;
     							val mes = new ValueMessage(vertexValue.excess, vertexValue.height, edgeId);
     							ctx.sendMessage(toId, mes);
-    						}
-    						
+    						}    						
     						
     					}
     					if(ctx.superstep()==1) {
     						var excess:Double = ctx.value().excess;
     						for(i in messages.range()) {
     							val mes = messages(i);
-    							outEdgesValue(mes.id).setToExcess(mes.excess);
-    							outEdgesValue(mes.id).setToHeight(mes.height);
+    							
+    							// TODO : more efficient way
+    							
+    							// // OLD CODE
+    							// outEdgesValue(mes.id).setToExcess(mes.excess);
+    							// outEdgesValue(mes.id).setToHeight(mes.height);
+    							    							
+    							for(val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+    								if(it.curId() == mes.id) {
+    									it.curValue().setFromExcess(vertexValue.excess);
+    									it.curValue().setFromHeight(vertexValue.height);
+    								}
+    							}
     						}
     					}
     					if(ctx.realId() == sourceVertexId || ctx.realId() == sinkVertexId)
@@ -323,8 +363,8 @@ final public class MaxFlow {
     			xpregel.iterate[FlowMessage,Long](
     					(ctx :VertexContext[MFVertex, MFEdge, FlowMessage, Long ], messages :MemoryChunk[FlowMessage ] ) => {
     						
-    						val outEdgesValue = ctx.outEdgesValue();
-    						val inEdgesValue = ctx.inEdgesValue();
+    						// val outEdgesValue = ctx.outEdgesValue();
+    						// val inEdgesValue = ctx.inEdgesValue();
     						val vertexValue = ctx.value();
     							
     						if(ctx.superstep()==0 && ctx.value().excess>eps
@@ -336,16 +376,35 @@ final public class MaxFlow {
     							var minimHeight:Long = 1000000000L ;
     							minimHeight *= minimHeight;
 
-    							for(i in outEdgesValue.range()) {
+    							// for(i in outEdgesValue.range()) {
+    							// 	if(excess<eps) break;
+    							// 	val toId = outEdgesValue(i).toId;
+    							// 	val flow = Math.min(outEdgesValue(i).capacity - outEdgesValue(i).flow, excess);
+    							// 	val toHeight = outEdgesValue(i).toHeight;
+    							// 	if(toHeight<vertexValue.height) {
+    							// 		val mes = new FlowMessage(flow ,-1);
+    							// 		excess -= flow;
+    							// 		if(flow>eps) {
+    							// 			outEdgesValue(i).setFlow(outEdgesValue(i).flow + flow);
+    							// 			ctx.sendMessage(toId, mes);
+    							// 			haveFlow = true;
+    							// 		}
+    							// 	}
+    							// 	else if(flow>eps) {
+    							// 		minimHeight = Math.min(minimHeight, toHeight);
+    							// 	}
+    							// }
+    							
+    							for(val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
     								if(excess<eps) break;
-    								val toId = outEdgesValue(i).toId;
-    								val flow = Math.min(outEdgesValue(i).capacity - outEdgesValue(i).flow, excess);
-    								val toHeight = outEdgesValue(i).toHeight;
+    								val toId = it.curValue().toId;
+    								val flow = Math.min(it.curValue().capacity - it.curValue().flow, excess);
+    								val toHeight = it.curValue().toHeight;
     								if(toHeight<vertexValue.height) {
     									val mes = new FlowMessage(flow ,-1);
     									excess -= flow;
     									if(flow>eps) {
-    										outEdgesValue(i).setFlow(outEdgesValue(i).flow + flow);
+    										it.curValue().setFlow(it.curValue().flow + flow);
     										ctx.sendMessage(toId, mes);
     										haveFlow = true;
     									}
@@ -354,12 +413,32 @@ final public class MaxFlow {
     									minimHeight = Math.min(minimHeight, toHeight);
     								}
     							}
-    							for(i in inEdgesValue.range()) {
+    							    
+    							// for(i in inEdgesValue.range()) {
+    							// 	if(excess<eps) break;
+    							// 	val toId =  inEdgesValue(i).fromId;
+    							// 	val index = inEdgesValue(i).index;
+    							// 	val flow = Math.min(inEdgesValue(i).flow, excess);
+    							// 	val toHeight = inEdgesValue(i).fromHeight;
+    							// 	if(toHeight<vertexValue.height) {
+    							// 		val mes = new FlowMessage(flow ,index);
+    							// 		excess -= flow;
+    							// 		if(flow>eps) {
+    							// 			ctx.sendMessage(toId, mes);
+    							// 			haveFlow = true;
+    							// 		}
+    							// 	}
+    							// 	else if(flow>eps) {
+    							// 		minimHeight = Math.min(minimHeight, toHeight);
+    							// 	}
+    							// }
+    							
+    							for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
     								if(excess<eps) break;
-    								val toId =  inEdgesValue(i).fromId;
-    								val index = inEdgesValue(i).index;
-    								val flow = Math.min(inEdgesValue(i).flow, excess);
-    								val toHeight = inEdgesValue(i).fromHeight;
+    								val toId =  it.curValue().fromId;
+    								val index = it.curValue().index;
+    								val flow = Math.min(it.curValue().flow, excess);
+    								val toHeight = it.curValue().fromHeight;
     								if(toHeight<vertexValue.height) {
     									val mes = new FlowMessage(flow ,index);
     									excess -= flow;
@@ -372,6 +451,7 @@ final public class MaxFlow {
     									minimHeight = Math.min(minimHeight, toHeight);
     								}
     							}
+    							
     							if(!haveFlow) {
     								vertexValue.setHeight(minimHeight+1);
     							}
@@ -385,8 +465,13 @@ final public class MaxFlow {
     								val index = mes.fromId;
     								val flow = mes.flow;
     								if(index>=0) {
-    									outEdgesValue(index).setFlow(outEdgesValue(index).flow - flow);
     									
+    									for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+    										if(it.curId() == index){
+    											it.curValue().setFlow(it.curValue().flow - flow);
+    											break;
+    										}
+    									}
     								}
     								excess += flow;
     							}

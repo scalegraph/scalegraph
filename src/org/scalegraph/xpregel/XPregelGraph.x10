@@ -30,6 +30,7 @@ import org.scalegraph.test.STest;
 import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.graph.Graph;
 import org.scalegraph.graph.id.OnedC;
+import org.scalegraph.graph.id.IdStruct;
 
 /**
  * a main entry for processing 
@@ -44,12 +45,21 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	val mWorkers :PlaceLocalHandle[WorkerPlaceGraph[V,E]];
 	val mTeam :Team2;
 	
+	public def this(ids :IdStruct)
+	{
+		val team = Config.get().worldTeam();
+		mTeam = new Team2(team);
+		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),
+				() => new WorkerPlaceGraph[V,E](team, ids));
+	}
+	
 	public def this(edgeIndexMatrix :DistSparseMatrix[Long])
 	{
 		val team = Config.get().worldTeam();
 		mTeam = new Team2(team);
 		mWorkers = PlaceLocalHandle.makeFlat[WorkerPlaceGraph[V,E]](mTeam.placeGroup(),
-				() => new WorkerPlaceGraph[V,E](team, edgeIndexMatrix));
+				() => new WorkerPlaceGraph[V,E](team, edgeIndexMatrix.ids()));
+		setGraph(edgeIndexMatrix);
 	}
 	
 	private def this(team :Team, workers :PlaceLocalHandle[WorkerPlaceGraph[V,E]])
@@ -75,15 +85,32 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		return g;
 	}
 	
-	private def setGraphAndEdgeValue(graph :DistSparseMatrix[E])
-	{
+	/** set out edges of this instance with a given graph represented by an edge index matrix.
+	 * The edge value after this method call is undefined. Users should initialize the edge values after setGraph().
+	 * All of the vertex value, vertex state and output buffer, are remain unchanged.
+	 */
+	public def setGraph(edgeIndexMatrix :DistSparseMatrix[Long]) {
 		val team_ = mTeam;
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
 			try {
 				val w = workers_();
-				// TODO: check whether the graph id is equivalent to the current graph id.
-				w.mOutEdge.set(graph());
+				w.setOutEdge(edgeIndexMatrix);
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
+	}
+	
+	/** set out edges of this instance with a given graph represented by a DistSparseMatrix.
+	 * The edge values are also initizlized with values from a given DistSparseMatrix.
+	  * All of the vertex value, vertex state and output buffer, are remain unchanged.
+	 */
+	public def setGraphAndEdgeValue(graph :DistSparseMatrix[E]) {
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				w.setOutEdgeWithValue(graph);
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}
@@ -144,8 +171,8 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		team_.placeGroup().broadcastFlat( () => {
 			try {
 				val w = workers_().mOutEdge;
-				Parallel.iter(w.value.range(), (tid :Long, r :LongRange) => {
-					for(i in r) w.value(i) = value;
+				Parallel.iter(w.values.range(), (tid :Long, r :LongRange) => {
+					for(i in r) w.values(i) = value;
 				});
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
@@ -163,7 +190,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	 */
 	public @Inline operator this(index :Long) {
 		@Ifndef("NO_BOUNDS_CHECKS") {
-			if(index < 0 || index > size())
+			if(index < 0 || index >= size())
 				throw new ArrayIndexOutOfBoundsException("index (" + index + ") not contained in MemoryChunk");
 		}
 		return Vertex[V, E](mWorkers(), index);
@@ -196,7 +223,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	/** Returns local edge data */
 	public def edgeIds() = mWorkers().mOutEdge.vertexes;
 	/** Returns local edge data */
-	public def edgeValues() = mWorkers().mOutEdge.value;
+	public def edgeValues() = mWorkers().mOutEdge.values;
 	
 	/** Detatch the index-th ouput and return it as a DistMemoryChunk.
 	 */

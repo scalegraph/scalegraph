@@ -14,10 +14,10 @@ package org.scalegraph.xpregel;
 import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.blas.SparseMatrix;
 
-final class GraphEdge [E] /*{ E haszero }*/ {
-	var offsets :MemoryChunk[Long];
-	var vertexes :MemoryChunk[Long];
-	var value : MemoryChunk[E];
+final class GraphEdge[E] /*{ E haszero }*/ extends GraphEdgeBase {
+//	var offsets :MemoryChunk[Long];
+//	var vertexes :MemoryChunk[Long];
+	var values : MemoryChunk[E];
 	/*
 	def this(m :SparseMatrix[E]) {
 		val numEdges = m.vertexes.size();
@@ -26,11 +26,26 @@ final class GraphEdge [E] /*{ E haszero }*/ {
 		value = MemoryChunk.make[E](numEdges);
 	}*/
 	
-	def this() { }
+	def this() {
+		offsets = MemoryChunk[Long]();
+		vertexes = MemoryChunk[Long]();
+		values = MemoryChunk[E]();
+	}
 	
 	def set(m :SparseMatrix[E]) {
 		offsets = m.offsets;
 		vertexes = m.vertexes;
-		value = m.values;
+		values = m.values;
+	}
+	def set(m :GraphEdge[E]) {
+		offsets = m.offsets;
+		vertexes = m.vertexes;
+		values = m.values;
+	}
+	
+	def set(off :MemoryChunk[Long], ver :MemoryChunk[Long], value :MemoryChunk[E]) {
+		offsets = off;
+		vertexes = ver;
+		values = value;
 	}
 }

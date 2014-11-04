@@ -66,14 +66,20 @@ public class TestShowEdge {
 				//display current in edges
 				sb.add("-- ss:"+ctx.superstep()+" id:"+ myId + 
 						" dstid:" + ctx.dstId(myId) + " --\n\tInEdges:\n");
-				val IEsId = ctx.inEdgesId();
-				for(eI in IEsId){
-					sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
+				for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+					sb.add("\t" + ctx.realId(it.curId()) + "\t->\t" + myId +"\n");
 				}
+				// val IEsId = ctx.inEdgesId();
+				// for(eI in IEsId){
+				// 	sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
+				// }
 				//display current out edges
 				sb.add("\tOutEdges:\n");
-				val OEsId = ctx.outEdgesId();
-				for(eI in OEsId){
+				// val OEsId = ctx.outEdgesId();
+				// for(eI in OEsId){
+				// 	sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
+				// }
+				for(eI in ctx){
 					sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
 				}
 				

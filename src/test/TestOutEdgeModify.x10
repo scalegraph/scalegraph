@@ -76,16 +76,24 @@ public class TestOutEdgeModify {
 			//	}
 				
 				//display current out edges
-				val OEsId = ctx.outEdgesId();	//get dstid
-				for(eI in OEsId){
+				// val OEsId = ctx.outEdgesId();	//get dstid
+				// for(eI in OEsId){
+				// 	sb.add("\t" + myId + "\t->\t" + eI + "\n");
+				// }
+				for(eI in ctx) {
 					sb.add("\t" + myId + "\t->\t" + eI + "\n");
-				}
+				}				
+				
 				sb.add("----------\n");
 				//display current in edges
-				val IEsId = ctx.inEdgesId();
-				for(eI in IEsId){
-					sb.add("\t" + eI + "\t->\t" + myId +"\n");
+				// val IEsId = ctx.inEdgesId();
+				// for(eI in IEsId){
+				// 	sb.add("\t" + eI + "\t->\t" + myId +"\n");
+				// }				
+				for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+					sb.add("\t" + it.curId() + "\t->\t" + myId +"\n");
 				}
+				
 				sb.add("----------\n");
 				
 				//add/remove
@@ -93,7 +101,15 @@ public class TestOutEdgeModify {
 				if(myId != 0L){
 					if(/*e*/arid!=myId){
 						sb.add(myId + ":\tRemove:\t" + arid + "\n");
-						ctx.removeOutEdge(arid);
+						
+						// ctx.removeOutEdge(arid);
+						// TODO : needs more efficient way
+						for(val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+							if (it.curId() == arid) {
+								it.remove();
+							}
+						}
+						
 					}else{
 						sb.add(myId + ":\tAdd   :\t" + arid + "\n");
 						ctx.addOutEdge(arid,0);
