@@ -150,7 +150,7 @@ public class ClusterTest extends AlgorithmTest {
 					val refDegj = GlobalMemoryChunk.make[Long](degj);
 					at(team.placeGroup()(pj)) {
 						val md = MemoryChunk.make[Long](mats, 0, true);
-						finish {MemoryChunk.asyncCopyWithHash(refMatd, 0L, md);}
+						finish {MemoryChunk.syncCopyWithHash(refMatd, 0L, md);}
 						val d = MemoryChunk.make[Long](mats, 0, true);
 						Parallel.iter(md.range(), (tid:Long, range:LongRange)=>{
 							for (u in range) {
@@ -158,7 +158,7 @@ public class ClusterTest extends AlgorithmTest {
 							}
 						});
 						md.del();
-						finish {MemoryChunk.asyncCopyWithHash(d, refDegj, 0L);}
+						finish {MemoryChunk.syncCopyWithHash(d, refDegj, 0L);}
 						d.del();
 					}
 					Parallel.iter(matd.range(), (tid:Long, range:LongRange)=>{
@@ -299,7 +299,7 @@ public class ClusterTest extends AlgorithmTest {
 				offset_j() = MemoryChunk.make[Long](v2n+1);
 				val refO = GlobalMemoryChunk.make[Long](offset_j());
 				at(team.placeGroup()(pj)) {
-					finish {MemoryChunk.asyncCopyWithHash(offsets(), refO, 0L);}
+					finish {MemoryChunk.syncCopyWithHash(offsets(), refO, 0L);}
 				}
 			}
 			sw.lap("finished 0#"+p);
@@ -311,7 +311,7 @@ public class ClusterTest extends AlgorithmTest {
 				val pj = (pi+p)%ps;
 				val refEdv = GlobalMemoryChunk.make[Long](vertex_j());
 				at(team.placeGroup()(pj)) {
-					finish {MemoryChunk.asyncCopyWithHash(vertexes(), refEdv, 0L);}
+					finish {MemoryChunk.syncCopyWithHash(vertexes(), refEdv, 0L);}
 				}
 			}
 			sw.lap("finished 1#"+p);
@@ -375,7 +375,7 @@ public class ClusterTest extends AlgorithmTest {
 						if (eds != refTB.size) {
 							Console.OUT.println("e");
 						}
-						MemoryChunk.asyncCopyWithHash(refTB, 0L, ed);
+						MemoryChunk.syncCopyWithHash(refTB, 0L, ed);
 						at(team.placeGroup()(pj)) used_f()(pi) = true;//tri_buffer()(pi).clear();
 
 						Parallel.iter(ed.range(), (tid :Long, range :LongRange) => {
