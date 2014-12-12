@@ -20,6 +20,7 @@ public class EdgeARMTest {
 	
 	public var team :Team = Config.get().worldTeam();
 	public var weights :String = "weight";
+	public var directed :Boolean = true;
 
 	public static def main(args: Array[String]) {
 		val config = Config.get();
@@ -31,7 +32,7 @@ public class EdgeARMTest {
 		
 		// Generate an Erdos-Renyi random graph
 		val scale = 10;
-		val edgeFactor = 5;
+		val edgeFactor = 10;
 		val rnd = new Random(2, 3);
 		val edgeList = GraphGenerator.genRandomGraph(scale, edgeFactor, rnd);
 		val g = Graph.make(edgeList);
@@ -66,43 +67,93 @@ public class EdgeARMTest {
 		val team = param.team;
 		val sw = Config.get().stopWatch();
 		
-		Console.OUT.println("Start UpdateInEdge");
-		
-		// compute PageRank
 		val xpgraph = XPregelGraph.make[Double, Double](matrix);
 		xpgraph.updateInEdge();
 		
 		sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
-		Console.OUT.println("Hello!akjvnajkdnv");
+		sw.lap("Start Iteration");
 		
 		xpgraph.iterate[Long, Long]((ctx :VertexContext[Double, Double, Long, Long], messages :MemoryChunk[Long]) => {
 			sw.lap("superstep " + ctx.superstep());
-			var sum :Long = 0;
 			switch (ctx.superstep()) {
 			case 0:
-				ctx.setValue(ctx.numberOfOutEdges() * 10000.0);
 				for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next()) {
+					// iter.modifyValue(iter.curValue() + 1);
 					iter.remove();
-					// Console.OUT.println("Revoving\n\n");
-					// Console.OUT.println("value : " + iter.curValue());
-				}				
+				}
+				assert(ctx.numberOfOutEdges() == 0L);
 				break;
 			case 1:
 				ctx.sendMessageToAllNeighbors(1L);
+				// ctx.voteToHalt();
 				break;
 			case 2:
-				sum = 0;
-				for (m in messages) {
+				var sum :Long = 0;
+				for (val m in messages) {
 					sum += m;
 				}
-				assert (sum == messages.size());
-				ctx.setValue(ctx.value() + messages.size() + 0.1);
-				break;
-			case 3:
+				assert(sum == 0L);
 				ctx.voteToHalt();
 				break;
+			
+			
+			/** NG Test **/
+			// case 0:
+			// 	var i :Long = 0;
+			// 	for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next(), i++) {
+			// 		if (i != 0L)
+			// 			iter.remove();					
+			// 	}
+			// 	break;
+			// case 1:
+			// 	sw.lap("OutEdge : " + ctx.numberOfOutEdges());
+			// 	ctx.voteToHalt();
+			// 	break;						
+				
+			/** OK Test **/
+			// case 0:
+			// 	val old = ctx.numberOfOutEdges();
+			// 	ctx.setValue(ctx.numberOfOutEdges() * 10000.0);
+			// 	ctx.clearOutEdges();
+			// 	val now = ctx.numberOfOutEdges();
+			// 	sw.lap("OutEdge : " + old + " => " + now);
+			// 	assert(now == 0L);
+			// 	ctx.voteToHalt();
+			// 	break;
+			
+			// case 0:
+			// 	val old = ctx.numberOfOutEdges();
+			// 	ctx.setValue(ctx.numberOfOutEdges() * 10000.0);
+			// 	for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next()) {
+			// 		sw.lap("Removing...");
+			// 		iter.remove();					
+			// 	}				
+			// 	val now = ctx.numberOfOutEdges();
+			// 	sw.lap("OutEdge : " + old + " => " + now);
+			// 	assert(now == 0L);
+			// 	ctx.voteToHalt();
+			// 	break;
+				
+			/****** ****/
+				
+			// case 1:
+			// 	ctx.sendMessageToAllNeighbors(1L);
+			// 	break;
+			// case 2:
+			// 	sum = 0;
+			// 	for (m in messages) {
+			// 		sum += m;
+			// 	}
+			// 	// assert (sum == messages.size());
+			// 	ctx.setValue(ctx.value() + messages.size() + 0.1);
+			// 	break;
+			// case 3:
+			// 	// assert(ctx.numberOfOutEdges() == 0L);
+			// 	sw.lap("OutEdge : " + ctx.numberOfOutEdges());
+			// 	ctx.voteToHalt();
+			// 	break;
 			default:
 				break;					
 			}
@@ -114,7 +165,7 @@ public class EdgeARMTest {
 		
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate:"); }
 		
-		xpgraph.once((ctx :VertexContext[Double, Double, Any, Any]) => {
+		xpgraph.once((ctx :VertexContext[Double, Double, Byte, Byte]) => {
 			ctx.output(ctx.value());
 		});
 		val result = xpgraph.stealOutput[Double]();

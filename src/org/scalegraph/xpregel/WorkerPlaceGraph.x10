@@ -649,6 +649,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 					val mes = ectx.message(srcid, mesTempBuffer);
 					@Ifdef("PROF_XP") { numLocalMes += mes.size(); }
 					if(mes.size() > 0 || mVertexActive(srcid)) {
+						ep.mEdgeChanged = false;
 						
 						compute(vc, mes);
 
