@@ -19,7 +19,6 @@ import x10.compiler.NativeRep;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit;
 
-import x10.util.IndexedMemoryChunk;
 import x10.compiler.NativeCPPOutputFile;
 
 @NativeCPPOutputFile("MemoryChunkData.h")
@@ -32,27 +31,27 @@ import x10.compiler.NativeCPPOutputFile;
  */
 @NativeRep("c++", "org::scalegraph::util::MCData_Impl<#T >", "org::scalegraph::util::MCData_Impl<#T >", null)
 final struct MemoryChunkData[T] {
-	public val raw :IndexedMemoryChunk[T];
+	public val raw :Rail[T];
 	public val offset :Long;
 	public val size :Long;
 	
 	@Native("c++", "null")
-	private def this(backing :IndexedMemoryChunk[T], offset :Long, size :Long) {
+	private def this(backing :Rail[T], offset :Long, size :Long) {
 		this.raw = backing;
 		this.offset = offset;
 		this.size = size;
 	}
 	
-	@Native("java", "x10.core.IndexedMemoryChunk.<#T$box>allocate(#T$rtt, #numElements, #zeroed)")
-	private static native def allocateFlat[T](numElements :Long, alignment :Int, zeroed :Boolean) :IndexedMemoryChunk[T];
+	//@Native("java", "x10.core.IndexedMemoryChunk.<#T$box>allocate(#T$rtt, #numElements, #zeroed)")
+	private static native def allocateFlat[T](numElements :Long, alignment :Int, zeroed :Boolean) :Rail[T];
 
 	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw() + (#offset), (#size), NULL)")
-	public static def make[T](backing :IndexedMemoryChunk[T], offset :Long, size :Long) :MemoryChunkData[T] {
+	public static def make[T](backing :Rail[T], offset :Long, size :Long) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, offset, size);
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw(), (#backing).length(), NULL)")
-	public static def make[T](backing :IndexedMemoryChunk[T]) :MemoryChunkData[T] {
-		return new MemoryChunkData[T](backing, 0L, backing.length());
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw(), (#backing).size, NULL)")
+	public static def make[T](backing :Rail[T]) :MemoryChunkData[T] {
+		return new MemoryChunkData[T](backing, 0L, backing.size);
 	}
 	//@Native("c++", "org::scalegraph::util::MCData_Impl<#T >::_make(#numElements, #alignment, #zeroed)")
 	@Native("c++", "org::scalegraph::util::MakeStruct<#T >::make(#numElements, #alignment, #zeroed)")

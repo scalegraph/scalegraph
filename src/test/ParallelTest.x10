@@ -11,7 +11,7 @@
 
 package test;
 
-import x10.util.ArrayUtils;
+import x10.util.RailUtils;
 import x10.util.Team;
 import x10.util.Random;
 
@@ -20,7 +20,7 @@ import org.scalegraph.util.Parallel;
 import org.scalegraph.util.MemoryChunk;
 
 public final class ParallelTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new ParallelTest().execute(args);
 	}
 	
@@ -46,8 +46,8 @@ public final class ParallelTest extends STest {
 	static def testsort(): void{
 		Console.OUT.println("Sort Test");
         val rand = new Random();
-		val n = 5000;
-		finish for (i in 1..n) {
+		val n = 5000n;
+		finish for (i in 1n..n) {
             val len = Math.abs(rand.nextInt() % i);
 		    val input = MemoryChunk.make[Int](len);
             for ( j in input.range()) {
@@ -55,8 +55,8 @@ public final class ParallelTest extends STest {
             }
 		    val result = input.clone();
             Parallel.sort[Int](result);
-		    val oracle = new Array[Int](input.toArray());
-            ArrayUtils.sort(oracle);
+		    val oracle = new Rail[Int](input.toRail());
+            RailUtils.sort(oracle);
             var isEqual: Boolean = true;
             for (j in input.range()) {
                 isEqual &= result(j) == oracle(j as Int);
@@ -68,16 +68,16 @@ public final class ParallelTest extends STest {
 	}
 	static def testpartition(): void{
 		Console.OUT.println("Partite Test");
-		val n = 15;
-		val input = MemoryChunk.make[Long](n + 1, (i:Long)=> i );
-		finish for (i in 1..n) {
+		val n = 15n;
+		val input = MemoryChunk.make[Long](n + 1n, (i:Long)=> i );
+		finish for (i in 1n..n) {
 			Console.OUT.println("n: " + i + ", input: " + input);
 			val result = Parallel.partition[Long](input, (x:Long)=> (x % i) as Int, i);
 			Console.OUT.println("n: " + i + ", result: " + result);
 		}
 	}
 	
-	public def run(args :Array[String](1)): Boolean {
+	public def run(args :Rail[String]): Boolean {
 	    Console.OUT.println("Team.WORLD: " + Team.WORLD);
 	    Console.OUT.println("members of Team(0): " + Team.WORLD.places());
 	    

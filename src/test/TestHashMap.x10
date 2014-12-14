@@ -12,7 +12,7 @@
 package test;
 
 import x10.compiler.Inline;
-import x10.util.IndexedMemoryChunk;
+//import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
@@ -25,7 +25,7 @@ import org.scalegraph.util.Parallel;
 import org.scalegraph.util.HashMap;
 
 final class TestHashMap extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestHashMap().execute(args);
 	}
 	
@@ -94,7 +94,7 @@ final class TestHashMap extends STest {
 
         val getVs = (()=>{
             val start = Timer.nanoTime();
-            val getVs = t.get(ks, -1);
+            val getVs = t.get(ks, -1n);
             Console.OUT.printf("parallel get time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
             return getVs;
         })();
@@ -102,7 +102,7 @@ final class TestHashMap extends STest {
         {
             val start = Timer.nanoTime();
             for (i in ks.range()) {
-                t.get(ks(i), -1);
+                t.get(ks(i), -1n);
             }
             Console.OUT.printf("sequencial get time = %g\n", (Timer.nanoTime() - start) / (1000. * 1000. * 1000.));
         }
@@ -115,7 +115,7 @@ final class TestHashMap extends STest {
     }
 
     def runNewKeys() {
-        val t = new HashMap[Int, Int](100);
+        val t = new HashMap[Int, Int](100n);
         val ks = MemoryChunk.make[Int](10);
         val vs = MemoryChunk.make[Int](10);
 
@@ -126,19 +126,19 @@ final class TestHashMap extends STest {
         t.put(ks, vs);
 
         val keys = MemoryChunk.make[Int](10);
-        keys(0) = 10;
-        keys(1) = 10;
-        keys(2) = 10;
-        keys(3) = 3;
-        keys(4) = 4;
-        keys(5) = 5;
-        keys(6) = 16;
-        keys(7) = 17;
-        keys(8) = 18;
-        keys(9) = 19;
+        keys(0) = 10n;
+        keys(1) = 10n;
+        keys(2) = 10n;
+        keys(3) = 3n;
+        keys(4) = 4n;
+        keys(5) = 5n;
+        keys(6) = 16n;
+        keys(7) = 17n;
+        keys(8) = 18n;
+        keys(9) = 19n;
 
         val newKeys = (()=>{
-            val newKeys = t.newKeys(keys, -1);
+            val newKeys = t.newKeys(keys, -1n);
             return newKeys;
         })();
         for (i in newKeys.range()) {
@@ -162,10 +162,10 @@ final class TestHashMap extends STest {
 
         // i (ne / 2 <= i < ne + ne / 2)
         for (i in ks.range()) {
-            ks(i) = i as Int + ne / 2;
+            ks(i) = i as Int + ne / 2n;
         }
 
-        val newKeys = t.newKeys(ks, -1);
+        val newKeys = t.newKeys(ks, -1n);
         assert(newKeys.size() ==  ne / 2 as Long);
         Parallel.sort(newKeys);
         // newKeys = ne, ne + 1, ..., ne - 1 + ne / 2
@@ -173,14 +173,14 @@ final class TestHashMap extends STest {
         assert(newKeys(0) == ne);
         for (i in newKeys.range()) {
             if (i > 0L) {
-                assert (newKeys(i) == newKeys(i - 1) + 1);
+                assert (newKeys(i) == newKeys(i - 1n) + 1n);
             }
         }
     }
 
     def run3() {
         Console.OUT.println("test3 start");
-        val t = new HashMap[Int, Int](100);
+        val t = new HashMap[Int, Int](100n);
         val n1 = 50;
         val n2 = 50;
 
@@ -197,8 +197,8 @@ final class TestHashMap extends STest {
         t.put(ks1, vs1);
 
         for (i in (0..(n2 - 1))) {
-            ks2(i as Long) = i + n1 as Int;
-            vs2(i as Long) = i + n1 as Int;
+            ks2(i as Long) = (i + n1) as Int;
+            vs2(i as Long) = (i + n1) as Int;
         }
         t.put(ks2, vs2);
 
@@ -210,7 +210,7 @@ final class TestHashMap extends STest {
     }
 
     def run4() {
-        val t = new HashMap[Int, Int](10);
+        val t = new HashMap[Int, Int](10n);
         val n1 = 5;
         val ks1 = MemoryChunk.make[Int](n1);
         val vs1 = MemoryChunk.make[Int](n1);
@@ -227,7 +227,7 @@ final class TestHashMap extends STest {
     def run5() {
         val n = 100000;
         val e = 40000;
-        val t = new HashMap[Long, Long](n);
+        val t = new HashMap[Long, Long](n as Int);
         val ks = MemoryChunk.make[Long](e);
         val vs  = MemoryChunk.make[Long](e);
         val r = new Random(1L);
@@ -256,9 +256,9 @@ final class TestHashMap extends STest {
         }
     }
 
-    public def run(args: Array[String](1)): Boolean {
-    	n = (args.size > 0) ? Int.parse(args(0)) : -1;
-    	ne = (args.size > 0) ? Int.parse(args(1)) : -1;
+    public def run(args: Rail[String]): Boolean {
+    	n = (args.size > 0) ? Int.parse(args(0)) : -1n;
+    	ne = (args.size > 0) ? Int.parse(args(1)) : -1n;
         
         benchSeqPut();
         benchParPut();

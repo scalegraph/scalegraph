@@ -12,7 +12,7 @@
 package test;
 
 import x10.util.Team;
-import x10.array.PlaceGroup;
+//import x10.array.PlaceGroup;
 import x10.util.Timer;
 import x10.util.Random;
 import x10.util.Pair;
@@ -23,7 +23,7 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Remote;
 
 public final class TestRemote extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new GeneratorTest().execute(args);
 	}
 
@@ -154,7 +154,7 @@ public final class TestRemote extends STest {
         }
     }
 
-    public def run(args: Array[String](1)): Boolean {
+    public def run(args: Rail[String]): Boolean {
         // val size = Int.parse(args(0));
         val size = 1 << 15;
 

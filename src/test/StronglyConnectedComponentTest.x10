@@ -19,11 +19,11 @@ import org.scalegraph.io.CSV;
 
 
 final class StronglyConnectedComponentTest extends AlgorithmTest{	
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new StronglyConnectedComponentTest().execute(args);
 	}
 	
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 //		val result = org.scalegraph.api.StronglyConnectedComponent.run(g);
 		val result : org.scalegraph.api.StronglyConnectedComponent2.Result;
 		

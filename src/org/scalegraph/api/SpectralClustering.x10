@@ -29,9 +29,9 @@ final public class SpectralClustering {
 	val dist = config.dist2d();
 	
 	// default options
-	var numCluster:Int = 2;         // number of clusters
+	var numCluster:Int = 2n;         // number of clusters
 	var tolerance:Double = 0.01;    // tolerance of Arnoldi process in ARPACK
-	var maxitr:Int = 1000;          // max number of iteration in k-means
+	var maxitr:Int = 1000n;          // max number of iteration in k-means
 	var threshold:Double = 0.0001;  // threshold for convergence test in k-means
 	
 	public def this() {}

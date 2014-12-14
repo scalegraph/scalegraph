@@ -20,11 +20,11 @@ import org.scalegraph.io.CSV;
 import org.scalegraph.id.Type;
 
 final class CSVReaderTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new CSVReaderTest().execute(args);
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		val mode = 5;
 		if(mode==0){
 			val colTypes = [Type.Boolean, Type.Byte, Type.Short, Type.Int, Type.Long, Type.Float, Type.Double, Type.UByte, Type.UShort, Type.UInt, Type.ULong, Type.Char, Type.String, Type.String];

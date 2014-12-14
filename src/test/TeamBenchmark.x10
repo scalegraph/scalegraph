@@ -17,7 +17,7 @@ import x10.util.Timer;
 import org.scalegraph.test.STest;
 
 final class TeamBenchmark extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TeamBenchmark().execute(args);
 	}
 	
@@ -29,19 +29,19 @@ final class TeamBenchmark extends STest {
     static def testBarrier(comm: Team, size: Int, count: Int) : void{
         message("Barrier Test");
         val places = comm.size();
-        val mapping = PlaceLocalHandle.make[Array[Long]](PlaceGroup.WORLD, ()=>new Array[Long](size));
+        val mapping = PlaceLocalHandle.make[Rail[Long]](PlaceGroup.WORLD, ()=>new Rail[Long](size));
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](places * size, (i:Int)=> i as Long);
+	                val vertices = new Rail[Long](places * size, (i:Long)=> i as Long);
 	
 	                message("Barrier start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
-	                    comm.barrier(role);
+	                    comm.barrier();
 	                }
 	                message("Barrier end");
 	                val time_end = Timer.nanoTime();
@@ -49,9 +49,9 @@ final class TeamBenchmark extends STest {
 	                message("Barrier: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("Barrier: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                comm.barrier(role);
+	                comm.barrier();
 	                for (i in 1..count)
-	                    comm.barrier(role);
+	                    comm.barrier();
 	            }
         	} catch (e :CheckedThrowable) { printException(e); }
         }
@@ -60,16 +60,16 @@ final class TeamBenchmark extends STest {
     static def testScatter(comm: Team, size: Int, count: Int) : void{
         message("Scatter Test");
         val places = comm.size();
-        val mapping = PlaceLocalHandle.make[Array[Long]](PlaceGroup.WORLD, ()=>new Array[Long](size));
+        val mapping = PlaceLocalHandle.make[Rail[Long]](PlaceGroup.WORLD, ()=>new Rail[Long](size));
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](places * size, (i:Int)=> i as Long);
+	                val vertices = new Rail[Long](places * size, (i:Long)=> i as Long);
 	
 	                message("scatter start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.scatter(role, root, vertices, size);
@@ -81,7 +81,7 @@ final class TeamBenchmark extends STest {
 	                message("scatter: ellapsed time: total: " + (time_end - time_start));
 	            } else {
 	                message("scatter start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                message("scatter end");
 	                for (i in 1..count) finish
 	                comm.scatter[Long](role, root, null, size);
@@ -92,16 +92,16 @@ final class TeamBenchmark extends STest {
     static def testScatterAuto(comm: Team, size: Int, count: Int) : void{
         message("ScatterAuto Test");
         val places = comm.size();
-        val mapping = PlaceLocalHandle.make[Array[Long]](PlaceGroup.WORLD, ()=>new Array[Long](size));
+        val mapping = PlaceLocalHandle.make[Rail[Long]](PlaceGroup.WORLD, ()=>new Rail[Long](size));
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](places * size, (i:Int)=> i as Long);
+	                val vertices = new Rail[Long](places * size, (i:Long)=> i as Long);
 	
 	                message("scatterAuto start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.scatter(role, root, vertices);
@@ -112,7 +112,7 @@ final class TeamBenchmark extends STest {
 	                message("scatterAuto: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("scatterAuto: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                comm.barrier(role);
+	                comm.barrier();
 	                for (i in 1..count) finish
 	                comm.scatter[Long](role, root, null);
 	            }
@@ -122,17 +122,17 @@ final class TeamBenchmark extends STest {
     static def testScattervAuto(comm: Team, size: Int, count: Int) : void{
         message("ScattervAuto Test");
         val places = comm.size();
-        val mapping = PlaceLocalHandle.make[Array[Long]](PlaceGroup.WORLD, ()=>new Array[Long](size));
+        val mapping = PlaceLocalHandle.make[Rail[Long]](PlaceGroup.WORLD, ()=>new Rail[Long](size));
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](size, (i:Int)=> i as Long);
-	                val arrCounts = new Array[Int](places, size);
+	                val vertices = new Rail[Long](size, (i:Long)=> i as Long);
+	                val arrCounts = new Rail[Int](places, size);
 	
 	                message("ScattervAuto start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.scatterv(role, root, vertices, arrCounts);
@@ -143,7 +143,7 @@ final class TeamBenchmark extends STest {
 	                message("scattervAuto: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("scattervAuto: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                comm.barrier(role);
+	                comm.barrier();
 	                for (i in 1..count) finish
 	                comm.scatterv[Long](role, root, null, null);
 	            }
@@ -153,16 +153,16 @@ final class TeamBenchmark extends STest {
     static def testGather(comm: Team, size: Int, count: Int) : void{
         message("Gather Test");
         val places = comm.size();
-        val mapping = PlaceLocalHandle.make[Array[Long]](PlaceGroup.WORLD, ()=>new Array[Long](size));
+        val mapping = PlaceLocalHandle.make[Rail[Long]](PlaceGroup.WORLD, ()=>new Rail[Long](size));
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](size, (i:Int)=> i as Long);
+	                val vertices = new Rail[Long](size, (i:Long)=> i as Long);
 	
 	                message("gather start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.gather(role, root, vertices, size);
@@ -173,8 +173,8 @@ final class TeamBenchmark extends STest {
 	                message("gather: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("gather: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                val vertices = new Array[Long](size, (i:Int)=> ((size * role) + i) as Long);
-	                comm.barrier(role);
+	                val vertices = new Rail[Long](size, (i:Long)=> ((size * role) + i) as Long);
+	                comm.barrier();
 	                for (i in 1..count) finish
 	                comm.gather(role, root, vertices, size);
 	            }
@@ -184,16 +184,16 @@ final class TeamBenchmark extends STest {
     static def testGathervAuto(comm: Team, size: Int, count: Int) : void{
         message("GathervAuto Test");
         val places = comm.size();
-        val mapping = PlaceLocalHandle.make[Array[Long]](PlaceGroup.WORLD, ()=>new Array[Long](size));
+        val mapping = PlaceLocalHandle.make[Rail[Long]](PlaceGroup.WORLD, ()=>new Rail[Long](size));
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](size, (i:Int)=> i as Long);
+	                val vertices = new Rail[Long](size, (i:Long)=> i as Long);
 	
 	                message("gathervAuto start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.gatherv(role, root, vertices);
@@ -204,8 +204,8 @@ final class TeamBenchmark extends STest {
 	                message("gathervAuto: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("gathervAuto: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                val vertices = new Array[Long](size, (i:Int)=> ((size * role) + i) as Long);
-	                comm.barrier(role);
+	                val vertices = new Rail[Long](size, (i:Long)=> ((size * role) + i) as Long);
+	                comm.barrier();
 	                for (i in 1..count) finish
 	                comm.gatherv(role, root, vertices);
 	            }
@@ -217,13 +217,13 @@ final class TeamBenchmark extends STest {
         val places = comm.size();
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](places * size, (i:Int)=> places * size * (role as Long) + i);
+	                val vertices = new Rail[Long](places * size, (i:Long)=> places * size * (role as Long) + i);
 	
 	                message("alltoall start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.alltoall(role, vertices);
@@ -234,8 +234,8 @@ final class TeamBenchmark extends STest {
 	                message("alltoall: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("alltoall: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                val vertices = new Array[Long](places * size, (i:Int)=> places * size * (role as Long) + i);
-	                comm.barrier(role);
+	                val vertices = new Rail[Long](places * size, (i:Long)=> places * size * (role as Long) + i);
+	                comm.barrier();
 	                for (i in 1..count) finish
 	                comm.alltoall(role, vertices);
 	            }
@@ -247,14 +247,14 @@ final class TeamBenchmark extends STest {
         val places = comm.size();
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](places * size, (i:Int)=> places * size * (role as Long) + i);
-	                val arrCounts = new Array[Int](places, size);
+	                val vertices = new Rail[Long](places * size, (i:Long)=> places * size * (role as Long) + i);
+	                val arrCounts = new Rail[Int](places, size);
 	
 	                message("alltoallv start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.alltoallv(role, vertices, arrCounts);
@@ -265,9 +265,9 @@ final class TeamBenchmark extends STest {
 	                message("alltoallv: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("alltoallv: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                val vertices = new Array[Long](places * size, (i:Int)=> places * size * (role as Long) + i);
-	                val arrCounts = new Array[Int](places, size);
-	                comm.barrier(role);
+	                val vertices = new Rail[Long](places * size, (i:Long)=> places * size * (role as Long) + i);
+	                val arrCounts = new Rail[Int](places, size);
+	                comm.barrier();
 	                for (i in 1..count) finish
 	                comm.alltoallv(role, vertices, arrCounts);
 	            }
@@ -279,13 +279,13 @@ final class TeamBenchmark extends STest {
         val places = comm.size();
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-	            val role = p;
-	            val root = 0;
+	            val role = p as Int;
+	            val root = 0n;
 	            if (role == root) {
-	                val vertices = new Array[Long](size, (i:Int)=> size * (role as Long) + i);
+	                val vertices = new Rail[Long](size, (i:Long)=> size * (role as Long) + i);
 	
 	                message("allgather start");
-	                comm.barrier(role);
+	                comm.barrier();
 	                val time_start = Timer.nanoTime();
 	                for (i in 1..count) finish {
 	                    val receivedArray = comm.allgather(role, vertices);
@@ -296,8 +296,8 @@ final class TeamBenchmark extends STest {
 	                message("allgather: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 	                message("allgather: ellapsed time: total: " + (time_end - time_start));
 	            } else {
-	                val vertices = new Array[Long](size, (i:Int)=> size * (role as Long) + i);
-	                comm.barrier(role);
+	                val vertices = new Rail[Long](size, (i:Long)=> size * (role as Long) + i);
+	                comm.barrier();
 	                for (i in 1..count) finish
 	                comm.allgather(role, vertices);
 	            }
@@ -309,13 +309,13 @@ final class TeamBenchmark extends STest {
         val places = comm.size();
         finish for (p in 0..(comm.size()-1)) at (comm.places()(p)) async {
         	try {
-		        val role = p;
-		        val root = 0;
+		        val role = p as Int;
+		        val root = 0n;
 		        if (role == root) {
-		            val vertices = new Array[Long](size, (i:Int)=> size * (role as Long) + i);
+		            val vertices = new Rail[Long](size, (i:Long)=> size * (role as Long) + i);
 		
 		            message("allgathervAuto start");
-		            comm.barrier(role);
+		            comm.barrier();
 		            val time_start = Timer.nanoTime();
 		            for (i in 1..count) finish {
 		                val receivedArray = comm.allgatherv(role, vertices);
@@ -326,8 +326,8 @@ final class TeamBenchmark extends STest {
 		            message("allgathervAuto: ellapsed time: each: " + (time_end - time_start) / (count as Double));
 		            message("allgathervAuto: ellapsed time: total: " + (time_end - time_start));
 		        } else {
-		            val vertices = new Array[Long](size, (i:Int)=> size * (role as Long) + i);
-		            comm.barrier(role);
+		            val vertices = new Rail[Long](size, (i:Long)=> size * (role as Long) + i);
+		            comm.barrier();
 		            for (i in 1..count) finish
 		            comm.allgatherv(role, vertices);
 		        }
@@ -335,18 +335,18 @@ final class TeamBenchmark extends STest {
         }
     }
 
-    public def run(args :Array[String](1)): Boolean {
+    public def run(args :Rail[String]): Boolean {
  //       val args = ["1024", "10"];
         entry(args);
         
         return true;
     }
-    public static def entry(args:Array[String](1)) : void {
+    public static def entry(args:Rail[String]) : void {
         val size = Int.parse(args(0));
         val count = Int.parse(args(1));
-        var tests: Int = ~0;
+        var tests: Int = ~0n;
         if (args.size >= 3) {
-            tests = Int.parse(args(2),2);
+            tests = Int.parse(args(2),2n);
         }
         val comm = Team.WORLD;
         message("Team.WORLD: " + Team.WORLD);

@@ -26,7 +26,7 @@ public class TestMathAppend {
 			message("i: " + i + ", ceilLog2(i): " + MathAppend.ceilLog2(i));
 		}
 	}
-	public static def main(argv: Array[String](1)) {
+	public static def main(argv: Rail[String]) {
 		testCeilLog2();
 	}
 }

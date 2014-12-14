@@ -81,9 +81,9 @@ public final struct SString {
 	public native def equals(that: SString): Boolean;
 	
 	public def hashCode(): Int {
-		var hc: Int = 0;
+		var hc: Int = 0n;
 		for(i in content.range()) {
-			hc = hc * 31 + (content(i) as Int);
+			hc = hc * 31n + (content(i) as Int);
 		}
 		return hc;
 	}
@@ -114,37 +114,37 @@ public final struct SString {
 	public def substring(fromIndex: Int) =
 		SString(content.subpart(fromIndex, content.size() - fromIndex));
 	
-	public def indexOf(ch: Char) = indexOf(ch, 0);
+	public def indexOf(ch: Char) = indexOf(ch, 0n);
 	
 	@Native("c++", "org::scalegraph::util::StringIndexOf_((#this).FMGL(content), #ch, #idx)")
 	public native def indexOf(ch: Char, idx: Int) :Int;
 	
-	public def indexOf(str: SString) = indexOf(str, 0);
+	public def indexOf(str: SString) = indexOf(str, 0n);
 
 	@Native("c++", "org::scalegraph::util::StringIndexOf_((#this).FMGL(content), (#str).FMGL(content), #idx)")
 	public native def indexOf(str: SString, idx: Int) :Int;
 	
-	public def lastIndexOf(ch: Char) = lastIndexOf(ch, 0);
+	public def lastIndexOf(ch: Char) = lastIndexOf(ch, 0n);
 
 	@Native("c++", "org::scalegraph::util::StringLastIndexOf_((#this).FMGL(content), #ch, #idx)")
 	public native def lastIndexOf(ch: Char, idx: Int): Int;
 	
-	public def lastIndexOf(str: SString) = lastIndexOf(str, 0);
+	public def lastIndexOf(str: SString) = lastIndexOf(str, 0n);
 
 	@Native("c++", "org::scalegraph::util::StringLastIndexOf_((#this).FMGL(content), (#str).FMGL(content), #idx)")
 	public native def lastIndexOf(str: SString, idx: Int): Int;
 	
 	public def replace(oldChar :Char, newChar :Char) {
 		// shortcut
-		if(indexOf(oldChar, 0) == -1) return this;
+		if(indexOf(oldChar, 0n) == -1n) return this;
 		
 		val new_char = charToUTF8(newChar, MemoryChunk.make[Byte](4));
 		val buf = new GrowableMemory[Byte]();
 		buf.grow(content.size());
-		var cur_pos :Int = 0;
+		var cur_pos :Int = 0n;
 		while(true) {
 			val next_pos = indexOf(oldChar, cur_pos);
-			if(next_pos == -1) break;
+			if(next_pos == -1n) break;
 			buf.add(content.subpart(cur_pos, next_pos - cur_pos));
 			buf.add(new_char);
 			cur_pos = next_pos + UTF8CodeLength(content(next_pos));
@@ -157,14 +157,14 @@ public final struct SString {
 	
 	public def replace(target :SString, replacement :SString) {
 		// shortcut
-		if(indexOf(target, 0) == -1) return this;
+		if(indexOf(target, 0n) == -1n) return this;
 		
 		val buf = new GrowableMemory[Byte]();
 		buf.grow(content.size());
-		var cur_pos :Int = 0;
+		var cur_pos :Int = 0n;
 		while(true) {
 			val next_pos = indexOf(target, cur_pos);
-			if(next_pos == -1) break;
+			if(next_pos == -1n) break;
 			buf.add(content.subpart(cur_pos, next_pos - cur_pos));
 			buf.add(replacement.content);
 			cur_pos = next_pos + target.size();
@@ -188,13 +188,13 @@ public final struct SString {
 			str = str_; splitter = splitter_;
 		}
 		public def size() {
-			var tokenCount: Int = 0;
+			var tokenCount: Int = 0n;
 			for(t in this) ++tokenCount;
 			return tokenCount;
 		}
 		public def result() {
 			val array = MemoryChunk.make[SString](size());
-			var tokenCount: Int = 0;
+			var tokenCount: Int = 0n;
 			for(t in this) array(tokenCount++) = t;
 			return array;
 		}
@@ -208,13 +208,13 @@ public final struct SString {
 	
 	public def trim() {
 		val length = content.size();
-		var start :Int = 0;
+		var start :Int = 0n;
 		for( ; start < length; ++start) {
 			if(content(start) > 0x20Y) {
 				break;
 			}
 		}
-		for(var end: Int = length as Int - 1; end >= start; --end) {
+		for(var end: Int = length as Int - 1n; end >= start; --end) {
 			if(content(end) > 0x20Y) {
 				return SString(content.subpart(start, end + 1 - start));
 			}

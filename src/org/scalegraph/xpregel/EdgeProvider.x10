@@ -84,7 +84,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	// call this method after inedgeUpdate
 	static def reInitializeEdgeProvider[E](list :MemoryChunk[EdgeProvider[E]]) /*{ E haszero }*/{
 		val numThreads :Int = Runtime.NTHREADS;
-		Parallel.iter(0..(numThreads-1), (tid:Int)=> {
+		Parallel.iter(0n..(numThreads-1n), (tid:Int)=> {
 			val e = list(tid);
 			//zero reset
 			for(i in e.mEdgeModifyReqOffset.range()){
@@ -99,7 +99,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	//called from top thread
 	//call this method before inedgeUpdate
 	static def updateOutEdge[V,E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) /*{ V haszero, E haszero }*/{
-		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME as Int, 0n);
 		{	//check change
 			var changed :Boolean = false;
 			for(i in list.range()) {
@@ -114,11 +114,11 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		}
 		val numThreads = Runtime.NTHREADS;
 		val numVertexes = ids.numberOfLocalVertexes();
-		val offsetPerThread = MemoryChunk.make[Long](numThreads + 1L,0,true);
+		val offsetPerThread = MemoryChunk.make[Long](numThreads + 1L,0n,true);
 		val outOffset = outEdge.offsets;
 		val outVertex = outEdge.vertexes;
 		val outValue = outEdge.value;
-		val newOffset = MemoryChunk.make[Long](numVertexes + 1L,0,false); //ensure not to be 0 initialized
+		val newOffset = MemoryChunk.make[Long](numVertexes + 1L,0n,false); //ensure not to be 0 initialized
 		
 		//optimize & calc newOffset's diff (== newVertex's index diff )
 		newOffset(0) = 0L;
@@ -153,7 +153,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		val newNumEdgesNum = offsetPerThread(numThreads);
 		val newVertex = MemoryChunk.make[Long](newNumEdgesNum);
 		val newValue = MemoryChunk.make[E](newNumEdgesNum);
-		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_1); }
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_1 as Int); }
 
 		WorkerPlaceGraph.foreachVertexes(numVertexes, (tid :Long, r :LongRange) => {
 			val e = list(tid);
@@ -175,7 +175,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			e.mOutValue = newValue;
 			assert newOffset(r.max + 1L) == offsetPerThread(tid + 1L);
 		});
-		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_2); }
+		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_2 as Int); }
 		outOffset.del();
 		outVertex.del();
 		outValue.del();
@@ -229,15 +229,15 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			//switch
 			//merge
 			switch(reqARM){
-			case 0:	//remove
+			case 0n:	//remove
 				++oldEdgeIndex;
 				break;
-			case 1:	//add
+			case 1n:	//add
 				newEdge(newEdgeIndex) = reqId;
 				newVal(newEdgeIndex) = reqValue;
 				++newEdgeIndex;
 				break;
-			case 2:	//modify
+			case 2n:	//modify
 				assert(oldEdge(oldEdgeIndex) == reqId);
 			//	newEdge(newEdgeIndex) = reqId;
 				newVal(newEdgeIndex) = reqValue;
@@ -263,7 +263,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		val start = mEdgeModifyReqOffset(localsrcid);// not mEdgeModifyReqOffset(srcid)
 		val end = mEdgeModifyReqOffset(localsrcid+1L) - 1L;
 		
-		val count = MemoryChunk.make[Long](3, 0, true);
+		val count = MemoryChunk.make[Long](3, 0n, true);
 		for(i in start..end) ++count(ARM(mEdgeModifyReqWithAR(i).val1));
 		return count(1) - count(0);
 	}
@@ -324,7 +324,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 					break;
 				}
 				*/
-				if(ARM(targetid) == 1) {
+				if(ARM(targetid) == 1n) {
 					mEdgeModifyReqWithAR(reqSaveIdx++) = 
 						new Tuple2((mEdgeModifyReqWithAR(reqIdx).val1 & req_NOINFO/*~req_ADD*/) | req_MOD,
 								mEdgeModifyReqWithAR(reqIdx).val2);
@@ -345,7 +345,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 					mEdgeModifyReqWithAR(reqSaveIdx++) = mEdgeModifyReqWithAR(reqIdx);
 					break;
 				}*/
-				if(ARM(targetid) != 0){
+				if(ARM(targetid) != 0n){
 					mEdgeModifyReqWithAR(reqSaveIdx++) = mEdgeModifyReqWithAR(reqIdx);
 				}
 			}
@@ -475,7 +475,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 //		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
 		
 		// stash
-		val arrat = new Array[Long](0);
+		val arrat = new Rail[Long](0);
 		val tempReqOff = MemoryChunk.make[MemoryChunk[Long]](list.size());
 		val tempReq = MemoryChunk.make[GrowableMemory[Tuple2[Long,E]]](list.size());
 		for(i in list.range()){
@@ -488,12 +488,12 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		
 		val numThreads = Runtime.NTHREADS;
 		val numVertexes = ids.numberOfLocalVertexes();
-		val offsetPerThread = MemoryChunk.make[Long](numThreads + 1L,0,true);
+		val offsetPerThread = MemoryChunk.make[Long](numThreads + 1L,0n,true);
 
 		val inOffset = inEdge.offsets;
 		val inVertex = inEdge.vertexes;
 		val inValue = (inEdge.vertexes.size() == inEdge.value.size()) ? inEdge.value : MemoryChunk.make[E](inEdge.vertexes.size());
-		val newOffset = MemoryChunk.make[Long](numVertexes + 1L,0,false); //ensure not to be 0 initialized
+		val newOffset = MemoryChunk.make[Long](numVertexes + 1L,0n,false); //ensure not to be 0 initialized
 		
 		//optimize & calc newOffset's diff (== newVertex's index diff )
 		newOffset(0) = 0L;

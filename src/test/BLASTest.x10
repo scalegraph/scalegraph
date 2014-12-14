@@ -27,23 +27,23 @@ import org.scalegraph.util.Parallel;
 import org.scalegraph.blas.DistDiagonalMatrix;
 
 final class BLASTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new BLASTest().execute(args);
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		val team = Team.WORLD;
 		val scale = Int.parse(args(0));
 		
 		val R = 1 << (MathAppend.ceilLog2(team.size()) / 2);
 		val C = team.size() / R;
-		val dist = Dist2D.make2D(team, R, C);
+		val dist = Dist2D.make2D(team, R as Int, C as Int);
 		
 		Console.OUT.println(dist);
 		Console.OUT.println("Graph generation ...");
 		
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
+		val edgelist = GraphGenerator.genRMAT(scale, 16n, 0.45, 0.15, 0.15, rnd);
 		// val weight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd, team);
 		val weight = new DistMemoryChunk[Double](team.placeGroup(),
 				() => MemoryChunk.make[Double](edgelist.src().size(), (Long) => 1.0));

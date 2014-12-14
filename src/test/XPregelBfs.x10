@@ -25,7 +25,7 @@ import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 
 final class XPregelBfs extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new XPregelBfs().execute(args);
 	}
 	
@@ -38,7 +38,7 @@ final class XPregelBfs extends AlgorithmTest {
 		
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
-			if(ctx.superstep() == 0) {
+			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
 				if(ctx.realId() != root) return ;
@@ -94,7 +94,7 @@ final class XPregelBfs extends AlgorithmTest {
 		
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
-			if(ctx.superstep() == 0) {
+			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
 				if(ctx.realId() != root) return ;
@@ -125,7 +125,7 @@ final class XPregelBfs extends AlgorithmTest {
 		val sw = Config.get().stopWatch();
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
-			if(ctx.superstep() == 0) {
+			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
 				if(ctx.realId() != root) return ;
@@ -159,7 +159,7 @@ final class XPregelBfs extends AlgorithmTest {
 		val sw = Config.get().stopWatch();
 		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
 			val pred :Long;
-			if(ctx.superstep() == 0) {
+			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
 				ctx.voteToHalt();
 				if(ctx.realId() != root) return ;
@@ -189,7 +189,7 @@ final class XPregelBfs extends AlgorithmTest {
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (combine):"); }
 	}
 
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 
 		if(args.size < 3) {
 			println("Usage: [naive|opt|combin|debug] [write|check] <path>");
@@ -205,7 +205,7 @@ final class XPregelBfs extends AlgorithmTest {
 		// release graph data
 		g.del();
 
-		xpregel.setLogPrinter(Console.ERR, 0);
+		xpregel.setLogPrinter(Console.ERR, 0n);
 
 		if(args(0).equals("naive")) {
 			bfs_naive(xpregel, root);

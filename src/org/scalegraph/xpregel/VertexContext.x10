@@ -277,7 +277,7 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 	/**
 	 * This is equivalent to the call output(0, value).
 	 */
-	public def output[T](value :T) { output(0, value); }
+	public def output[T](value :T) { output(0n, value); }
 	
 	/**
 	 * Output the value with the specified slot.

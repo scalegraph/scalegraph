@@ -192,7 +192,7 @@ final public class MaxFlow {
     	xpregel.iterate[Boolean,Long](
     			(ctx :VertexContext[MFVertex, MFEdge, Boolean, Long ], messages :MemoryChunk[Boolean] ) => {
 
-    				if(ctx.superstep()==0) {
+    				if(ctx.superstep()==0n) {
     					if(ctx.realId() == sourceVertexId) {
     						ctx.setVertexShouldBeActive(true);
     						ctx.voteToHalt();
@@ -223,7 +223,7 @@ final public class MaxFlow {
     				val outEdgesValue = ctx.outEdgesValue();
     				val vertexValue = ctx.value();
     				
-    				if(ctx.superstep()==0 && ctx.realId()==sourceVertexId) {
+    				if(ctx.superstep()==0n && ctx.realId()==sourceVertexId) {
     					for(i in outEdgesId.range()) {
     						val toId = outEdgesId(i);
     						val flow = outEdgesValue(i).capacity;
@@ -235,7 +235,7 @@ final public class MaxFlow {
     					vertexValue.setHeight(ctx.numberOfVertices());
     					ctx.setVertexShouldBeActive(true);
     				}
-    				if(ctx.superstep()==1) {
+    				if(ctx.superstep()==1n) {
     					// var excess:Long = ctx.value().excess;
     					var excess:Double  = ctx.value().excess;
     					for(i in messages.range()) {
@@ -267,7 +267,7 @@ final public class MaxFlow {
     					val outEdgesValue = ctx.outEdgesValue();
     					val inEdgesValue = ctx.inEdgesValue();
     					val vertexValue = ctx.value();
-    					if(ctx.superstep()==0) {
+    					if(ctx.superstep()==0n) {
     						ctx.setVertexShouldBeActive(ctx.value().excess > eps);
     						
     						if(ctx.realId() == sinkVertexId) {
@@ -299,7 +299,7 @@ final public class MaxFlow {
     						
     						
     					}
-    					if(ctx.superstep()==1) {
+    					if(ctx.superstep()==1n) {
     						var excess:Double = ctx.value().excess;
     						for(i in messages.range()) {
     							val mes = messages(i);
@@ -327,7 +327,7 @@ final public class MaxFlow {
     						val inEdgesValue = ctx.inEdgesValue();
     						val vertexValue = ctx.value();
     							
-    						if(ctx.superstep()==0 && ctx.value().excess>eps
+    						if(ctx.superstep()==0n && ctx.value().excess>eps
     								&& ctx.realId()!=sourceVertexId && ctx.realId()!=sinkVertexId) {
     							ctx.aggregate(1);
     							// var excess:Long = ctx.value().excess;
@@ -378,7 +378,7 @@ final public class MaxFlow {
     							vertexValue.setExcess(excess);
 
     						}
-    						if(ctx.superstep()==1) {
+    						if(ctx.superstep()==1n) {
     							var excess:Double = ctx.value().excess;
     							for(i in messages.range()) {
     								val mes = messages(i);
@@ -399,7 +399,7 @@ final public class MaxFlow {
     					(values :MemoryChunk[Long]) => MathAppend.sum(values),
     					(superstep :Int, aggVal :Long) => {
     						if(updatedNum.home == here)
-    							if(superstep==0)
+    							if(superstep==0n)
     								updatedNum()() = aggVal;
     						
     						return superstep >= 1; 
@@ -413,13 +413,13 @@ final public class MaxFlow {
     			// step 6 : gap-heuristic
     			xpregel.iterate[Long,Long](
     					(ctx :VertexContext[MFVertex, MFEdge, Long, Long ], messages :MemoryChunk[Long ] ) => {
-    						if(ctx.superstep()==0) {
+    						if(ctx.superstep()==0n) {
     							val n = ctx.numberOfVertices();
     							val mes = ctx.value().height;
     							if(mes<n)
     								ctx.sendMessage(0L, mes);
     						}
-    						if(ctx.superstep()==1 && ctx.id()==0L) {
+    						if(ctx.superstep()==1n && ctx.id()==0L) {
     							val n = messages.size();
     							var maxim:Long = 0;
     							for(i in messages.range()) {
@@ -442,7 +442,7 @@ final public class MaxFlow {
     							}
     							ctx.aggregate(ret);
     						}
-    						if(ctx.superstep()==2) {
+    						if(ctx.superstep()==2n) {
     							val n = ctx.numberOfVertices();
     							val border = ctx.aggregatedValue();
     							if(ctx.value().height>border && ctx.value().height<n) {

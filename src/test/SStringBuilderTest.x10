@@ -15,20 +15,20 @@ import org.scalegraph.util.SString;
 import org.scalegraph.util.SStringBuilder;
 
 public class SStringBuilderTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new SStringBuilderTest().execute(args);
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		val sb = new SStringBuilder();
 		
 		sb.add("X10").add(" ").add("String");
 		Console.OUT.println(sb);
 		
-		sb.add(" %s %d" as SString, ("is" as SString).c_str(), 10);
+		sb.add(" %s %d" as SString, ("is" as SString).c_str(), 10n);
 		Console.OUT.println(sb);
 		
-		sb.delete(4, 10);
+		sb.delete(4n, 10n);
 		Console.OUT.println(sb);
 		
 		return true;

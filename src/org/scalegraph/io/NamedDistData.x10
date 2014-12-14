@@ -20,41 +20,41 @@ import org.scalegraph.util.SString;
 import org.scalegraph.id.Type;
 
 public class NamedDistData {
-	val name :Array[String](1);
-	val typeId :Array[Int](1);
-	val data :Array[Any](1);
+	val name :Rail[String];
+	val typeId :Rail[Int];
+	val data :Rail[Any];
 	var datatype :Byte;
 	var header :Any;
 	
-	private static def createTypeId(data :Array[Any](1)) {
-		val typeId = new Array[Int](data.size);
-		for([i] in data) {
+	private static def createTypeId(data :Rail[Any]) {
+		val typeId = new Rail[Int](data.size);
+		for(i in data.range()) {
 			typeId(i) = Type.typeId(data(i));
 		}
 		return typeId;
 	}
 	
-	private static def createName(data :Array[Any](1)) {
-		val name = new Array[String](data.size);
-		for([i] in data) {
+	private static def createName(data :Rail[Any]) {
+		val name = new Rail[String](data.size);
+		for(i in data.range()) {
 			name(i) = String.format("column-%d", [i as Any]);
 		}
 		return name;
 	}
 
-	public def this(data_ :Array[Any](1)) {
+	public def this(data_ :Rail[Any]) {
 		this(null, null, data_, null);
 	}
 	
-	public def this(name_ :Array[String](1), data_ :Array[Any](1)) {
+	public def this(name_ :Rail[String], data_ :Rail[Any]) {
 		this(name_, null, data_, null);
 	}
 	
-	public def this(name_ :Array[String](1), data_ :Array[Any](1), header_ :Any) {
+	public def this(name_ :Rail[String], data_ :Rail[Any], header_ :Any) {
 		this(name_, null, data_, header_);
 	}
 	
-	public def this(var name_ :Array[String](1), var typeId_ :Array[Int](1), data_ :Array[Any](1), header_ :Any) {
+	public def this(var name_ :Rail[String], var typeId_ :Rail[Int], data_ :Rail[Any], header_ :Any) {
 		if(data_ == null) {
 			throw new IllegalArgumentException("data may not be null");
 		}
@@ -79,14 +79,14 @@ public class NamedDistData {
 		// check
 		if(name.size != typeId.size || name.size != data.size)
 			throw new IllegalArgumentException("Check the array length!");
-		for([i] in name) {
+		for(i in name.range()) {
 			if(!Type.checkType(data(i), typeId(i)))
 				throw new IllegalArgumentException("Type ID is not match to the actual data type.");
 		}
 	}
 	
 	public def nameToIndex(name_ :SString) {
-		for([i] in name) {
+		for(i in name.range()) {
 			if(name_.equals(name(i))) {
 				return i;
 			}
@@ -94,7 +94,7 @@ public class NamedDistData {
 		throw new IllegalArgumentException("Specified name does not exist");
 	}
 	
-	public def get[T](name_ :SString) = get[T](nameToIndex(name_));
+	public def get[T](name_ :SString) = get[T](nameToIndex(name_) as Int);
 	
 	public def get[T](index :Int) {
 		val data_ = data(index);

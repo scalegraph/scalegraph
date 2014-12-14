@@ -30,11 +30,11 @@ import org.scalegraph.api.MinimumSpanningTree;
 import org.scalegraph.Config;
 
 final class TestMST extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestMST().execute(args);
 	}
     
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 	    
 	    if(args.size < 3) {
 	        println("Usage: [high|low] [write|check] <path>");

@@ -36,7 +36,7 @@ import org.scalegraph.xpregel.XPregelGraph;
  */
 
 public class TestEdgeModify {
-	public static def main(args:Array[String](1)) {
+	public static def main(args:Rail[String]) {
 		
 		//-----initialize team
 		Console.OUT.println("initialize team");	
@@ -117,7 +117,7 @@ public class TestEdgeModify {
 				}
 			},
 			(values :MemoryChunk[Long]) => 0L,	//returns 0 with no cost
-			(superstep :Int, aggVal :Long) => (superstep > 1000)	//tekitou
+			(superstep :Int, aggVal :Long) => (superstep > 1000n)	//tekitou
 		);
 		//-----end of work
 
@@ -125,7 +125,7 @@ public class TestEdgeModify {
 		val end_time = System.currentTimeMillis();
 		
 		val ps=team.places();
-		for(p in ps) at(ps(p)) {// ...
+		for(p in ps) at(p) {// ...
 			atomic{
 			Console.OUT.println(p + ":\n" + mesBuf().toString());
 			}

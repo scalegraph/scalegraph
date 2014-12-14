@@ -74,7 +74,7 @@ public abstract class InputSplitter {
 		private val splits :MemoryChunk[InputSplit];
 		private val parse :(Int, MemoryChunk[Byte]) => void;
 		private val monitor = new Monitor();
-		private var numLauchTasks :Int = 0;
+		private var numLauchTasks :Int = 0n;
 		private var frontBuffer :GrowableMemory[Byte] = new GrowableMemory[Byte]();
 		private var backBuffer :GrowableMemory[Byte] = new GrowableMemory[Byte]();
 		
@@ -99,7 +99,7 @@ public abstract class InputSplitter {
 		
 		private def notifySubtaskCompletion() {
 			monitor.lock();
-			if(--numLauchTasks == 0)
+			if(--numLauchTasks == 0n)
 				monitor.release();
 			else
 				monitor.unlock();
@@ -107,7 +107,7 @@ public abstract class InputSplitter {
 		
 		private def subtask() {
 			try {
-				@Ifdef("PROF_IO") val mtimer_ = Config.get().profIO().timer(IO.SUB_FRAME, 0);
+				@Ifdef("PROF_IO") val mtimer_ = Config.get().profIO().timer(IO.SUB_FRAME as Int, 0 as Int);
 				@Ifdef("PROF_IO") { mtimer_.start(); }
 				val data = frontBuffer.raw();
 				val size = data.size();
@@ -121,21 +121,21 @@ public abstract class InputSplitter {
 					// We must call the parse closure even if the data length is zero
 					// so that the parse closure can count the number of chunks.
 					async {
-						@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_TH_FRAME, tid);
+						@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_TH_FRAME as Int, tid as Int);
 						@Ifdef("PROF_IO") { mtimer.start(); }
-						parse(tid, data.subpart(start, end - start));
-						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_TH_PARSE); }
+						parse(tid as Int, data.subpart(start, end - start));
+						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_TH_PARSE as Int); }
 					}
 					offset = end;
 				}
-				@Ifdef("PROF_IO") { mtimer_.lap(IO.SUB_PARSE); }
+				@Ifdef("PROF_IO") { mtimer_.lap(IO.SUB_PARSE as Int); }
 				
 				notifySubtaskCompletion();
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		}
 		
 		public def split() {
-			@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME, 0);
+			@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME as Int, 0n);
 			@Ifdef("PROF_IO") { mtimer.start(); }
 			val s_chunk_size = T_CHUNK_SIZE * nthreads;
 			
@@ -148,38 +148,38 @@ public abstract class InputSplitter {
 					val remain = split.end - start;
 					if(remain < s_chunk_size * 3 / 2) {
 						backBuffer.setSize(remain);
-						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST); }
+						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST as Int); }
 						reader.read(backBuffer.raw());
-						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_READ_FILE); }
+						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_READ_FILE as Int); }
 						backBuffer.grow(remain + 1); // for null teminate
-						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST); }
-						cycleBuffers(1);
-						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_WAIT_SUBTASK); }
+						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST as Int); }
+						cycleBuffers(1n);
+						@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_WAIT_SUBTASK as Int); }
 						async subtask();
 						break;
 					}
 					backBuffer.setSize(s_chunk_size);
-					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST); }
+					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST as Int); }
 					reader.read(backBuffer.raw());
-					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_READ_FILE); }
+					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_READ_FILE as Int); }
 					backBuffer.add(nextBreak(reader));
 					backBuffer.grow(backBuffer.size() + 1); // for null teminate
-					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST); }
-					cycleBuffers(1);
-					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_WAIT_SUBTASK); }
+					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST as Int); }
+					cycleBuffers(1n);
+					@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_WAIT_SUBTASK as Int); }
 					async subtask();
 				}
 				reader.close();
-				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST); }
+				@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_THREAD_DIST as Int); }
 			}
-			@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_WAIT_LASTTASK); }
+			@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_WAIT_LASTTASK as Int); }
 		}
 	}
 	
 	public def split(team :Team, fman :FileNameProvider, offset :Long,
 			nthreads :Int, parse :(Int, MemoryChunk[Byte]) => void)
 	{
-		@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME, 0);
+		@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME as Int, 0n);
 		val splits = new GrowableMemory[InputSplit]();
 
 		val places = team.places();
@@ -242,7 +242,7 @@ public abstract class InputSplitter {
 				reader.close();
 			}
 		}
-		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_PLACE_DIST); }
+		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_SPLIT_PLACE_DIST as Int); }
 
 		val splits_per_place = (splits.size()+teamSize-1) / teamSize;
 		team.placeGroup().broadcastFlat(() => {

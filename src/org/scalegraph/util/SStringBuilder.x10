@@ -66,12 +66,12 @@ public final struct SStringBuilder {
 	
 	public def grow(minCapacity :Int) :void { buffer.grow(minCapacity); }
 	
-	public def indexOf(str :SString) = indexOf(str, 0);
+	public def indexOf(str :SString) = indexOf(str, 0n);
 
 	@Native("c++", "org::scalegraph::util::StringIndexOf_((#this).FMGL(buffer)->raw(), (#str).FMGL(content), #idx)")
 	public native def indexOf(str :SString, idx :Int) :Int;
 	
-	public def lastIndexOf(str :SString) = lastIndexOf(str, 0);
+	public def lastIndexOf(str :SString) = lastIndexOf(str, 0n);
 
 	@Native("c++", "org::scalegraph::util::StringLastIndexOf_((#this).FMGL(buffer)->raw(), (#str).FMGL(content), #idx)")
 	public native def lastIndexOf(str :SString, idx :Int) :Int;
@@ -91,8 +91,8 @@ public final struct SStringBuilder {
 	
 	public def reverse() {
 		// TODO:
-		var left :Int = 0;
-		val right :Int = buffer.size() as Int - 1;
+		var left :Int = 0n;
+		val right :Int = buffer.size() as Int - 1n;
 		val buf = buffer.raw();
 		while(left < right) { // swap byte
 			val tmp = buf(left);

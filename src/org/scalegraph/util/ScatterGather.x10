@@ -42,7 +42,7 @@ public final struct ScatterGather {
 		bufferWidth = Math.max(CACHE_LINE/4, nChunk);
 
 		val size = bufferWidth * (maxThreads*2 + 1) + (nChunk*2 + 1);
-		val dist = (MemoryChunk.make[Long](size, CACHE_LINE)).distributor();
+		val dist = (MemoryChunk.make[Long](size, CACHE_LINE as Int)).distributor();
 
 		threadCounts = dist.next(bufferWidth*maxThreads);
 		threadOffsets = dist.next(bufferWidth*(maxThreads+1));
@@ -66,7 +66,7 @@ public final struct ScatterGather {
 		val threadsRange = 0..(maxThreads-1);
 		// compute sum of thread local count values
 		for(r in teamRange) {
-			var sum :Int = 0;
+			var sum :Int = 0n;
 			for(t in threadsRange) {
 				sum += threadCounts(t*width + r);
 			}

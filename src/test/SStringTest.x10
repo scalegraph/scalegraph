@@ -14,7 +14,7 @@ import org.scalegraph.test.STest;
 import org.scalegraph.util.SString;
 
 final class SStringTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new SStringTest().execute(args);
 	}
 	
@@ -22,7 +22,7 @@ final class SStringTest extends STest {
 		Console.OUT.println(ch);
 	}
 
-	public def run(args :Array[String](1)): Boolean {
+	public def run(args :Rail[String]): Boolean {
 		// X10 String literal to SString
 		val s1 :SString = "X10 String is very slow on C++ backend.";
 		Console.OUT.println(s1);
@@ -53,7 +53,7 @@ final class SStringTest extends STest {
 		Console.OUT.println("s1.indexOf(space) = " + idx);
 		
 		// substring and c_str()
-		val s4 = s1.substring(0, idx);
+		val s4 = s1.substring(0n, idx);
 		Console.OUT.println("s1.substring(0, idx) = " + s4);
 		
 		// indexOf(SString) and substring

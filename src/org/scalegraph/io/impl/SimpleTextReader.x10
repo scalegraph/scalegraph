@@ -40,7 +40,7 @@ public class SimpleTextReader {
 		
 		private static val sharp = SString("#");
 		private static def isSkip(line :SString) {
-			return (line.size() == 0) || line.startsWith(sharp);
+			return (line.size() == 0n) || line.startsWith(sharp);
 		}
 		
 		@Native("c++", "org::scalegraph::io::impl::LineEndAndNextBreak(#data, #offset)")
@@ -48,7 +48,7 @@ public class SimpleTextReader {
 		
 		public def parse(data :MemoryChunk[Byte]) {
 			val size = data.size();
-			var offset :Long = 0L;
+			var offset :Long = 0;
 			var lines :Long = 0;
 			while(offset < size) {
 				val nextOffset = nativeNextBreak(data, offset);
@@ -75,8 +75,8 @@ public class SimpleTextReader {
 		val fman = FileNameProvider.createForRead(path);
 
 		// broadcast attribute handlers
-		val bufferPLH = PlaceLocalHandle.makeFlat[Array[ReaderBuffer[T]](1)](team.placeGroup(),
-				() => new Array[ReaderBuffer[T]](nthreads, (i:Int) => new ReaderBuffer[T](parser)));
+		val bufferPLH = PlaceLocalHandle.makeFlat[Rail[ReaderBuffer[T]]](team.placeGroup(),
+				() => new Rail[ReaderBuffer[T]](nthreads, (i:Long) => new ReaderBuffer[T](parser)));
 		
 		val splitter = new LineBreakSplitter();
 		

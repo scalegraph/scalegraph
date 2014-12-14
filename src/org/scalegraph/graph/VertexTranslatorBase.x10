@@ -22,7 +22,7 @@ abstract class VertexTranslatorBase {
 	def this(team__:Team){
 		team = team__;
 		teamRank = team.role()(0);
-		teamSize = team.size();
+		teamSize = team.size() as int;
 	}
 
 	public abstract def isTranslator() :Boolean;

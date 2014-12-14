@@ -29,7 +29,7 @@ import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 
 final class XPregelPageRank extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new XPregelPageRank().execute(args);
 	}
 	
@@ -42,7 +42,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		
 		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
-			if(ctx.superstep() == 0)
+			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
 			else
 				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
@@ -56,7 +56,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return superstep == 30;
+			return superstep == 30n;
 		});
 		sw.lap("PageRank Main Iterate (opt)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (opt):"); }
@@ -71,7 +71,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		
 		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
-			if(ctx.superstep() == 0)
+			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
 			else
 				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
@@ -96,7 +96,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		
 		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
-			if(ctx.superstep() == 0)
+			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
 			else
 				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
@@ -114,7 +114,7 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return superstep == 30;
+			return superstep == 30n;
 		});
 		sw.lap("PageRank Main Iterate (naive)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (naive):"); }
@@ -125,7 +125,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		
 		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
-			if(ctx.superstep() == 0)
+			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
 			else
 				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
@@ -144,21 +144,21 @@ final class XPregelPageRank extends AlgorithmTest {
 			if (here.id == 0) {
 				sw.lap("PageRank at superstep " + superstep + " = " + aggVal + " ");
 			}
-			return superstep == 30;
+			return superstep == 30n;
 		});
 		sw.lap("PageRank Main Iterate (combine)");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate (combine):"); }
 	}
 	
-	def inputTest(args:Array[String](1)) {
+	def inputTest(args:Rail[String]) {
 		val team = Team.WORLD;
-		val dist = Dist2D.make2D(team, 1, team.size());
+		val dist = Dist2D.make2D(team, 1n, team.size() as Int);
 		val scale = Int.parse(args(0));
 		
 		val start_read_time = System.currentTimeMillis();
 		val rnd = new Random(2, 3);
-		val edgeList = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
-		val rawWeight = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+		val edgeList = GraphGenerator.genRMAT(scale, 16n, 0.45, 0.15, 0.15, rnd);
+		val rawWeight = GraphGenerator.genRandomEdgeValue(scale, 16n, rnd);
 		val end_read_time = System.currentTimeMillis();
 		Console.OUT.println("Generate Graph: "+(end_read_time-start_read_time)+" ms");
 
@@ -191,7 +191,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		edgeList.dst.del();
 		rawWeight.del();
 		
-		xpregel.setLogPrinter(Console.OUT, 0);
+		xpregel.setLogPrinter(Console.OUT, 0n);
 		
 		val end_init_graph = System.currentTimeMillis();
 		Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
@@ -217,7 +217,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		Console.OUT.println("Finish application");
 	}
 
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 
 		if(args.size < 3) {
 			println("Usage: [naive|opt|combine|default] [write|check] <path>");
@@ -232,7 +232,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		// release graph data
 		g.del();
 		
-		xpregel.setLogPrinter(Console.ERR, 0);
+		xpregel.setLogPrinter(Console.ERR, 0n);
 
 		if(args(0).equals("naive")) {
 			pagerank_naive(xpregel);

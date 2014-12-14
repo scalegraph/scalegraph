@@ -14,11 +14,11 @@ package test;
 import org.scalegraph.test.STest;
 
 final class TestVertexTranslator extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestVertexTranslator().execute(args);
 	}
 
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
         return true;
     }
 }

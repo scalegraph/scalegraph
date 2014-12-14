@@ -37,7 +37,7 @@ public class CSVAttributeHandler {
 	public val doubleQuoated :Boolean;
 	
 	public def this(){
-		typeId = 0;
+		typeId = 0n;
 		doubleQuoated = false;
 	}
 	
@@ -80,8 +80,8 @@ public class CSVAttributeHandler {
 			val buffers = MemoryChunk.make[ChunkBuffer[T]](nthreads);
 			for(tid in 0..(nthreads-1)) {
 				val ch = buffers(tid);
-				ch.buf = getBuffer(tid) as GrowableMemory[T];
-				ch.chunkSize = getChunkSize(tid);
+				ch.buf = getBuffer(tid as Int) as GrowableMemory[T];
+				ch.chunkSize = getChunkSize(tid as Int);
 				ch.offset = 0L;
 			}
 			
@@ -94,7 +94,7 @@ public class CSVAttributeHandler {
 			val outbuf = MemoryChunk.make[T](totalSize);
 			
 			// copy the result
-			val numChunks = getChunkSize(0).size();
+			val numChunks = getChunkSize(0n).size();
 			var offset :Long = 0;
 			for(ich in 0..(numChunks-1)) {
 				for(tid in 0..(nthreads-1)) {
@@ -143,7 +143,7 @@ public class CSVAttributeHandler {
 		
 		public def print(team :Team, any : Any) {
 			val dmc = any as DistMemoryChunk[T];
-			for(var i:Int = 0; i < team.size(); i++) at(team.places()(i)) {
+			for(var i:Int = 0n; i < team.size(); i++) at(team.places()(i)) {
 				Console.OUT.print(dmc() + " ");
 			}
 			Console.OUT.println("");

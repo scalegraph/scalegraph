@@ -97,7 +97,7 @@ import org.scalegraph.util.DistMemoryChunk;
 		private table = new HashMap[T, Long]();
 		private vertexNamesAtt :DistMemoryChunk[T];
 		private vertexNames :GrowableMemory[T];
-		private var maxLocalId : Int = 0;
+		private var maxLocalId : Int = 0n;
 		
 		public def isTranslator() = true;
 		public def sizeOfDictionary() = table.size() as Long;
@@ -200,7 +200,7 @@ import org.scalegraph.util.DistMemoryChunk;
 			Parallel.iter(edges.range(), (tid: Long, r :LongRange)=> {
 				val counts = scatterGather.getCounts(tid as Int);
 				for(i in r)
-					counts(hashFunc(edges(i)) & sizeMask) += 1;
+					counts(hashFunc(edges(i)) & sizeMask) += 1n;
 			});
 			scatterGather.sum();
 			val partitioned = MemoryChunk.make[T](edges.size());
@@ -241,8 +241,9 @@ import org.scalegraph.util.DistMemoryChunk;
 		 */
 		public def translateWithAll(edges: MemoryChunk[T], withPut :Boolean) {
 			val CHUNK_SIZE = 1L << 22;
-			val iterations = team.allreduce(teamRank,
-					(edges.size() + CHUNK_SIZE - 1) / CHUNK_SIZE, Team.MAX);
+			//val iterations = team.allreduce(teamRank,
+			val iterations = team.allreduce(
+					(edges.size() + CHUNK_SIZE - 1n) / CHUNK_SIZE, Team.MAX);
 			val scatterGather = new DistScatterGather(team);
 			val translated = MemoryChunk.make[Long](edges.size());
 			val edgesDist = edges.distributor();
@@ -254,7 +255,8 @@ import org.scalegraph.util.DistMemoryChunk;
 			}
 			if(withPut) {
 				// update max vertex ID if assigning new number is enabled
-				maxVertexID = team.reduce(teamRank, 0, table.size() as Long * teamSize + teamRank, Team.MAX);
+				//maxVertexID = team.reduce(teamRank, 0n, table.size() as Long * teamSize + teamRank, Team.MAX);
+				maxVertexID = team.reduce(0n, table.size() as Long * teamSize + teamRank, Team.MAX);
 				// update name attribute
 				vertexNamesAtt() = vertexNames.raw();
 			}
@@ -293,7 +295,8 @@ import org.scalegraph.util.DistMemoryChunk;
 			(a:Long, b:Long) => Math.max(a,b));
 			if(withPut) {
 				maxVertexID = Math.max(
-						team.reduce(teamRank, 0, localMaxId, Team.MAX), maxVertexID);
+						//team.reduce(teamRank, 0n, localMaxId, Team.MAX), maxVertexID);
+						team.reduce(0n, localMaxId, Team.MAX), maxVertexID);
 			}
 			return translated;
 		}
@@ -317,7 +320,8 @@ import org.scalegraph.util.DistMemoryChunk;
 			(a:Long, b:Long) => Math.max(a,b));
 			if(withPut) {
 				maxVertexID = Math.max(
-						team.reduce(teamRank, 0, localMaxId, Team.MAX), maxVertexID);
+						//team.reduce(teamRank, 0n, localMaxId, Team.MAX), maxVertexID);
+						team.reduce(0n, localMaxId, Team.MAX), maxVertexID);
 			}
 			return vertexes;
 		}

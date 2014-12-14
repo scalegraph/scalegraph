@@ -172,7 +172,7 @@ import org.scalegraph.id.Type;
 		default:
 			throw new IllegalOperationException("Not supported edge type");
 		}
-		for([i] in edgeData.data()) {
+		for(i in edgeData.data().range()) {
 			if(i == srcIdx || i == dstIdx) continue;
 			val proxy = AttributeProxy.make(edgeData.typeId()(i));
 			val name = edgeData.name()(i);
@@ -180,7 +180,7 @@ import org.scalegraph.id.Type;
 			proxy.setEdgeAttribute(g, name, data);
 		}
 		if(vertexData != null) {
-			for([i] in vertexData.data()) {
+			for(i in vertexData.data().range()) {
 				val proxy = AttributeProxy.make(vertexData.typeId()(i));
 				val name = vertexData.name()(i);
 				val data = vertexData.data()(i);
@@ -268,7 +268,8 @@ import org.scalegraph.id.Type;
 		val srcList_ = srcList();
 		val dstList_ = dstList();
 		
-		val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size(), Team.ADD);
+		//val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size(), Team.ADD);
+		val globalNumOfEdges = team_.reduce(0n, tlSrcs.size() as Int, Team.ADD);
 		if(here == ref.home) {
 			val g = ref.getLocalOrCopy();
 			g.numberOfVertices = Math.max(maxVertexID + 1, g.numberOfVertices);
@@ -365,7 +366,7 @@ import org.scalegraph.id.Type;
 		val team_ = team;
 		
 		val srcList_ = srcList;
-		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size() as Int);
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
@@ -401,7 +402,7 @@ import org.scalegraph.id.Type;
 		val team_ = team;
 		
 		val srcList_ = srcList;
-		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size() as Int);
 		
 		return DistMemoryChunk[T](team_.placeGroup(), () => {
 			var att_ :MemoryChunk[T] = MemoryChunk.make[T]();
@@ -512,7 +513,7 @@ import org.scalegraph.id.Type;
 	public def setVertexAttribute[T](name :String, values :DistMemoryChunk[T]) {T haszero}
 	{
 		val team_ = team;
-		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size() as Int);
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
@@ -552,7 +553,7 @@ import org.scalegraph.id.Type;
 	public def setVertexAttribute[T](name :String, sparseMatrix :DistSparseMatrix[Long],
 			values :DistMemoryChunk[T]) {T haszero}
 	{
-		setVertexAttribute[T](name, sparseMatrix, values, 0);
+		setVertexAttribute[T](name, sparseMatrix, values, 0n);
 	}
 	
 	public def retrieveVertexAttribute[T](ids :DistMemoryChunk[Long], values :DistMemoryChunk[T]) {T haszero} {
@@ -571,7 +572,7 @@ import org.scalegraph.id.Type;
 	{
 		val attValues = getOrCreateAttribute[T](true, name, false);
 		val team_ = team;
-		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size() as Int);
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
@@ -588,7 +589,7 @@ import org.scalegraph.id.Type;
 					if(i < actualLocalVertices) att_(i) = v;
 				};
 
-				if(sparseMatrix.dist().z() == z) {
+				if(sparseMatrix.dist().z() == z as Long) {
 					val allTeam = sparseMatrix.dist().allTeam();
 					val roleInDist = allTeam.role()(0);
 					val sizeOfDist = allTeam.size();
@@ -623,7 +624,7 @@ import org.scalegraph.id.Type;
 		val team_ = team;
 		val srcList_ = srcList;
 		val dstList_ = dstList;
-		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size() as Int);
 		
 		return new DistSparseMatrix(dist2d, () => {
 			val sw = Config.get().stopWatch();
@@ -634,7 +635,7 @@ import org.scalegraph.id.Type;
 					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = MemoryChunk.make[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
-			for([i] in places) {
+			for(i in places.range()) {
 				roleMap(i) = team_.role(places(i))(0);
 			}
 			val rmask = (1L << ids.lgr) - 1;
@@ -723,7 +724,7 @@ import org.scalegraph.id.Type;
 		val team_ = team;
 		val srcList_ = srcList;
 		val dstList_ = dstList;
-		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size());
+		val vi = VertexInfo(vertexTranslator, vertexType, numberOfVertices, team.size() as Int);
 		val att = getEdgeAttribute[T](name);
 
 		return new DistSparseMatrix(dist2d, () => {
@@ -735,7 +736,7 @@ import org.scalegraph.id.Type;
 					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
 			val roleMap = MemoryChunk.make[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
-			for([i] in places) {
+			for(i in places.range()) {
 				roleMap(i) = team_.role(places(i))(0);
 			}
 			/*
@@ -901,11 +902,11 @@ import org.scalegraph.id.Type;
 				val sendNumEdges = MemoryChunk.make[Int](1);
 				sendNumEdges(0) = sendSrcV.size() as Int;
 				if(place == here) { // root
-					val counts = MemoryChunk.make[Int](team_.size(), 0, true);
+					val counts = MemoryChunk.make[Int](team_.size(), 0 as Int, true);
 					val offsets  = MemoryChunk.make[Int](team_.size() + 1);
 					team2.gather(root, sendNumEdges, counts);
 					
-					offsets(0) = 0;
+					offsets(0) = 0n;
 					for(i in counts.range()) offsets(i + 1) = offsets(i) + counts(i);
 					val recvSrcV = MemoryChunk.make[Long](offsets(team_.size()));
 					val recvDstV = MemoryChunk.make[Long](offsets(team_.size()));

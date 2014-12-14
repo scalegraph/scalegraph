@@ -18,8 +18,6 @@ import x10.compiler.NativeCPPOutputFile;
 import x10.compiler.Ifdef;
 import x10.compiler.Ifndef;
 
-import x10.util.IndexedMemoryChunk;
-
 @NativeCPPOutputFile("MemoryPointer.h")
 
 /** The pointer representation for MemoryChunk. Using this representation directly is unsafe on the C++ backend.
@@ -28,26 +26,26 @@ import x10.util.IndexedMemoryChunk;
 public final struct MemoryPointer[T] {
 	
 	@Ifndef("__CPP__")
-	public transient val raw :IndexedMemoryChunk[T];
+	public transient val raw :Rail[T];
 	@Ifndef("__CPP__")
     public transient val offset :Long;
 	
 	@Native("c++", "null")
-	private def this(backing :IndexedMemoryChunk[T], offset :Long) {
+	private def this(backing :Rail[T], offset :Long) {
 		this.raw = backing;
 		this.offset = offset;
 	}
 
 	@Native("c++", "(#backing)->raw() + (#offset)")
-	public static def make[T](backing :IndexedMemoryChunk[T], offset :Long) :MemoryPointer[T] {
+	public static def make[T](backing :Rail[T], offset :Long) :MemoryPointer[T] {
 		return new MemoryPointer(backing, offset);
 	}
 	@Native("c++", "(#backing)->raw() + (#offset)")
-	public static def make[T](backing :IndexedMemoryChunk[T], offset :Int) :MemoryPointer[T] {
+	public static def make[T](backing :Rail[T], offset :Int) :MemoryPointer[T] {
 		return new MemoryPointer(backing, offset as Long);
 	}
 	@Native("c++", "(#backing)->raw()")
-	public static def make[T](backing :IndexedMemoryChunk[T]) :MemoryPointer[T] {
+	public static def make[T](backing :Rail[T]) :MemoryPointer[T] {
 		return new MemoryPointer(backing, 0L);
 	}
 

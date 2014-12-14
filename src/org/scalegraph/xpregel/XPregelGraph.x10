@@ -89,7 +89,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	}
 	
 	private def ensurePlaceRoot() {
-		if(mTeam.role() != 0) {
+		if(mTeam.role() != 0n) {
 			throw new IllegalOperationException("This method can be called on only the FIRST_PLACE.");
 		}
 	}
@@ -206,7 +206,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 				() => mWorkers().stealOutput[T](index));
 	}
 	
-	public def stealOutput[T]() :DistMemoryChunk[T] = stealOutput[T](0);
+	public def stealOutput[T]() :DistMemoryChunk[T] = stealOutput[T](0n);
 	
 	/** Returns the aggregated value by the last superstep of previous iteration.
 	 */

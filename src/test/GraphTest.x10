@@ -18,11 +18,11 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.xpregel.XPregelGraph;
 
 public class GraphTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new GraphTest().execute(args);
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		val graph = Graph.make(CSV.read(args(0), 
 					[Type.Long as Int, Type.Long, Type.None, Type.Double],
 					["source", "target", "weight"]));

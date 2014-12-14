@@ -32,7 +32,7 @@ public class Serialization {
 	{
 		val ser_count = count_ser_size(0L, data, data_offset, data_count);
 		val ser_data = MemoryChunk.make[Byte](ser_count);
-		write_ser_data(0L, data, data_offset, data_count, ser_data, 0, ser_count);
+		write_ser_data(0L, data, data_offset, data_count, ser_data, 0n, ser_count);
 
 		return ser_data;
 	}
@@ -40,23 +40,23 @@ public class Serialization {
 	public static def serialize[T](data :MemoryChunk[T], data_offsets :MemoryChunk[Int], data_counts :MemoryChunk[Int], ser_offsets :MemoryChunk[Int], ser_counts :MemoryChunk[Int]): MemoryChunk[Byte]
 	{
 		val places = data_counts.size();
-		var ser_size: Int = 0;
+		var ser_size: Int = 0n;
 		val sw = Config.get().stopWatch();
-		if(here.id == 0) sw.lap("before finish for async");
+		 sw.lap("before finish for async"+here.id);
 		finish for (p in 0..(places-1)) async {
 			ser_counts(p) = count_ser_size(p, data, data_offsets(p), data_counts(p));
 			ser_size += ser_counts(p);
 		}
-		if(here.id == 0) sw.lap("after finish for async");
+		 sw.lap("after finish for async"+here.id);
 
-		ser_offsets(0) = 0;
+		ser_offsets(0) = 0n;
 		for (i in 0..(places-2)) ser_offsets(i+1) = ser_offsets(i) + ser_counts(i);
 		val ser_data = MemoryChunk.make[Byte](ser_size);
-		if(here.id == 0) sw.lap("before finish for async");
+		 sw.lap("before finish for async"+here.id);
 		finish for (p in 0..(places-1)) async {
 			write_ser_data(p, data, data_offsets(p), data_counts(p), ser_data, ser_offsets(p), ser_counts(p));
 		}
-		if(here.id == 0) sw.lap("after finish for async");
+		 sw.lap("after finish for async"+here.id);
 		
 		return ser_data;
 	}

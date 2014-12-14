@@ -26,11 +26,11 @@ import org.scalegraph.util.SString;
 @NativeRep("c++", "org::scalegraph::io::NativeFile", "org::scalegraph::io::NativeFile", null)
 @Pinned public struct NativeFile {
 	@Native("c++", "0")
-	public static val BEGIN: Int = 0;
+	public static val BEGIN: Int = 0n;
 	@Native("c++", "1")
-	public static val CURRENT: Int = 1;
+	public static val CURRENT: Int = 1n;
 	@Native("c++", "2")
-	public static val END: Int = 2;
+	public static val END: Int = 2n;
 	
 	public native def this(name: SString, fileMode :Int, fileAccess :Int);
 	public native def close(): void;

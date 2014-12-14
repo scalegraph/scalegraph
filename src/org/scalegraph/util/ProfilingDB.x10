@@ -19,25 +19,25 @@ import org.scalegraph.test.STest;
 
 public struct ProfilingDB {
 
-	public static val TH_AVG_TIME = 0;
-	public static val TH_AVG_CALL = 1;
-	public static val TH_MIN_TIME = 2;
-	public static val TH_MIN_CALL = 3;
-	public static val TH_MAX_TIME = 4;
-	public static val TH_MAX_CALL = 5;
-	public static val TH_STDDEV_TIME = 6;
-	public static val PROC_AVG_TIME = 7;
-	public static val PROC_AVG_CALL = 8;
-	public static val PROC_MIN_TIME = 9;
-	public static val PROC_MIN_CALL = 10;
-	public static val PROC_MAX_TIME = 4; // equals to TH_MAX_TIME
-	public static val PROC_MAX_CALL = 11;
-	public static val PROC_STDDEV_TIME = 12;
-	public static val CPU_TIME_TOTAL = 13;
-	public static val PROC_TIME_TOTAL = 14;
-	public static val REAL_TIME_TOTAL = 15;
-	public static val TOTAL_CALL = 16;
-	public static val RES_COUNT = 17;
+	public static val TH_AVG_TIME = 0n;
+	public static val TH_AVG_CALL = 1n;
+	public static val TH_MIN_TIME = 2n;
+	public static val TH_MIN_CALL = 3n;
+	public static val TH_MAX_TIME = 4n;
+	public static val TH_MAX_CALL = 5n;
+	public static val TH_STDDEV_TIME = 6n;
+	public static val PROC_AVG_TIME = 7n;
+	public static val PROC_AVG_CALL = 8n;
+	public static val PROC_MIN_TIME = 9n;
+	public static val PROC_MIN_CALL = 10n;
+	public static val PROC_MAX_TIME = 4n; // equals to TH_MAX_TIME
+	public static val PROC_MAX_CALL = 11n;
+	public static val PROC_STDDEV_TIME = 12n;
+	public static val CPU_TIME_TOTAL = 13n;
+	public static val PROC_TIME_TOTAL = 14n;
+	public static val REAL_TIME_TOTAL = 15n;
+	public static val TOTAL_CALL = 16n;
+	public static val RES_COUNT = 17n;
 	
 	public static class DB {
 		public static val FREQ = 1000000000 as Double;
@@ -61,27 +61,27 @@ public struct ProfilingDB {
 		
 		var result :MemoryChunk[Double];
 		
-		def this(numPoints_ :Array[Int](1)) {
-			numFrames = numPoints_.size;
+		def this(numPoints_ :Rail[Int]) {
+			numFrames = numPoints_.size as Int;
 			numThreads = Runtime.NTHREADS;
 			numPoints = MemoryChunk.make[Int](numPoints_.size, (i:Long) => numPoints_(i as Int));
 			frameOffsets = initOffset(numPoints);
 			totalPoints = Algorithm.reduce(0L..(numPoints_.size-1L), (i :Long) => numPoints_(i as Int));
-			width = (frameOffsets(numFrames) + 7) & ~7;
+			width = (frameOffsets(numFrames) + 7n) & ~7n;
 			
-			step = MemoryChunk.make[Long](width * numThreads, 64, true);
+			step = MemoryChunk.make[Long](width * numThreads, 64n, true);
 			
 			pointIndex = MemoryChunk.make[Int](totalPoints);
 			var pt :Long = 0;
 			for(frame in 0..(numFrames-1))
 				for(i in 0..(numPoints(frame)-1))
-					pointIndex(pt++) = frameOffsets(frame) + i*2 + 1;
+					pointIndex(pt++) = (frameOffsets(frame) + i*2 + 1) as Int;
 		}
 		
 		private static def initOffset(numPoints :MemoryChunk[Int]) {
 			val offsets = MemoryChunk.make[Int](numPoints.size() + 1);
-			offsets(0) = 0;
-			for(i in numPoints.range()) offsets(i+1) = offsets(i) + numPoints(i)*2 + 1;
+			offsets(0) = 0n;
+			for(i in numPoints.range()) offsets(i+1) = offsets(i) + numPoints(i)*2n + 1n;
 			return offsets;
 		}
 		
@@ -139,7 +139,7 @@ public struct ProfilingDB {
 		def finishStep(team :Team2) {
 			val teamSize = team.size();
 			val role = team.role();
-			if(role == 0 && result.size() == 0L)
+			if(role == 0n && result.size() == 0L)
 				result = MemoryChunk.make[Double](totalPoints * RES_COUNT, (i:Long) => 0.0);
 			
 			val tp = totalPoints;
@@ -165,15 +165,15 @@ public struct ProfilingDB {
 			// buf1 <- local min
 			// buf2(time) <- local max
 			// buf2(call) <- local sum
-			localMin(buf1.subpart(0, tp), 0);
-			localMin(buf1.subpart(tp, tp), 1);
-			localMax(buf2.subpart(0, tp), 0);
-			localSum(buf2.subpart(tp, tp), 1);
+			localMin(buf1.subpart(0, tp), 0n);
+			localMin(buf1.subpart(tp, tp), 1n);
+			localMax(buf2.subpart(0, tp), 0n);
+			localSum(buf2.subpart(tp, tp), 1n);
 			
 			// buf3 <- thread min
 			// buf4 <- proc min
-			team.reduce(0, buf12, buf34, Team.MIN);
-			if(role == 0) {
+			team.reduce(0n, buf12, buf34, Team.MIN);
+			if(role == 0n) {
 				val th_min_time = resbuf(TH_MIN_TIME);
 				val proc_min_time = resbuf(PROC_MIN_TIME);
 				val th_min_call = resbuf(TH_MIN_CALL);
@@ -186,10 +186,10 @@ public struct ProfilingDB {
 				}
 			}
 
-			localMax(buf1.subpart(tp, tp), 1);
+			localMax(buf1.subpart(tp, tp), 1n);
 			// buf1 <- {thread,proc} max
-			team.reduce(0, buf12, buf34, Team.MAX);
-			if(role == 0) {
+			team.reduce(0n, buf12, buf34, Team.MAX);
+			if(role == 0n) {
 				val th_max_time = resbuf(TH_MAX_TIME);
 				val th_max_call = resbuf(TH_MAX_CALL);
 				val proc_max_call = resbuf(PROC_MAX_CALL);
@@ -203,7 +203,7 @@ public struct ProfilingDB {
 			}
 
 			// buf1 <- local sum
-			localSum(buf1.subpart(0, tp), 0);
+			localSum(buf1.subpart(0n, tp), 0n);
 
 			// buf3 <- thread avg
 			// buf4 <- proc avg
@@ -213,7 +213,7 @@ public struct ProfilingDB {
 				buf4(i) /= teamSize;
 			}
 			
-			if(role == 0) {
+			if(role == 0n) {
 				val th_avg_time = resbuf(TH_AVG_TIME);
 				val th_avg_call = resbuf(TH_AVG_CALL);
 				val proc_avg_time = resbuf(PROC_AVG_TIME);
@@ -252,8 +252,8 @@ public struct ProfilingDB {
 			
 			// buf3 <- thread stddev ^ 2
 			// buf4 <- proc stddev ^ 2
-			team.reduce(0, dbuf12, dbuf34, Team.ADD);
-			if(role == 0) {
+			team.reduce(0n, dbuf12, dbuf34, Team.ADD);
+			if(role == 0n) {
 				val th_stddev = resbuf(TH_STDDEV_TIME);
 				val proc_stddev = resbuf(PROC_STDDEV_TIME);
 				for(i in pr) {
@@ -299,11 +299,11 @@ public struct ProfilingDB {
 		}
 	}
 	
-	public def this(numPoints :Array[Int](1)) {
+	public def this(numPoints :Rail[Int]) {
 		this(Config.get().worldTeam(), numPoints);
 	}
 	
-	public def this(team :Team, numPoints :Array[Int](1)) {
+	public def this(team :Team, numPoints :Rail[Int]) {
 		this.team = new Team2(team);
 		this.plh = PlaceLocalHandle.make[DB](team.placeGroup(), () => new DB(numPoints));
 	}
@@ -324,12 +324,12 @@ public struct ProfilingDB {
 	}
 	
 	public def result() {
-		if(team.role() != 0)
+		if(team.role() != 0n)
 			throw new BadPlaceException("The only root place can call thie method.");
 		return plh().result;
 	}
 	
-	public def resultString(names :Array[String](1)) {
+	public def resultString(names :Rail[String]) {
 		val result = result();
 		val header :SString = 
 			"avgtime(proc),stddev(proc)," + "maxtime(th),stddev(th)," + "avgcall(proc),mincall(proc),maxcall(proc)," +"time(cpu),time(real)\n";
@@ -368,7 +368,7 @@ public struct ProfilingDB {
 		return sb.result();
 	}
 	
-	public def detailedResultString(names :Array[String](1)) {
+	public def detailedResultString(names :Rail[String]) {
 		val result = result();
 		val header :SString = 
 			"avgtime(th),mintime(th),maxtime(th),stddev(th)," +
@@ -415,7 +415,7 @@ public struct ProfilingDB {
 		return sb.result();
 	}
 	
-	public def finishStepAndPrint(detail :Boolean, title :String, names :Array[String](1)) {
+	public def finishStepAndPrint(detail :Boolean, title :String, names :Rail[String]) {
 		finishStep();
 		STest.println(title);
 		val result = detail

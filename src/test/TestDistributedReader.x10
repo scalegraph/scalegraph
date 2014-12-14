@@ -18,7 +18,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.fileread.DistributedReader;
 
 final class TestDistributedReader extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestDistributedReader().execute(args);
 	}
 	
@@ -37,13 +37,13 @@ final class TestDistributedReader extends STest {
 				Double.parse(elements(2)));
 	};
 
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 	    //val args = ["/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20", ""];
 	    entry(args);
 	    return true;
 	}
 	
-	public def entry(args: Array[String](1)) {
+	public def entry(args: Rail[String]) {
 	    val team = Team.WORLD;
 	    val format = args(0).endsWith(".txt") ? inputFormat_g1 : inpurFormat_g2;
 	    var time: Long = System.currentTimeMillis();

@@ -18,7 +18,7 @@ import org.scalegraph.graph.id.OnedC;
 import org.scalegraph.graph.id.OnedR;
 
 final class IdConverterTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new IdConverterTest().execute(args);
 	}
 	
@@ -37,9 +37,9 @@ final class IdConverterTest extends STest {
 	}
 	
 	public static def twodTest() {
-		val R = 32, C = 64;
+		val R = 32n, C = 64n;
 		val maxVertexID = (1L << 45) - 1L;
-		val ids = new IdStruct(5, 6, 34, false, 0, 0);
+		val ids = new IdStruct(5n, 6n, 34n, false, 0, 0);
 		val rnd = new Random(1, 2);
 		
 		for(i in 0..1000) {
@@ -65,9 +65,9 @@ final class IdConverterTest extends STest {
 	}
 	
 	public static def onedCTest() {
-		val R = 1, C = 64;
+		val R = 1n, C = 64n;
 		val maxVertexID = (1L << 40) - 1L;
-		val ids = new IdStruct(0, 6, 34, false, 0, 0);
+		val ids = new IdStruct(0n, 6n, 34n, false, 0, 0);
 		val rnd = new Random(1, 2);
 		
 		for(i in 0..1000) {
@@ -93,9 +93,9 @@ final class IdConverterTest extends STest {
 	}
 	
 	public static def onedRTest() {
-		val R = 32, C = 1;
+		val R = 32n, C = 1n;
 		val maxVertexID = (1L << 39) - 1L;
-		val ids = new IdStruct(5, 0, 34, false, 0, 0);
+		val ids = new IdStruct(5n, 0n, 34n, false, 0, 0);
 		val rnd = new Random(1, 2);
 		
 		for(i in 0..1000) {
@@ -120,7 +120,7 @@ final class IdConverterTest extends STest {
 		}
 	}
 
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
         twodTest();
         onedCTest();
         onedRTest();

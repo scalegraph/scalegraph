@@ -25,7 +25,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 import org.scalegraph.util.random.Random;
 
 final class HyperANF_Pregel extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new HyperANF_Pregel().execute(args);
 	}
 	
@@ -40,17 +40,17 @@ final class HyperANF_Pregel extends STest {
 		
 		val tmp:Double = M*5.0/2.0;
 		if(E<tmp) {
-			var cnt:Int =0;
-			var zero:Byte = 0;
+			var cnt:Int =0n;
+			var zero:Byte = 0 as Byte;
 			for(i in counter.range()) 
 				if(counter(i)==zero) 
 					cnt++;
-			if(cnt==0) return E;
+			if(cnt==0n) return E;
 			return M * Math.log(M/cnt);
 		}
 		var border:Double = 1.0/30.0;
-		var i:Int = 0;
-		while(i<32) {
+		var i:Int = 0n;
+		while(i<32n) {
 			border *= 2.0;
 			i ++;
 		}
@@ -60,7 +60,7 @@ final class HyperANF_Pregel extends STest {
 		
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		
 		val start_read_time = System.currentTimeMillis();
 		val g = Graph.make(CSV.read(args(0), 
@@ -80,7 +80,7 @@ final class HyperANF_Pregel extends STest {
 		xpregel.updateInEdge();
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 		
-		val niter = 30;
+		val niter = 30n;
 		
 		val N:Long = g.numberOfVertices();
 		val B = 7;
@@ -96,16 +96,16 @@ final class HyperANF_Pregel extends STest {
 					bufferedPrintln("V[" + ctx.realId() + "] " + messages.size());
 
 					var counterB:MemoryChunk[Byte];
-					if(ctx.superstep()==0) {
+					if(ctx.superstep()==0n) {
 						val counterA = MemoryChunk.make[Byte](M);
-						for(i in counterA.range()) counterA(i) = 0;
+						for(i in counterA.range()) counterA(i) = 0 as Byte;
 						val rand = new Random(ctx.realId(ctx.id()), 1000);
 						val pos = rand.nextLong()%M;
 						var num:Long = rand.nextLong()+1;
-						var cnt:Byte = 0;
+						var cnt:Byte = 0 as Byte;
 						while(num%2==0L) {
 							num /= 2;
-							cnt = cnt+1;
+							cnt = cnt+1 as Byte;
 						}
 						counterA(pos) =  cnt;
 						counterB = counterA;
@@ -145,7 +145,7 @@ final class HyperANF_Pregel extends STest {
 			}
 			return superstep >= niter;
 		});
-		var iter:Int=0;
+		var iter:Int=0n;
 		while(iter<niter) {
 				Console.OUT.println( (iter+1) + " "+ results()()(iter));
 				iter++;

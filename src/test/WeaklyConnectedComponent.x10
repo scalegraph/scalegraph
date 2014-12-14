@@ -15,11 +15,11 @@ import org.scalegraph.util.SString;
 import org.scalegraph.io.NamedDistData;
 
 public class WeaklyConnectedComponent extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new WeaklyConnectedComponent().execute(args);
 	}
 	
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 		
 
 		if(args.size < 2) {
@@ -37,7 +37,7 @@ public class WeaklyConnectedComponent extends AlgorithmTest {
 		
 		xpgraph.iterate[Long,Long]((ctx :VertexContext[Long, Double, Long, Long], messages :MemoryChunk[Long]) => {
 			val minid :Long;
-			if(ctx.superstep() == 0) {
+			if(ctx.superstep() == 0n) {
 				ctx.setValue(Long.MAX_VALUE);
 				minid = ctx.realId();
 			}

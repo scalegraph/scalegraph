@@ -75,7 +75,8 @@ public final class DegreeDistImpl {
 					break;
 				}
 			}
-			result.setSize(team.allreduce(team.role()(0), resultSize, Team.MAX));
+			//result.setSize(team.allreduce(team.role()(0), resultSize, Team.MAX));
+			result.setSize(team.allreduce(resultSize, Team.MAX));
 			result.shrink(0);
 			
 			return result.raw();

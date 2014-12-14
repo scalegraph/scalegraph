@@ -17,11 +17,11 @@ public class ID {
 	
 	public static val VERSION = 1;
 	
-	public static val HEADER_NONE		: Byte = 0;
-	public static val HEADER_GRAPH	: Byte = 1;
-	public static val HEADER_MATRIX	: Byte = 2;
-	public static val HEADER_VECTOR	: Byte = 3;
-	public static val HEADER_ANY		: Byte = -128; // Serialized with X10
+	public static val HEADER_NONE		: Byte = 0 as Byte;
+	public static val HEADER_GRAPH	: Byte = 1 as Byte;
+	public static val HEADER_MATRIX	: Byte = 2 as Byte;
+	public static val HEADER_VECTOR	: Byte = 3 as Byte;
+	public static val HEADER_ANY		: Byte = -128 as Byte; // Serialized with X10
 	
 	public static val NAME_SOURCE		: String = "source";
 	public static val NAME_TARGET		: String = "target";

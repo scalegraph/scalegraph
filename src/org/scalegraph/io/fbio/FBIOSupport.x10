@@ -90,8 +90,10 @@ struct BlockInfo {
 
 @NativeCPPInclude("NativeSupport.h")
 @NativeCPPOutputFile("Attributes.h")
-@NativeRep("c++", "::scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*",
-					"::scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*", null)
+@NativeRep("c++", "scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*",
+					"scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*", null)
+//@NativeRep("c++", "::scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*",
+//					"::scalegraph::gc_std<org::scalegraph::io::fbio::NativeAttribute>::vector*", null)
 struct Attributes {
 	@Native("c++", "(#this)->size()")
 	public native def numAttributes() : Int;
@@ -148,7 +150,7 @@ class SingleFileManager extends FileManager {
 	public def setFileOffset(blockOffsets :MemoryChunk[Long], blockDist :MemoryChunk[Int]) :void { };
 	public def headerFileName() = path;
 	public def fileName(i:Int) = path;
-	public def index(offset : Long) = 0;
+	public def index(offset : Long) = 0n;
 	public def offset(i :Int) = 0L;
 	public def deleteFile() : void {
 		new File(path).delete();
@@ -157,12 +159,12 @@ class SingleFileManager extends FileManager {
 
 class ScatteredFileManager extends FileManager {
 	private static val format = "%s" + File.SEPARATOR + "part-%05d";
-	private var fileOffset:Array[Long](1) = null;
+	private var fileOffset:Rail[Long] = null;
 	private var count:Int;
 	
 	public def this(path : String) {
 		super(path);
-		this.count = 0;
+		this.count = 0n;
 	}
 	public def isScattered() = true;
 	public def readFileOffset() {
@@ -178,7 +180,7 @@ class ScatteredFileManager extends FileManager {
 		 * }
 		 * FBIOSupport.debugprint("fileOffset = " + fileOffset);
 		 */
-		var idx :Int = 0;
+		var idx :Int = 0n;
 		val fileSize = new ArrayList[Long]();
 		while(true) {
 			val file = new File(fileName(idx));
@@ -190,36 +192,36 @@ class ScatteredFileManager extends FileManager {
 			}
 			idx++;
 		}
-		fileOffset = new Array[Long](fileSize.size()+1, 0L);
+		fileOffset = new Rail[Long](fileSize.size()+1, 0L);
 		for(i in 0..(fileSize.size()-1)) {
 			fileOffset(i + 1) = fileOffset(i) + fileSize(i);
 		}
 	}
 	public def setFileOffset(blockOffsets :MemoryChunk[Long], blockDist :MemoryChunk[Int]) {
-		fileOffset = new Array[Long]((blockDist.size() + 2) as Int);
+		fileOffset = new Rail[Long]((blockDist.size() + 2) as Int);
 		fileOffset(0) = 0;
-		var blockIdx :Int = 0;
+		var blockIdx :Int = 0n;
 		for(pid in blockDist.range()) {
 			fileOffset(pid as Int + 1) = blockOffsets(blockIdx);
 			blockIdx += blockDist(pid);
 		}
-		assert (blockIdx == blockOffsets.size() as Int -1);
+		assert (blockIdx == blockOffsets.size() as Int -1n);
 		fileOffset((blockDist.size() + 1) as Int) = blockOffsets(blockIdx);
 	}
-	public def headerFileName() = fileName(0);
+	public def headerFileName() = fileName(0n);
 	public def fileName(i:Int) = String.format(format, [path, i]);
 	public def index(offset : Long) : Int {
 		for(i in 1..(fileOffset.size-1)) {
-			if(offset < fileOffset(i)) return i - 1;
+			if(offset < fileOffset(i)) return i as Int - 1n;
 		}
-		return -1;
+		return -1n;
 	}
 	public def offset(i :Int) = fileOffset(i);
 	
 	public def deleteFile() : void {
 		val dir = new File(path);
 		for(i in 0..(dir.list().size-1)) {
-			new File(fileName(i)).delete();
+			new File(fileName(i as Int)).delete();
 		}
 	}
 }
@@ -233,15 +235,15 @@ class ScatteredFileManager extends FileManager {
 public class FBIOSupport {
 
 	private static class BlockConfig {
-		var numBlocksPerPlace :Int = 4;
-		var minNumBlocks :Int = 16;
+		var numBlocksPerPlace :Int = 4n;
+		var minNumBlocks :Int = 16n;
 		var minBlockSize :Long = 1L << 10;
 		var maxBlockSize :Long = 4L << 20;
 	}
 	
 	static val blockConfig = new BlockConfig();
 	
-	static @Inline def align(addr : Int, length : Int) : Int = (addr + (length - 1)) & ~(length - 1);
+	static @Inline def align(addr : Int, length : Int) : Int = (addr + (length - 1n)) & ~(length - 1n);
 	
 	static @Inline def align(addr : Long, length : Int) : Long = (addr + (length as Long - 1L)) & ~(length as Long - 1L);
 	
@@ -263,7 +265,7 @@ public class FBIOSupport {
 		val blocks = headers.blocks();
 		headerFile.close();
 		
-		debugprint("datatype = " + header.datatype(0));
+		debugprint("datatype = " + header.datatype(0n));
 		printProperty(attrs);
 		printBlockInfo(blocks);
 		
@@ -274,50 +276,51 @@ public class FBIOSupport {
 		val extraBlocks = blocks.numBlocks() % team.size();
 		// local array size for each place and attribute
 		val numAttributes = attrs.numAttributes();
-		val localArraySize = new Array[Array[Long](1)](team.size(),
-				(i:Int) => new Array[Long](numAttributes, 0));
-		var block_idx :Int = 0;
+		val localArraySize = new Rail[Rail[Long]](team.size(),
+				(i:Long) => new Rail[Long](numAttributes, 0));
+		var block_idx :Int = 0n;
 		for(pid in 0..(team.size()-1)) {
 			for(bid in 0..(blocksPerPlace + ((pid < extraBlocks) ? 1 : 0) - 1)) {
 				val curBlock = blocks.block(block_idx++);
 				for(aid in 0..(numAttributes - 1)) {
-					localArraySize(pid)(aid) += curBlock.numElements(aid);
+					localArraySize(pid)(aid) += curBlock.numElements(aid as Int);
 				}
 			}
 		}
 		debugprint("localArraySize = " + localArraySize);
 		
 		// make return data structure
-		val attrIds = new Array[Int](numAttributes);
-		val attrNames = new Array[String](numAttributes);
-		for(i in 0..(numAttributes-1)) {
+		val attrIds = new Rail[Int](numAttributes);
+		val attrNames = new Rail[String](numAttributes);
+		for(i in 0n..(numAttributes-1n)) {
 			attrIds(i) = attrs.attribute(i).id();
 			attrNames(i) = attrs.attribute(i).name();
 		}
-		val attrHandler = new Array[AttributeHandler](attrs.numAttributes(),
-				(i:Int) => AttributeHandler.make(team, attrIds(i)));
-		val attributes = new Array[Any](numAttributes, (i:Int) => 
+		val attrHandler = new Rail[AttributeHandler](attrs.numAttributes(),
+				(i:Long) => AttributeHandler.make(team, attrIds(i)));
+		val attributes = new Rail[Any](numAttributes, (i:Long) => 
 				attrHandler(i).allocate((pid :Int) => localArraySize(pid)(i)));
 		
 		// assign closures to each place
-		block_idx = 0;
+		block_idx = 0n;
 		finish for(pid in 0..(team.size()-1)) {
 			val tasks = new ArrayList[()=>void]();
-			val attrOffset = new Array[Long](numAttributes, 0L);
+			val attrOffset = new Rail[Long](numAttributes, 0L);
 			for(bid in 0..(blocksPerPlace + ((pid < extraBlocks) ? 1 : 0) - 1)) {
 				val curBlock = blocks.block(block_idx++);
 				
 				val fileIndex = fm.index(curBlock.offset());
 				val fileName = fm.fileName(fileIndex);
 				val localBlockOffset = curBlock.offset() - fm.offset(fileIndex);
-				val attrNumBytes = new Array[Long](numAttributes);
-				val attrNumElements = new Array[Long](numAttributes);
-				for(i in 0..(numAttributes-1)) {
+				val attrNumBytes = new Rail[Long](numAttributes);
+				val attrNumElements = new Rail[Long](numAttributes);
+				for(i in 0n..(numAttributes-1n)) {
 					attrNumBytes(i) = curBlock.numBytes(i);
 					attrNumElements(i) = curBlock.numElements(i);
 				}
-				val tmpAttrOffset = new Array[Long](numAttributes, (i :Int)=>attrOffset(i));
-				for([i] in attrOffset) attrOffset(i) += attrNumElements(i);
+				val tmpAttrOffset = new Rail[Long](numAttributes, (i :Long)=>attrOffset(i));
+				var cnt : Long = 0;
+				for(i in attrOffset) attrOffset(cnt) += attrNumElements(cnt++);
 				
 				tasks.add( () => {
 					debugprint("block_size = " + attrNumBytes + ", local_block_offset = " + localBlockOffset + ", block_n = " + attrNumElements);
@@ -326,7 +329,7 @@ public class FBIOSupport {
 					nf.seek(localBlockOffset, NativeFile.BEGIN);
 					for(aid in 0..(numAttributes - 1)) {
 						attrHandler(aid).read(nf, attributes(aid), tmpAttrOffset(aid),
-								attrNumElements(aid), align(attrNumBytes(aid), 8));
+								attrNumElements(aid), align(attrNumBytes(aid), 8n));
 					}
 					nf.close();
 				});
@@ -348,8 +351,8 @@ public class FBIOSupport {
 		val attrNames = data.name();
 		val attrData = data.data();
 		val attrTypeIds = data.typeId();
-		val attrHandler = new Array[AttributeHandler](numAttributes,
-						(i:Int) => AttributeHandler.make(team, attrTypeIds(i)));
+		val attrHandler = new Rail[AttributeHandler](numAttributes,
+						(i:Long) => AttributeHandler.make(team, attrTypeIds(i)));
 		
 		val blocks = getBlockPartitioning(team, attrHandler, attrData);
 
@@ -362,7 +365,7 @@ public class FBIOSupport {
 		fm.deleteFile();
 		
 		val headerFile = new NativeFile(fm.headerFileName(), FileMode.OpenOrCreate, FileAccess.Write);
-		writeHeaders(headerFile, data.datatype(), numAttributes, blocks.numBlocks,
+		writeHeaders(headerFile, data.datatype() as Int, numAttributes as Int, blocks.numBlocks,
 				attrTypeIds, attrNames, blocks.offsets, blocks.chunkSizes, data.header());
 		headerFile.close();
 		
@@ -370,19 +373,21 @@ public class FBIOSupport {
 		debugprint(blocks.toString());
 
 		// assign closures to each place
-		var blockIdx :Int = 0;
-		finish for(pid in 0..(team.size()-1)) {
+		var blockIdx :Int = 0n;
+		finish for(pid in 0n..(team.size() as Int-1n)) {
 			val numLocalBlocks = blocks.numLocalBlocks(pid);
-			val tasks = new Array[(NativeFile)=>void](numLocalBlocks);
-			val attrOffset = new Array[Long](numAttributes, 0L);
-			val fileOffset = fm.offset(pid + 1);
+			val tasks = new Rail[(NativeFile)=>void](numLocalBlocks);
+			val attrOffset = new Rail[Long](numAttributes, 0L);
+			val fileOffset = fm.offset(pid as Int + 1n);
 			for(bid in 0..(numLocalBlocks - 1)) {
 				val localBlockOffset = blocks.offsets(blockIdx) - fileOffset;
 				val chunkSize = blocks.chunkSizes(blockIdx);
-				val attrNumBytes = new Array[Long](numAttributes, (i :Int)=>chunkSize(i * 2 + 0));
-				val attrNumElements = new Array[Long](numAttributes, (i :Int)=>chunkSize(i * 2 + 1));
-				val tmpAttrOffset = new Array[Long](numAttributes, (i :Int)=>attrOffset(i));
-				for([i] in attrOffset) attrOffset(i) += attrNumElements(i);
+				val attrNumBytes = new Rail[Long](numAttributes, (i :Long)=>chunkSize(i * 2 + 0));
+				val attrNumElements = new Rail[Long](numAttributes, (i :Long)=>chunkSize(i * 2 + 1));
+				val tmpAttrOffset = new Rail[Long](numAttributes, (i :Long)=>attrOffset(i));
+				//for([i] in attrOffset) attrOffset(i) += attrNumElements(i);
+				var cnt : Long = 0;
+				for(i in attrOffset) attrOffset(cnt) += attrNumElements(cnt++);
 				
 				tasks(bid) = (nf :NativeFile) => {
 					debugprint("block_size = " + attrNumBytes + ", local_block_offset = " + localBlockOffset + ", block_n = " + attrNumElements);
@@ -391,12 +396,12 @@ public class FBIOSupport {
 				//	assert (nf.getpos() == localBlockOffset);
 					for(aid in 0..(numAttributes - 1)) {
 						attrHandler(aid).write(nf, attrData(aid), tmpAttrOffset(aid),
-								attrNumElements(aid), align(attrNumBytes(aid), 8));
+								attrNumElements(aid), align(attrNumBytes(aid), 8n));
 					}
 				};
 				++blockIdx;
 			}
-			val fileName = fm.fileName(pid + 1);
+			val fileName = fm.fileName(pid + 1n);
 			at(team.places()(pid)) async {
 				@Ifdef("DEBUG") {
 					for(aid in 0..(numAttributes - 1)) {
@@ -404,50 +409,55 @@ public class FBIOSupport {
 					}
 				}
 				val nf = new NativeFile(fileName, FileMode.OpenOrCreate, FileAccess.Write);
-				for([i] in tasks) tasks(i)(nf);
+				for(i in tasks) i(nf);
 				nf.close();
 			}
 		}
 	}
 	
-	@Native("c++", "org::scalegraph::io::fbio::writeHeaders(#nf, #datatype, #numAttributes, #numBlocks, (#typeIds)->raw()->raw(), (#attrNames)->raw()->raw(), (#blockOffsets)->pointer(), (#chunkSizes)->raw()->raw(), #udf)")
+	@Native("c++", "org::scalegraph::io::fbio::writeHeaders(#nf, #datatype, #numAttributes, #numBlocks, (#typeIds)->raw, (#attrNames)->raw, (#blockOffsets)->pointer(), (#chunkSizes)->raw, #udf)")
 	private static native def writeHeaders(
 			nf :NativeFile,
 			datatype :Int, numAttributes :Int, numBlocks :Int,
-			typeIds :Array[Int](1),
-			attrNames :Array[String](1),
+			typeIds :Rail[Int],
+			attrNames :Rail[String],
 			blockOffsets :MemoryChunk[Long],
-			chunkSizes :Array[MemoryChunk[Long]](1),
+			chunkSizes :Rail[MemoryChunk[Long]],
 			udf :Any) :void;
 	
 	private static class PartitionedBlocks {
 		public val numBlocks :Int;
 		public val offsets :MemoryChunk[Long];
 		// This has two components: 2*N + 0: number of bytes, 2*N + 1: number of elements
-		public val chunkSizes :Array[MemoryChunk[Long]](1);
+		public val chunkSizes :Rail[MemoryChunk[Long]];
 		public val numLocalBlocks :MemoryChunk[Int];
 		
 		public def this(numAttributes :Int, numBlocks :Int) {
 			this.numBlocks = numBlocks;
 			offsets = MemoryChunk.make[Long](numBlocks + 1);
-			chunkSizes = new Array[MemoryChunk[Long]](numBlocks,
-					(i:Int)=>MemoryChunk.make[Long](numAttributes * 2));
+			chunkSizes = new Rail[MemoryChunk[Long]](numBlocks,
+					(i:Long)=>MemoryChunk.make[Long](numAttributes * 2));
 			numLocalBlocks = MemoryChunk.make[Int](0);
 		}
 
 		public def this(team :Team, numBlocks :Int) {
 			this.numBlocks = numBlocks;
 			offsets = MemoryChunk.make[Long](numBlocks + 1);
-			chunkSizes = new Array[MemoryChunk[Long]](numBlocks);
+			chunkSizes = new Rail[MemoryChunk[Long]](numBlocks);
 			numLocalBlocks = MemoryChunk.make[Int](team.size());
 		}
 		
 		public def toString() {
 			val sb = new StringBuilder();
 			sb.add("NumBlocks = ").add(numBlocks).add("\nOffsets = ").add(offsets).add("\nChunkSizeList:\n");
-			for([i] in chunkSizes) {
-				sb.add("Block").add(i).add(": ").add(chunkSizes(i)).add("\n");
+			var cnt : Long = 0;
+			for(i in chunkSizes) {
+				sb.add("Block").add(cnt).add(": ").add(i).add("\n");
+				cnt++;
 			}
+			//for([i] in chunkSizes) {
+			//	sb.add("Block").add(i).add(": ").add(chunkSizes(i)).add("\n");
+			//}
 			sb.add("Block distribution: ").add(numLocalBlocks);
 			return sb.result();
 		}
@@ -456,13 +466,13 @@ public class FBIOSupport {
 	/**
 	 * blockOffsets, chunkSize
 	 */
-	private static def getBlockPartitioning(team :Team, attrHandler :Array[AttributeHandler](1),
-			attrData :Array[Any](1)) : PartitionedBlocks
+	private static def getBlockPartitioning(team :Team, attrHandler :Rail[AttributeHandler],
+			attrData :Rail[Any]) : PartitionedBlocks
 	{
 		val numAttr = attrData.size;
 		val teamSize = team.size();
-		val results = new Array[PartitionedBlocks](teamSize);
-		val ref_results = new GlobalRef[Array[PartitionedBlocks](1)](results);
+		val results = new Rail[PartitionedBlocks](teamSize);
+		val ref_results = new GlobalRef[Rail[PartitionedBlocks]](results);
 		
 		val pg = team.placeGroup();
 		finish for(pid in 0..(teamSize-1)) at (pg(pid)) async {
@@ -472,7 +482,7 @@ public class FBIOSupport {
 				numTotalBytes += attrHandler(aid).numBytes(attrData(aid));
 			}
 			val numBlocks = getAppropriateNumBlocks(numTotalBytes);
-			val blocks = new PartitionedBlocks(numAttr, numBlocks);
+			val blocks = new PartitionedBlocks(numAttr as Int, numBlocks);
 			
 			// calculate the length of each chunks
 			for(aid in 0..(numAttr-1)) {
@@ -493,7 +503,7 @@ public class FBIOSupport {
 			for(bid in 0..(numBlocks-1)) {
 				var bytesOffset :Long = 0L;
 				for(aid in 0..(numAttr-1)) {
-					bytesOffset += align(blocks.chunkSizes(bid)(aid * 2 + 0), 8);
+					bytesOffset += align(blocks.chunkSizes(bid)(aid * 2 + 0), 8n);
 				}
 				// Actually, this is the size of the block, not the offset.
 				blocks.offsets(bid) = bytesOffset;
@@ -506,12 +516,12 @@ public class FBIOSupport {
 		}
 		
 		// merge the results
-		var numBlocks :Int = 0;
+		var numBlocks :Int = 0n;
 		for(pid in 0..(teamSize-1)) {
 			numBlocks += results(pid).numBlocks;
 		}
 		val ret = new PartitionedBlocks(team, numBlocks);
-		var blockIdx :Int = 0;
+		var blockIdx :Int = 0n;
 		ret.offsets(0) = 0L;
 		for(pid in 0..(teamSize-1)) {
 			ret.numLocalBlocks(pid) = results(pid).numBlocks;
@@ -532,15 +542,15 @@ public class FBIOSupport {
 		val minNumBlocks = blockConfig.minNumBlocks;
 		val minBlockSize = blockConfig.minBlockSize;
 		val maxBlockSize = blockConfig.maxBlockSize;
-		val guideNumBlocks = Math.max(numBlocksPerPlace, (minNumBlocks + numPlaces - 1) / numPlaces);
+		val guideNumBlocks = Math.max(numBlocksPerPlace as Long, (minNumBlocks + numPlaces - 1n) / numPlaces);
 		
-		var numBlocks:Int = 0;
+		var numBlocks:Int = 0n;
 		if(numTotalBytes < guideNumBlocks * minBlockSize) {
 			numBlocks = ((numTotalBytes + minBlockSize - 1L) / minBlockSize) as Int;
 		} else if(numTotalBytes > guideNumBlocks * maxBlockSize) {
 			numBlocks = ((numTotalBytes + maxBlockSize - 1L) / maxBlockSize) as Int;
 		} else {
-			numBlocks = guideNumBlocks;
+			numBlocks = guideNumBlocks as Int;
 		}
 		debugprint("guideNumBlocks = " + guideNumBlocks);
 		debugprint("numBlocks = " + numBlocks);
@@ -551,7 +561,7 @@ public class FBIOSupport {
 	/************************** test function ******************************/
 	private static def printProperty(attrs : Attributes) {
 		debugprint("nattr = " + attrs.numAttributes());
-		for(var i:Int = 0; i < attrs.numAttributes(); i++) {
+		for(var i:Int = 0n; i < attrs.numAttributes(); i++) {
 			val attr = attrs.attribute(i);
 			debugprint("attr[" + i + "] = {" + attr.id() + ", " + attr.name() + "}");
 		}
@@ -559,10 +569,10 @@ public class FBIOSupport {
 	
 	private static def printBlockInfo(blocks : BlockInfo) {
 		debugprint("nBlock = " + blocks.numBlocks());
-		for(var i:Int = 0; i < blocks.numBlocks(); i++) {
+		for(var i:Int = 0n; i < blocks.numBlocks(); i++) {
 			val block = blocks.block(i);
 			debugprint("block[" + i + "] : offset = " + block.offset());
-			for(var j:Int = 0; j < block.numAttributes(); j++) {
+			for(var j:Int = 0n; j < block.numAttributes(); j++) {
 				debugprint("     :[" + i + "," + j + "] size = " + block.numBytes(j) + ", n = " + block.numElements(j));
 			}
 		}

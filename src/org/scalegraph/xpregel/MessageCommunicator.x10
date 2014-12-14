@@ -91,7 +91,7 @@ final class MessageCommunicator[M] { M haszero } {
 		mTeam = team;
 		mIds = ids;
 		mNumThreads = numThreads;
-		mSuperstep = 0;
+		mSuperstep = 0n;
 		mVtoD = new OnedR.VtoD(ids);
 		mDtoV = new OnedR.DtoV(ids);
 		mDtoS = new OnedR.DtoS(ids);
@@ -143,7 +143,7 @@ final class MessageCommunicator[M] { M haszero } {
 				
 				if(bmp(dst)) { // TODO: optimize
 					val wordOffset = Bitmap.offset(dst);
-					val wordMask = Bitmap.mask(dst) - 1;
+					val wordMask = Bitmap.mask(dst) - 1n;
 					val mesOffset = offset(wordOffset) +
 						MathAppend.popcount(bmp.word(wordOffset) & wordMask);
 					buffer.add(mes(mesOffset));
@@ -181,8 +181,8 @@ final class MessageCommunicator[M] { M haszero } {
 			mesCount = mUCSCount;
 			mesOffset = mUCSOffset;
 		}
-		mesOffset(0) = 0;
-		for(p in 0..(numPlaces-1)) mesCount(p) = 0;
+		mesOffset(0) = 0n;
+		for(p in 0..(numPlaces-1)) mesCount(p) = 0n;
 
 		// count number of messages
 		for(th in 0..(mNumThreads-1)) {
@@ -234,7 +234,7 @@ final class MessageCommunicator[M] { M haszero } {
 			Parallel.iter(0L..(numPlaces-1), (p :Long) => {
 				val pstart = mesOffset(p);
 				val plength = mesOffset(p+1) - pstart;
-				if(plength == 0) return ; // short cut
+				if(plength == 0n) return ; // short cut
 				
 				val mesLocal = mesTmp.subpart(pstart, plength);
 				val idsLocal = idsTmp.subpart(pstart, plength);
@@ -243,7 +243,7 @@ final class MessageCommunicator[M] { M haszero } {
 				Algorithm.sort(idsLocal, mesLocal);
 				
 				// combine
-				var resultLength: Int = 0;
+				var resultLength: Int = 0n;
 				var start: Long = 0;
 				var length: Long = 1;
 				var vid: Long = idsLocal(0);
@@ -280,7 +280,7 @@ final class MessageCommunicator[M] { M haszero } {
 		val numCombinedMessages :Long;
 		if(combine != null) {
 			// compact
-			mUCSOffset(0) = 0;
+			mUCSOffset(0) = 0n;
 			for(p in 0..(numPlaces-1)) {
 				mUCSOffset(p + 1) = mUCSOffset(p) + mUCSCount(p);
 			}
@@ -291,7 +291,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val idsBuffer = mUCSIds;
 			val mesBuffer = mUCSMessages;
 			
-			Parallel.iter(0..(numPlaces-1), (p :Int) => {
+			Parallel.iter(0n..(numPlaces as Int-1n), (p :Int) => {
 				val tmpOffset = mesOffset(p) as Long;
 				val bufOffset = mUCSOffset(p) as Long;
 				val length = mUCSCount(p) as Long;
@@ -336,7 +336,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val raw = tmpMask.raw();
 			val numBits = numLocalVertexes2N as Int;
 			val mask = (1L << numBits) - 1;
-			for (var p :Int = mTeam.size()-1; p >= 0; --p) {
+			for (var p :Int = mTeam.size() as Int - 1n; p >= 0n; --p) {
 				val shift = (numBits * p) % Bitmap.BitsPerWord;
 				raw(p) = (raw(Bitmap.offset(numBits * p)) >> shift) & mask;
 			}
@@ -370,7 +370,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val placeInEdgeMask = mInEdgesMask.raw().subpart(startWordOffset, lengthInWords);
 			val rawHasMessage = mBCCHasMessage.raw();
 			
-			var placeNumMessage :Int = 0;
+			var placeNumMessage :Int = 0n;
 			// The size of mBCCHasMessage is the actual number of vertexes (NumberOfLocalVertexes).
 			// But the size of placeHasMessage and placeInEdgeMask is the power of 2 number (NumberOfLocalVertexes2N).
 			for(i in 0..(rawHasMessage.size()-1)) {
@@ -378,7 +378,7 @@ final class MessageCommunicator[M] { M haszero } {
 				placeNumMessage += MathAppend.popcount(placeHasMessage(i));
 			}
 			for(i in rawHasMessage.size()..(placeInEdgeMask.size()-1)) {
-				placeHasMessage(i) = 0L;
+				placeHasMessage(i) = 0n;
 			}
 			mBCSCount(p) = placeNumMessage;
 		});
@@ -388,7 +388,7 @@ final class MessageCommunicator[M] { M haszero } {
 			for(i in r) rawHasMessage(i) = 0UL; // clear bitmap
 		});
 		
-		mBCSOffset(0) = 0;
+		mBCSOffset(0) = 0n;
 		for(i in 0..(numPlaces-1)) {
 			mBCSOffset(i + 1) = mBCSOffset(i) + mBCSCount(i);
 		}
@@ -405,7 +405,7 @@ final class MessageCommunicator[M] { M haszero } {
 			val length = mBCSCount(p);
 			val mesLocalBuffer = mBCSMessages.subpart(start, length);
 			
-			var offset :Int = 0L;
+			var offset :Int = 0n;
 			for(i in mBCCMessages.range()) {
 				if(placeHasMessage(i)) {
 					mesLocalBuffer(offset++) = mBCCMessages(i);
@@ -439,7 +439,7 @@ final class MessageCommunicator[M] { M haszero } {
 	}
 	
 	def exchangeMessages(UCEnabled :Boolean, BCEnabled :Boolean) :void {
-		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);
+		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0n);
 		val sw = Config.get().stopWatch();
 		val numPlaces = mTeam.size();
 		val recvCount = MemoryChunk.make[Int](numPlaces);
@@ -454,7 +454,7 @@ final class MessageCommunicator[M] { M haszero } {
 			mTeam.alltoall(mUCSCount, recvCount);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMM_COUNT); }
 			
-			recvOffset(0) = 0;
+			recvOffset(0) = 0n;
 			for(i in recvCount.range()) {
 				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
 			}
@@ -501,7 +501,7 @@ final class MessageCommunicator[M] { M haszero } {
 			mTeam.alltoall(mBCSCount, recvCount);
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_COMM_COUNT); }
 			
-			recvOffset(0) = 0;
+			recvOffset(0) = 0n;
 			for(i in recvCount.range()) {
 				recvOffset(i + 1) = recvOffset(i) + recvCount(i);
 			}

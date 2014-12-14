@@ -14,12 +14,14 @@ package org.scalegraph.visitor;
 import x10.compiler.Ifndef;
 import x10.compiler.Inline;
 import x10.compiler.Native;
-import x10.io.SerialData;
+//import x10.io.SerialData;
+import x10.io.Serializer;
+import x10.io.Deserializer;
 import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 import x10.util.ArrayList;
-import x10.util.IndexedMemoryChunk;
+//import x10.util.IndexedMemoryChunk;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
 import org.scalegraph.util.Dist2D;
@@ -58,7 +60,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val _distSparseMatrix: DistSparseMatrix[Long];
         
         val _source: Cell[Vertex];
-        val _queues: IndexedMemoryChunk[Bitmap2];
+        val _queues: Rail[Bitmap2];
         
         // poniters of current queue and next queue
         val _qPointer: Cell[Int];
@@ -75,11 +77,11 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val _CONGRUENT = false;
         
         // distance from source
-        val _distanceMap: IndexedMemoryChunk[Long];    
+        val _distanceMap: Rail[Long];    
         
         /* Buffer stuffs*/
-        val _predBuf: Array[Array[ArrayList[Vertex]]];
-        val _succBuf: Array[Array[ArrayList[Vertex]]];   
+        val _predBuf: Rail[Rail[ArrayList[Vertex]]];
+        val _succBuf: Rail[Rail[ArrayList[Vertex]]];   
         
         val _handler: LsBFSHandler;
         
@@ -95,29 +97,31 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             _handler = h;
             
             _source = new Cell[Vertex](src);
-            _queues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](2,
-                            _ALIGN,
-                            _CONGRUENT);
+            //_queues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](2,
+            _queues = Unsafe.allocRailUninitialized[Bitmap2](2);
+                            //_ALIGN,
+                            //_CONGRUENT);
             _queues(0) = new Bitmap2(_numLocalVertices);
             _queues(1) = new Bitmap2(_numLocalVertices);
-            _qPointer = new Cell[Int](0);
+            _qPointer = new Cell[Int](0n);
             _currentLevel = new Cell[Long](0);
             
-            _distanceMap = IndexedMemoryChunk.allocateZeroed[Long](
-                    _numLocalVertices,
-                    _ALIGN,
-                    _CONGRUENT);
+            _distanceMap = Unsafe.allocRailZeroed[Long](
+                    _numLocalVertices//,
+                    //_ALIGN,
+                    //_CONGRUENT);
+			);
        
             // Init loop
             for (i in 0..(_numLocalVertices - 1)) {
                 _distanceMap(i) = 0L;
             }
-            _predBuf = new Array[Array[ArrayList[Vertex]]](_NUM_TASK,
-                    (int) => new Array[ArrayList[Vertex]](t.size(),
-                            (int) => new ArrayList[Vertex](buffSize)));
-            _succBuf = new Array[Array[ArrayList[Vertex]]](_NUM_TASK,
-                    (int) => new Array[ArrayList[Vertex]](t.size(),
-                            (int) => new ArrayList[Vertex](buffSize)));
+            _predBuf = new Rail[Rail[ArrayList[Vertex]]](_NUM_TASK,
+                    (Long) => new Rail[ArrayList[Vertex]](t.size(),
+                            (Long) => new ArrayList[Vertex](buffSize)));
+            _succBuf = new Rail[Rail[ArrayList[Vertex]]](_NUM_TASK,
+                    (Long) => new Rail[ArrayList[Vertex]](t.size(),
+                            (Long) => new ArrayList[Vertex](buffSize)));
 
         }
     }
@@ -137,28 +141,36 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         localGraph = dsm();
     }
     
-    /* Serialize function */
-    public def serialize(): SerialData {
-        return new SerialData(lch, null);
-    }
-    
-    /* Deserialize function */
-    public def this (serialData: SerialData) {
-        this(serialData.data as PlaceLocalHandle[LocalState]);
-    }
+    ///* Serialize function */
+    //public def serialize(): SerialData {
+    //    return new SerialData(lch, null);
+    //}
+    //
+    ///* Deserialize function */
+    //public def this (serialData: SerialData) {
+    //    this(serialData.data as PlaceLocalHandle[LocalState]);
+    //}
+
+	public def this(data : Deserializer){
+        this(data.readAny() as PlaceLocalHandle[LocalState]);
+	}
+	public def serialize(s:Serializer) {
+		s.writeAny(lch);
+	}
+
     
     /* GCC Built-in atomic function interface */
-    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
-    private static native def compare_and_swap[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): Boolean;
+    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw + #index, #oldVal, #newVal)")
+    private static native def compare_and_swap[T](imc: Rail[T], index: Long, oldVal: T, newVal: T): Boolean;
     
-    @Native("c++", "__sync_val_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
-    private static native def compare_and_swap_val[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): T;
+    @Native("c++", "__sync_val_compare_and_swap((#imc)->raw + #index, #oldVal, #newVal)")
+    private static native def compare_and_swap_val[T](imc: Rail[T], index: Long, oldVal: T, newVal: T): T;
     
-    @Native("c++", "__sync_fetch_and_add((#imc)->raw() + #index, #value)")
-    private static native def fetch_and_add[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
+    @Native("c++", "__sync_fetch_and_add((#imc)->raw + #index, #value)")
+    private static native def fetch_and_add[T](imc: Rail[T], index: Long, value: T): T;
     
-    @Native("c++", "__sync_add_and_fetch((#imc)->raw() + #index, #value)")
-    private static native def add_and_fetch[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
+    @Native("c++", "__sync_add_and_fetch((#imc)->raw + #index, #value)")
+    private static native def add_and_fetch[T](imc: Rail[T], index: Long, value: T): T;
 
     /**
      * Factory method for creating visitor
@@ -174,7 +186,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
         val localState = PlaceLocalHandle.make[LocalState](places, 
                 () => { 
                     return (new LocalState(csr,
-                                           transBufferSize,
+                                           transBufferSize as Int,
                                            h,
                                            source));
                 });
@@ -255,7 +267,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
     private def nextQ() = lch()._queues((lch()._qPointer() + 1) & 1);
     
     @Inline
-    private def swapQ() { lch()._qPointer() = (lch()._qPointer() + 1) & 1; }
+    private def swapQ() { lch()._qPointer() = (lch()._qPointer() + 1n) & 1n; }
     
     @Inline
     public def getVertexPlace(orgVertex: Vertex): Place {
@@ -279,8 +291,8 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             succBuf(bufId)(pid).clear();
         };
         val _flush = (bufId: Int, pid: Int) => {
-            val preds = predBuf(bufId)(pid).toArray();
-            val succs = succBuf(bufId)(pid).toArray();
+            val preds = predBuf(bufId)(pid).toRail();
+            val succs = succBuf(bufId)(pid).toRail();
             val count = preds.size;
             val p = team.place(pid);
             at (p)  {
@@ -295,7 +307,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             finish for (i in 0..(numTask -1))
                 async for (ii in 0..(team.size() -1)) {
                     if (predBuf(i)(ii).size() > 0)
-                        _flush(i, ii);
+                        _flush(i as Int, ii as Int);
                 }
         };
         val _visitRemote = (bufId: Int, pid: Int, pred: Vertex, succ: Vertex) => {
@@ -316,7 +328,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             swapQ();
             nextQ().clearAll();
             // Check wether there is a vertex on such a place
-            val maxVertexCount = team.allreduce(role,
+            val maxVertexCount = team.allreduce(//role,
                     currentQ().setBitCount(),
                     Team.MAX);
             if (maxVertexCount == 0L)
@@ -338,7 +350,7 @@ public class LsBfsVisitor implements x10.io.CustomSerialization {
             };
             currentQ().examine(traverse);
             _flushAll();
-            team.barrier(role);
+            team.barrier();
             lch()._currentLevel(lch()._currentLevel() + 1);
         }
     }

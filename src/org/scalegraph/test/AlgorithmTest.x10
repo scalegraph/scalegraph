@@ -32,7 +32,7 @@ import org.scalegraph.id.Type;
 
 public abstract class AlgorithmTest extends STest {
 	
-	public abstract def run(args :Array[String](1), graph :Graph) :Boolean;
+	public abstract def run(args :Rail[String], graph :Graph) :Boolean;
 	
 	private static def genConstanceValueEdges(getSize :()=>Long, value :Double)
 	{
@@ -54,13 +54,13 @@ public abstract class AlgorithmTest extends STest {
 		return edgeMemory;
 	}
 	
-	private static def loadGraph(args :Array[String](1)) {
+	private static def loadGraph(args :Rail[String]) {
 		if(args.size < 2) {
 			throw new IllegalArgumentException("Too few arguments");
 		}
 		if (args(0).equals("rmat")) {
 			val scale = Int.parse(args(1));
-			val edgefactor = (args.size > 2) ? Int.parse(args(2)) : 16;
+			val edgefactor = (args.size > 2) ? Int.parse(args(2)) : 16n;
 			val A = (args.size > 3) ? Double.parse(args(3)) : 0.45;
 			val B = (args.size > 4) ? Double.parse(args(4)) : 0.15;
 			val C = (args.size > 5) ? Double.parse(args(5)) : 0.15;
@@ -78,7 +78,7 @@ public abstract class AlgorithmTest extends STest {
 		}
 		else if (args(0).equals("random")) {
 			val scale = Int.parse(args(1));
-			val edgefactor = (args.size > 2) ? Int.parse(args(2)) : 16;
+			val edgefactor = (args.size > 2) ? Int.parse(args(2)) : 16n;
 			val rnd = new Random(2, 3);
 
 			val sw = Config.get().stopWatch();
@@ -114,20 +114,22 @@ public abstract class AlgorithmTest extends STest {
 		}
 	}
 	
-	private static def splitArgs(args :Array[String](1)) {
-		for([s] in args) {
+	private static def splitArgs(args :Rail[String]) {
+		for(s in args.range()) {
 			if(args(s).equals("-")) {
-				val args1 = new Array[String](s, (i :Int) => args(i));
-				val args2 = new Array[String](args.size - s - 1, (i :Int) => args(s + 1 + i));
+				val args1 = new Rail[String](s, (i :Long) => args(i));
+				val args2 = new Rail[String](args.size - s - 1, (i :Long) => args(s + 1 + i));
 				return [ args1, args2 ];
 			}
 		}
 		throw new IllegalArgumentException("Input parameter does not have splitter flag");
 	}
 
-	public final def run(args :Array[String](1)): Boolean {
+	public final def run(args :Rail[String]): Boolean {
 		print("ARGS: "); println(args);
-		val [ graphArgs, mainArgs ] = splitArgs(args);
+		//val [ graphArgs, mainArgs ] = splitArgs(args);
+		val graphArgs = splitArgs(args)(0);
+		val mainArgs = splitArgs(args)(1);
 		return run(mainArgs, loadGraph(graphArgs));
 	}
 	
@@ -140,10 +142,14 @@ public abstract class AlgorithmTest extends STest {
 	{
 		val sw = Config.get().stopWatch();
 		val team = Config.get().worldTeam();
+		//val refdata = CSV.read(reference, [Type.Long as Int, Type.typeId[T]()], true);
+		val tmpRail = new Rail[Int](2);
+		tmpRail(0) = Type.Long as Int;
+		tmpRail(1) = Type.typeId[T]();
 		val refdata = CSV.read(reference, [Type.Long as Int, Type.typeId[T]()], true);
 		sw.lap("Read reference data[path=" + reference + "]");
-		val index = refdata.get[Long](0);
-		val refval = refdata.get[T](1);
+		val index = refdata.get[Long](0n);
+		val refval = refdata.get[T](1n);
 		val checkResult = GlobalRef[Cell[Boolean]](new Cell[Boolean](false));
 		
 		team.placeGroup().broadcastFlat( () => {
@@ -153,28 +159,28 @@ public abstract class AlgorithmTest extends STest {
 			val index_ = index();
 			val refval_ = refval();
 			
-			var flags :Int = 0;
+			var flags :Int = 0n;
 			if(result_.size() != refval_.size()) {
-				flags = 2;
+				flags = 2n;
 			}
 			else {
 				flags = Parallel.reduce[Int](result_.range(), (tid :Long, r :LongRange) => {
 					for(i in r) {
 						if(index_(i) != (i * teamSize + teamRole)) {
-							return 2;
+							return 2n;
 						}
 						val diff = MathAppend.abs(result_(i) - refval_(i));
 						if(diff > threshold) {
-						    printError(teamSize, teamRole, i, result_(i), refval_(i));
-							return 1;
+						    printError(teamSize as Int, teamRole, i, result_(i), refval_(i));
+							return 1n;
 						}
 					}
-					return 0;
+					return 0n;
 				},
 				(o1 :Int, o2 :Int) => o1 | o2);
 			}
 			
-			flags = team.allreduce(teamRole, flags, Team.BOR);
+			flags = team.allreduce(flags, Team.BOR);
 			
 			if((flags & 2) != 0) {
 				val shift = MathAppend.ceilLog2(teamSize);
@@ -192,19 +198,19 @@ public abstract class AlgorithmTest extends STest {
 					for(i in r) {
 						val diff = MathAppend.abs(result_(i) - recv(i));
 						if(diff > threshold) {
-						    printError(teamSize, teamRole, i, result_(i), recv(i));
-							return 1;
+						    printError(teamSize as Int, teamRole, i, result_(i), recv(i));
+							return 1n;
 						}
 					}
-					return 0;
+					return 0n;
 				},
 				(o1 :Int, o2 :Int) => o1 | o2);
 				
-				flags = team.allreduce(teamRole, flags, Team.BOR);
+				flags = team.allreduce(flags, Team.BOR) as Int;
 			}
 			
 			if(checkResult.home == here) {
-				checkResult.getLocalOrCopy()() = (flags == 0);
+				checkResult.getLocalOrCopy()() = (flags == 0n);
 			}
 		});
 		sw.lap("Compare result and reference data");
@@ -223,7 +229,7 @@ public abstract class AlgorithmTest extends STest {
 			val teamSize = team.size();
 			val res_ = result();
 			val ref_ = ref();
-			var error :Int = 0;
+			var error :Int = 0n;
 			val numVertexes = res_.offsets.size() - 1;
 			
 			if(res_.offsets.size() != ref_.offsets.size()
@@ -231,37 +237,37 @@ public abstract class AlgorithmTest extends STest {
 					//	|| res_.values.size() != ref_.values.size()
 			)
 			{
-				error = 1;
+				error = 1n;
 			}
 			else {
 				error |= Parallel.reduce[Int](res_.offsets.range(), (tid :Long, r :LongRange) => {
-					var lerror :Int = 0;
-					for(i in r) if(res_.offsets(i) != ref_.offsets(i)) lerror = 1;
+					var lerror :Int = 0n;
+					for(i in r) if(res_.offsets(i) != ref_.offsets(i)) lerror = 1n;
 					return lerror;
 				}, (a :Int, b :Int) => a | b);
 				
 				error |= Parallel.reduce[Int](res_.vertexes.range(), (tid :Long, r :LongRange) => {
-					var lerror :Int = 0;
-					for(i in r) if(res_.vertexes(i) != ref_.vertexes(i)) lerror = 1;
+					var lerror :Int = 0n;
+					for(i in r) if(res_.vertexes(i) != ref_.vertexes(i)) lerror = 1n;
 					return lerror;
 				}, (a :Int, b :Int) => a | b);
 				
 				if(withValue) {
 					error |= Parallel.reduce[Int](res_.values.range(), (tid :Long, r :LongRange) => {
-						var lerror :Int = 0;
+						var lerror :Int = 0n;
 						for(i in r) {
 							val diff = MathAppend.abs(res_.values(i) - ref_.values(i));
-							if(diff > threshold) lerror = 1;
+							if(diff > threshold) lerror = 1n;
 						}
 						return lerror;
 					}, (a :Int, b :Int) => a | b);
 				}
 			}
 			
-			error = team.allreduce(teamRole, error, Team.BOR);
+			error = team.allreduce(error, Team.BOR);
 			
 			if(checkResult.home == here) {
-				checkResult.getLocalOrCopy()() = (error == 0);
+				checkResult.getLocalOrCopy()() = (error == 0n);
 			}
 		});
 

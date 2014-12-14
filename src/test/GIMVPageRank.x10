@@ -28,15 +28,15 @@ import org.scalegraph.graph.GraphGenerator;
 import org.scalegraph.fileread.DistributedReader;
 
 final class GIMVPageRank extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new GIMVPageRank().execute(args);
 	}
 
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		val par = [8 , 14, 18];
 		
 		for (i in 0..(par.size - 1)) {
-			entry(par(i));
+			entry(par(i) as Int);
 		}
 		
 		return true;
@@ -46,8 +46,8 @@ final class GIMVPageRank extends STest {
 
 		Console.OUT.println("Generating edge list ...");
 		val rnd = new Random(2, 3);
-		val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
-		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+		val edgelist = GraphGenerator.genRMAT(scale, 16n, 0.45, 0.15, 0.15, rnd);
+		val weigh = GraphGenerator.genRandomEdgeValue(scale, 16n, rnd);
 
 		Console.OUT.println("Creating graph object ...");
 
@@ -137,7 +137,7 @@ final class GIMVPageRank extends STest {
 		Console.OUT.println("Constructing 2DCSR [directed, inner] ...");
 
 		// directed, inner edge
-		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, team.size(), 1), true, false);
+		val csr = g.createDistEdgeIndexMatrix(Dist2D.make2D(team, team.size() as Int, 1n), true, false);
 		val weight = g.createDistAttribute[Double](csr, false, "normalized_weight");
 
 		val vector = pagerank(csr, weight, g.numberOfVertices());

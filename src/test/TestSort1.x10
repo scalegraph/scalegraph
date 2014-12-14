@@ -12,7 +12,7 @@
 package test;
 
 import x10.compiler.Inline;
-import x10.util.IndexedMemoryChunk;
+//import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
@@ -23,7 +23,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 
 final class TestSort1 extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestSort1().execute(args);
 	}
 	
@@ -63,7 +63,7 @@ final class TestSort1 extends STest {
         Console.OUT.println();
     }
 
-    public def run(args: Array[String](1)): Boolean {
+    public def run(args: Rail[String]): Boolean {
         val n = 1 << 5;
         runtest(n);
         

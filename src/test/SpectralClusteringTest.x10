@@ -37,11 +37,11 @@ import org.scalegraph.util.tuple.Tuple3;
 
 
 final class SpectralClusteringTest extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new SpectralClusteringTest().execute(args);
 	}
 
-	public def run(args :Array[String](1), g : Graph): Boolean {
+	public def run(args :Rail[String], g : Graph): Boolean {
 		val config = Config.get();
 		val team = config.worldTeam();
 		val dist = config.dist2d();
@@ -80,7 +80,7 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		} else if(outOrEval.equals("eval")) {
 		
 			sw.next("validation");
-			checkResult[Int](result, outputPath, 0);
+			checkResult[Int](result, outputPath, 0n);
 			
 		} else {
 			Console.OUT.printf("Worning: invalid argument \"%s\" will be ignored\n", outOrEval);
@@ -103,9 +103,9 @@ final class SpectralClusteringTest extends AlgorithmTest {
 		val localWidth = 1L << (ids.lgl + ids.lgr);
 		val localHeight = 1L << (ids.lgl + ids.lgc);
 		
-		val factors = PlaceLocalHandle.make[Cell[Tuple2[Array[Long], Array[Long]]]](team.placeGroup(), () => {
-			val assoc = new Array[Long](numberOfClusters);
-			val cut = new Array[Long](numberOfClusters);
+		val factors = PlaceLocalHandle.make[Cell[Tuple2[Rail[Long], Rail[Long]]]](team.placeGroup(), () => {
+			val assoc = new Rail[Long](numberOfClusters);
+			val cut = new Rail[Long](numberOfClusters);
 			
 			val W_ = W();
 			val offsets = W_.offsets;
@@ -139,12 +139,15 @@ final class SpectralClusteringTest extends AlgorithmTest {
 					Console.OUT.println(cut);
 					Console.OUT.println(assoc);
 				}
-				team.barrier(team.role()(0));
+				team.barrier();
+				//team.barrier(team.role()(0));
 			}
 			
-			team.allreduce(team.role()(0), assoc, 0, assoc, 0, assoc.size, Team.ADD);
-			team.allreduce(team.role()(0), cut,   0, cut,   0, cut.size,   Team.ADD);
-			new Cell(Tuple2[Array[Long], Array[Long]](cut, assoc))
+			team.allreduce(assoc, 0, assoc, 0, assoc.size, Team.ADD);
+			team.allreduce(cut,   0, cut,   0, cut.size,   Team.ADD);
+			//team.allreduce(team.role()(0), assoc, 0, assoc, 0, assoc.size, Team.ADD);
+			//team.allreduce(team.role()(0), cut,   0, cut,   0, cut.size,   Team.ADD);
+			new Cell(Tuple2[Rail[Long], Rail[Long]](cut, assoc))
 		})()();
 		
 		val cut = factors.get1();
@@ -193,7 +196,7 @@ class MyStopWatch {
 	}
 	
 	val list : x10.util.ArrayList[Record] = new x10.util.ArrayList[Record]();
-	var maxLength : Int = 0;
+	var maxLength : Int = 0n;
 	
 	def start(label : String) {
 		list.add(new Record(label, x10.util.Timer.milliTime()));
@@ -214,7 +217,7 @@ class MyStopWatch {
 	def print() {
 		for(rec in list) {
 			val numTab = (maxLength / 8 + 1) - (rec.label.length() / 8);
-			Console.OUT.printf("%s%s%.3f sec\n", rec.label, new String(new Array[Char](numTab, '\t')), rec.time / 1000.0);
+			Console.OUT.printf("%s%s%.3f sec\n", rec.label, new String(new Rail[Char](numTab, '\t')), rec.time / 1000.0);
 		}
 	}
 }

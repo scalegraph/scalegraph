@@ -28,7 +28,7 @@ import org.scalegraph.xpregel.VertexContext;
 import org.scalegraph.xpregel.XPregelGraph;
 
 final class SCCDebug extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new SCCDebug().execute(args);
 	}
 	
@@ -81,8 +81,8 @@ final class SCCDebug extends STest {
 
 	    Console.OUT.println("Generating edge list ...");
 	    val rnd = new Random(2, 3);
-	    val edgelist = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
-	    val weigh = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+	    val edgelist = GraphGenerator.genRMAT(scale, 16n, 0.45, 0.15, 0.15, rnd);
+	    val weigh = GraphGenerator.genRandomEdgeValue(scale, 16n, rnd);
 
 	    Console.OUT.println("Creating graph object ...");
 
@@ -98,7 +98,7 @@ final class SCCDebug extends STest {
 	    return g;
 	}
 
-	public def run(args :Array[String](1)): Boolean {
+	public def run(args :Rail[String]): Boolean {
 		val team = Team.WORLD;	
 		// val inputFormat = (s:String) => {
 		// 	val elements = s.split(",");
@@ -123,7 +123,7 @@ final class SCCDebug extends STest {
 		// val end_init_graph = System.currentTimeMillis();
 		// Console.OUT.println("Init Graph: " + (end_init_graph-start_init_graph) + "ms");
 		val scale = 14;
-		val g = generate_graph(scale, team, true);
+		val g = generate_graph(scale as Int, team, true);
 		
 //		val csr = g.constructDistSparseMatrix(Dist2D.make2D(team, 1, team.size()), true, true);
 		val xpregel = XPregelGraph.make[SCCVertex, Long](
@@ -137,14 +137,14 @@ final class SCCDebug extends STest {
 		xpregel.initVertexValue(initInfo);
 		
 		//value : leaderId, front, back
-		var recursion:Int = 0;
+		var recursion:Int = 0n;
 		while(recursion<10) {
 			recursion++;
 			//phaseA : BFS的に伝搬
 			xpregel.iterate[MessageA, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageA, Long ], messages :MemoryChunk[MessageA] ) => {
 						
-				if(ctx.superstep()==0) {
+				if(ctx.superstep()==0n) {
 					//隣接点がなければその頂点はすぐに終わらせる
 					if(ctx.outEdgesId().size()==0L && ctx.inEdgesId().size()==0L && ctx.id()!=0L) {
 						val newInfo = new SCCVertex(ctx.id(), true,true,-1L);
@@ -165,7 +165,7 @@ final class SCCDebug extends STest {
 				}
 				val mesF = new MessageA(ctx.value().leaderId, false);
 				val mesT = new MessageA(ctx.value().leaderId, true);
-				if(ctx.superstep()==0 && ctx.id() == ctx.value().leaderId) {
+				if(ctx.superstep()==0n && ctx.id() == ctx.value().leaderId) {
 					for(i in ctx.outEdgesId().range()) 
 						ctx.sendMessage(ctx.outEdgesId()(i), mesF);
 					for(i in ctx.inEdgesId().range())
@@ -173,7 +173,7 @@ final class SCCDebug extends STest {
 					val newInfo = new SCCVertex(ctx.value().leaderId, true, true, -1L);
 					ctx.setValue(newInfo);
 				}
-				if(ctx.superstep()>0) {
+				if(ctx.superstep()>0n) {
 					if(ctx.value().front && ctx.value().back)
 						return;
 					Console.OUT.println(ctx.realId());
@@ -206,17 +206,17 @@ final class SCCDebug extends STest {
 			//aggregateは多分使わないので適当なことを書いた
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
 			//終了条件は、最終的には全部のセルが止まった状態になればよい
-			(superstep :Int, aggVal :Long) => (superstep >= 100 ) );
+			(superstep :Int, aggVal :Long) => (superstep >= 100n ) );
 			
 			//phaseB:Leaderに情報を伝搬/Leaderから情報を伝搬
 			xpregel.iterate[MessageB, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageB, Long ], messages :MemoryChunk[MessageB] ) => {
-				if(ctx.superstep()==0) {
+				if(ctx.superstep()==0n) {
 					val mes = new MessageB(ctx.value().front, ctx.value().back, ctx.id() );
 					ctx.sendMessage(ctx.value().leaderId, mes);
 					ctx.voteToHalt();
 				}
-				if(ctx.superstep()==1) {
+				if(ctx.superstep()==1n) {
 					val cnt = MemoryChunk.make[Long](4);
 					val pos = MemoryChunk.make[Long](4);
 					for(i in messages.range()) {
@@ -239,7 +239,7 @@ final class SCCDebug extends STest {
 					Console.OUT.println("              cnt"+ctx.realId()+":" + cnt(0) +" "+cnt(1) + " "+cnt(2) + " " + cnt(3));
 					ctx.voteToHalt();
 				}
-				if(ctx.superstep()==2) {
+				if(ctx.superstep()==2n) {
 					//messageはそれぞれ一つしかこないので、0のはず
 					Console.OUT.println("    :ctx.realId() "+ctx.realId() );
 					Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
@@ -269,7 +269,7 @@ final class SCCDebug extends STest {
 					(ctx :VertexContext[SCCVertex, Long, MessageC, Long ], messages :MemoryChunk[MessageC] ) => {
 				
 				var update:Boolean = false;
-				if(ctx.superstep()==0) {
+				if(ctx.superstep()==0n) {
 					ctx.setVertexShouldBeActive(true);
 					update = true;
 				}
@@ -296,7 +296,7 @@ final class SCCDebug extends STest {
 			//aggregateは多分使わないので適当なことを書いた
 			(values :MemoryChunk[Long]) => MathAppend.sum(values),
 			//終了条件は、最終的には全部のセルが止まった状態になればよい
-			(superstep :Int, aggVal :Long) => (superstep >= 100) );
+			(superstep :Int, aggVal :Long) => (superstep >= 100n) );
 		}
 		val end_time = System.currentTimeMillis();
 			

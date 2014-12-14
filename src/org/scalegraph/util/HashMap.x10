@@ -14,12 +14,13 @@ package org.scalegraph.util;
 import x10.util.Timer;
 import x10.util.Map;
 import x10.util.Box;
+import x10.util.RailUtils;
 import x10.util.concurrent.AtomicInteger;
 import x10.util.NoSuchElementException;
 import x10.compiler.NonEscaping;
 import x10.compiler.Inline;
 import x10.io.CustomSerialization;
-import x10.io.SerialData;
+//import x10.io.SerialData;
 import org.scalegraph.util.StopWatch;
 import org.scalegraph.util.MathAppend;
 import org.scalegraph.util.MemoryChunk;
@@ -53,7 +54,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     def this () {
       this.key = Zero.get[Key]();
       this.value = Zero.get[Value]();
-      this.hash = 0;
+      this.hash = 0n;
       this.flag = EMPTY; /* not occpied */
     }
 
@@ -73,7 +74,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
   }
 
   static def pow2floor(x : Int) {
-    var pow2 : int = 1;
+    var pow2 : int = 1n;
     while (pow2 < x) {
       pow2 <<= 1;
     }
@@ -95,8 +96,8 @@ public final class HashMap[K,V] {K haszero, V haszero} {
 
   var shouldRehash: Boolean;
 
-  static MAX_PROBES = 3;
-  static MIN_SIZE = 4;
+  static MAX_PROBES = 3n;
+  static MIN_SIZE = 4n;
 
   public def this() {
     init(MIN_SIZE);
@@ -116,7 +117,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
 
     table = MemoryChunk.make[HashEntry[K, V]](init_size as Long);
     this.logSize = MathAppend.ceilLog2(table.size());
-    this.size = 0;
+    this.size = 0n;
     shouldRehash = false;
   }
 
@@ -124,7 +125,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     for (i in table.range()) {
       table(i) = HashEntry[K, V]();
     }
-    size = 0;
+    size = 0n;
     logSize = MathAppend.ceilLog2(table.size());
     shouldRehash = false;
   }
@@ -133,7 +134,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
 
   @Inline protected final def hash(k: K): Int = hashInternal(k);
   @NonEscaping @Inline protected final def hashInternal(k: K): Int {
-    return k.hashCode() * 200000000;
+    return k.hashCode() * 200000000n;
   }
 
   /** mask and shift upper n bits */
@@ -150,7 +151,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     val sz = this.logSize;
 
     var i : Int = hashToIndex(h, sz);
-    var cnt : Int = 0;
+    var cnt : Int = 0n;
 
     while (true) {
       val e = table(i);
@@ -166,7 +167,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         return new Box[V](old);
       }
       cnt++;
-      i = (i + 1) % (table.size() as Int);
+      i = (i + 1n) % (table.size() as Int);
     }
   }
 
@@ -185,10 +186,10 @@ public final class HashMap[K,V] {K haszero, V haszero} {
   public def get(ks : MemoryChunk[K], defValue : V) {
     val vs = MemoryChunk.make[V](ks.size());
 
-    val eachSize = new Array[Long](nChunk, (i:Int)=>{
+    val eachSize = new Rail[Long](nChunk, (i:Long)=>{
       if (i == nChunk - 1) {return ks.size() / nChunk + ks.size() % nChunk;}
       else {return ks.size() / nChunk;}});
-    val offset = new Array[Long](nChunk + 1);
+    val offset = new Rail[Long](nChunk + 1);
     for (i in 1..nChunk) {
       offset(i) = offset(i - 1) + eachSize(i - 1);
     }
@@ -223,7 +224,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       val counts = scatterGather.counts(tid as Int);
       for (i in r) {
         val h = hash(ks(i));
-        val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+        val chunkIdx = (nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits);
         counts(chunkIdx)++;
       }
     });
@@ -235,7 +236,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       for (i in r) {
         val k = ks(i);
         val h = hash(ks(i));
-        val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+        val chunkIdx = (nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits);
         val idx = offsets(chunkIdx)++;
         chunk(idx) = new Pair[Int, Long](h, i);
       }
@@ -246,27 +247,27 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     // add chunks to table
 
     // closure__3
-    val localSize = new Array[Int](nChunk);
-    var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
-      new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
-        (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+    val localSize = new Rail[Int](nChunk);
+    var currentChunk : Rail[GrowableMemory[Tuple3[Int, Long, Int]]] =
+      new Rail[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+        (i:Long)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
 
     val pushed = MemoryChunk.make[Int](ks.size());
     for (i in pushed.range()) {
-      pushed(i) = -1L;
+      pushed(i) = -1n;
     }
 
     finish for (p in 0..(nChunk - 1)) async {
-      var cnt:Int = 0;
+      var cnt:Int = 0n;
       for (i in (offsets(p)..(offsets(p) + counts(p) - 1))) {
         val e = chunk(i);
         val idx = e.second;
         val ret = putDummyLocal(e.first, e.first, ks(idx), defValue);
-        if (ret == -2) { // not added on local
+        if (ret == -2n) { // not added on local
                          // if flow from table, add next chunk
           currentChunk((p + 1) % nChunk).add(
-            new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.first));
-        } else if (ret >= 0) { // added
+            new Tuple3[Int, Long, Int]( (((p + 1) % nChunk) << (32 - nMaskBits)) as Int, idx, e.first));
+        } else if (ret >= 0n) { // added
           cnt++;
           pushed(i) = ret;
         }
@@ -274,20 +275,21 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       localSize(p) = cnt;
     }
 
-    for (var count : Int = 0; count < nChunk - 1 &&
-      !currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+    for (var count : Int = 0n; count < nChunk - 1 &&
+      //!currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+      !RailUtils.reduce(currentChunk, ((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
       count++) {
-      val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
-        (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+      val nextChunk = new Rail[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+        (i:Long)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
       finish for (p in 0..(nChunk - 1)) async {
         for (i in currentChunk(p).range()) {
           val e = currentChunk(p)(i);
           val idx = e.val2;
           val ret = putDummyLocal(e.val1, e.val3, ks(idx), defValue);
-          if (ret == -2) {
+          if (ret == -2n) {
             // if flow from table, add next chunk
-            nextChunk((p + 1) % nChunk).add(
-              new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+            nextChunk((p + 1n) % nChunk).add(
+              new Tuple3[Int, Long, Int]( (((p + 1n) % nChunk) << (32n - nMaskBits)) as Int, idx, e.val3));
           } else {
             pushed(i) = ret;
             localSize(p)++;
@@ -296,11 +298,12 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       }
       currentChunk = nextChunk;
     }
-    val dummysize = localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
+    //val dummysize = localSize.reduce((acc:Int, x:Int)=>(acc + x), 0n);
+    val dummysize = RailUtils.reduce(localSize, ((acc:Int, x:Int)=>(acc + x)), 0n);
 
     val newKeys = MemoryChunk.make[K](dummysize);
 
-    val counts2 = new Array[Int](nChunk, 0);
+    val counts2 = new Rail[Int](nChunk, 0n);
     Parallel.iter(pushed.range(), (tid : Long, r : LongRange) =>{
       for (i in r) {
         if (pushed(i) >= 0) {
@@ -308,9 +311,9 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         }
       }
     });
-    val offsets2 = new Array[Int](nChunk + 1, 0);
+    val offsets2 = new Rail[Int](nChunk + 1n, 0n);
     for (i in (1..nChunk)) {
-      offsets2(i) = offsets2(i - 1) + counts2(i - 1);
+      offsets2(i) = offsets2(i - 1n) + counts2(i - 1n);
     }
 
     Parallel.iter(pushed.range(), (tid : Long, r : LongRange) => {
@@ -328,12 +331,12 @@ public final class HashMap[K,V] {K haszero, V haszero} {
 
   @Inline private def putDummyLocal(h : Int, proper_h : Int, key : K, value : V) {
     // current working upper bits
-    val currentBits = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+    val currentBits = (nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits);
     // upper bit of table size
     val sz = this.logSize;
 
     var cur : Int = hashToIndex(h, sz);
-    var cnt : Int = 0;
+    var cnt : Int = 0n;
 
     // while working on current chunk
     while (cur >> (sz - nMaskBits) == currentBits) {
@@ -347,18 +350,18 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         return cur;
       } else if (e.flag == HashEntry.OCCUPIED || e.flag == HashEntry.DUMMY) {
         if (e.key == key) {
-          return -1; // already added
+          return -1n; // already added
         }
       }
-      cur = (cur + 1) % (table.size() as Int);
+      cur = (cur + 1n) % (table.size() as Int);
       cnt++;
     }
-    return -2; // Add on next chunk
+    return -2n; // Add on next chunk
   }
 
   protected def getEntryIndex(k: K): Int {
-    if (size == 0)
-      return -1;
+    if (size == 0n)
+      return -1n;
 
     // incompatible with iterators
     //        if (shouldRehash)
@@ -368,14 +371,14 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     val sz = this.logSize;
 
     var i : Int = hashToIndex(h, sz);
-    var cnt : Int = 0;
+    var cnt : Int = 0n;
 
     while (true) {
       val e = table(i);
       if (e.flag == HashEntry.EMPTY) {
         if (cnt > MAX_PROBES)
           shouldRehash = true;
-        return -1;
+        return -1n;
       }
       if (e.flag == HashEntry.OCCUPIED) {
         if (e.hash == h && k.equals(e.key)) {
@@ -386,10 +389,10 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         if (cnt > table.size()) {
           if (cnt > MAX_PROBES)
             shouldRehash = true;
-          return -1;
+          return -1n;
         }
       }
-      i = (i + 1) % (table.size() as Int);
+      i = (i + 1n) % (table.size() as Int);
       cnt++;
     }
   }
@@ -406,7 +409,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       val counts = scatterGather.counts(tid as Int);
       for (i in r) {
         val h = hash(ks(i));
-        val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+        val chunkIdx = (nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits);
         counts(chunkIdx)++;
       }
     });
@@ -419,7 +422,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         val k = ks(i);
         val v = vs(i);
         val h = hash(ks(i));
-        val chunkIdx = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+        val chunkIdx = (nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits);
         val idx = offsets(chunkIdx)++;
         chunk(idx) = new Pair[Int, Long](h, i);
       }
@@ -429,20 +432,20 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     val counts = scatterGather.counts();
 
     // put elements to table parallel
-    val localSize = new Array[Int](nChunk);
-    var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
-      new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
-        (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+    val localSize = new Rail[Int](nChunk);
+    var currentChunk : Rail[GrowableMemory[Tuple3[Int, Long, Int]]] =
+      new Rail[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+        (i:Long)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
 
     finish for (p in 0..(nChunk - 1)) async {
-      var cnt:Int = 0;
+      var cnt:Int = 0n;
       for (i in (offsets(p)..(offsets(p) + counts(p) - 1))) {
         val e = chunk(i);
         val idx = e.second;
         if (!putLocal(e.first, e.first, ks(idx), vs(idx))) {
           // if flow from table, add next chunk
-          currentChunk((p + 1) % nChunk).add(
-            new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.first));
+          currentChunk((p + 1n) % nChunk).add(
+            new Tuple3[Int, Long, Int]( (((p + 1) % nChunk) << (32 - nMaskBits)) as int, idx, e.first));
         } else {
           cnt++;
         }
@@ -451,11 +454,12 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     }
 
     // put flow elements to table
-    for (var count : Int = 0; count < nChunk - 1 &&
-      !currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+    for (var count : Int = 0n; count < nChunk - 1 &&
+      //!currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+      !RailUtils.reduce(currentChunk, ((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
       count++) {
-      val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
-        (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+      val nextChunk = new Rail[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+        (i:Long)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
       finish for (p in 0..(nChunk - 1)) async {
         for (i in currentChunk(p).range()) {
           val e = currentChunk(p)(i);
@@ -463,7 +467,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
           if (!putLocal(e.val1, e.val3, ks(idx), vs(idx))) {
             // if flow from table, add next chunk
             nextChunk((p + 1) % nChunk).add(
-              new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+              new Tuple3[Int, Long, Int]( (((p + 1) % nChunk) << (32 - nMaskBits)) as Int, idx, e.val3));
           } else {
             localSize(p)++;
           }
@@ -471,17 +475,18 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       }
       currentChunk = nextChunk;
     }
-    size += localSize.reduce((acc:Int, x:Int)=>(acc + x), 0);
+    //size += localSize.reduce((acc:Int, x:Int)=>(acc + x), 0n);
+    size += RailUtils.reduce(localSize, ((acc : Int, x : Int)=> (acc + x)), 0n);
   }
 
   @Inline private def putLocal(h : Int, proper_h : Int, key : K, value : V) {
     // current working upper bits
-    val currentBits = (nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits);
+    val currentBits = (nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits);
     // upper bit of table size
     val sz = this.logSize;
 
     var cur : Int = hashToIndex(h, sz);
-    var cnt : Int = 0;
+    var cnt : Int = 0n;
 
     // while working on current chunk
     while (cur >> (sz - nMaskBits) == currentBits) {
@@ -494,7 +499,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         table(cur) = HashEntry[K, V](key, value, proper_h);
         return true;
       }
-      cur = (cur + 1) % (table.size() as Int);
+      cur = (cur + 1n) % (table.size() as Int);
       cnt++;
     }
     return false;
@@ -504,7 +509,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
   @NonEscaping protected final def rehashInternal(): void {
     val t = table;
     val oldSize = size;
-    size = 0;
+    size = 0n;
     table = MemoryChunk.make[HashEntry[K, V]](t.size() * 2);
     this.logSize = MathAppend.ceilLog2(table.size());
 
@@ -516,7 +521,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         val e = t(i);
         if (e.flag == HashEntry.OCCUPIED) {
           val h = e.hash;
-          val chunkIdx = ((nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits));
+          val chunkIdx = ((nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits));
           counts(chunkIdx)++;
         }
       }
@@ -532,7 +537,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
         val e = t(i);
         if (e.flag == HashEntry.OCCUPIED) {
           val h = e.hash;
-          val chunkIdx = ((nMaskBits == 0) ? 0 : hashToIndex(h, nMaskBits));
+          val chunkIdx = ((nMaskBits == 0n) ? 0n : hashToIndex(h, nMaskBits));
           val idx = offsets(chunkIdx)++;
           chunk(idx) = new Pair[Int, Long](h, i);
         }
@@ -543,21 +548,21 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     val counts = scatterGather.counts();
 
 
-    val localSize = new Array[Int](nChunk);
-    var currentChunk : Array[GrowableMemory[Tuple3[Int, Long, Int]]](1) =
-      new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
-        (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+    val localSize = new Rail[Int](nChunk);
+    var currentChunk : Rail[GrowableMemory[Tuple3[Int, Long, Int]]] =
+      new Rail[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+        (i:Long)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
 
     // put elements to table parallel
     finish for (p in 0..(nChunk - 1)) async {
-      var cnt:Int = 0;
+      var cnt:Int = 0n;
       for (i in (offsets(p)..(offsets(p) + counts(p) - 1))) {
         val e = chunk(i);
         val idx = e.second;
         if (!putLocal(e.first, e.first, t(idx).key, t(idx).value)) {
           // if flow from table, add next chunk
-          currentChunk((p + 1) % nChunk).add(
-            new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.first));
+          currentChunk((p + 1n) % nChunk).add(
+            new Tuple3[Int, Long, Int]( (((p + 1) % nChunk) << (32 - nMaskBits)) as Int, idx, e.first));
         } else {
           cnt++;
         }
@@ -566,11 +571,12 @@ public final class HashMap[K,V] {K haszero, V haszero} {
     }
 
     // put flow elements to table
-    for (var count : Int = 0; count < nChunk - 1 &&
-      !currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+    for (var count : Int = 0n; count < nChunk - 1 &&
+      //!currentChunk.reduce(((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
+      !RailUtils.reduce(currentChunk, ((acc:Boolean, x:GrowableMemory[Tuple3[Int, Long, Int]])=>x.size()==0L && acc), true);
       count++) {
-      val nextChunk = new Array[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
-        (i:Int)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
+      val nextChunk = new Rail[GrowableMemory[Tuple3[Int, Long, Int]]](nChunk,
+        (i:Long)=>new GrowableMemory[Tuple3[Int, Long, Int]]());
       finish for (p in 0..(nChunk - 1)) async {
         for (i in currentChunk(p).range()) {
           val e = currentChunk(p)(i);
@@ -578,7 +584,7 @@ public final class HashMap[K,V] {K haszero, V haszero} {
           if (!putLocal(e.val1, e.val3, t(idx).key, t(idx).value)) {
             // if flow from table, add next chunk
             nextChunk((p + 1) % nChunk).add(
-              new Tuple3[Int, Long, Int](((p + 1) % nChunk) << (32 - nMaskBits), idx, e.val3));
+              new Tuple3[Int, Long, Int]( (((p + 1) % nChunk) << (32 - nMaskBits)) as Int, idx, e.val3));
           } else {
             localSize(p)++;
           }
@@ -587,10 +593,11 @@ public final class HashMap[K,V] {K haszero, V haszero} {
       currentChunk = nextChunk;
     }
 
-    size += localSize.reduce((acc : Int, x : Int)=> (acc + x), 0);
+    //size += localSize.reduce((acc : Int, x : Int)=> (acc + x), 0n);
+    size += RailUtils.reduce(localSize, ((acc : Int, x : Int)=> (acc + x)), 0n);
 
     for (p in 0..(nChunk -1)) {
-      assert(currentChunk(p).size() == 0L);
+      assert(currentChunk(p).size() == 0);
     }
     assert(size == oldSize);
   }

@@ -27,11 +27,11 @@ import x10.io.EOFException;
 
 final class HyperANFTest extends AlgorithmTest{
 	
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new HyperANFTest().execute(args);
 	}
 	
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 //		val result = org.scalegraph.api.HyperANF.run(g);	
 		val hyperANF = new org.scalegraph.api.HyperANF();
 		val result :MemoryChunk[Double];

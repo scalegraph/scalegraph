@@ -19,11 +19,11 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.DistMemoryChunk;
 
 final class PageRankTest extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new PageRankTest().execute(args);
 	}
     
-    public def run(args :Array[String](1), g :Graph): Boolean {
+    public def run(args :Rail[String], g :Graph): Boolean {
     	
     	if(args.size < 3) {
     		println("Usage: [high|low] [write|check] <path>");
@@ -41,7 +41,7 @@ final class PageRankTest extends AlgorithmTest {
     		g.del();
     		Config.get().stopWatch().lap("Graph construction: ");
     		val pg = new org.scalegraph.api.PageRank();
-    		pg.niter = 30;
+    		pg.niter = 30n;
     		pg.eps = 0.0;
     		result = pg.execute(matrix);
     	}

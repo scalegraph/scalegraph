@@ -58,7 +58,7 @@ public final struct DistSparseMatrix[T] {
 		dist.allTeam().placeGroup().broadcastFlat(() => {
 			val z = dist.parentTeam().role()(0) / dist.allTeam().size();
 			if(z > 0) {
-				val copy_from = dist.getCongruentPlace(0);
+				val copy_from = dist.getCongruentPlace(0n);
 				val r = at (copy_from) Tuple2(data_()().ids, data_()().matrix);
 				data_()() = new Data(dist, r.get1(), r.get2());
 			}
@@ -87,7 +87,7 @@ public final struct DistSparseMatrix[T] {
 
 	/** (Not implemented)
 	 */
-	public static def makeReplica[T](attribute :DistMemoryChunk[T], teamArray :Array[Team]) {
+	public static def makeReplica[T](attribute :DistMemoryChunk[T], teamArray :Rail[Team]) {
 		// return PlaceLocalHandle[Rail[T]]...
 	}
 	
@@ -100,8 +100,8 @@ public final struct DistSparseMatrix[T] {
 			val m = data()().matrix;
 			val values_ = m.values;
 			val ids = data()().ids;
-			val StoV = Twod.StoV(ids, dist.r());
-			val DtoV = Twod.DtoV(ids, dist.c());
+			val StoV = Twod.StoV(ids, dist.r() as Int);
+			val DtoV = Twod.DtoV(ids, dist.c() as Int);
 			var dstIdx :Long = 0L;
 			var cachedOffset :Long = m.offsets(0);
 			

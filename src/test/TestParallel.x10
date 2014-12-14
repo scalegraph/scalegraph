@@ -11,7 +11,7 @@
 
 package test;
 
-import x10.util.ArrayUtils;
+import x10.util.RailUtils;
 import x10.util.Team;
 import x10.util.Random;
 import org.scalegraph.util.Parallel;
@@ -49,7 +49,7 @@ public final class TestParallel {
 
     finish for (i in 1..n) {
       Console.OUT.println("n: " + i + ", input: " + input);
-      val result = Parallel.partition[Int](input, (x:Int)=> x % i, i);
+      val result = Parallel.partition[Int](input, (x:Int)=> x % i as Int, i as Int);
       Console.OUT.println("n: " + i + ", result: " + result);
     }
   }
@@ -69,7 +69,7 @@ public final class TestParallel {
 	Console.OUT.println("m: " + m + ", result: " + result + ", retval: " + retval);
   }
 
-  public static def main(args:Array[String](1)) : void{
+  public static def main(args:Rail[String]) : void{
     Console.OUT.println("Team.WORLD: " + Team.WORLD);
     Console.OUT.println("members of Team(0): " + Team.WORLD.places());
     

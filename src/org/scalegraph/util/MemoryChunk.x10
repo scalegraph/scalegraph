@@ -17,8 +17,6 @@ import x10.compiler.Ifndef;
 import x10.compiler.Native;
 import x10.compiler.NativeRep;
 
-import x10.util.IndexedMemoryChunk;
-
 /** High performance array. The followings are the advantages of MemoryChunk compared with x10.lang.Array.<br>
  * <p><dl><dt>Indexing with Long</dt> <dd>The maximum length of x10.lang.Array is 2^31 since it uses Int for indexing.
  * In constract, the maximum length of MemoryChunk, which uses Long for indexing, is 2^63.</dd>
@@ -83,16 +81,16 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	}
 
 	private def this(size :Long, init :(Long) => T, filename :MemoryPointer[Byte], num :Int) {
-		data = MemoryChunkData.make_nocons[T](size, 0, false, filename, num);
+		data = MemoryChunkData.make_nocons[T](size, 0n, false, filename, num);
 		for(i in 0L..(size-1L)) {
 			data(i) = init(i);
 		}
 	}
 	
-	private def this(imc :IndexedMemoryChunk[T], offset :Long, size :Long) {
-		if(offset < 0 || offset + size > imc.length())
+	private def this(rail :Rail[T], offset :Long, size :Long) {
+		if(offset < 0 || offset + size > rail.size)
 			throw new ArrayIndexOutOfBoundsException("Out of bounds. Please, check the offset and the size.");
-		this.data = MemoryChunkData.make[T](imc, offset, size);
+		this.data = MemoryChunkData.make[T](rail, offset, size);
 	}
 	
 	def this(data :MemoryChunkData[T]) {
@@ -109,7 +107,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	/** Creates an empty memory chunk.
 	 */
 	public def this() {
-		data = MemoryChunkData.make[T](0L, 0, false);
+		data = MemoryChunkData.make[T](0L, 0n, false);
 	}
 	
 	public static def make[T]() = new MemoryChunk[T]();
@@ -148,36 +146,36 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	//@Native("c++", "org::scalegraph::util::MemoryChunk<#T >::_make(org::scalegraph::util::MakeStruct<#T >::make_nocons(#size, 0, false, (char*)(void*)__FILE__, __LINE__),#size, #init, (x10_byte*)(void*)__FILE__, __LINE__)")
 	//public static native def make[T](size :Long, init :(Long) => T) :MemoryChunk[T];
 	
-	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk.
-	 * @param imc IndexedMemoryChunk whose subsection is used
+	/** Creates memory chunk which refers subsection of the specified Rail.
+	 * @param rail Rail whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 * @param size The number of elements of the subsection
 	 */
-	public static def make[T](imc :IndexedMemoryChunk[T], offset :Long, size :Long) = new MemoryChunk[T](imc, offset, size);
+	public static def make[T](rail :Rail[T], offset :Long, size :Long) = new MemoryChunk[T](rail, offset, size);
 	
-	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk.
-	 * @param imc IndexedMemoryChunk whose subsection is used
+	/** Creates memory chunk which refers subsection of the specified Rail.
+	 * @param rail Rail whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 * @param size The number of elements of the subsection
 	 */
-	public static def make[T](imc :IndexedMemoryChunk[T], offset :Int, size :Int) = new MemoryChunk[T](imc, offset, size);
+	public static def make[T](rail :Rail[T], offset :Int, size :Int) = new MemoryChunk[T](rail, offset, size);
 	
-	/** Creates memory chunk which refers subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, offset, (imc.length() - offset)).
-	 * @param imc IndexedMemoryChunk whose subsection is used
+	/** Creates memory chunk which refers subsection of the specified Rail. This method is equivalent to this(rail, offset, (rail.size - offset)).
+	 * @param rail Rail whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 */
-	public static def make[T](imc :IndexedMemoryChunk[T], offset :Long) = new MemoryChunk[T](imc, offset, (imc.length() - offset) as Long);
+	public static def make[T](rail :Rail[T], offset :Long) = new MemoryChunk[T](rail, offset, (rail.size - offset) as Long);
 	
-	/** Creates memory chunk which refers the subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, offset, (imc.length() - offset)).
-	 * @param imc IndexedMemoryChunk whose subsection is used
+	/** Creates memory chunk which refers the subsection of the specified Rail. This method is equivalent to this(rail, offset, (rail.size - offset)).
+	 * @param rail Rail whose subsection is used
 	 * @param offset The offset from which the subsection starts
 	 */
-	public static def make[T](imc :IndexedMemoryChunk[T], offset :Int) = new MemoryChunk[T](imc, offset as Long, (imc.length() - offset) as Long);
+	public static def make[T](rail :Rail[T], offset :Int) = new MemoryChunk[T](rail, offset as Long, (rail.size - offset) as Long);
 	
-	/** Creates memory chunk which refers the subsection of the specified IndexedMemoryChunk. This method is equivalent to this(imc, 0, imc.length()).
-	 * @param imc IndexedMemoryChunk whose subsection is used
+	/** Creates memory chunk which refers the subsection of the specified Rail. This method is equivalent to this(rail, 0, rail.size).
+	 * @param rail Rail whose subsection is used
 	 */
-	public static def make[T](imc :IndexedMemoryChunk[T]) = new MemoryChunk[T](imc, 0L, imc.length() as Long);
+	public static def make[T](rail :Rail[T]) = new MemoryChunk[T](rail, 0L, rail.size as Long);
 	
 	/** Free memory. Once you free MemoryChunk,
 	 * you can not use any MemoryChunk which point to the released memory.
@@ -191,7 +189,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 		val sb = new x10.util.StringBuilder();
 		sb.add("[");
 		val sz = Math.min(size(), 10L);
-		for (var i:Int = 0; i < sz; ++i) {
+		for (var i:Int = 0n; i < sz; ++i) {
 			if (i > 0) sb.add(",");
 			sb.add("" + data(i));
 		}
@@ -244,7 +242,7 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	
 	/** Creates new array and copy the elements to it and returns it.
 	 */
-	public def toArray() = new Array[T](data.size as Int, (i:Int)=>data(i));
+	public def toRail() = new Rail[T](data.size, (i:Long)=>data(i));
 
 	/** Allocates new memory and copy the elements to it and returns it.
 	 */

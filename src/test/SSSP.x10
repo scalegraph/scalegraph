@@ -26,11 +26,11 @@ import org.scalegraph.util.SString;
 import org.scalegraph.io.NamedDistData;
 
 public final class SSSP extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new SSSP().execute(args);
 	}
 	
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 		
 
 		if(args.size < 2) {

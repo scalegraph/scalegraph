@@ -17,6 +17,8 @@ import x10.io.FileReader;
 import x10.io.BufferedReader;
 import x10.io.IOException;
 
+import x10.array.OrderedPlaceGroup;
+
 import x10.util.HashSet;
 import x10.util.Team;
 
@@ -28,7 +30,8 @@ import org.scalegraph.util.DistMemoryChunk;
 public class Import {
 	
 	public static def fromEdgeList(readPath : String, writePath : String, separator : String) {
-		val singleTeam = new Team(new Array[Place](1, here));
+		//val singleTeam = new Team(new Rail[Place](1, here));
+		val singleTeam = new Team(new OrderedPlaceGroup(new Rail[Place](1, here)));
 		
 		val reader = new BufferedReader(new FileReader(new File(readPath)));
 		
@@ -52,7 +55,7 @@ public class Import {
 		
 		val vertexList = MemoryChunk.make[Long](vertexSet.size());
 		val it = vertexSet.iterator();
-		for(var i:Int = 0; it.hasNext(); i++) {
+		for(var i:Int = 0n; it.hasNext(); i++) {
 			vertexList(i) = it.next();
 		}
 		val vid = new DistMemoryChunk[Long](singleTeam.placeGroup(), () => vertexList);

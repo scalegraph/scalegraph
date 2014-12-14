@@ -14,7 +14,7 @@ import org.scalegraph.test.STest;
 import org.scalegraph.util.MemoryChunk;
 
 final class MemoryChunkTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new MemoryChunkTest().execute(args);
 	}
 	
@@ -39,7 +39,7 @@ final class MemoryChunkTest extends STest {
 		public def toString() = "a = " + a + ", b = " + b;
 	}
 
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
     //	val mc1 = MemoryChunk.make[SampleStruct](10, (i :Long) => SampleStruct(i as Int, i));
     //	val mc2 = MemoryChunk.make[SampleClass](10);
     //	val mc2 = MemoryChunk.make[SampleClass](10, (Long)=>new SampleClass());

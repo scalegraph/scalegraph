@@ -12,7 +12,8 @@
 package org.scalegraph.util;
 
 import x10.util.Team;
-import x10.util.ArrayUtils;
+//import x10.util.ArrayUtils;
+import x10.regionarray.Region;
 import x10.util.HashMap;
 import x10.compiler.Pragma;
 
@@ -26,8 +27,8 @@ import org.scalegraph.graph.id.IdStruct;
  * This class supports the multiple 2d distributed plane. 
  */
 public final struct Dist2D {
-	public static DISTRIBUTE_ROWS :Int = 1;
-	public static DISTRIBUTE_COLUMNS :Int = 2;
+	public static DISTRIBUTE_ROWS :Int = 1n;
+	public static DISTRIBUTE_COLUMNS :Int = 2n;
 	
 	static type Rect2D = Region(2){rect==true,zeroBased==true};
 	private static struct LocalData (
@@ -43,7 +44,7 @@ public final struct Dist2D {
 			property(mapping_, nreplica_, parentTeam_, allTeam_, rowTeam_, columnTeam_, herePt_);
 		}
 		public def this() {
-			property(null, 0, Team.WORLD, Team.WORLD, null, null, null);
+			property(null, 0n, Team.WORLD, Team.WORLD, null, null, null);
 		}
 	}
 	
@@ -63,7 +64,7 @@ public final struct Dist2D {
     	
     	// create mapping from Place to Point.
     	val placeMap = new HashMap[Place, Point(2)]();
-    	val orderedPlaces = new Array[Place](places.size);
+    	val orderedPlaces = new Rail[Place](places.size);
     	for(c in 0..mapping.max(1)) {
     		for(r in 0..mapping.max(0)) {
     			val i = mapping.indexOf(r, c);
@@ -80,7 +81,7 @@ public final struct Dist2D {
     		create_allteam = true;
     	else {
     		val pp = parentTeam.places();
-    		for([i] in pp) {
+    		for(i in pp.range()) {
     			if(pp(i) != orderedPlaces(i)) {
     				create_allteam = true;
     				break;
@@ -97,14 +98,16 @@ public final struct Dist2D {
     		var allTeam :Team;
     		if(create_allteam_) {
     			val z = parentTeam.role()(0) / RC;
-    			allTeam = parentTeam.split(parentTeam.role()(0), z, role);
+    			//allTeam = parentTeam.split(parentTeam.role()(0), z, role);
+    			allTeam = parentTeam.split(z as Int, role);
     			for(pp in parentTeam.placeGroup()) {
     				/// if(here == pp) {
     				///	Console.OUT.println(here);
     				///	Console.OUT.println("allTeam = " + allTeam);
     				///	Console.OUT.println("split(key=" + role + ",color=" + z + ")");
     				/// }
-    				parentTeam.barrier(parentTeam.role()(0));
+    				//parentTeam.barrier(parentTeam.role()(0));
+    				parentTeam.barrier();
     			}
     		}
     		else {
@@ -125,10 +128,12 @@ public final struct Dist2D {
 	    		}
     		}
     		else {
-    			rowTeam = Cell.make[Team](allTeam.split(role, r, c));
-    			columnTeam = Cell.make[Team](allTeam.split(role, c, r));
+    			//rowTeam = Cell.make[Team](allTeam.split(role, r, c));
+    			//columnTeam = Cell.make[Team](allTeam.split(role, c, r));
+    			rowTeam = Cell.make[Team](allTeam.split(r as Int, c));
+    			columnTeam = Cell.make[Team](allTeam.split(c as Int, r));
     		}
-    		return new Cell[LocalData](LocalData(mapping, cycles, parentTeam, allTeam, rowTeam, columnTeam, p));
+    		return new Cell[LocalData](LocalData(mapping, cycles as Int, parentTeam, allTeam, rowTeam, columnTeam, p));
     	});
     }
     
@@ -139,7 +144,8 @@ public final struct Dist2D {
      * @param parentTeam The base team from which split into.
      */
     public static def make2D(parentTeam :Team, R:Int, C:Int) {
-		return new Dist2D(Region.makeRectangular([0, 0], [R-1, C-1]) as Rect2D, parentTeam, false);
+		var zero :Long = 0;
+		return new Dist2D(Region.makeRectangular([zero, zero], [R-1, C-1]) as Rect2D, parentTeam, false);
     }
     
     /** Create R x R distribution.
@@ -147,7 +153,8 @@ public final struct Dist2D {
      * @param parentTeam The base team from which split into.
      */
     public static def make2D(parentTeam :Team, R:Int) {
-    	return new Dist2D(Region.makeRectangular([0, 0], [R-1, R-1]) as Rect2D, parentTeam, false);
+		var zero :Long = 0;
+    	return new Dist2D(Region.makeRectangular([zero, zero], [R-1, R-1]) as Rect2D, parentTeam, false);
     }
     
     /** Creates 2D distribution from the mapping
@@ -164,10 +171,11 @@ public final struct Dist2D {
      */
     public static def make1D(parentTeam :Team, distributionMethod :Int) {
     	val numPlaces = parentTeam.size();
+		var zero :Long = 0;
     	if(distributionMethod == DISTRIBUTE_ROWS)
-    		return new Dist2D(Region.makeRectangular([0, 0], [numPlaces-1, 0]) as Rect2D, parentTeam, true);
+    		return new Dist2D(Region.makeRectangular([zero, zero], [numPlaces-1, 0]) as Rect2D, parentTeam, true);
     	else if(distributionMethod == DISTRIBUTE_COLUMNS)
-    		return new Dist2D(Region.makeRectangular([0, 0], [0, numPlaces-1]) as Rect2D, parentTeam, true);
+    		return new Dist2D(Region.makeRectangular([zero, zero], [0, numPlaces-1]) as Rect2D, parentTeam, true);
     	else
     		throw new IllegalArgumentException();
     }
@@ -240,8 +248,8 @@ public final struct Dist2D {
      */
     public def getIds(numberOfVertices :Long, numberOfLocalVertices :Long, transpose :Boolean) {
     	var R:Int, C:Int;
-    	R = R();
-    	C = C();
+    	R = R() as Int;
+    	C = C() as Int;
     	val size = R * C;
     	val avgNumberOfLocalVertices = (numberOfVertices + size - 1) / size;
     	if(!MathAppend.powerOf2(R) || !MathAppend.powerOf2(C))
@@ -258,11 +266,14 @@ public final struct Dist2D {
     	val cachedData = data()();
     	if(cachedData.rowTeam != null &&
     	   cachedData.rowTeam().id() != cachedData.allTeam.id())
-    		cachedData.rowTeam().del(c());
+    		//cachedData.rowTeam().del(c());
+    		cachedData.rowTeam().delete();
     	if(cachedData.columnTeam != null &&
     	   cachedData.columnTeam().id() != cachedData.allTeam.id())
-    		cachedData.columnTeam().del(r());
-    	if(cachedData.allTeam.id() != cachedData.parentTeam.id()) cachedData.allTeam.del(idx());
+    		//cachedData.columnTeam().del(r());
+    		cachedData.columnTeam().delete();
+    	//if(cachedData.allTeam.id() != cachedData.parentTeam.id()) cachedData.allTeam.del(idx());
+    	if(cachedData.allTeam.id() != cachedData.parentTeam.id()) cachedData.allTeam.delete();
     	data()() = LocalData();
     }
     

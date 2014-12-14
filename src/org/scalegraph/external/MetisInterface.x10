@@ -49,7 +49,7 @@ public final class MetisInterface {
                                             options: MemoryChunk[Long],
                                             edgecut: MemoryChunk[Long],
                                             part: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V3_PartKway(vtxdist->pointer(), xadj->pointer(), adjncy->pointer(), vwgt->pointer(), adjWgt->pointer(), &wgtflag, &numflag, &ncon, &nparts, tpwgts->pointer(), ubvec->pointer(), options->pointer(), edgecut->pointer(), part->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support
@@ -77,7 +77,7 @@ public final class MetisInterface {
                                             options: MemoryChunk[Long],
                                             edgecut: MemoryChunk[Long],
                                             part: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V3_PartGeomKway(vtxdist->pointer(), xadj->pointer(), adjncy->pointer(), vwgt->pointer(), adjWgt->pointer(), &wgtflag, &numflag, &ndims, xyz->pointer(), &ncon, &nparts, tpwgts->pointer(), ubvec->pointer(), options->pointer(), edgecut->pointer(), part->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support
@@ -93,7 +93,7 @@ public final class MetisInterface {
                                                 ndims: Long,
                                                 xyz: MemoryChunk[Double],
                                                 part: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V3_PartGeom(vtxdist->pointer(), &ndims, xyz->pointer(), part->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support
@@ -119,7 +119,7 @@ public final class MetisInterface {
                                                 options: MemoryChunk[Long],
                                                 edgecut: MemoryChunk[Long],
                                                 part: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V3_PartMeshKway(elmdist->pointer(), eptr->pointer(), eind->pointer(), elmwgt->pointer(), &wgtflag, &numflag, &ncon, &commonnodes, &nparts, tpwgts->pointer(), ubvec->pointer(), options->pointer(), edgecut->pointer(), part->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support
@@ -147,7 +147,7 @@ public final class MetisInterface {
                                             options: MemoryChunk[Long],
                                             edgecut: MemoryChunk[Long],
                                             part: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V3_AdaptiveRepart(vtxdist->pointer(), xadj->pointer(), adjncy->pointer(), vwgt->pointer(), size->pointer(), adjWgt->pointer(), &wgtflag, &numflag, &ncon, &nparts, tpwgts->pointer(), ubvec->pointer(), &itr, options->pointer(), edgecut->pointer(), part->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support
@@ -173,7 +173,7 @@ public final class MetisInterface {
                                                   options: MemoryChunk[Long],
                                                   edgecut: MemoryChunk[Long],
                                                   part: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V3_RefineKway(vtxdist->pointer(), xadj->pointer(), adjncy->pointer(), vwgt->pointer(), adjWgt->pointer(), &wgtflag, &numflag, &ncon, &nparts, tpwgts->pointer(), ubvec->pointer(), options->pointer(), edgecut->pointer(), part->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support
@@ -192,7 +192,7 @@ public final class MetisInterface {
                                               options: MemoryChunk[Long],
                                               order: MemoryChunk[Long],
                                               size: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V3_NodeND(vtxdist->pointer(), xadj->pointer(), adjncy->pointer(), &numflag, options->pointer(), order->pointer(), size->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support
@@ -218,7 +218,7 @@ public final class MetisInterface {
                                           dbglvl: Long,
                                           order: MemoryChunk[Long],
                                           size: MemoryChunk[Long]): Int {
-        var ret: Int = 0;
+        var ret: Int = 0n;
         @Ifdef("__CPP__") {
             @Native("c++", "ret = ParMETIS_V32_NodeND(vtxdist->pointer(), xadj->pointer(), adjncy->pointer(), vwgt->pointer(), &numflag, &mtype, &rtype, &p_nseps, &s_nseps, &ubfrac, &seed, &dbglvl, order->pointer(), size->pointer(), &METIS_DEFAULT_TEAM);") {
                 // Java code does not support

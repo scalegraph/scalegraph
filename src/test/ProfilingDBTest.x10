@@ -21,40 +21,40 @@ import org.scalegraph.util.SStringBuilder;
 import org.scalegraph.util.SString;
 
 public class ProfilingDBTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new ProfilingDBTest().execute(args);
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		
-		val prof = new ProfilingDB([4 as Int, 2]);
+		val prof = new ProfilingDB([4n, 2n]);
 		
 		Config.get().worldTeam().placeGroup().broadcastFlat(() => {
-			val timer = prof.timer(0, 0);
+			val timer = prof.timer(0n, 0);
 			val counters = MemoryChunk.make[ProfilingDB.Timer](
-					Runtime.NTHREADS, (i:Long) => prof.timer(1, i));
+					Runtime.NTHREADS, (i:Long) => prof.timer(1n, i));
 			
 			timer.start();
 			val testdata = MemoryChunk.make[Int](10000000);
-			timer.lap(0);
+			timer.lap(0n);
 			Parallel.iter(testdata.range(), (tid :Long, r :LongRange) => {
 				counters(tid).start();
-				for(i in r) testdata(i) = 3;
-				counters(tid).lap(0);
+				for(i in r) testdata(i) = 3n;
+				counters(tid).lap(0n);
 			});
-			timer.lap(1);
+			timer.lap(1n);
 			Parallel.iter(testdata.range(), (tid :Long, r :LongRange) => {
 				for(i in r) {
 					counters(tid).start();
-					testdata(i) = 9;
-					counters(tid).lap(1);
+					testdata(i) = 9n;
+					counters(tid).lap(1n);
 				}
 			});
-			timer.lap(2);
+			timer.lap(2n);
 			Parallel.iter(testdata.range(), (i :Long) => {
-				testdata(i) = 5;
+				testdata(i) = 5n;
 			});
-			timer.lap(3);
+			timer.lap(3n);
 			
 			prof.finishStepWithAll();
 		});

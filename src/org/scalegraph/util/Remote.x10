@@ -28,7 +28,7 @@ public final class Remote {
 		Console.OUT.println("Place: " + here.id + ": Remote: " + tag);
 	}
 
-	private static def splitChunks(range :LongRange) :Array[Long](1){self.size==2} {
+	private static def splitChunks(range :LongRange) :Rail[Long]{self.size==2} {
 		val size = range.max - range.min + 1;
 		if(size == 0L) return [0L, size];
 		val nthreads = Math.min(Runtime.NTHREADS as Long, size);
@@ -48,7 +48,9 @@ public final class Remote {
 	{
 		val teamSize = team.size();
 		val scatterGather = new DistScatterGather(team);
-		val [nthreads, chunk_size] = splitChunks(range);
+		//val [nthreads, chunk_size] = splitChunks(range);
+		val tmprail = splitChunks(range);
+		val nthreads = tmprail(0), chunk_size = tmprail(1);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
@@ -104,7 +106,10 @@ public final class Remote {
 	{
 		val teamSize = team.size();
 		val scatterGather = new DistScatterGather(team);
-		val [nthreads, chunk_size] = splitChunks(range);
+		//val [nthreads, chunk_size] = splitChunks(range);
+		val tmpRail = splitChunks(range);
+		val nthreads = tmpRail(0);
+		val chunk_size = tmpRail(1);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
@@ -158,7 +163,9 @@ public final class Remote {
 	{
 		val teamSize = team.size();
 		val scatterGather = new DistScatterGather(team);
-		val [nthreads, chunk_size] = splitChunks(range);
+		//val [nthreads, chunk_size] = splitChunks(range);
+		val tmprail = splitChunks(range);
+		val nthreads = tmprail(0), chunk_size = tmprail(1);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);
@@ -201,7 +208,9 @@ public final class Remote {
 	{
 		val teamSize = team.size();
 		val scatterGather = new DistScatterGather(team);
-		val [nthreads, chunk_size] = splitChunks(range);
+		//val [nthreads, chunk_size] = splitChunks(range);
+		val tmprail = splitChunks(range);
+		val nthreads = tmprail(0), chunk_size = tmprail(1);
 		finish for(i in 0..(nthreads-1)) {
 			val i_start = range.min + i*chunk_size;
 			val i_range = i_start..Math.min(range.max, i_start+chunk_size-1);

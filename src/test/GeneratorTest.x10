@@ -22,14 +22,14 @@ import org.scalegraph.io.CSV;
 import org.scalegraph.io.NamedDistData;
 
 final class GeneratorTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new GeneratorTest().execute(args);
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		for(s in 14..22) {
-			rmat_test(s);
-			erdos_test(s);
+			rmat_test(s as Int);
+			erdos_test(s as Int);
 		}
 	//	random_test();
 		return true;
@@ -37,8 +37,8 @@ final class GeneratorTest extends STest {
 	
 	private static def rmat_test(scale :Int) {
 		val rnd = new Random(2,3);
-		val edges = GraphGenerator.genRMAT(scale, 16, 0.45, 0.15, 0.15, rnd);
-		val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+		val edges = GraphGenerator.genRMAT(scale, 16n, 0.45, 0.15, 0.15, rnd);
+		val weights = GraphGenerator.genRandomEdgeValue(scale, 16n, rnd);
 		CSV.write("rmat-scale" + scale + "-%d",
 				new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]),true);
 		//DistributedReader.write("rmat-%d", rmatEdges);
@@ -47,8 +47,8 @@ final class GeneratorTest extends STest {
 	
 	private static def erdos_test(scale :Int) {
 	    val rnd = new Random(2,3);
-	    val edges = GraphGenerator.genRandomGraph(scale, 16, rnd);
-	    val weights = GraphGenerator.genRandomEdgeValue(scale, 16, rnd);
+	    val edges = GraphGenerator.genRandomGraph(scale, 16n, rnd);
+	    val weights = GraphGenerator.genRandomEdgeValue(scale, 16n, rnd);
 	    CSV.write("erdos-scale" + scale + "-%d",
 	    		new NamedDistData(["source" as String, "target", "weight"], [edges.src as Any, edges.dst, weights]),true);
 	    //DistributedReader.write("erdos-%d", rmatEdges);

@@ -15,11 +15,11 @@ import org.scalegraph.test.STest;
 import org.scalegraph.util.random.Random;
 
 class RandomTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new RandomTest().execute(args);
 	}
 	
-	public def run(args :Array[String](1)): Boolean {
+	public def run(args :Rail[String]): Boolean {
 	    val t1 = new Random(1, 2);
 
 	    Console.OUT.println(t1.nextInt());

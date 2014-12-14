@@ -63,7 +63,7 @@ final public class SpectralClusteringImpl {
 		val params = new ARPACK.Params();
 		params.nev = numCluster;
 		params.tol = tolerance;
-		params.rvec = 1;
+		params.rvec = 1n;
 		params.fit();
 		val V = calcEigenVectors(team, W, params);
 		
@@ -93,7 +93,7 @@ final public class SpectralClusteringImpl {
 		// global params for pdsaupd
 		val n = n_ as Int;
 		val nloc = nloc_ as Int;
-		var comm_:Int = 0;
+		var comm_:Int = 0n;
 		@Native("c++", "comm_ = MPI_COMM_WORLD;") {}
 		val comm = comm_;
 		val nev:Int = params.nev;
@@ -117,29 +117,29 @@ final public class SpectralClusteringImpl {
 			// local workspaces for pdsaupd
 			val random = new Random(2L);
 			val role = team.role()(0);
-			var ido:Int = 0;
-			val resid:Array[Double](1) = new Array[Double](nloc, (Int) => random.nextDouble());
-			val u:Array[Double](1) = new Array[Double](ncv * ldu);
-			val iparam:Array[Int](1) = new Array[Int](11);
-			val ipntr:Array[Int](1) = new Array[Int](11);
-			val workd:Array[Double](1) = new Array[Double](3 * nloc);
-			val workl:Array[Double](1) = new Array[Double](lworkl);
-			var info:Int = 1;
+			var ido:Int = 0n;
+			val resid:Rail[Double] = new Rail[Double](nloc, (Long) => random.nextDouble());
+			val u:Rail[Double] = new Rail[Double](ncv * ldu);
+			val iparam:Rail[Int] = new Rail[Int](11);
+			val ipntr:Rail[Int] = new Rail[Int](11);
+			val workd:Rail[Double] = new Rail[Double](3 * nloc);
+			val workl:Rail[Double] = new Rail[Double](lworkl);
+			var info:Int = 1n;
 			
 			// local workspaces for pdseupd
-			val select:Array[Int](1) = new Array[Int](ncv);
-			val d:Array[Double](1) = new Array[Double](nev);
-			val v:Array[Double](1) = new Array[Double](nev * ldv);
+			val select:Rail[Int] = new Rail[Int](ncv);
+			val d:Rail[Double] = new Rail[Double](nev);
+			val v:Rail[Double] = new Rail[Double](nev * ldv);
 			
 			val sw = Config.get().stopWatch();
 			if(here.id == 0) sw.lap("start ARPACK iteration");
 			
-			iparam(0) = 1;
+			iparam(0) = 1n;
 			iparam(2) = maxitr;
-			iparam(3) = 1;
-			iparam(6) = 1;
+			iparam(3) = 1n;
+			iparam(6) = 1n;
 			
-			var iter:Int = 0;
+			var iter:Int = 0n;
 			while(true) {
 				//if(role == 0 && iter % 100 == 0) {
 				//	Console.OUT.println("iter = " + iter);
@@ -152,45 +152,45 @@ final public class SpectralClusteringImpl {
 
 				if(here.id == 0) sw.lap("ARPACK Iteration " + iter);
 				
-				if(role == 0 && info != 0) {
+				if(role == 0n && info != 0n) {
 					ARPACK.printError("pdsaupd", info);
 				}
 				
-				if(ido == -1 || ido == 1) {
+				if(ido == -1n || ido == 1n) {
 					// y <- OP(x)
-					Parallel.iter(0..(nloc-1), (tid:Int, r:IntRange) => {
+					Parallel.iter(0n..(nloc-1n), (tid:Int, r:IntRange) => {
 						for(i in r) {
 							x()(i) = workd(ipntr(0) - 1 + i);
 						}
 					});
 					BLAS.mult_[Double](1.0, A, false, x, 0.0, y);
-					Parallel.iter(0..(nloc-1), (tid:Int, r:IntRange) => {
+					Parallel.iter(0n..(nloc-1n), (tid:Int, r:IntRange) => {
 						for(i in r) {
 							workd(ipntr(1) - 1 + i) = y()(i);
 						}
 					});
 					if(here.id == 0) sw.lap("Operation y <- OP(x): " + iter);
 					
-				} else if(ido == 2) {
+				} else if(ido == 2n) {
 					// y <- Bx
-					Parallel.iter(0..(nloc-1), (tid:Int, r:IntRange) => {
+					Parallel.iter(0n..(nloc-1n), (tid:Int, r:IntRange) => {
 						for(i in r) {
 							workd(ipntr(1) - 1 + i) = workd(ipntr(0) - 1 + i);
 						}
 					});
 					if(here.id == 0) sw.lap("Operation y <- Bx: " + iter);
 				} else {
-					if(role == 0 && ido != 99) Console.OUT.println("ARPACK: pdsaupd: unknown operation: ido = " + ido);
+					if(role == 0n && ido != 99n) Console.OUT.println("ARPACK: pdsaupd: unknown operation: ido = " + ido);
 					if(here.id == 0) sw.lap("Iteration finished");
 					break;
 				}
 			}
 			
-			if(role == 0) Console.OUT.println("ARPACK: iterations = " + iparam(2));
-			if(role == 0) Console.OUT.println("converged Ritz values = " + iparam(4));
+			if(role == 0n) Console.OUT.println("ARPACK: iterations = " + iparam(2));
+			if(role == 0n) Console.OUT.println("converged Ritz values = " + iparam(4));
 			
 			if(iparam(4) < nev){
-				if(role == 0) Console.OUT.println("ARPACK: pdsaupd: could not calculate all required Ritz values");
+				if(role == 0n) Console.OUT.println("ARPACK: pdsaupd: could not calculate all required Ritz values");
 				//return Zero.get[DistMemoryChunk[Double]]();
 			}
 			
@@ -199,7 +199,7 @@ final public class SpectralClusteringImpl {
 					ncv, u, ldu, iparam, ipntr, workd,
 					workl, lworkl, info);
 			
-			if(role == 0){
+			if(role == 0n){
 				ARPACK.printError("pdseupd", info);
 				Console.OUT.println(d);
 			}
@@ -208,10 +208,10 @@ final public class SpectralClusteringImpl {
 			
 			val result = MemoryChunk.make[Double](v.size);
 			Parallel.iter(
-					0..(nloc-1),
+					0n..(nloc-1n),
 					(tid:Int, r:IntRange) => {
 						for(i in r) {
-							for(var j:Int = 0; j < nev; j++) {
+							for(var j:Int = 0n; j < nev; j++) {
 								result(nev * i + j) = v(i + j * nloc);
 							}
 						}
@@ -258,7 +258,7 @@ final public class SpectralClusteringImpl {
 			}
 			
 			for(itr in 1..maxitr) {
-				if(team.role()(0) == 0) Console.OUT.println("itr = " + itr);
+				if(team.role()(0) == 0n) Console.OUT.println("itr = " + itr);
 				
 				// reduce centroids
 				// if(team.role()(0) == 0) Console.OUT.println("reduce centroids");
@@ -287,7 +287,7 @@ final public class SpectralClusteringImpl {
 						}
 					}
 					if(converge) {
-						if(team.role()(0) == 0) Console.OUT.println("k-means: iterations = " + itr);
+						if(team.role()(0) == 0n) Console.OUT.println("k-means: iterations = " + itr);
 						break;
 					}
 				}
@@ -305,7 +305,7 @@ final public class SpectralClusteringImpl {
 				// assign vertices to the nearest cluster
 				// if(team.role()(0) == 0) Console.OUT.println("assign vertices to the nearest cluster");
 				for(i in 0..(nloc-1)) {
-					var best:Int = -1;
+					var best:Int = -1n;
 					var bestNorm2:Double = Double.MAX_VALUE;
 					for(j in 0..(k-1)) {
 						var norm2:Double = 0.0;
@@ -314,7 +314,7 @@ final public class SpectralClusteringImpl {
 							norm2 += x * x;
 						}
 						if(norm2 < bestNorm2) {
-							best = j;
+							best = j as Int;
 							bestNorm2 = norm2;
 						}
 					}
@@ -350,7 +350,7 @@ class MyStopWatch {
 	}
 	
 	val list : x10.util.ArrayList[Record] = new x10.util.ArrayList[Record]();
-	var maxLength : Int = 0;
+	var maxLength : Int = 0n;
 	
 	def start(label : String) {
 		list.add(new Record(label, x10.util.Timer.milliTime()));
@@ -371,7 +371,7 @@ class MyStopWatch {
 	def print() {
 		for(rec in list) {
 			val numTab = (maxLength / 8 + 1) - (rec.label.length() / 8);
-			Console.OUT.printf("%s%s%.3f sec\n", rec.label, new String(new Array[Char](numTab, '\t')), rec.time / 1000.0);
+			Console.OUT.printf("%s%s%.3f sec\n", rec.label, new String(new Rail[Char](numTab, '\t')), rec.time / 1000.0);
 		}
 	}
 }

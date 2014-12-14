@@ -27,11 +27,11 @@ import org.scalegraph.Config;
 import org.scalegraph.io.CSV;
 
 final class TestBetweennessCentralityUnweighted extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestBetweennessCentralityUnweighted().execute(args);
 	}
     
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 	    
 	    var result: DistMemoryChunk[Double];
 	    

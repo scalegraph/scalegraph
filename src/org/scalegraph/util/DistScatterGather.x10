@@ -35,7 +35,7 @@ public final struct DistScatterGather {
 	private recvCounts :MemoryChunk[Int];
 	private recvOffsets :MemoryChunk[Int];
 
-    private CACHE_LINE = 64;
+    private CACHE_LINE = 64n;
 
 	public def this(team :Team) {
 		this.team = new Team2(team);
@@ -43,10 +43,10 @@ public final struct DistScatterGather {
 
 		// TODO: imcomplete cache alignment
 		maxThreads = Runtime.NTHREADS;
-		bufferWidth = Math.max(CACHE_LINE/4, teamSize);
+		bufferWidth = Math.max(CACHE_LINE/4n, teamSize as Int);
 
 		val size = bufferWidth * (maxThreads*2 + 1) + (teamSize*2 + 1) * 2;
-		val dist = (MemoryChunk.make[Int](size, CACHE_LINE)).distributor();
+		val dist = (MemoryChunk.make[Int](size as Int, CACHE_LINE)).distributor();
 
 		threadCounts = dist.next(bufferWidth*maxThreads);
 		threadOffsets = dist.next(bufferWidth*(maxThreads+1));
@@ -59,7 +59,7 @@ public final struct DistScatterGather {
 
 	public def getCounts(tid :Int) {
 		val mc = threadCounts.subpart(bufferWidth*tid, bufferWidth);
-		for(i in mc.range()) mc(i) = 0;
+		for(i in mc.range()) mc(i) = 0n;
 		return mc;
 	}
 
@@ -72,14 +72,14 @@ public final struct DistScatterGather {
 		val threadsRange = 0..(maxThreads-1);
 		// compute sum of thread local count values
 		for(r in teamRange) {
-			var sum :Int = 0;
+			var sum :Int = 0n;
 			for(t in threadsRange) {
 				sum += threadCounts(t*width + r);
 			}
 			sendCounts(r) = sum;
 		}
 		// compute offsets
-		sendOffsets(0) = 0;
+		sendOffsets(0) = 0n;
 		for(r in teamRange) {
 			sendOffsets(r + 1) = sendOffsets(r) + sendCounts(r);
 		}
@@ -111,7 +111,7 @@ public final struct DistScatterGather {
 			assert (sendData.size() as Int == sendOffsets(teamSize));
 		}
 		team.alltoall(sendCounts, recvCounts);
-		Team2.countOffsets(recvCounts, recvOffsets, 0);
+		Team2.countOffsets(recvCounts, recvOffsets, 0n);
 		val recvData = MemoryChunk.make[T](recvOffsets(teamSize));
 		team.alltoallv(sendData, sendOffsets, sendCounts, recvData, recvOffsets, recvCounts);
 		return recvData;

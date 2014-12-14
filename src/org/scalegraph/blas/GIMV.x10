@@ -89,7 +89,7 @@ public final class GIMV {
 			val v = vector();
 			val columnTeam = Team2(matrix.dist().columnTeam());
 			val rowTeam = Team2(matrix.dist().rowTeam());
-			val map_tmp_array = new Array[GrowableMemory[U]](Runtime.NTHREADS, (Int)=>new GrowableMemory[U](0));
+			val map_tmp_array = new Rail[GrowableMemory[U]](Runtime.NTHREADS, (Long)=>new GrowableMemory[U](0));
 			val convergence = MemoryChunk.make[U](1);
 			
 			// superstep loop
@@ -219,7 +219,7 @@ public final class GIMV {
 			val w = weight();
 			val v = vector();
 			val map_tmp = new GrowableMemory[U](0);
-			val map_tmp_array = new Array[GrowableMemory[U]](Runtime.NTHREADS, (Int)=>new GrowableMemory[U](0));
+			val map_tmp_array = new Rail[GrowableMemory[U]](Runtime.NTHREADS, (Long)=>new GrowableMemory[U](0));
 			val convergence = MemoryChunk.make[U](1);
 			
 			// superstep loop

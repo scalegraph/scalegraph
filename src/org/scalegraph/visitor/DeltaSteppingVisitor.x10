@@ -15,14 +15,18 @@ import org.scalegraph.blas.DistSparseMatrix;
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.blas.SparseMatrix;
 import org.scalegraph.util.MemoryChunk;
-import x10.util.IndexedMemoryChunk;
+//import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import org.scalegraph.util.Bitmap2;
-import x10.util.GrowableIndexedMemoryChunk;
+//mport x10.util.GrowableIndexedMemoryChunk;
+import x10.util.GrowableRail;
 import x10.util.Team;
-import x10.io.SerialData;
+//import x10.io.SerialData;
 import x10.compiler.Inline;
 import x10.compiler.Native;
+import x10.io.CustomSerialization;
+import x10.io.Serializer;
+import x10.io.Deserializer;
 
 public class DeltaSteppingVisitor {
     
@@ -32,8 +36,9 @@ public class DeltaSteppingVisitor {
     
     private val MAX_BUCKET_INDEX = Int.MAX_VALUE;
     
-    private static type Bucket = Array[Bitmap2]{self.size == 2};
-    private static type Buckets = GrowableIndexedMemoryChunk[Bucket];
+    private static type Bucket = Rail[Bitmap2]{self.size == 2};
+    //private static type Buckets = GrowableIndexedMemoryChunk[Bucket];
+    private static type Buckets = GrowableRail[Bucket];
     private static type BucketIndex = Int;
     
     private val lch: PlaceLocalHandle[LocalState];
@@ -50,8 +55,8 @@ public class DeltaSteppingVisitor {
         val gWeight: DistMemoryChunk[Double];
         val csr: SparseMatrix[Long];
         val weight: MemoryChunk[Double];
-        val distance: IndexedMemoryChunk[Double];
-        val predecessors: IndexedMemoryChunk[ArrayList[Vertex]];
+        val distance: Rail[Double];
+        val predecessors: Rail[ArrayList[Vertex]];
         val deferredVertex: Bitmap2;
         val delta: Int;
         
@@ -68,12 +73,12 @@ public class DeltaSteppingVisitor {
         val NUM_TASK: Int;
         val buckets: Buckets;
         
-        val semaphore: IndexedMemoryChunk[Long];
+        val semaphore: Rail[Long];
         
         // buffer
-        val predBuf: Array[Array[ArrayList[Vertex]]];
-        val succBuf: Array[Array[ArrayList[Vertex]]];
-        val tentBuf: Array[Array[ArrayList[Double]]];
+        val predBuf: Rail[Rail[ArrayList[Vertex]]];
+        val succBuf: Rail[Rail[ArrayList[Vertex]]];
+        val tentBuf: Rail[Rail[ArrayList[Double]]];
         val callBack: DeltaSteppingHandler;
         
         private def this (csr_: DistSparseMatrix[Long],
@@ -90,29 +95,29 @@ public class DeltaSteppingVisitor {
             numLocalVertices = gCsr.ids().numberOfLocalVertexes();
             // numberOfVerticesInGraph = vInGraph;
             currentSource = new Cell[Vertex](source);
-            currentBucketIndex = new Cell[Int](0);
-            bucketQueuePointer = new Cell[Int](0);
+            currentBucketIndex = new Cell[Int](0n);
+            bucketQueuePointer = new Cell[Int](0n);
             NUM_TASK = Runtime.NTHREADS;
             delta = delta_;
             callBack = h_;
             
-            distance = IndexedMemoryChunk.allocateZeroed[Double](
-                    numLocalVertices,
-                    ALIGN,
-                    CONGRUENT);
-            predecessors = IndexedMemoryChunk.allocateZeroed[ArrayList[Vertex]](
-                    numLocalVertices,
-                    ALIGN,
-                    CONGRUENT);
-            semaphore = IndexedMemoryChunk.allocateZeroed[Long](
-                    numLocalVertices,
-                    ALIGN,
-                    CONGRUENT);
+            distance = Unsafe.allocRailUninitialized[Double](
+                    numLocalVertices);//,
+                    //ALIGN,
+                    //CONGRUENT);
+            predecessors = Unsafe.allocRailUninitialized[ArrayList[Vertex]](
+                    numLocalVertices);//,
+                    //ALIGN,
+                    //CONGRUENT);
+            semaphore = Unsafe.allocRailUninitialized[Long](
+                    numLocalVertices);//,
+                    //ALIGN,
+                    //CONGRUENT);
             
             buckets = new Buckets(INIT_BUCKET_SIZE);
             val nVertices = numLocalVertices;
             for (i in 0..(INIT_BUCKET_SIZE - 1))
-                buckets(i) = new Array[Bitmap2](2, (Int) => new Bitmap2(nVertices));
+                buckets(i) = new Rail[Bitmap2](2, (Long) => new Bitmap2(nVertices));
             deferredVertex = new Bitmap2(numLocalVertices);
             
             for (i in 0..(numLocalVertices - 1)) {
@@ -121,15 +126,15 @@ public class DeltaSteppingVisitor {
             }
 
             val team = gCsr.dist().allTeam();
-            predBuf = new Array[Array[ArrayList[Vertex]]](NUM_TASK,
-                    (int) => new Array[ArrayList[Vertex]](team.size(),
-                            (int) => new ArrayList[Vertex](transferBufSize)));
-            succBuf = new Array[Array[ArrayList[Vertex]]](NUM_TASK,
-                    (int) => new Array[ArrayList[Vertex]](team.size(),
-                            (int) => new ArrayList[Vertex](transferBufSize)));
-            tentBuf = new Array[Array[ArrayList[Double]]](NUM_TASK,
-                    (int) => new Array[ArrayList[Double]](team.size(),
-                            (int) => new ArrayList[Double](transferBufSize)));
+            predBuf = new Rail[Rail[ArrayList[Vertex]]](NUM_TASK,
+                    (Long) => new Rail[ArrayList[Vertex]](team.size(),
+                            (Long) => new ArrayList[Vertex](transferBufSize)));
+            succBuf = new Rail[Rail[ArrayList[Vertex]]](NUM_TASK,
+                    (Long) => new Rail[ArrayList[Vertex]](team.size(),
+                            (Long) => new ArrayList[Vertex](transferBufSize)));
+            tentBuf = new Rail[Rail[ArrayList[Double]]](NUM_TASK,
+                    (Long) => new Rail[ArrayList[Double]](team.size(),
+                            (Long) => new ArrayList[Double](transferBufSize)));
         }
     }
     
@@ -143,14 +148,21 @@ public class DeltaSteppingVisitor {
         role = team.role(here)(0);
     }
 
-    public def this(serialData: SerialData) {
-        this( serialData.data as PlaceLocalHandle[LocalState]);
-    }
-    
-    public def serialize(): SerialData {
-        
-        return new SerialData(lch, null);
-    }
+    //public def this(serialData: SerialData) {
+    //    this( serialData.data as PlaceLocalHandle[LocalState]);
+    //}
+    //
+    //public def serialize(): SerialData {
+    //    
+    //    return new SerialData(lch, null);
+    //}
+
+	public def this(data : Deserializer){
+        this( data.readAny() as PlaceLocalHandle[LocalState]);
+	}
+	public def serialize(s:Serializer) {
+		s.writeAny(lch);
+	}
     
     /**
      * Factory method for creating visitor
@@ -167,7 +179,7 @@ public class DeltaSteppingVisitor {
                 () => { 
                     return (new LocalState(csr,
                                            weight,
-                                           transBufferSize,
+                                           transBufferSize as Int,
                                            source,
                                            delta,
                                            h));
@@ -197,8 +209,8 @@ public class DeltaSteppingVisitor {
                 lch().predecessors(i).clear();
         }   
 
-        lch().currentBucketIndex() = 0;
-        lch().bucketQueuePointer() = 0;
+        lch().currentBucketIndex() = 0n;
+        lch().bucketQueuePointer() = 0n;
         
         for (i in 0..(buckets().capacity() - 1)) {
             buckets()(i)(0).clearAll();
@@ -271,15 +283,15 @@ public class DeltaSteppingVisitor {
     
     @Inline
     private def swapBucket() {
-        lch().bucketQueuePointer() = (lch().bucketQueuePointer() + 1) & 1;
+        lch().bucketQueuePointer() = (lch().bucketQueuePointer() + 1n) & 1n;
     }
         
     /* GCC Built-in atomic function interface */
     @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
-    private static native def compare_and_swap[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): Boolean;
+    private static native def compare_and_swap[T](imc: Rail[T], index: Long, oldVal: T, newVal: T): Boolean;
     
     @Native("c++", "__sync_add_and_fetch((#imc)->raw() + #index, #value)")
-    private static native def add_and_fetch[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
+    private static native def add_and_fetch[T](imc: Rail[T], index: Long, value: T): T;
     
     
     private def deltaStepping() {
@@ -298,9 +310,9 @@ public class DeltaSteppingVisitor {
             // No data return
             if (bufferV(threadId)(pid).size() == 0)
                 return;
-            val relaxDataV = bufferV(threadId)(pid).toArray();
-            val relaxDataW = bufferW(threadId)(pid).toArray();
-            val relaxDataX = bufferX(threadId)(pid).toArray();
+            val relaxDataV = bufferV(threadId)(pid).toRail();
+            val relaxDataW = bufferW(threadId)(pid).toRail();
+            val relaxDataX = bufferX(threadId)(pid).toRail();
             val count = relaxDataV.size;
             at (team.place(pid)) {
                 for(k in 0..(count - 1)) {
@@ -316,12 +328,12 @@ public class DeltaSteppingVisitor {
                 val k = i;
                 async for (ii in 0..(team.size() - 1)) {
                     val kk = ii;
-                    flush(k, kk);
+                    flush(k as int, kk as int);
                 }
             }
         };
         val remoteRelax = (threadId: Int, pid: Int, v: Vertex, w: Vertex, x: Double) => {
-            if (bufferV(threadId)(pid).size() == bufSize) {
+            if (bufferV(threadId)(pid).size() == bufSize as Long) {
                 flush(threadId, pid);
             }
             bufferV(threadId)(pid).add(v);
@@ -329,7 +341,7 @@ public class DeltaSteppingVisitor {
             bufferX(threadId)(pid).add(x);
         };       
         // Start delta stepping        
-        var dataAvailable: Int = 0;
+        var dataAvailable: Int = 0n;
         val src = lch().currentSource();
         if (role == getVertexPlaceRole(src)) {
             relax(src, src, 0);
@@ -340,18 +352,18 @@ public class DeltaSteppingVisitor {
         //// Console.OUT.println("Before loop");
         do {
             // clear bucket queue pointer, this makes nextqueue of another buckets deterministic
-            lch().bucketQueuePointer() = 0;
-            Team.WORLD.barrier(here.id);
+            lch().bucketQueuePointer() = 0n;
+            Team.WORLD.barrier();
             while (currentBucketIndex()() < buckets().capacity()
                     && (buckets()(currentBucketIndex()()) == null
                             || nextBucketQueue().setBitCount() == 0L)) {
-                currentBucketIndex()() = currentBucketIndex()() + 1;
+                currentBucketIndex()() = currentBucketIndex()() + 1n;
             }
             if (currentBucketIndex()() >= buckets().capacity()) {
                 currentBucketIndex()() = MAX_BUCKET_INDEX; 
             }
             // Find smallest bucket
-            currentBucketIndex()() = Team.WORLD.allreduce(role, currentBucketIndex()(), Team.MIN);
+            currentBucketIndex()() = Team.WORLD.allreduce(currentBucketIndex()(), Team.MIN);
             if (currentBucketIndex()() == MAX_BUCKET_INDEX) {
                 // No more work to do
                 break;
@@ -398,15 +410,15 @@ public class DeltaSteppingVisitor {
                     });
                     flushAll();
                 }
-                Team.WORLD.barrier(here.id);
+                Team.WORLD.barrier();
                 if (currentBucketIndex()() < buckets().capacity()
                         && buckets()(currentBucketIndex()()) != null
                         && nextBucketQueue().setBitCount() > 0) {
-                    dataAvailable = 1;
+                    dataAvailable = 1n;
                 } else {
-                    dataAvailable = 0;
+                    dataAvailable = 0n;
                 }
-                dataAvailable = Team.WORLD.allreduce(here.id, dataAvailable, Team.MAX);
+                dataAvailable = Team.WORLD.allreduce(dataAvailable, Team.MAX);
                 
             } while (dataAvailable > 0);
             
@@ -433,7 +445,7 @@ public class DeltaSteppingVisitor {
                 }
             });
             flushAll();
-            currentBucketIndex()() = currentBucketIndex()() + 1; 
+            currentBucketIndex()() = currentBucketIndex()() + 1n; 
         } while (true);
     }
     
@@ -459,8 +471,8 @@ public class DeltaSteppingVisitor {
                                 val newCap = growth + newIndex;
                                 buckets().grow(newCap);
                                 for(k in 0..(newCap - oldCap - 1)) {
-                                    buckets().add(new Array[Bitmap2](2, 
-                                            (Int) => new Bitmap2(lch().numLocalVertices)));
+                                    buckets().add(new Rail[Bitmap2](2, 
+                                            (Long) => new Bitmap2(lch().numLocalVertices)));
                                 }
                             }
                         }

@@ -68,18 +68,18 @@ public class CSVReader {
 	}
 	
 	private static class ReaderBuffer {
-		public val attHandler :Array[CSVAttributeHandler](1);
-		public val buffer :Array[Any](1);
+		public val attHandler :Rail[CSVAttributeHandler];
+		public val buffer :Rail[Any];
 		public transient val elemPtrs :MemoryPointer[MemoryPointer[Byte]];
 		public val chunkSize :GrowableMemory[Long];
 		public val stride :Long;
 		public val numElems :Int;
 		
-		public def this(attHandler :Array[CSVAttributeHandler](1)) {
+		public def this(attHandler :Rail[CSVAttributeHandler]) {
 			this.attHandler = attHandler;
-			this.numElems = attHandler.size;
+			this.numElems = attHandler.size as Int;
 			this.stride = CSVAttributeHandler.H_CHUNK_SIZE;
-			this.buffer = new Array[Any](numElems,
+			this.buffer = new Rail[Any](numElems,
 					(i :Int) => attHandler(i).createBlockGrowableMemory());
 			this.elemPtrs = allocatePtrBuffer(stride * numElems);
 			this.chunkSize = new GrowableMemory[Long]();
@@ -118,15 +118,15 @@ public class CSVReader {
 	 * H_CHUNK: Each P_CHUNK is split into H_CHUNK. Attribute handlers can process H_CHUNK at once.
 	 */
 	
-	public static def read(team :Team, path :SString, columnDef :Array[Int](1),
-			columnNames :Array[String](1), includeHeader :Boolean) {
+	public static def read(team :Team, path :SString, columnDef :Rail[Int],
+			columnNames :Rail[String], includeHeader :Boolean) {
 		//
-		@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME, 0);
+		@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME as Int, 0n);
 		@Ifdef("PROF_IO") { mtimer.start(); }
 		val nthreads = Runtime.NTHREADS;
 		val numColumns = columnDef.size;
-		var columnNamesInHeader :Array[SString](1) = null;
-		val attHandler = new Array[CSVAttributeHandler](columnDef.size);
+		var columnNamesInHeader :Rail[SString] = null;
+		val attHandler = new Rail[CSVAttributeHandler](columnDef.size);
 
 		val fman = FileNameProvider.createForRead(path);
 		var includeDQ :Boolean = false;
@@ -134,7 +134,7 @@ public class CSVReader {
 		
 		// read header and create attribute handler
 		{
-			val reader = new FileReader(fman.fileName(0));
+			val reader = new FileReader(fman.fileName(0n));
 			val headerLine = reader.fastReadLine();
 			if(includeHeader) {
 				val header = NativeCSVHeader.make(headerLine);
@@ -145,9 +145,9 @@ public class CSVReader {
 				}
 				dataOffset = reader.currentOffset();
 				
-				columnNamesInHeader = new Array[SString](numColumns);
-				for([i] in attHandler) {
-					val att = header.attribute(i);
+				columnNamesInHeader = new Rail[SString](numColumns);
+				for(i in attHandler.range()) {
+					val att = header.attribute(i as Int);
 					val typeId = att.includeType() 
 							? Type.typeId(att.attTypeName().toString())
 							: columnDef(i);
@@ -160,37 +160,37 @@ public class CSVReader {
 			}
 			else {
 				includeDQ = (headerLine.trim().bytes()(0) as Char == '"');
-				for([i] in attHandler) {
+				for(i in attHandler.range()) {
 					attHandler(i) = CSVAttributeHandler.create(columnDef(i), includeDQ);
 				}
 			}
 			
 			reader.close();
 		}
-		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_READ_HEADER); }
+		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_READ_HEADER as Int); }
 
 		// broadcast attribute handlers
-		val bufferPLH = PlaceLocalHandle.makeFlat[Array[ReaderBuffer](1)](team.placeGroup(),
-				() => new Array[ReaderBuffer](nthreads, (i:Int) => new ReaderBuffer(attHandler)));
+		val bufferPLH = PlaceLocalHandle.makeFlat[Rail[ReaderBuffer]](team.placeGroup(),
+				() => new Rail[ReaderBuffer](nthreads, (i:Long) => new ReaderBuffer(attHandler)));
 		
 		val splitter = includeDQ ? new DoubleQuoatedCSVSplitter() : new LineBreakSplitter();
-		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_PREPARE); }
+		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_PREPARE as Int); }
 		
 		// read data
 		splitter.split(team, fman, dataOffset, nthreads,
 			(tid :Int, data :MemoryChunk[Byte]) => { bufferPLH()(tid).parse(data); });
 
 		@Ifdef("PROF_IO") { mtimer.start(); }
-		var enabledColumns :Int = 0;
+		var enabledColumns :Int = 0n;
 		for(e in 0..(numColumns-1)) {
 			if(!attHandler(e).isSkip()) ++enabledColumns;
 		}
 		
 		// merge result
-		val attributes = new Array[Any](enabledColumns);
-		val attrNames = new Array[String](enabledColumns);
-		val typeIds = new Array[Int](enabledColumns);
-		var attrIndex :Int = 0;
+		val attributes = new Rail[Any](enabledColumns);
+		val attrNames = new Rail[String](enabledColumns);
+		val typeIds = new Rail[Int](enabledColumns);
+		var attrIndex :Int = 0n;
 	//	finish for(e in 0..(numColumns-1)) {
 		for(e in 0..(numColumns-1)) {
 			if(!attHandler(e).isSkip()) {
@@ -210,7 +210,7 @@ public class CSVReader {
 				++attrIndex;
 			}
 		}
-		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_MERGE_RESULT); }
+		@Ifdef("PROF_IO") { mtimer.lap(IO.MAIN_MERGE_RESULT as Int); }
 		
 		return new NamedDistData(attrNames, typeIds, attributes, null);
 	}

@@ -21,9 +21,9 @@ abstract public class STest {
 	//private static val linebreak = "\n    "; // 4 space
 	private static val linebreak = "\n";
 
-    abstract public def run(args: Array[String](1)) :boolean;
+    abstract public def run(args: Rail[String]) :boolean;
 
-    public def execute(args: Array[String](1)) {
+    public def execute(args: Rail[String]) {
     	x10.io.Console.ERR.print("  " + typeName() + ": |" + linebreak);
        var b :boolean = false;
        try {
@@ -50,7 +50,7 @@ abstract public class STest {
     	buffer.add(linebreak);
     	
     	val stackTrace = e.getStackTrace();
-    	for ([i] in stackTrace) {
+    	for (i in stackTrace.range()) {
     		buffer.add(nested_prefix);
     		buffer.add("        at ");
     		buffer.add(escapeString(stackTrace(i)));
@@ -63,8 +63,8 @@ abstract public class STest {
     		buffer.add(nested_prefix);
     		buffer.add("Caused by ");
     		buffer.add(linebreak);
-    		for([i] in excs) {
-    			printException(excs(i), nested + 1);
+    		for(i in excs.range()) {
+    			printException(excs(i), nested + 1n);
     		}
     	}
     }
@@ -86,7 +86,7 @@ abstract public class STest {
     }
     
     public static def printException(e :CheckedThrowable) {
-    	printException(e, 0);
+    	printException(e, 0n);
     }
     
     public static def print(obj :Any) {
@@ -110,12 +110,12 @@ abstract public class STest {
 
     public static def success(): void = {
 	   at (Place.FIRST_PLACE) 
-	     System.setExitCode(0);
+	     System.setExitCode(0n);
     }
 
     public static def failure(): void = {
         at (Place.FIRST_PLACE)
-           System.setExitCode(1);
+           System.setExitCode(1n);
     }
 
     protected static def reportResult(b: boolean): void = {

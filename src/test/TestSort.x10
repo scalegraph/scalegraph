@@ -12,7 +12,7 @@
 package test;
 
 import x10.compiler.Inline;
-import x10.util.IndexedMemoryChunk;
+//import x10.util.IndexedMemoryChunk;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.Random;
@@ -23,7 +23,7 @@ import org.scalegraph.util.MemoryChunk;
 import org.scalegraph.util.Parallel;
 
 final class TestSort extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestSort().execute(args);
 	}
 	
@@ -36,7 +36,7 @@ final class TestSort extends STest {
 	}
 
 	public static def sort[T](a:MemoryChunk[T], cmp:(T,T)=>Int) {
-		finish qsort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1, 0L, (a.size()-1), cmp);
+		finish qsort[T](a, MathAppend.ceilLog2(Runtime.NTHREADS as Long) + 1n, 0L, (a.size()-1), cmp);
 	}
 
 	public static def sort[T](a:MemoryChunk[T], proc : Int, cmp:(T,T)=>Int) {
@@ -58,11 +58,11 @@ final class TestSort extends STest {
 		val ll = l;
 		val hh = h;
 		if (proc > 0) {
-			async qsort[T](a, proc - 1, lo, hh, cmp);
-			qsort[T](a, proc - 1, ll, hi, cmp);
+			async qsort[T](a, proc - 1n, lo, hh, cmp);
+			qsort[T](a, proc - 1n, ll, hi, cmp);
 		} else {
-			qsort[T](a, proc - 1, lo, hh, cmp);
-			qsort[T](a, proc - 1, ll, hi, cmp);
+			qsort[T](a, proc - 1n, lo, hh, cmp);
+			qsort[T](a, proc - 1n, ll, hi, cmp);
 		}
 	}
 	private static @Inline def exch[T](a:MemoryChunk[T], i:Long, j:Long):void {
@@ -112,11 +112,11 @@ final class TestSort extends STest {
         Console.OUT.printf("par = %f\n", par / 10);
     }
 
-    public def run(args: Array[String](1)): Boolean {
+    public def run(args: Rail[String]): Boolean {
         // val n = Int.parse(args(0));
         // val m = Int.parse(args(1));
 
-        val n = 1 << 16;
+        val n = 1n << 16n;
         val m = n;
         runtest(n, m);
         

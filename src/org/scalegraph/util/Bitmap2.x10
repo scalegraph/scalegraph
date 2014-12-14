@@ -11,7 +11,7 @@
 
 package org.scalegraph.util;
 
-import x10.util.IndexedMemoryChunk;
+//import x10.util.IndexedMemoryChunk;
 import x10.compiler.Native;
 import x10.util.concurrent.AtomicLong;
 import x10.compiler.Ifndef;
@@ -23,21 +23,23 @@ import x10.compiler.Inline;
  */
 public struct Bitmap2 {
     private val bitLength: Long;
-    private val data: IndexedMemoryChunk[Long];
+    private val data: Rail[Long];
     private val bitPerWord = 64;
     private val setCount: AtomicLong;
-    private val semaphore: IndexedMemoryChunk[Long];
+    private val semaphore: Rail[Long];
     
     public def this(length: Long) {
         bitLength = length;
         val allocSize = (bitLength >> 6) + (((bitLength & 63L) > 0L)? 1 : 0); // div by 64
-        data = IndexedMemoryChunk.allocateZeroed[Long](allocSize, 64, false);
-        semaphore = IndexedMemoryChunk.allocateZeroed[Long](allocSize, 64, false);
+        //data = Unsafe.allocateZeroed[Long](allocSize, 64, false);
+        //semaphore = Unsafe.allocateZeroed[Long](allocSize, 64, false);
+        data = Unsafe.allocRailZeroed[Long](allocSize);
+        semaphore = Unsafe.allocRailZeroed[Long](allocSize);
         setCount = new AtomicLong(0);
     }
     
-    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
-    private static native def compare_and_swap[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): Boolean;
+    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw + #index, #oldVal, #newVal)")
+    private static native def compare_and_swap[T](imc: Rail[T], index: Long, oldVal: T, newVal: T): Boolean;
     
     @Inline
     private def acquireLock(word: Long) {
@@ -137,11 +139,11 @@ public struct Bitmap2 {
             }
         };
         if (setCount.longValue() > 0)
-            Parallel.iter(0..(data.length() as Long - 1), f);
+            Parallel.iter(0..(data.size as Long - 1), f);
     }
     
     public def clearAll() {   
-        data.clear(0, data.length());
+        data.clear(0, data.size);
         setCount.set(0L);
     }
     

@@ -23,11 +23,11 @@ import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Dist2D;
 
 final class TestDegreeDistOut extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestDegreeDistOut().execute(args);
 	}
     
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 	    
 	    var outdegResult: DistMemoryChunk[Long];
 	    val op1 = args(0);

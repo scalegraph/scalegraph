@@ -16,6 +16,8 @@ import x10.compiler.NativeRep;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.NativeCPPCompilationUnit ;
 import x10.io.CustomSerialization;
+import x10.io.Serializer;
+import x10.io.Deserializer;
 
 import org.scalegraph.util.MemoryChunk;
 
@@ -81,20 +83,35 @@ public class Random implements CustomSerialization {
 		state.init(orig);
 	}
 	
-	public def this(data :x10.io.SerialData) {
-		val arr = data.data as MemoryChunk[Int];
+	//public def this(data :x10.io.SerialData) {
+	//	val arr = data.data as MemoryChunk[Int];
+	//	state.init(arr(0),arr(1),arr(2),arr(3),arr(4));
+	//}
+
+	public def this(data : Deserializer){
+		val arr = data.readAny() as MemoryChunk[Int];
 		state.init(arr(0),arr(1),arr(2),arr(3),arr(4));
 	}
-
-	public def serialize():x10.io.SerialData {
-		val arr = MemoryChunk.make[Int](5);
-		arr(0) = state.z1;
-		arr(1) = state.z2;
-		arr(2) = state.z3;
-		arr(3) = state.z4;
-		arr(4) = state.z5;
-		return new x10.io.SerialData(arr, null);
+	//public def serialize():x10.io.SerialData {
+	//	val arr = MemoryChunk.make[Int](5);
+	//	arr(0) = state.z1;
+	//	arr(1) = state.z2;
+	//	arr(2) = state.z3;
+	//	arr(3) = state.z4;
+	//	arr(4) = state.z5;
+	//	return new x10.io.SerialData(arr, null);
+	//}
+	public def serialize(s:Serializer) {
+	//	val tmp = new Rail[Int](5);
+		val tmp = MemoryChunk.make[Int](5);
+		tmp(0) = state.z1;
+		tmp(1) = state.z2;
+		tmp(2) = state.z3;
+		tmp(3) = state.z4;
+		tmp(4) = state.z5;
+		s.writeAny(tmp);
 	}
+
 
 	@Native("c++", "mrg_get_uint_orig(&(#this)->FMGL(state));")
 	private native def random() :Int;
@@ -144,7 +161,7 @@ public class Random implements CustomSerialization {
 		if (n <= 0) throw new IllegalArgumentException();
 		if ((n & -n) == n) {
 			// If a power of 2, just mask nextInt
-			return nextInt() & (n-1);
+			return nextInt() & (n-1n);
 		}
 		return nextInt() % maxPlus1;
 	}

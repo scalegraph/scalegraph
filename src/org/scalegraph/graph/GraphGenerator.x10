@@ -135,7 +135,7 @@ public final class GraphGenerator {
 			val src = MemoryChunk.make[Long](1);
 			src(0) = getSize();
 			val dst = (sizeArray.home == here) ? sizeArray.getLocalOrCopy()() : MemoryChunk.make[Long](0);
-			t2.gather(0, src, dst);
+			t2.gather(0n, src, dst);
 		});
 		
 		val edgeMemory = new DistMemoryChunk[Double](team.placeGroup(),
@@ -144,7 +144,7 @@ public final class GraphGenerator {
 		val sizeArray_ = sizeArray()();
 		val placeArray = team.places();
 		var numEdges :Long = 0;
-		for([role] in placeArray) {
+		for(role in placeArray.range()) {
 			val numLocalEdges = sizeArray_(role);
 			val offset = numEdges;
 			at(placeArray(role)) async {
@@ -254,8 +254,10 @@ public final class GraphGenerator {
 						else { dstVertex += 1; srcVertex += 1; }
 					}
 					if(permute) {
-						srcMem_(i) = MathAppend.scramble(scale, srcVertex, 0x1234567812345678UL, 0x2345678923456789UL);
-						dstMem_(i) = MathAppend.scramble(scale, dstVertex, 0x1234567812345678UL, 0x2345678923456789UL);
+						//srcMem_(i) = MathAppend.scramble(scale, srcVertex, 0x1234567812345678UL, 0x2345678923456789UL);
+						//dstMem_(i) = MathAppend.scramble(scale, dstVertex, 0x1234567812345678UL, 0x2345678923456789UL);
+						srcMem_(i) = MathAppend.scramble(scale, srcVertex, 0x1234567812345678L, 0x2345678923456789L);
+						dstMem_(i) = MathAppend.scramble(scale, dstVertex, 0x1234567812345678L, 0x2345678923456789L);
 					}
 					else {
 						srcMem_(i) = srcVertex;

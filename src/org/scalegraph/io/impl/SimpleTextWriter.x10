@@ -41,7 +41,7 @@ public class SimpleTextWriter {
 		private val fw :FileWriter;
 		private val strClousure :MemoryChunk[(sb :SStringBuilder, idx :Long) => void];
 		private val monitor = new Monitor();
-		private var numLauchTasks :Int = 0;
+		private var numLauchTasks :Int = 0n;
 		
 		public def this(fw :FileWriter, strClousure :MemoryChunk[(sb :SStringBuilder, idx :Long) => void]) {
 			val nthreads = Runtime.NTHREADS;
@@ -54,7 +54,7 @@ public class SimpleTextWriter {
 		private def cycleBuffers(numTasksToLaunch :Int) {
 			// wait for completion of sub tasks
 			monitor.lock();
-			while(numLauchTasks > 0) {
+			while(numLauchTasks > 0n) {
 				monitor.await();
 			}
 			numLauchTasks = numTasksToLaunch;
@@ -66,7 +66,7 @@ public class SimpleTextWriter {
 		
 		private def notifySubtaskCompletion() {
 			monitor.lock();
-			if(--numLauchTasks == 0)
+			if(--numLauchTasks == 0n)
 				monitor.release();
 			else
 				monitor.unlock();
@@ -101,7 +101,7 @@ public class SimpleTextWriter {
 			finish for(var start :Long = 0; start < numLines; start += CHUNK_SIZE * nthreads) {
 				val end = MathAppend.min(start + CHUNK_SIZE * nthreads, numLines) - 1;
 				makeString(start..end);
-				cycleBuffers(1);
+				cycleBuffers(1n);
 				async subtask();
 			}
 		}
@@ -138,7 +138,7 @@ public class SimpleTextWriter {
 				
 				val fw = fman.openWrite(teamRole);
 				
-				if (teamRole == 0){
+				if (teamRole == 0n){
 					// write header
 					fw.write(header.bytes());
 				}

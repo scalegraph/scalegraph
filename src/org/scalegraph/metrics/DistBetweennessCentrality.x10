@@ -15,12 +15,14 @@ import x10.compiler.Ifndef;
 import x10.compiler.Inline;
 import x10.compiler.Native;
 import x10.util.concurrent.Lock;
-import x10.io.SerialData;
+//import x10.io.SerialData;
+import x10.io.Serializer;
+import x10.io.Deserializer;
 import x10.io.File;
 import x10.io.FileReader;
 import x10.io.IOException;
 import x10.util.ArrayList;
-import x10.util.IndexedMemoryChunk;
+//import x10.util.IndexedMemoryChunk;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
 
@@ -86,7 +88,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _linearScale: Boolean;
         
         /* Sources stuffs */
-        val _sources: Array[Vertex];
+        val _sources: Rail[Vertex];
         val _sourceRange: LongRange;
         val _numSource: Long;
         
@@ -109,7 +111,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         
         // vertex dependecies
         val _dependencies: MemoryChunk[Double];
-        val _dependenciesLock: MemoryChunk[Lock];
+        val _dependenciesLock: Rail[Lock];
                 
         /* Back tracking stuff */
         val _backtrackingQueues: MemoryChunk[Bitmap2];
@@ -118,11 +120,11 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val _numUpdate: MemoryChunk[Long];
         
         /* Buffer stuffs*/
-        val _predBuf: Array[Array[ArrayList[Vertex]]];
-        val _succBuf: Array[Array[ArrayList[Vertex]]];
-        val _deltaBuf: Array[Array[ArrayList[Double]]];
-        val _sigmaBuf: Array[Array[ArrayList[Long]]];
-        val _muBuf: Array[Array[ArrayList[Long]]];
+        val _predBuf: Rail[Rail[ArrayList[Vertex]]];
+        val _succBuf: Rail[Rail[ArrayList[Vertex]]];
+        val _deltaBuf: Rail[Rail[ArrayList[Double]]];
+        val _sigmaBuf: Rail[Rail[ArrayList[Long]]];
+        val _muBuf: Rail[Rail[ArrayList[Long]]];
         
         val s2v: OnedR.StoV;
         val d2v: OnedR.DtoV;
@@ -132,7 +134,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                            buffSize: Int,
                            nAllVerticesInG: Long,
                            nSrc: Long,
-                           srcs: Array[Vertex],
+                           srcs: Rail[Vertex],
                            srcRange: LongRange,
                            norm: Boolean,
                            linearScale: Boolean) {
@@ -155,7 +157,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             _queues = MemoryChunk.make[Bitmap2](2);
             _queues(0) = new Bitmap2(_numLocalVertices);
             _queues(1) = new Bitmap2(_numLocalVertices);
-            _qPointer = new Cell[Int](0);
+            _qPointer = new Cell[Int](0n);
             _currentLevel = new Cell[Long](0);
             
             // _score = IndexedMemoryChunk.allocateZeroed[Double](
@@ -192,7 +194,8 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             //         _numLocalVertices, 
             //         _ALIGN, 
             //         _CONGRUENT);
-            _dependenciesLock = MemoryChunk.make[Lock](_numLocalVertices);
+            //_dependenciesLock = MemoryChunk.make[Lock](_numLocalVertices);
+            _dependenciesLock = Unsafe.allocRailZeroed[Lock](_numLocalVertices);
 
             // Create queue for updating score
             // _backtrackingQueues = IndexedMemoryChunk.allocateUninitialized[Bitmap2](
@@ -202,7 +205,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             _backtrackingQueues = MemoryChunk.make[Bitmap2](2);
             _backtrackingQueues(0) = new Bitmap2(_numLocalVertices);
             _backtrackingQueues(1) = new Bitmap2(_numLocalVertices);
-            _backtrackingQPointer = new Cell[Int](0);
+            _backtrackingQPointer = new Cell[Int](0n);
             // _numUpdate = IndexedMemoryChunk.allocateZeroed[Long](
             //         _numLocalVertices, 
             //         _ALIGN, 
@@ -221,21 +224,21 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 _dependenciesLock(idx) = new Lock();
                 _score(idx) = 0D;
             }
-            _predBuf = new Array[Array[ArrayList[Vertex]]](_NUM_TASK,
-                    (int) => new Array[ArrayList[Vertex]](t.size(),
-                            (int) => new ArrayList[Vertex](buffSize)));
-            _succBuf = new Array[Array[ArrayList[Vertex]]](_NUM_TASK,
-                    (int) => new Array[ArrayList[Vertex]](t.size(),
-                            (int) => new ArrayList[Vertex](buffSize)));
-            _deltaBuf = new Array[Array[ArrayList[Double]]](_NUM_TASK,
-                    (int) => new Array[ArrayList[Double]](t.size(),
-                            (int) => new ArrayList[Double](buffSize)));
-            _sigmaBuf = new Array[Array[ArrayList[Long]]](_NUM_TASK,
-                    (int) => new Array[ArrayList[Long]](t.size(),
-                            (int) => new ArrayList[Long](buffSize)));
-            _muBuf = new Array[Array[ArrayList[Long]]](_NUM_TASK,
-                    (int) => new Array[ArrayList[Long]](t.size(),
-                            (int) => new ArrayList[Long](buffSize)));
+            _predBuf = new Rail[Rail[ArrayList[Vertex]]](_NUM_TASK,
+                    (Long) => new Rail[ArrayList[Vertex]](t.size(),
+                            (Long) => new ArrayList[Vertex](buffSize)));
+            _succBuf = new Rail[Rail[ArrayList[Vertex]]](_NUM_TASK,
+                    (Long) => new Rail[ArrayList[Vertex]](t.size(),
+                            (Long) => new ArrayList[Vertex](buffSize)));
+            _deltaBuf = new Rail[Rail[ArrayList[Double]]](_NUM_TASK,
+                    (Long) => new Rail[ArrayList[Double]](t.size(),
+                            (Long) => new ArrayList[Double](buffSize)));
+            _sigmaBuf = new Rail[Rail[ArrayList[Long]]](_NUM_TASK,
+                    (Long) => new Rail[ArrayList[Long]](t.size(),
+                            (Long) => new ArrayList[Long](buffSize)));
+            _muBuf = new Rail[Rail[ArrayList[Long]]](_NUM_TASK,
+                    (Long) => new Rail[ArrayList[Long]](t.size(),
+                            (Long) => new ArrayList[Long](buffSize)));
             
             s2v = new OnedR.StoV(dsm.ids(), t.role()(0));
             d2v = new OnedR.DtoV(dsm.ids());
@@ -258,28 +261,36 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         localGraph = dsm();
     }
     
-    /* Serialize function */
-    public def serialize(): SerialData {
-        return new SerialData(lch, null);
+    ///* Serialize function */
+    //public def serialize(): SerialData {
+    //    return new SerialData(lch, null);
+    //}
+    //
+    ///* Deserialize function */
+    //public def this (serialData: SerialData) {
+    //    this(serialData.data as PlaceLocalHandle[LocalState]);
+    //}
+
+	public def this(data : Deserializer){
+        this( data.readAny() as PlaceLocalHandle[LocalState]);
     }
     
-    /* Deserialize function */
-    public def this (serialData: SerialData) {
-        this(serialData.data as PlaceLocalHandle[LocalState]);
+    public def serialize(s:Serializer) {
+		s.writeAny(lch);
     }
     
     /* GCC Built-in atomic function interface */
     @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
-    private static native def compare_and_swap[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): Boolean;
+    private static native def compare_and_swap[T](imc: Rail[T], index: Long, oldVal: T, newVal: T): Boolean;
     
     @Native("c++", "__sync_val_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
-    private static native def compare_and_swap_val[T](imc: IndexedMemoryChunk[T], index: Long, oldVal: T, newVal: T): T;
+    private static native def compare_and_swap_val[T](imc: Rail[T], index: Long, oldVal: T, newVal: T): T;
     
     @Native("c++", "__sync_fetch_and_add((#imc)->raw() + #index, #value)")
-    private static native def fetch_and_add[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
+    private static native def fetch_and_add[T](imc: Rail[T], index: Long, value: T): T;
     
     @Native("c++", "__sync_add_and_fetch((#imc)->raw() + #index, #value)")
-    private static native def add_and_fetch[T](imc: IndexedMemoryChunk[T], index: Long, value: T): T;
+    private static native def add_and_fetch[T](imc: Rail[T], index: Long, value: T): T;
     
     // /**
     //  * Calculate exact betweenness centrality
@@ -315,7 +326,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     //  * @param sources the array of source vertices to calculate betweenness centrality
     //  * @param linearScale use linear-scaling technique
     //  */
-    // public static def estimate(g: Graph, directed: Boolean, attrName: String, sources: Array[Vertex], linearScale: Boolean): void {
+    // public static def estimate(g: Graph, directed: Boolean, attrName: String, sources: Rail[Vertex], linearScale: Boolean): void {
     //     run(g, directed, attrName, false, -1, sources, 0..(-1 as Long), linearScale, false);
     // }
     // 
@@ -339,7 +350,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     }
 
     /* Should be used by designated API */
-    public static def run(csr: DistSparseMatrix[Long], numberOfVertices: Long, directed: Boolean, normalize: Boolean, numSource: Long, sources: Array[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
+    public static def run(csr: DistSparseMatrix[Long], numberOfVertices: Long, directed: Boolean, normalize: Boolean, numSource: Long, sources: Rail[Vertex], sourceRange: LongRange, linearScale: Boolean, isExactBc: Boolean) {
         val team = csr.dist().allTeam();;
         val places = team.placeGroup();
         // Represent graph as CSR
@@ -360,7 +371,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         val localState = PlaceLocalHandle.make[LocalState](places, 
                 () => { 
                     return (new LocalState(csr,
-                            transBufferSize,
+                            transBufferSize as Int,
                             N,
                             numSource_,
                             sources_,
@@ -425,7 +436,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             // generate random sources
             val numSrc = lch()._numSource;
             val numAllVertices = lch()._numberOfVerticesInGraph;
-            val srcArray = new Array[Long](numAllVertices as Int, (i: Int) => i as Long);
+            val srcArray = new Rail[Long](numAllVertices as Int, (i: Long) => i as Long);
             val r = new x10.util.Random(System.currentTimeMillis());
             for (i in 0..(srcArray.size -1)) {
                 val index = r.nextLong(numAllVertices) as Int;
@@ -460,28 +471,28 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                     if(isLocalVertex(src)) {
                         srcNeighbors = localGraph.adjacency(locSrc).size();
                     }
-                    srcNeighbors = team.allreduce(role, srcNeighbors, Team.ADD);
+                    srcNeighbors = team.allreduce(srcNeighbors, Team.ADD);
                     if (srcNeighbors > 0L) {
                         // source has neighbor(s)
                         setLocalSource(src);
                         Runtime.x10rtBlockingProbe();
-                        team.barrier(role);
+                        team.barrier();
                         
                         travelNonIncDist();
                         Runtime.x10rtBlockingProbe();
-                        team.barrier(role);
+                        team.barrier();
                         
                         countSuccessor();	
                         Runtime.x10rtBlockingProbe();
-                        team.barrier(role);
+                        team.barrier();
                         
                         addLeafNodeToUpdate();
                         Runtime.x10rtBlockingProbe();
-                        team.barrier(role);
+                        team.barrier();
                         
                         backtracking(); 	
                         Runtime.x10rtBlockingProbe();
-                        team.barrier(role);
+                        team.barrier();
                     }
                 }
             }
@@ -574,19 +585,19 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
     private def currentQ() = lch()._queues(lch()._qPointer());
     
     @Inline
-    private def nextQ() = lch()._queues((lch()._qPointer() + 1) & 1);
+    private def nextQ() = lch()._queues((lch()._qPointer() + 1n) & 1n);
     
     @Inline
-    private def swapQ() { lch()._qPointer() = (lch()._qPointer() + 1) & 1; }
+    private def swapQ() { lch()._qPointer() = (lch()._qPointer() + 1n) & 1n; }
      
     @Inline
     private def backtrackingCurrentQ() = lch()._backtrackingQueues(lch()._backtrackingQPointer());
     
     @Inline
-    private def backtrackingNextQ() = lch()._backtrackingQueues((lch()._backtrackingQPointer() + 1) & 1);
+    private def backtrackingNextQ() = lch()._backtrackingQueues((lch()._backtrackingQPointer() + 1n) & 1n);
    
     @Inline
-    private def swapUpdateScoreQ() { lch()._backtrackingQPointer() = (lch()._backtrackingQPointer() + 1) & 1; }
+    private def swapUpdateScoreQ() { lch()._backtrackingQPointer() = (lch()._backtrackingQPointer() + 1n) & 1n; }
     
     @Inline
     private def getVertexPlace(orgVertex: Vertex): Place {
@@ -612,9 +623,9 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             sigmaBuf(bufId)(pid).clear();
         };
         val _flush = (bufId: Int, pid: Int) => {
-            val preds = predBuf(bufId)(pid).toArray();
-            val succs = succBuf(bufId)(pid).toArray();
-            val predSigma = sigmaBuf(bufId)(pid).toArray();
+            val preds = predBuf(bufId)(pid).toRail();
+            val succs = succBuf(bufId)(pid).toRail();
+            val predSigma = sigmaBuf(bufId)(pid).toRail();
             val count = preds.size;
             val p = team.place(pid);
             at (p)  {
@@ -629,7 +640,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             finish for (i in 0..(numTask -1))
                 async for (ii in 0..(team.size() -1)) {
                     if (predBuf(i)(ii).size() > 0)
-                        _flush(i, ii);
+                        _flush(i as Int, ii as Int);
                 }
         };
         val _visitRemote = (bufId: Int, pid: Int, pred: Vertex, succ: Vertex, predSigma: Long) => {
@@ -652,7 +663,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             swapQ();
             nextQ().clearAll();
             // Check wether there is a vertex on such a place
-            val maxVertexCount = team.allreduce(role,
+            val maxVertexCount = team.allreduce(
                     currentQ().setBitCount(),
                     Team.MAX);
             if (maxVertexCount == 0L)
@@ -675,7 +686,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             };
             currentQ().examine(traverse);
             _flushAll();
-            team.barrier(role);
+            team.barrier();
             lch()._currentLevel(lch()._currentLevel() + 1);
         }
     }
@@ -716,7 +727,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             predBuf(bufId)(pid).clear();
         };        
         val _flush = (bufId: Int, pid: Int) => {
-            val preds = predBuf(bufId)(pid).toArray();
+            val preds = predBuf(bufId)(pid).toRail();
             val p = team.place(pid);
             at (p) {
                 for(k in 0..(preds.size - 1)) {
@@ -733,7 +744,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
                 val taskId = i;
                 async for (ii in 0..(team.size() -1)) {
                     if (predBuf(i)(ii).size() > 0)
-                        _flush(taskId, ii);
+                        _flush(taskId as Int, ii as Int);
                 }
             }
         };
@@ -796,10 +807,10 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             muBuf(bufId)(pid).clear();
         };
         val _flush = (bufId: Int, pid: Int) => {
-            val preds = predBuf(bufId)(pid).toArray();
-            val delta = deltaBuf(bufId)(pid).toArray();
-            val sigma = sigmaBuf(bufId)(pid).toArray();
-            val mu = muBuf(bufId)(pid).toArray();
+            val preds = predBuf(bufId)(pid).toRail();
+            val delta = deltaBuf(bufId)(pid).toRail();
+            val sigma = sigmaBuf(bufId)(pid).toRail();
+            val mu = muBuf(bufId)(pid).toRail();
             val p = team.place(pid);
             at (p) {
                 for(k in 0..(preds.size - 1)) {
@@ -813,7 +824,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             finish for (i in 0..(numTask -1))
                 async for ( ii in 0..(team.size() -1)) {
                     if (predBuf(i)(ii).size() > 0)
-                        _flush(i, ii);
+                        _flush(i as Int, ii as Int);
                 }
         };
         val calRemote = (bufId: Int, pid: Int, mu: Long, delta: Double, signma: Long, pred: Vertex) => {
@@ -828,9 +839,9 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
         while(true) {
             swapUpdateScoreQ();
             backtrackingNextQ().clearAll();
-            team.barrier(role);
+            team.barrier();
             // Check wether there is a vertex on such a place
-            val maxVertexCount = team.allreduce(role, backtrackingCurrentQ().setBitCount(), Team.MAX);
+            val maxVertexCount = team.allreduce(backtrackingCurrentQ().setBitCount(), Team.MAX);
             if (maxVertexCount == 0L)
                 break;
             val traverse = (localSucc: Vertex, threadId: Int) => {           
@@ -855,7 +866,7 @@ public class DistBetweennessCentrality implements x10.io.CustomSerialization {
             };
             backtrackingCurrentQ().examine(traverse);
             _flushAll();
-            team.barrier(role);
+            team.barrier();
         }
     }
     

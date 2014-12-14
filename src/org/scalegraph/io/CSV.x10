@@ -19,12 +19,12 @@ import org.scalegraph.util.SString;
 public final class CSV {
 
 	/** Read a CSV File */
-	public static def read(path :SString, columnDef :Array[Int](1), includeHeader :Boolean) {
+	public static def read(path :SString, columnDef :Rail[Int], includeHeader :Boolean) {
 		return CSVReader.read(Config.get().worldTeam(), path, columnDef, null, includeHeader);
 	}
 	
 	/** Read a CSV File */
-	public static def read(path :SString, columnDef :Array[Int](1), columnNames :Array[String](1)) {
+	public static def read(path :SString, columnDef :Rail[Int], columnNames :Rail[String]) {
 		return CSVReader.read(Config.get().worldTeam(), path, columnDef, columnNames, false);
 	}
 	

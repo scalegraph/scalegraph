@@ -38,9 +38,9 @@ public class HyperANF {
 	/** Maximum number of iterations.
 	 * Default: 1000
 	 */
-	public var niter:Int = 1000;
+	public var niter:Int = 1000n;
 
-	public var B :Int = 7;
+	public var B :Int = 7n;
 	
 	public var weights :String = "weight";
 	/*
@@ -84,17 +84,17 @@ public class HyperANF {
 		
 		val tmp:Double = M*5.0/2.0;
 		if(E<tmp) {
-			var cnt:Int =0;
-			var zero:Byte = 0;
+			var cnt:Int =0n;
+			var zero:Byte = 0 as Byte;
 			for(i in counter.range()) 
 				if(counter(i)==zero) 
 					cnt++;
-			if(cnt==0) return E;
+			if(cnt==0n) return E;
 			return M * Math.log(M/cnt);
 		}
 		var border:Double = 1.0/30.0;
-		var i:Int = 0;
-		while(i<32) {
+		var i:Int = 0n;
+		while(i<32n) {
 			border *= 2.0;
 			i ++;
 		}
@@ -124,19 +124,19 @@ public class HyperANF {
 		val sw = Config.get().stopWatch();
 
 		val xpregel = XPregelGraph.make[MemoryChunk[Byte], Double](matrix);
-		xpregel.setLogPrinter(Console.ERR, 0);
+		xpregel.setLogPrinter(Console.ERR, 0n);
 		xpregel.updateInEdge();
 		
 		sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
 		val N:Long = xpregel.size();
-		val B = (param.B < 4) ? 4 : param.B;
+		val B = (param.B < 4) ? 4n : param.B;
 		val M = 1<<B;
 
 		val alpha:Double;
-		if(B==5) alpha = 0.697;
-		else if(B==6) alpha = 0.769;
+		if(B==5n) alpha = 0.697;
+		else if(B==6n) alpha = 0.769;
 		else alpha = 0.7213 / (1.00+1.073/M);
 		
 		val W = 4;
@@ -154,23 +154,23 @@ public class HyperANF {
 		 = (ctx :VertexContext[MemoryChunk[Byte], Double, MesHANF, Double], messages :MemoryChunk[MesHANF]) => {
 
 //			 var counterB:MemoryChunk[Byte];
-			 if(ctx.superstep()==0) {
+			 if(ctx.superstep()==0n) {
 				 val counterA = MemoryChunk.make[Byte](M);
-				 for(i in counterA.range()) counterA(i) = 0;
+				 for(i in counterA.range()) counterA(i) = 0 as Byte;
 				 val rand = new Random(ctx.realId(ctx.id()), 1000);
 				 val pos = rand.nextInt()%M;
 				 var num:Long = rand.nextLong()+1;
-				 var cnt:Byte = 1;
+				 var cnt:Byte = 1 as Byte;
 				 while(num%2==0L) {
 					 num /= 2;
-					 cnt = cnt+1;
+					 cnt = cnt+1 as Byte;
 				 }
 				 counterA(pos) =  cnt;
 				 ctx.setValue(counterA);
 			 }
 
 			 val ss = ctx.superstep();
-			 val mes = kernel(ctx.value(), messages, ss, mask);
+			 val mes = kernel(ctx.value(), messages, ss, mask as Int);
 			/*
 			 for(i in ctx.outEdgesId().range() ) 
 				 ctx.sendMessage(ctx.outEdgesId()(i), mes);

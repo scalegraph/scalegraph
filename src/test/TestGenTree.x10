@@ -18,14 +18,14 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.io.NamedDistData;
 
 public class TestGenTree extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestGenTree().execute(args);
 	}
 	
-	public def run(args: Array[String](1)): Boolean {
+	public def run(args: Rail[String]): Boolean {
 		
 		Console.OUT.println("Test Gen Tree");
-		val edgeList = org.scalegraph.graph.GraphGenerator.genTree(8);
+		val edgeList = org.scalegraph.graph.GraphGenerator.genTree(8n);
 		
 		CSV.write("tree-%d", new NamedDistData(["source" as String, "target"], [edgeList.src as Any, edgeList.dst]), false);
 		

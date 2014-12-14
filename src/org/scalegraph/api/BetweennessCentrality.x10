@@ -37,7 +37,7 @@ public class BetweennessCentrality {
     /** Graph directness, default is directed. */
     public var directed: Boolean = true;
     
-    /** Source must be either Long, LongRange or Array[Long]. */
+    /** Source must be either Long, LongRange or Rail[Long]. */
     public var source: Any = null;
     
     /** The name of a graph attribute to store the result, default is "bc". */
@@ -49,7 +49,7 @@ public class BetweennessCentrality {
     /** The delta value for delta-stepping algorithm in computing betweeness centrality for weighted graphs,
      * default is 1.
      */
-    public var delta: Int = 1;
+    public var delta: Int = 1n;
     
     /** Normalization flag, default is false. This flag is applicable only for exact betweenness centrlaity calculation, 
      * <br/>
@@ -134,12 +134,12 @@ public class BetweennessCentrality {
             return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1L, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
             return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
-        } else if (src instanceof Array[Long]) {
-            return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+        } else if (src instanceof Rail[Long]) {
+            return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1, src as Rail[Long], dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof LongRange) {
             return DistBetweennessCentrality.run(matrix, numberOfVertices, inst.directed, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
         } else {
-            throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
+            throw new IllegalArgumentException("Source must be either Long, Rail[Long] or LongRange");
         }        
     }
     
@@ -162,12 +162,12 @@ public class BetweennessCentrality {
             return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, -1, null, dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof Long) {
             return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, src as Long, null, dummy, inst.linearScale, inst.exactBc);
-        } else if (src instanceof Array[Long]) {
-            return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, -1, src as Array[Long], dummy, inst.linearScale, inst.exactBc);
+        } else if (src instanceof Rail[Long]) {
+            return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, -1, src as Rail[Long], dummy, inst.linearScale, inst.exactBc);
         } else if (src instanceof LongRange) {
             return DistBetweennessCentralityWeighted.run(matrix, numberOfVertices, inst.directed, inst.delta, inst.normalize, -1, null, src as LongRange, inst.linearScale, inst.exactBc);
         } else {
-            throw new IllegalArgumentException("Source must be either Long, Array[Long] or LongRange");
+            throw new IllegalArgumentException("Source must be either Long, Rail[Long] or LongRange");
         }
     }
 }

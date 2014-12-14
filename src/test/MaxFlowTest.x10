@@ -19,11 +19,11 @@ import org.scalegraph.io.CSV;
 import org.scalegraph.util.MathAppend;
 
 final class MaxFlowTest extends AlgorithmTest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new MaxFlowTest().execute(args);
 	}
 	
-	public def run(args :Array[String](1), g :Graph): Boolean {
+	public def run(args :Rail[String], g :Graph): Boolean {
 		if(args.size < 5) {
 			println("Usage: [high|low] check s t answer(s!=t)");
 			return false;

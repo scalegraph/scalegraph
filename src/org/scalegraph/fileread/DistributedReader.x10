@@ -73,7 +73,7 @@ public final class DistributedReader {
     }
  
  	public static def read[T](
- 		fileList : Array[String],
+ 		fileList : Rail[String],
  		inputFormat : (String) => Tuple3[Long, Long, T])
  	{
  		val team = Config.get().worldTeam();
@@ -84,7 +84,7 @@ public final class DistributedReader {
 		val weight = new DistGrowableMemory[T](team.placeGroup());
 		
 		var all_size: Long= 0;
-		for(path in fileList.values()) {
+		for(path in fileList) {
 			val file = new File(path);
 			all_size += file.size();
 		}
@@ -93,7 +93,7 @@ public final class DistributedReader {
 		//majide seek ga hoshii, nannde kon na koto shinaito ikenainda
 		//sonnakoto sinakute iindayo!!
 
-		for(path in fileList.values()) {
+		for(path in fileList) {
 			val file = new File(path);
 			val reader = new BufferedReader(new FileReader(file));
 			val size :Long = file.size();

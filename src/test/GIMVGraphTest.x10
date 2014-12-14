@@ -27,7 +27,7 @@ import org.scalegraph.graph.Graph;
 import org.scalegraph.blas.GIMV;
 
 final class GIMVGraphTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new GIMVGraphTest().execute(args);
 	}
 	
@@ -259,10 +259,10 @@ final class GIMVGraphTest extends STest {
 		team.placeGroup().broadcastFlat(() => {
 			val v = vector();
 			for(i in v.range()) v(i) = initValue;
-			if(team.role()(0) == 0) v(0) = 0.0;
+			if(team.role()(0) == 0n) v(0) = 0.0;
 		});
 		
-		if(C == 1) { // 1D
+		if(C == 1n) { // 1D
 			Console.OUT.println("Using 1D GIM-V Engine ...");
 			GIMV.main1DCSR(csr, weight, vector, map, combine, assign, end);
 		}
@@ -328,7 +328,7 @@ final class GIMVGraphTest extends STest {
 			for(i in v.range()) v(i) = iv;
 		});
 		
-		if(C == 1) { // 1D
+		if(C == 1n) { // 1D
 			Console.OUT.println("Using 1D GIM-V Engine ...");
 			GIMV.main1DCSR(csr, weight, vector, map, combine, assign, end);
 		}
@@ -346,7 +346,7 @@ final class GIMVGraphTest extends STest {
 		Console.OUT.println("Complete!!!");
 	}
 	
-    public def run(args: Array[String](1)): Boolean {
+    public def run(args: Rail[String]): Boolean {
         val file = "/nfs/data0/testdata/WEIGHTED_COMMA_SPLIT_RMAT_SCALE_20";
         val parttition = "1x" + Place.MAX_PLACES;
         ditributed_sssp_test(file, parttition);

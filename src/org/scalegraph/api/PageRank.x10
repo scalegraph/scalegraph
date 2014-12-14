@@ -65,7 +65,7 @@ public final class PageRank {
 	/** Maximum number of iterations.
 	 * Default: 1000
 	 */
-	public var niter :Int = 30; // TODO: We need to use more large value.
+	public var niter :Int = 30n; // TODO: We need to use more large value.
 	
 	public def this() { }
 	
@@ -111,7 +111,7 @@ public final class PageRank {
 		
 		xpgraph.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
 			val value :Double;
-			if(ctx.superstep() == 0)
+			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
 			else
 				value = (1.0-damping) / ctx.numberOfVertices() + damping * MathAppend.sum(messages);

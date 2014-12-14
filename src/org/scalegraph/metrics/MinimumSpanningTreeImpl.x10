@@ -153,7 +153,7 @@ public final class MinimumSpanningTreeImpl {
 		    // Select minimum edge
 		    xpregel.iterate[EdgeInfo,Double]((ctx :VertexContext[VertexValue, Double, EdgeInfo, Double], messages :MemoryChunk[EdgeInfo]) => {
 		        
-		        if (ctx.superstep() == 0) {
+		        if (ctx.superstep() == 0n) {
 		            // Find minimum edge
 		            val v = ctx.value();
 		            val table = v.edgeTable;
@@ -173,13 +173,13 @@ public final class MinimumSpanningTreeImpl {
 		                }
 		            }
 		            
-		            assert(selectedIndex >= 0);
+		            assert(selectedIndex >= 0n);
 		            
 		            val e = table(selectedIndex);
 		            v.n = e.dstRoot;
 		            // Console.OUT.printf("\t\tsend(%ld): (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), e.src, e.dst, e.srcRoot, e.dstRoot, e.w);
 		            ctx.sendMessage(e.dstRoot, e);
-		        } else if (ctx.superstep() == 1) {
+		        } else if (ctx.superstep() == 1n) {
 		            
 		            // Select root
 		            val v = ctx.value();
@@ -196,8 +196,8 @@ public final class MinimumSpanningTreeImpl {
 		                    // waive selected edge, then do nothing
 		                } else {
 		                    // output selected edge
-		                    ctx.output(0, m.dst);
-		                    ctx.output(1, m.src);
+		                    ctx.output(0n, m.dst);
+		                    ctx.output(1n, m.src);
 		                    // Console.OUT.printf("\t\tsel(%ld): (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), m.src, m.dst, m.srcRoot, m.dstRoot, m.w);
 		                }
 		            }
@@ -210,7 +210,7 @@ public final class MinimumSpanningTreeImpl {
 		        /// if (here.id == 0) {
 		        ///    sw.lap("Loop: " + loop_ + ": " + (superstep == 0 ? "Find minimum edge" : "Select root"));
 		        /// }
-		        return superstep == 1;
+		        return superstep == 1n;
 		    });
 
 		    @Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Select edge"); }
@@ -220,7 +220,7 @@ public final class MinimumSpanningTreeImpl {
 		        
 		        val v = ctx.value();
 		        var minimumRoot: Long = v.root; 
-		        if (ctx.superstep() == 0) {
+		        if (ctx.superstep() == 0n) {
 		            v.root = Long.MAX_VALUE;
 		        } else {
 		            for (i in messages.range()) {
@@ -266,7 +266,7 @@ public final class MinimumSpanningTreeImpl {
 		    // Pointer Jumping & Gathering
 		    xpregel.iterate[EdgeInfo,Long]((ctx :VertexContext[VertexValue, Double, EdgeInfo, Long], messages :MemoryChunk[EdgeInfo]) => {
 		        val v = ctx.value();
-		        if (ctx.superstep() == 0) {
+		        if (ctx.superstep() == 0n) {
 		            
 		            // Broadcast its edge info
 		            // Console.OUT.println("----------------- Broadcast edge info ---------------");
@@ -279,7 +279,7 @@ public final class MinimumSpanningTreeImpl {
 		                ctx.sendMessage(e.dstRoot, e);
 		                // Console.OUT.printf("\t\t%ld: (%ld, %ld, %ld, %ld, %lf)\n", ctx.id(), e.src, e.dst, e.srcRoot, e.dstRoot, e.w);
 		            }
-		        } else if (ctx.superstep() == 1) {
+		        } else if (ctx.superstep() == 1n) {
 		            
 		            // redirect edges to its root - i.e. pointer jumping
 		            // Console.OUT.println("----------------- Pointer Jumping ---------------");
@@ -318,7 +318,7 @@ public final class MinimumSpanningTreeImpl {
 		    },
 		    (values :MemoryChunk[Long]) => MathAppend.sum[Long](values),
 		    (superstep :Int, aggVal :Long) => {
-		        if (superstep == 2 && numCom.home == here) {
+		        if (superstep == 2n && numCom.home == here) {
 		            numCom()() = aggVal;
 		            /// Console.OUT.println("\t\tAggr: " + aggVal);
 		        }
@@ -331,10 +331,10 @@ public final class MinimumSpanningTreeImpl {
 		    @Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Pointer Jumping & Gathering at "); }
 		    
 		    ++loop;
-		} while (numCom()() > 0);
+		} while (numCom()() > 0n);
 
-		val outSrc = xpregel.stealOutput[Long](0);
-		val outDst = xpregel.stealOutput[Long](1);
+		val outSrc = xpregel.stealOutput[Long](0n);
+		val outDst = xpregel.stealOutput[Long](1n);
 		
 		/// sw.lap("Finished computing MST");
 		

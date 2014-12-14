@@ -18,7 +18,7 @@ import org.scalegraph.util.tuple.*;
 import org.scalegraph.util.*;
 
 public class TestTransToCSV {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		val st = new SimpleText();
 		val csv = new CSV();
 		
@@ -30,7 +30,7 @@ public class TestTransToCSV {
 		val testToB = "test%d.txt";
 		
 		val data = st.read[Long](testFromB, inputFormat);
-		Console.OUT.println(data.get[Long](0)().size() );
+		Console.OUT.println(data.get[Long](0n)().size() );
 		csv.write(testToB, data, false);
 		
 		

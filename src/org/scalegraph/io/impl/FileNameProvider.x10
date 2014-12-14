@@ -28,7 +28,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 		// default method assumes the path pointing to the normal file
 		val last_sep = path.lastIndexOf(File.SEPARATOR);
 		if(last_sep > 0) {
-			(new File(path.substring(0, last_sep).toString())).mkdirs();
+			(new File(path.substring(0n, last_sep).toString())).mkdirs();
 		}
 	}
 	public abstract def deleteFile() :void;
@@ -40,7 +40,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 	private static class PathIterator implements Iterator[SString] {
 		private val th :FileNameProvider;
 		private var index :Int;
-		public def this(th :FileNameProvider) { index = 0; this.th = th; }
+		public def this(th :FileNameProvider) { index = 0n; this.th = th; }
 		public def hasNext() = new File(th.fileName(index).toString()).exists();
 		public def next() = th.fileName(index++);
 	}
@@ -59,7 +59,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 		
 		private static class SinglePathIterator extends PathIterator {
 			public def this(th :FileNameProvider) { super(th); }
-			public def hasNext() = (index == 0);
+			public def hasNext() = (index == 0n);
 		}
 		public def iterator() = new SinglePathIterator(this);
 	}
@@ -71,7 +71,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 		public def isScattered() = true;
 		public def fileName(index :Int) = SString.format(path, index);
 		public def deleteFile() {
-			var index :Int = 0;
+			var index :Int = 0n;
 			do {
 				val file = new File(fileName(index).toString());
 				if (!file.exists()) break;
@@ -96,7 +96,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 		public def deleteFile() {
 			val dir = new File(path.toString());
 			for(i in 0..(dir.list().size-1)) {
-				new File(fileName(i).toString()).delete();
+				new File(fileName(i as Int).toString()).delete();
 			}
 		}
 		public def openRead(index :Int) = new FileReader(fileName(index));
@@ -112,7 +112,7 @@ public abstract class FileNameProvider implements Iterable[SString] {
 	 */
 	private static def create(path :SString, isRead :Boolean, scattered :Boolean) {
 		val num_pos = path.indexOf("%d");
-		if(num_pos != -1) {
+		if(num_pos != -1n) {
 			val last_sep = path.lastIndexOf(File.SEPARATOR);
 			if(last_sep > num_pos) {
 				throw new IllegalArgumentException("Number position may not be on a directory name.");

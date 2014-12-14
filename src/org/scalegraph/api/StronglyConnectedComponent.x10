@@ -90,7 +90,7 @@ public final class StronglyConnectedComponent {
 	/** Maximum number of iterations.
 	 * Default: 1000
 	 */
-	public var niter :Int = 1000; // TODO: We need to use more large value.
+	public var niter :Int = 1000n; // TODO: We need to use more large value.
 	
 	// The algorithm interface needs two execute methods.
 	// 1) Accept a Graph object.
@@ -205,10 +205,10 @@ public final class StronglyConnectedComponent {
 		/// sw.lap("UpdateInEdge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
-		var recursion:Int = 0;
+		var recursion:Int = 0n;
 		var numOfCluster:Long = 0; 
 		while(recursion<niter) {
-			if(niter==recursion+1) {
+			if(niter==recursion+1n) {
 				throw new Exception("End of recursion. Please set more large niter.");
 			}
 			//			Console.OUT.println("recursion, maximalCluster" + recursion +" "+ numOfCluster);
@@ -225,7 +225,7 @@ public final class StronglyConnectedComponent {
 			xpregel.iterate[MessageA, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageA, Long ], messages :MemoryChunk[MessageA] ) => {
 						ctx.aggregate(1);
-						if(ctx.superstep()==0) {
+						if(ctx.superstep()==0n) {
 							/* If there is no edges connecting to this node, 
 							 * program force to end this node.
 							 * ( In "if(ctx.value().front && ctx.value().back)" this node is setted halted.  )
@@ -252,7 +252,7 @@ public final class StronglyConnectedComponent {
 						val mesT = new MessageA(ctx.value().leaderId, true);
 						
 						//sending message from leader.
-						if(ctx.superstep()==0 && ctx.id() == ctx.value().leaderId) {
+						if(ctx.superstep()==0n && ctx.id() == ctx.value().leaderId) {
 							for(i in ctx.outEdgesId().range()) 
 								ctx.sendMessage(ctx.outEdgesId()(i), mesF);
 							for(i in ctx.inEdgesId().range())
@@ -311,12 +311,12 @@ public final class StronglyConnectedComponent {
 			xpregel.iterate[MessageB, Long](
 					(ctx :VertexContext[SCCVertex, Long, MessageB, Long ], messages :MemoryChunk[MessageB] ) => {
 						ctx.aggregate(0);
-						if(ctx.superstep()==0) {
+						if(ctx.superstep()==0n) {
 							val mes = new MessageB(ctx.value().front, ctx.value().back, ctx.id() );
 							ctx.sendMessage(ctx.value().leaderId, mes);
 							ctx.voteToHalt();
 						}
-						if(ctx.superstep()==1) {
+						if(ctx.superstep()==1n) {
 							val cnt = MemoryChunk.make[Long](4);
 							val pos = MemoryChunk.make[Long](4);
 							for(i in messages.range()) {
@@ -343,7 +343,7 @@ public final class StronglyConnectedComponent {
 							ctx.voteToHalt();
 						}
 
-						if(ctx.superstep()==2) {
+						if(ctx.superstep()==2n) {
 							if(messages(0).front) {
 								ctx.clearOutEdges();
 								ctx.setVertexShouldBeActive(false);
@@ -356,7 +356,7 @@ public final class StronglyConnectedComponent {
 					},
 					(values :MemoryChunk[Long]) => MathAppend.sum(values),
 					(superstep :Int, aggVal :Long) => {
-						if(superstep==1)
+						if(superstep==1n)
 							if(cl.home==here)
 								cl()() = aggVal;
 						return superstep >= 2;
@@ -375,7 +375,7 @@ public final class StronglyConnectedComponent {
 					(ctx :VertexContext[SCCVertex, Long, MessageC, Long ], messages :MemoryChunk[MessageC] ) => {
 						
 						var update:Boolean = false;
-						if(ctx.superstep()==0) {
+						if(ctx.superstep()==0n) {
 							ctx.setVertexShouldBeActive(true);
 							update = true;
 						}
@@ -418,11 +418,11 @@ public final class StronglyConnectedComponent {
 		xpregel.resetSholdBeActiveFlag();
 		xpregel.iterate[MessageD, Long](
 				(ctx :VertexContext[SCCVertex, Long, MessageD,Long ], messages :MemoryChunk[MessageD] ) => {
-					if(ctx.superstep()==0) {
+					if(ctx.superstep()==0n) {
 						val mes = new MessageD(ctx.id(), ctx.realId(), 0L);
 						ctx.sendMessage(ctx.value().leaderId, mes);
 					}
-					else if(ctx.superstep()==1) {
+					else if(ctx.superstep()==1n) {
 						var minim:Long = -1L;
 						if(messages.size()>0) 
 							minim = messages(0).realId;
@@ -434,7 +434,7 @@ public final class StronglyConnectedComponent {
 							ctx.sendMessage(messages(i).ctxId, mes);
 						}
 					}
-					else if(ctx.superstep()==2) {
+					else if(ctx.superstep()==2n) {
 						if(messages.size()==0L) {
 							Console.OUT.println("ERROR.");
 							return ;
@@ -449,16 +449,16 @@ public final class StronglyConnectedComponent {
 				(values :MemoryChunk[Long]) => MathAppend.sum(values),
 				(superstep :Int, aggVal :Long) => (superstep >= 2) );
 		xpregel.once((ctx :VertexContext[SCCVertex, Long, Byte, Byte]) => {
-			ctx.output(0, ctx.value().leaderId);
+			ctx.output(0n, ctx.value().leaderId);
 			var plus:Long = 0L;
 			if(ctx.realId() == ctx.value().leaderId && ctx.value().childCnt==0L)
 				plus = 1L;
-			ctx.output(1, ctx.value().childCnt+plus);
+			ctx.output(1n, ctx.value().childCnt+plus);
 //			Console.OUT.println(ctx.realId() + " " + ctx.value().leaderId + " " + ctx.value().childCnt);
 		});
 		
 		/// sw.lap("numOfCluster" + numOfCluster);
-		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0), xpregel.stealOutput[Long](1));
+		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0n), xpregel.stealOutput[Long](1n));
 //		Console.OUT.println("numOfCluster" + numOfCluster);
 
 		/// sw.lap("Retrieve output");

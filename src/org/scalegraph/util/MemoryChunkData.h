@@ -25,13 +25,17 @@
 namespace x10 {
 	namespace lang {
 		class Place;
-	}
-    namespace util {
-    	extern void IMC_copyToBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+    	extern void Rail_copyToBody(void *srcAddr, void *dstAddr, x10_int numBytes,
                                x10::lang::Place dstPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
-    	extern void IMC_copyFromBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+    	extern void Rail_copyFromBody(void *srcAddr, void *dstAddr, x10_int numBytes,
                                  x10::lang::Place srcPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
-    }
+	}
+    //namespace util {
+    //	extern void IMC_copyToBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+    //                           x10::lang::Place dstPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    //	extern void Rail_copyFromBody(void *srcAddr, void *dstAddr, x10_int numBytes,
+    //                             x10::lang::Place srcPlace, bool overlap, x10::lang::VoidFun_0_0* notif);
+    //}
 }
 
 namespace org { namespace scalegraph { namespace util {
@@ -656,7 +660,7 @@ template<class T> void MCData_Impl<T>::asyncCopy(MCData_Impl<T> src, void* dst, 
 	x10_long mx = (1L<<30)/sizeof(T);
 	while (l < r) {
 		x10_long c = (r-l < mx) ? r-l : mx;
-		::x10::util::IMC_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+		::x10::lang::Rail_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
 		l += c;
 	}
 	//::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst + dstIndex, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
@@ -667,7 +671,7 @@ template<class T> void MCData_Impl<T>::asyncCopy(void* src, x10_long srcIndex, x
 	x10_long mx = (1L<<30)/sizeof(T);
 	while (l < r) {
 		x10_long c = (r-l < mx) ? r-l : mx;
-		::x10::util::IMC_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+		::x10::lang::Rail_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
 		l += c;
 	}
 	//::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
@@ -679,7 +683,7 @@ template<class T> void MCData_Impl<T*>::asyncCopy(MCData_Impl<T*> src, void* dst
 	x10_long mx = (1L<<30)/sizeof(T);
 	while (l < r) {
 		x10_long c = (r-l < mx) ? r-l : mx;
-		::x10::util::IMC_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
+		::x10::lang::Rail_copyToBody((T*)src.FMGL(pointer) + l, (T*)dst + dstIndex + l, c * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
 		l += c;
 	}
 	//::x10::util::IMC_copyToBody(src.FMGL(pointer), (T*)dst + dstIndex, src.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(dstPlace), true, NULL);
@@ -691,7 +695,7 @@ template<class T> void MCData_Impl<T*>::asyncCopy(void* src, x10_long srcIndex, 
 	x10_long mx = (1L<<30)/sizeof(T);
 	while (l < r) {
 		x10_long c = (r-l < mx) ? r-l : mx;
-		::x10::util::IMC_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
+		::x10::lang::Rail_copyFromBody((T*)src + srcIndex + l, (T*)dst.FMGL(pointer) + l, c * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);
 		l += c;
 	}
 	//::x10::util::IMC_copyFromBody((T*)src + srcIndex, dst.FMGL(pointer), dst.FMGL(size) * sizeof(T), ::x10::lang::Place::_make(srcPlace), true, NULL);

@@ -26,67 +26,70 @@ public class BufferedReader extends Reader {
 	
 	public def this(r: Reader) {
 		reader = r;
-		buffer = new Array[Byte](128*1024);
-		offset = length = 0;
-		fp = 0;
+		buffer = new Rail[Byte](128*1024);
+		offset = length = 0n;
+		fp = 0n;
 	}
 	
 	public def reset():void {
-		offset = length = 0;
-		fp = 0;
+		offset = length = 0n;
+		fp = 0n;
 		reader.reset();
 	}
 
-	public def skip(n: Int):void {
+	public def skip(n: Long):void {
 		val buffered = length - offset;
 		fp = fp + (n as Long);
 		if(buffered >= n) {
 			offset += n;
 		}
 		else {
-			offset = length = 0;
+			offset = length = 0n;
 			reader.skip(n - buffered);
 		}
 	}
 
-	public def read(r: Rail[Byte], var off: Int, var len: Int): Int {
+	public def read(r: Rail[Byte], var off: Long, var len: Long): void{//Int {
 		val buffered = length - offset;
 		fp = fp + (len as Long);
 		if(buffered >= len) {
-			Array.copy(buffer, offset, r, off, len);
+			Rail.copy(buffer, offset as Long, r, off as Long, len as Long);
 			offset += len;
-			return len;
+			//return len;
 		}
 		else {
-			Array.copy(buffer, offset, r, off, buffered);
+			Rail.copy(buffer, offset as Long, r, off as Long, buffered as Long);
 			off += buffered; len -= buffered;
-			offset = length = 0;
+			offset = length = 0n;
 			var ret: Int = buffered;
 			try {
-				val readBytes = reader.read(r, off, len);
-				if(readBytes > 0) {
+				//val readBytes = reader.read(r, off, len);
+				r.clear();
+				reader.read(r, off, len);
+				val readBytes = r.size;
+				if(readBytes > 0n) {
 					ret += readBytes;
 					fillBuffer();
 				}
 			} catch (e: IOException) {
-				if(ret == 0) throw e;
+				if(ret == 0n) throw e;
 			}
-			return ret;
+			//return ret;
 		}
 	}
 
 	public def read():x10.lang.Byte {
 		fp = fp + 1;
 		if(length == offset) {
-			offset = length = 0;
-			if(fillBuffer() <= 0) throw new IOException();
+			offset = length = 0n;
+			if(fillBuffer() <= 0n) throw new IOException();
 		}
 		return buffer(offset++);
 	}
 
 	public def close():void {
-		offset = length = 0;
-		fp = 0;
+		offset = length = 0n;
+		fp = 0n;
 		buffer = null;
 		reader.close();
 	}
@@ -102,9 +105,12 @@ public class BufferedReader extends Reader {
 	}
 
 	private def fillBuffer(): Int {
-		val readBytes = reader.read(buffer, length, buffer.size - length);
-		if(readBytes > 0) length += readBytes;
-		return readBytes;
+		buffer.clear();
+		reader.read(buffer, length, buffer.size - length);
+		val readBytes = buffer.size;
+		//val readBytes = reader.read(buffer, length, buffer.size - length);
+		if(readBytes > 0n) length += readBytes;
+		return readBytes as Int;
 	}
 	
 	public def getFilePointer(): Long{

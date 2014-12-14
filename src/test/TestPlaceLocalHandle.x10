@@ -41,7 +41,7 @@ public class TestPlaceLocalHandle {
 			val plh = PlaceLocalHandle.make[MyInt](placeGroup, ()=>new MyInt());
 			message("make complete " + i, start);
 			finish for(place in placeGroup) at(place) async {
-				plh()() = 0;
+				plh()() = 0n;
 			}
 			message("write complete " + i, start);
 		}
@@ -54,7 +54,7 @@ public class TestPlaceLocalHandle {
 			val start = Timer.nanoTime();
 			val plh = PlaceLocalHandle.makeFlat[MyInt](placeGroup, ()=>new MyInt());
 			message("make complete " + i, start);
-			placeGroup.broadcastFlat(()=>{plh()()=0;return;});
+			placeGroup.broadcastFlat(()=>{plh()()=0n;return;});
 			message("write complete " + i, start);
 		}
 	}
@@ -67,8 +67,18 @@ public class TestPlaceLocalHandle {
 			val start = Timer.nanoTime();
 			val plh = PlaceLocalHandle.make[MyInt](placeGroup, ()=>new MyInt());
 			message("make complete " + i, start);
-			@Pragma(Pragma.FINISH_SPMD) finish for([pi] in places) at(places(pi)) async {
-				plh()() = pi;
+			//@Pragma(Pragma.FINISH_SPMD) finish for([pi] in places) at(places(pi)) async {
+			//	plh()() = pi;
+			//}
+			@Pragma(Pragma.FINISH_SPMD){
+				var cnt : Int = 0n;
+				finish for(pi in places){
+					val cnt2 = cnt;
+					at(pi) async {
+						plh()() = cnt2;
+					}
+					cnt++;
+				}
 			}
 			message("write complete " + i, start);
 		}
@@ -83,10 +93,12 @@ public class TestPlaceLocalHandle {
 			val plh = PlaceLocalHandle.makeFlat[MyInt](placeGroup, ()=>new MyInt());
 			message("make complete " + i, start);
 			placeGroup.broadcastFlat(()=>{
-				for([pi] in places) {
-					if(here == places(pi)) {
-						plh()() = pi; break;
+				var cnt : Int = 0n;
+				for(pi in places) {
+					if(here == pi) {
+						plh()() = cnt; break;
 					}
+					cnt++;
 				}
 				return;
 			});
@@ -103,9 +115,10 @@ public class TestPlaceLocalHandle {
 			val plh = PlaceLocalHandle.makeFlat[MyInt](placeGroup, ()=>new MyInt());
 			message("make complete " + i, start);
 			finish for(pi in 0..(placeGroup.size()-1)) at(placeGroup(pi)) async {
-				val array = new Array[Int](size, (i:Int)=>i);
-				val recv = new Array[Int](1);
-				Team.WORLD.scatter(Team.WORLD.id(), 0, array, 0, recv, 0, 1);
+				val array = new Rail[Int](size, (i:Long)=>i as Int);
+				val recv = new Rail[Int](1);
+				//Team.WORLD.scatter(Team.WORLD.id(), 0, array, 0, recv, 0, 1);
+				Team.WORLD.scatter(0n, array, 0, recv, 0, 1);
 				plh()() = recv(0);
 			};
 			message("write complete " + i, start);
@@ -134,7 +147,7 @@ public class TestPlaceLocalHandle {
 		}
 	}
 	
-	public static def main(args:Array[String](1)) : void{
+	public static def main(args:Rail[String]) : void{
 		message("Team.WORLD: " + Team.WORLD);
 		message("members of Team(0): " + Team.WORLD.places());
 		

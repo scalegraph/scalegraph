@@ -26,7 +26,7 @@ import org.scalegraph.util.Bitmap2;
 import org.scalegraph.graph.id.OnedC;
 
 final class TestLsBfs extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new TestLsBfs().execute(args);
 	}
     
@@ -56,7 +56,7 @@ final class TestLsBfs extends STest {
     };
     
 
-    public def run(args: Array[String](1)): Boolean {
+    public def run(args: Rail[String]): Boolean {
         
         val team = Team.WORLD;
         
@@ -89,8 +89,10 @@ final class TestLsBfs extends STest {
         visitor.run();
         
         team.placeGroup().broadcastFlat(() => {
-            val allVisited = team.allreduce(team.role()(0), lch().vertexCount.get(), Team.ADD);
-            val allEdges = team.allreduce(team.role()(0), lch().edgeCount.get(), Team.ADD);
+            //val allVisited = team.allreduce(team.role()(0), lch().vertexCount.get(), Team.ADD);
+            //val allEdges = team.allreduce(team.role()(0), lch().edgeCount.get(), Team.ADD);
+            val allVisited = team.allreduce(lch().vertexCount.get(), Team.ADD);
+            val allEdges = team.allreduce(lch().edgeCount.get(), Team.ADD);
             if (here == Place.FIRST_PLACE) {
                 // Console.OUT.println("Visited: " + allVisited);
                 // Console.OUT.println("Edge: " + allEdges);

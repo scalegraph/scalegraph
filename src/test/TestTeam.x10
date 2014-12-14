@@ -23,14 +23,15 @@ public class TestTeam {
 	static def testbcast1() : void{
 		message("Bcast Test");
 		val comm = Team.WORLD;
-                val counts = 1;
-                val root = 0;
+                val counts = 1n;
+                val root = 0n;
 		finish for (p in Place.places()) async at (p) {
-			val role = here.id;
-                        val src = (role == root) ? new Array[Int](counts * comm.size(), (i:Int)=> i) : [0];
+			val role = here.id as Int;
+                        val src = (role == root) ? new Rail[Int](counts * comm.size(), (i:Long)=> i as Int) : new Rail[Int](1, (Long)=>0n);//[0];
                         val oracle = role;
 
-                        val recv = comm.bcast1(role, root, src);
+                        //val recv : Int = comm.bcast1(root, src);
+                        val recv : Int = comm.bcast1(root, 3n);
                         if (recv != oracle)
                           message(here + ": received: " + recv + ", expected: " + oracle);
 		}
@@ -38,32 +39,33 @@ public class TestTeam {
 	static def testscatter() : void{
 		message("Scatter Test");
 		val comm = Team.WORLD;
-                val counts = 3;
-                val root = 0;
+		val counts = 3n;
+		val root = 0n;
 		finish for (p in Place.places()) async at (p) {
-			val role = here.id;
-                        val src = (role == root) ? new Array[Int](counts * comm.size(), (i:Int)=> i) : [0 as Int];
-                        val oracle = new Array[Int](counts, (i:Int)=> role * counts + i);
+			val role = here.id as Int;
+			val src = (role == root) ? new Rail[Int](counts * comm.size(), (i:Long)=> i as Int) : [0 as Int];
+			val oracle = new Rail[Int](counts, (i:Long)=> (role * counts + i) as Int);
 
-                        val recv = comm.scatter(role, root, src);
-                        if (recv.size != oracle.size)
-                          message(here + ": length mistatch: received: " + recv + ", expected: " + oracle);
-                        for (i in 0..(recv.size - 1)) {
-                        if (recv(i) != oracle(i))
-                          message(here + ": received: " + recv(i) + ", expected: " + oracle(i));
-                      }
+			//val recv = comm.scatter(role, root, src);
+			val recv = comm.scatter(role, root, src);
+			if (recv.size != oracle.size)
+				message(here + ": length mistatch: received: " + recv + ", expected: " + oracle);
+			for (i in 0..(recv.size - 1)) {
+				if (recv(i) != oracle(i))
+					message(here + ": received: " + recv(i) + ", expected: " + oracle(i));
+			}
 		}
 	}
 	static def testscatterv() : void{
 		message("Scatterv Test");
 		val comm = Team.WORLD;
-                val counts = 3;
-                val root = 0;
+                val counts = 3n;
+                val root = 0n;
 		finish for (p in Place.places()) async at (p) {
-			val role = here.id;
-                        val src = (role == root) ? new Array[Double](counts * comm.size(), (i:Int)=> i as Double) : [0 as Double];
-                        val src_offs = new Array[Int](comm.size(), (i:Int)=> i * counts);
-                        val src_counts = new Array[Int](comm.size(), (i:Int)=> counts);
+			val role = here.id as Int;
+                        val src = (role == root) ? new Rail[Double](counts * comm.size(), (i:Long)=> i as Double) : [0 as Double];
+                        val src_offs = new Rail[Int](comm.size(), (i:Long)=> (i * counts) as Int);
+                        val src_counts = new Rail[Int](comm.size(), (i:Long)=> counts as Int);
 
                         val recv = comm.scatterv(role, root, src, src_counts);
                         val oracle = comm.scatter(role, root, src);
@@ -78,8 +80,8 @@ public class TestTeam {
 	static def testsplit() : void{
 		message("Split Test");
 		finish for (p in Place.places()) async at (p) {
-			val old_role = here.id;
-			val new_team = Team.WORLD.split(old_role, old_role % 2, old_role / 2);
+			val old_role = here.id as Int;
+			val new_team = Team.WORLD.split(old_role % 2n, old_role / 2);
 			val new_role = old_role / 2;
 			message(here + ": old role: " + old_role + ", new role: " + new_role + " new team: " + new_team);
 		}
@@ -107,20 +109,20 @@ public class TestTeam {
 		message("Allgather Test");
 		val comm = Team.WORLD;
 		finish for (p in Place.places()) async at (p) {
-			val counts = 2;
-			val role = here.id;
-			val src = new Array[Int](counts, (i:Int)=> role * counts + i);
+			val counts = 2n;
+			val role = here.id as Int;
+			val src = new Rail[Int](counts, (i:Long)=> (role * counts + i) as Int);
 			for (q in Place.places())  {
-				comm.barrier(role);
+				comm.barrier();
 				if (p == q) {
 					// message(here + ": input: " + src);
 				}
 			}
 			val dst = comm.allgather(role, src);
 			// message(here + ": allgather output: " + dst);
-			val oracle = new Array[Int](comm.size() * counts, (i:Int)=> i);
+			val oracle = new Rail[Int](comm.size() * counts, (i:Long)=> i as Int);
             for (q in Place.places()) {
-              comm.barrier(role);
+              comm.barrier();
               if (q == here) {
                   for (i in 0..(dst.size - 1)) {
                       if (dst(i) != oracle(i))
@@ -134,19 +136,19 @@ public class TestTeam {
 		message("Allgatherv Test");
 		val comm = Team.WORLD;
 		finish for (p in Place.places()) async at (p) {
-			val role = here.id;
-			val src = new Array[Int](role + 1, (i:Int)=> (role + 1) * role / 2 + 1 + i);
+			val role = here.id as Int;
+			val src = new Rail[Int](role + 1, (i:Long)=> ((role + 1) * role / 2 + 1 + i) as Int);
 			for (q in Place.places())  {
-				comm.barrier(role);
+				comm.barrier();
 				if (p == q) {
 					// message(here + ": input: " + src);
 				}
 			}
 			val dst = comm.allgatherv(role, src);
 			message(here + ": allgatherv output: " + dst);
-			val oracle = new Array[Int](comm.size() * (comm.size() + 1) / 2, (i:Int)=> i);
+			val oracle = new Rail[Int](comm.size() * (comm.size() + 1) / 2, (i:Long)=> i as Int);
             for (q in Place.places()) {
-                comm.barrier(role);
+                comm.barrier();
                 if (q == here) {
                     for (i in 0..(dst.size - 1)) {
                         if (dst(i) != oracle(i))
@@ -161,19 +163,19 @@ public class TestTeam {
 		finish for (p in Place.places()) async at (p) {
 			val comm = Team.WORLD;
 			val places = comm.size();
-			val role = here.id;
-			val src = new Array[Int](places, (i:Int)=> role * places + i);
+			val role = here.id as Int;
+			val src = new Rail[Int](places, (i:Long)=> (role * places + i) as Int);
 			for (q in Place.places())  {
-				Team.WORLD.barrier(role);
+				Team.WORLD.barrier();
 				if (p == q) {
 					// message(here + ": input: " + src);
 				}
 			}
 			val dst = comm.alltoall(role, src);
 			// message(here + ": alltoall output: " + dst);
-			val oracle = new Array[Int](places, (i:Int)=> i * places + role);
+			val oracle = new Rail[Int](places, (i:Long)=> (i * places + role) as Int);
             for (q in Place.places()) {
-                comm.barrier(role);
+                comm.barrier();
                 if (q == here) {
                     for (i in 0..(dst.size - 1)) {
                         if (dst(i) != oracle(i))
@@ -188,22 +190,22 @@ public class TestTeam {
 		finish for (p in Place.places()) async at (p) {
 			val comm = Team.WORLD;
 			val places = comm.size();
-			val role = here.id;
+			val role = here.id as Int;
 			{
-				val src = new Array[Array[Int](1)](places, (i:Int)=>
-				new Array[Int](1, role * places + i));
+				val src = new Rail[Rail[Int]](places, (i:Long)=>
+				new Rail[Int](1, (role * places + i) as Int));
 				for (q in Place.places())  {
-					comm.barrier(role);
+					comm.barrier();
 					if (p == q) {
 						// message(here + ": input: " + src);
 					}
 				}
 				message(here + " before alltoallv");
 				val dst = comm.alltoallv(role, src);
-				val oracle = new Array[Int](places, (i:Int)=> i * places + role);
+				val oracle = new Rail[Int](places, (i:Long)=> (i * places + role) as Int);
 				// message(here + ": alltoallv output: " + dst);
                 for (q in Place.places()) {
-                  comm.barrier(role);
+                  comm.barrier();
                   if (q == here) {
                     for (i in 0..(dst.size - 1)) {
                       if (dst(i) != oracle(i))
@@ -213,10 +215,10 @@ public class TestTeam {
                 }
 			}
 			{
-				val src = new Array[Array[Int](1)](places, (i:Int)=>
-				new Array[Int](i, role * places + i));
+				val src = new Rail[Rail[Int]](places, (i:Long)=>
+				new Rail[Int](i, (role * places + i) as Int));
 				for (q in Place.places())  {
-					Team.WORLD.barrier(role);
+					Team.WORLD.barrier();
 					if (p == q) {
 						// message(here + ": input: " + src);
 					}
@@ -224,9 +226,9 @@ public class TestTeam {
 				message(here + " before alltoallv");
 				val dst = comm.alltoallv(role, src);
 				// message(here + ": alltoallv output: " + dst);
-				val oracle = new Array[Int](role * places, (i:Int)=> (i / role) * places + role);
+				val oracle = new Rail[Int](role * places, (i:Long)=> ((i / role) * places + role) as Int);
                 for (q in Place.places()) {
-                  comm.barrier(role);
+                  comm.barrier();
                   if (q == here) {
                     for (i in 0..(dst.size - 1)) {
                       if (dst(i) != oracle(i))
@@ -236,10 +238,10 @@ public class TestTeam {
                 }
 			}
 			{
-				val src = new Array[Array[Int](1)](places, (i:Int)=>
-				new Array[Int](places - i - 1, role * places + i));
+				val src = new Rail[Rail[Int]](places, (i:Long)=>
+				new Rail[Int](places - i - 1, (role * places + i) as Int));
 				for (q in Place.places())  {
-					Team.WORLD.barrier(role);
+					Team.WORLD.barrier();
 					if (p == q) {
 						//message(here + ": input: " + src);
 					}
@@ -247,9 +249,9 @@ public class TestTeam {
 				message(here + " before alltoallv");
 				val dst = comm.alltoallv(role, src);
 				message(here + ": alltoallv output: " + dst);
-				val oracle = new Array[Int]((places - role - 1) * places, (i:Int)=> (i / (places - role - 1)) * places + role);
+				val oracle = new Rail[Int]((places - role - 1) * places, (i:Long)=> ((i / (places - role - 1)) * places + role) as Int);
                 for (q in Place.places()) {
-                  comm.barrier(role);
+                  comm.barrier();
                   if (q == here) {
                     for (i in 0..(dst.size - 1)) {
                       if (dst(i) != oracle(i))
@@ -260,12 +262,12 @@ public class TestTeam {
 			}
 		}
 	}
-	public static def main(args:Array[String](1)) : void{
+	public static def main(args:Rail[String]) : void{
 		message("Team.WORLD: " + Team.WORLD);
 		message("members of Team(0): " + Team.WORLD.places());
 		
-		//testbcast1();
-		//testsplit();
+		testbcast1();
+		testsplit();
 		testscatter();
 		testscatterv();
 		testallgather();

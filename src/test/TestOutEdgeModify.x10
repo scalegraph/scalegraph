@@ -24,7 +24,7 @@ import org.scalegraph.xpregel.XPregelGraph;
  */
 
 public class TestOutEdgeModify {
-	public static def main(args:Array[String](1)) {
+	public static def main(args:Rail[String]) {
 		
 		//-----initialize team
 		Console.OUT.println("initialize team");	
@@ -122,7 +122,7 @@ public class TestOutEdgeModify {
 		val end_time = System.currentTimeMillis();
 		
 		val ps=team.places();
-		for(p in ps) at(ps(p)) {// ...
+		for(p in ps) at(p) {// ...
 			atomic{
 			Console.OUT.println(p + ":\n" + mesBuf().toString());
 			}

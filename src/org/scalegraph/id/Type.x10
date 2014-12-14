@@ -20,22 +20,22 @@ import org.scalegraph.util.SString;
 @NativeCPPInclude("TypeHelper.h")
 @NativeCPPOutputFile("TypeHelper.h")
 public final class Type {
-	public static val None		: Int = 0;
-	public static val Boolean	: Int = 1;
-	public static val Byte		: Int = 2;
-	public static val Short		: Int = 3;
-	public static val Int		: Int = 4;
-	public static val Long		: Int = 5;
-	public static val Float		: Int = 6;
-	public static val Double	: Int = 7;
-	public static val UByte		: Int = 8;
-	public static val UShort	: Int = 9;
-	public static val UInt		: Int = 10;
-	public static val ULong		: Int = 11;
-	public static val Char		: Int = 12;
-	public static val String	: Int = 13;
-	public static val Date		: Int = 14;
-	public static val TypeCount	: Int = 15;
+	public static val None		: Int = 0n;
+	public static val Boolean	: Int = 1n;
+	public static val Byte		: Int = 2n;
+	public static val Short		: Int = 3n;
+	public static val Int		: Int = 4n;
+	public static val Long		: Int = 5n;
+	public static val Float		: Int = 6n;
+	public static val Double	: Int = 7n;
+	public static val UByte		: Int = 8n;
+	public static val UShort	: Int = 9n;
+	public static val UInt		: Int = 10n;
+	public static val ULong		: Int = 11n;
+	public static val Char		: Int = 12n;
+	public static val String	: Int = 13n;
+	public static val Date		: Int = 14n;
+	public static val TypeCount	: Int = 15n;
 
 	public static def attTypeId(typeId :Int) = typeId << 8;
 	public static def attTypeId(typeId :Int, flags :Int) = (typeId << 8) | flags;

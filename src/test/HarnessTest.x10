@@ -13,11 +13,11 @@ package test;
 import org.scalegraph.test.STest;
 
 final class HarnessTest extends STest {
-	public static def main(args: Array[String](1)) {
+	public static def main(args: Rail[String]) {
 		new HarnessTest().execute(args);
 	}
 
-	public def run(args:Array[String](1)) :boolean {
+	public def run(args:Rail[String]) :boolean {
 		finish for(p in Place.places()) at(p) async {
 			throw new NullPointerException("Exception for test");
 		}

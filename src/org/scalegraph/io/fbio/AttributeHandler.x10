@@ -113,7 +113,7 @@ class PrimitiveAttributeHandler[T] extends AttributeHandler {
 	
 	public def print(any : Any) {
 		val dmc = any as DistMemoryChunk[T];
-		for(var i:Int = 0; i < team.size(); i++) at(team.places()(i)) {
+		for(var i:Int = 0n; i < team.size(); i++) at(team.places()(i)) {
 			Console.OUT.print(dmc() + " ");
 		}
 		Console.OUT.println("");
@@ -136,7 +136,7 @@ class StringAttributeHandler extends AttributeHandler {
 		val mc = (any as DistMemoryChunk[String])();
 		var sum : Long = 0L;
 		for(i in offset..(offset+num-1)) {
-			sum += 4 + FBIOSupport.align(mc(i).length(), 4);
+			sum += 4 + FBIOSupport.align(mc(i).length(), 4n);
 		}
 		return sum;
 	}
@@ -157,8 +157,8 @@ class StringAttributeHandler extends AttributeHandler {
 	
 	public def print(any : Any) {
 		val dmc = any as DistMemoryChunk[String];
-		for(var i:Int = 0; i < team.size(); i++) at(team.places()(i)) {
-			Console.OUT.print(dmc().toArray() + " ");
+		for(var i:Int = 0n; i < team.size(); i++) at(team.places()(i)) {
+			Console.OUT.print(dmc().toRail() + " ");
 		}
 		Console.OUT.println("");
 	}

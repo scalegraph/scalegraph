@@ -65,7 +65,7 @@ public final class MathAppend {
 
     public static def floorLog2(var p:Long):Int {
         var pow2: long = 1L;
-        var i: Int = -1;
+        var i: Int = -1n;
         while (pow2 <= p) {
             pow2 <<= 1;
             ++i;
@@ -76,8 +76,8 @@ public final class MathAppend {
     @Native("c++", "63 - __builtin_clzl(((#p) << 1) - 1)")
     public static def ceilLog2(var p:Long):Int {
         var pow2: long = 1L;
-        if (p == 0L) return -1;
-        var i: Int = 0;
+        if (p == 0L) return -1n;
+        var i: Int = 0n;
         while (pow2 < p) {
             pow2 <<= 1;
             ++i;
@@ -100,7 +100,7 @@ public final class MathAppend {
     @Native("c++", "63 - __builtin_clzl(#p)")
     public static def log2(var p:Long):Long {
         assert powerOf2(p);
-        var i:Int = 0;
+        var i:Int = 0n;
         while (p > 1) { p = p/2; i++; }
         return i;
     }

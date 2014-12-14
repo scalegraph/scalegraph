@@ -86,7 +86,7 @@ public final class StronglyConnectedComponent2 {
 	/** Maximum number of iterations.
 	 * Default: 1000
 	 */
-	public var niter :Int = 1000; // TODO: We need to use more large value.
+	public var niter :Int = 1000n; // TODO: We need to use more large value.
 	
 	// The algorithm interface needs two execute methods.
 	// 1) Accept a Graph object.
@@ -193,10 +193,10 @@ public final class StronglyConnectedComponent2 {
 		});
 		var numOfCluster : Long =0;
 		
-		var recursion:Int = 0;
+		var recursion:Int = 0n;
 		var sum:Long = 0;
 		while(recursion < niter ) {
-			if(niter==recursion+1) {
+			if(niter==recursion+1n) {
 				throw new Exception("End of recursion. Please set more large niter.");
 			}
 			val end_hoge_time = System.currentTimeMillis();
@@ -211,8 +211,8 @@ public final class StronglyConnectedComponent2 {
 						var updateFrom:Boolean = false;
 						var updateTo:Boolean = false;
 						var updateAll:Boolean = false;
-						if(ctx.superstep()==0) {
-							if(curRec==0) {
+						if(ctx.superstep()==0n) {
+							if(curRec==0n) {
 								if(!ctx.value().ended)updateAll = true;
 								else ctx.aggregate(1);
 							}
@@ -277,7 +277,7 @@ public final class StronglyConnectedComponent2 {
 
 					(values :MemoryChunk[Long]) => MathAppend.sum(values),
 					(superstep :Int, aggVal :Long) => {
-						if(superstep==0)
+						if(superstep==0n)
 							if(cl.home==here)
 								cl()() = aggVal;
 						return (superstep >= 1000);
@@ -302,11 +302,11 @@ public final class StronglyConnectedComponent2 {
 			val right = left + maxMemo;
 			xpregel.iterate[Boolean, Long](
 					(ctx :VertexContext[SCCVertex, Double, Boolean,Long ], messages :MemoryChunk[Boolean] ) => {
-						if(ctx.superstep()==0 && left<=ctx.realId() && ctx.realId()<right) {
+						if(ctx.superstep()==0n && left<=ctx.realId() && ctx.realId()<right) {
 							val mes = true;
 							ctx.sendMessage(ctx.value().parentAddress, mes);
 						}
-						if(ctx.superstep()==1)
+						if(ctx.superstep()==1n)
 							ctx.value().plusNumOfChild(messages.size());
 					},
 					(values :MemoryChunk[Long]) => MathAppend.sum(values),
@@ -315,13 +315,13 @@ public final class StronglyConnectedComponent2 {
 			
 		}
 		xpregel.once((ctx :VertexContext[SCCVertex, Double, Byte, Byte]) => {
-			ctx.output(0, ctx.value().prevFromId);
-			ctx.output(1, ctx.value().numOfChild);
+			ctx.output(0n, ctx.value().prevFromId);
+			ctx.output(1n, ctx.value().numOfChild);
 			//Console.OUT.println(ctx.realId() + " " + ctx.value().prevFromId + " " + ctx.value().numOfChild);
 		});
 		
 		sw.lap("numOfCluster" + numOfCluster);
-		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0), xpregel.stealOutput[Long](1));
+		val result = new Result(numOfCluster, xpregel.stealOutput[Long](0n), xpregel.stealOutput[Long](1n));
 //		Console.OUT.println("numOfCluster" + numOfCluster);
 
 		/// sw.lap("Retrieve output");

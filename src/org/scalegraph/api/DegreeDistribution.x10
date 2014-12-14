@@ -26,12 +26,12 @@ import org.scalegraph.Config;
 final public class DegreeDistribution {
     
     // Modes
-    public static val IN_DEGREE: Int = 0;
-    public static val OUT_DEGREE: Int = 1;
-    public static val INOUT_DEGREE: Int = 2;
+    public static val IN_DEGREE: Int = 0n;
+    public static val OUT_DEGREE: Int = 1n;
+    public static val INOUT_DEGREE: Int = 2n;
     
     /** The mode in which the degree of a vertex is determined, default is in-degree calculation. */
-    public var mode: Int = 1;
+    public var mode: Int = 1n;
     
     public def this() { }
     
