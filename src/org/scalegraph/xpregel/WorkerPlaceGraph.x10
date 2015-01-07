@@ -186,12 +186,13 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			dataNum += diec(team);
 		val died = MemoryChunk.make[Tuple3[Long,Long,E]](dataNum);
 		var dataIndex :Long = 0;
-		for (team in 0..(numTeam-1))
+		for (team in 0..(numTeam-1)) {
 			for (thread in threadRange){
 				val src = diffInEdgeDataPerThread(thread)(team);
 				MemoryChunk.copy(src, 0L, died, dataIndex, src.size());
 				dataIndex += src.size();
 			}
+		}
 		assert (dataIndex == dataNum);
 		
 		//exchange differences
@@ -203,8 +204,9 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		
 		//foreach differences
 		foreachVertexes(result.size(),(tid :Long, range :LongRange)=>{	//Irregular usage! DO NOT COPY this line!
-			for(i in range)	//optimize? overwrite val1 directory
+			for(i in range)	{//optimize? overwrite val1 directory
 				result(i) = new Tuple3(mDtoS(result(i).val1),result(i).val2,result(i).val3);	//DtoS
+			}
 		});
 		
 		//sort (optimize => sort order (srcid --> (subdivided)dstid))
