@@ -182,7 +182,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			
 			// renew edgeProvider
 			//TODO : use GraphEdge.set
-//			e.mOutEdge.set(newOffset, newVertex, newValue);
+			e.mOutEdge.set(newOffset, newVertex, newValue);
 //			e.mOffset = newOffset;
 //			e.mVertex = newVertex;
 //			e.mOutValue = newValue;
@@ -192,9 +192,9 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_2); }
 		
-		//outOffset.del();
-		//outVertex.del();
-		//outValue.del();
+		outOffset.del();
+		outVertex.del();
+		outValue.del();
 		outEdge.offsets = newOffset;
 		outEdge.vertexes = newVertex;
 		outEdge.values = newValue;
@@ -619,7 +619,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				);
 			}
 			// kore hitsuyou
-//			e.mInEdge.set(newOffset, newVertex, newValue);
+			e.mInEdge.set(newOffset, newVertex, newValue);
 //			e.mInOffset = newOffset;
 //			e.mInVertex = newVertex;
 //			e.mInValue = newValue;
@@ -628,9 +628,9 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			assert newOffset(r.max + 1L) == offsetPerThread(tid + 1L);
 		});
 //		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_UPDATE_OUT_EDGES_2); }
-//		inOffset.del();
-//		inVertex.del();
-//		inValue.del();
+		inOffset.del();
+		inVertex.del();
+		inValue.del();
 		inEdge.offsets = newOffset;
 		inEdge.vertexes = newVertex;
 		inEdge.values = newValue;
