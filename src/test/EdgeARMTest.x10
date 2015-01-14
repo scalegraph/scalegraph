@@ -35,6 +35,7 @@ public class EdgeARMTest {
 		val edgeFactor = 10;
 		val rnd = new Random(2, 3);
 		val edgeList = GraphGenerator.genRandomGraph(scale, edgeFactor, rnd);
+		// val edgeList = GraphGenerator.genRMAT(scale, edgeFactor, 0.45, 0.15, 0.15, rnd);
 		val g = Graph.make(edgeList);
 		
 		// Generate edge weight
@@ -56,6 +57,9 @@ public class EdgeARMTest {
 		this.team = g.team();	
 		val matrix = g.createDistSparseMatrix[Double](
 				Config.get().distXPregel(), weights, directed, false);
+		matrix.simplify(true, true, (list :MemoryChunk[Double]) => {
+			return MathAppend.sum(list);
+		});
 		Config.get().stopWatch().lap("Graph construction");
 		return execute(matrix);
 	}
@@ -76,25 +80,39 @@ public class EdgeARMTest {
 		sw.lap("Start Iteration");
 		
 		xpgraph.iterate[Long, Long]((ctx :VertexContext[Double, Double, Long, Long], messages :MemoryChunk[Long]) => {
-			sw.lap("superstep " + ctx.superstep());
 			switch (ctx.superstep()) {
 			case 0:
-				for (val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next()) {
-					// iter.modifyValue(iter.curValue() + 1);
-					iter.remove();
-				}
-				assert(ctx.numberOfOutEdges() == 0L);
+				sw.lap("[Step 0] NumOuts = " + ctx.numberOfOutEdges() + "(at " + ctx.id() + ")");
+				ctx.setValue(ctx.numberOfOutEdges());
+				ctx.sendMessageToAllNeighbors(1L);
 				break;
 			case 1:
+				sw.lap("[Step 1-1] NumOuts = " + ctx.numberOfOutEdges() + "(at " + ctx.id() + ")");
+				ctx.clearOutEdges();
+				sw.lap("[Step 1-2] NumOuts = " + ctx.numberOfOutEdges() + "(at " + ctx.id() + ")");
+				val numOut = ctx.numberOfOutEdges();
+				assert(ctx.numberOfOutEdges() == 0L);
+				assert(numOut == 0L);
+				
 				ctx.sendMessageToAllNeighbors(1L);
-				// ctx.voteToHalt();
+				
 				break;
 			case 2:
-				var sum :Long = 0;
-				for (val m in messages) {
-					sum += m;
-				}
-				assert(sum == 0L);
+				sw.lap("[Step 2] NumOuts = " + ctx.numberOfOutEdges() + "(at " + ctx.id() + ")");
+				ctx.sendMessageToAllNeighbors(1L);
+				sw.lap("[Step 2-2] Diff = " + (ctx.numberOfOutEdges() - (ctx.value() as Long)) + "(at " + ctx.id() + ")");
+				
+				val sum_2 = MathAppend.sum(messages);
+				sw.lap("[Step 2] Sum = " + sum_2 + "(at " + ctx.id() + ")");
+				
+				// assert(!ctx.getOutEdgesIterator().hasNext());
+				
+				break;
+			case 3:
+				sw.lap("[Step 3] NumOuts = " + ctx.numberOfOutEdges() + "(at " + ctx.id() + ")");
+				val sum_3 = MathAppend.sum(messages);
+				sw.lap("[Step 3] Sum = " + sum_3 + "(at " + ctx.id() + ")");
+				// assert(sum_3 == 0L);
 				ctx.voteToHalt();
 				break;
 			
@@ -162,6 +180,17 @@ public class EdgeARMTest {
 		(superstep :Int, aggVal :Long) => {
 			return false;
 		});
+		
+		// xpgraph.updateInEdgeAndValue();
+		
+		// xpgraph.iterate[Long, Long]((ctx :VertexContext[Double, Double, Long, Long], messages :MemoryChunk[Long]) => {
+		// 	assert(ctx.numberOfOutEdges() == 0L);
+		// 	ctx.voteToHalt();
+		// },
+		// (values :MemoryChunk[Long]) => MathAppend.sum(values),
+		// (superstep :Int, aggVal :Long) => {
+		// 	return false;
+		// });
 		
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("PageRank Main Iterate:"); }
 		

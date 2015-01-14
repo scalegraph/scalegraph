@@ -49,6 +49,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 	val mGetEdgeBuf :GrowableMemory[Long] = new GrowableMemory[Long](0L);
 	val mGetValBuf :GrowableMemory[E] = new GrowableMemory[E](0L);
 	var mEdgeChanged:Boolean;
+	var mEdgeChangedUntilNow :Boolean;
 	//TODO: apply this flag
 //	var mReqEdgeOptimized:Boolean;
 	public val mStartSrcid :Long;
@@ -70,34 +71,36 @@ class EdgeProvider [E] /*{ E haszero }*/{
 		mEdgeModifyReqWithAR = req;
 		mStartSrcid = startSrcid;
 		mEdgeChanged = false;
+		mEdgeChangedUntilNow = false;
 //		mReqEdgeOptimized = false;
 	}
 	
 	// call this method after inedgeUpdate
-	static def reInitializeEdgeProvider[E](list :MemoryChunk[EdgeProvider[E]]) /*{ E haszero }*/{
+	static def reInitializeEdgeProvider[V,E,M,A](list :MemoryChunk[VertexContext[V,E,M,A]]) { M haszero, A haszero }{
 		val numThreads :Int = Runtime.NTHREADS;
 		Parallel.iter(0..(numThreads-1), (tid:Int)=> {
-			val e = list(tid);
+			val e = list(tid).mEdgeProvider;
 			//zero reset
 			for(i in e.mEdgeModifyReqOffset.range()){
 				e.mEdgeModifyReqOffset(i) = 0L;
 			}
 			e.mEdgeModifyReqWithAR.setSize(0L);
 			e.mEdgeChanged = false;
+			e.mEdgeChangedUntilNow = false;
 //			e.mReqEdgeOptimized = false;
 		});
 	}
 	
 	//called from top thread
 	//call this method before inedgeUpdate
-	static def updateOutEdge[V,E](outEdge :GraphEdge[E], list :MemoryChunk[EdgeProvider[E]], ids :IdStruct) /*{ V haszero, E haszero }*/{
+	static def updateOutEdge[V,E,M,A](outEdge :GraphEdge[E], list :MemoryChunk[VertexContext[V, E, M, A]], ids :IdStruct) { M haszero, A haszero }{
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0);		
 		{
 			//check change
 			var changed :Boolean = false;
 			for(i in list.range()) {
-				Utils.debugPrintln("updateOutEdge",""+list(i).mEdgeChanged);
-				if(list(i).mEdgeChanged) {
+				Utils.debugPrintln("updateOutEdge",""+list(i).mEdgeProvider.mEdgeChanged);
+				if(list(i).mEdgeProvider.mEdgeChangedUntilNow) {
 					changed = true;
 					break;
 				}
@@ -122,7 +125,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 				return;
 			}
 			
-			val e = list(tid);
+			val e = list(tid).mEdgeProvider;
 			
 			// // optimize whole ReqEdge in e
 			// // calcEdgeNumDifferential de tsugi no index ga hitsuyou nanode ikki ni compute
@@ -165,7 +168,7 @@ class EdgeProvider [E] /*{ E haszero }*/{
 			if(r.min > r.max) {
 				return;
 			}
-			val e = list(tid);
+			val e = list(tid).mEdgeProvider;
 			
 			//update each vertex
 			for(srcid in r) {

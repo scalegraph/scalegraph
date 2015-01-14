@@ -609,10 +609,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 				this, ectx, i, 
 				mOutEdgeModifyReqOffsets(i), mOutEdgeModifyReqsWithAR(i), 
 				localSrcids(i)));
-
-		val edgeProviderList = MemoryChunk.make[EdgeProvider[E]](numThreads as Long,
-				(i:Long) => vctxs(i).mEdgeProvider);
-		
+				
 		val intermedAggregateValue = MemoryChunk.make[A](numThreads);
 		val aggregateBuffer = MemoryChunk.make[A](root ? mTeam.size() : 0);
 		val statistics = MemoryChunk.make[Long](STT_MAX*2);
@@ -655,7 +652,10 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 						
 						compute(vc, mes);
 
-						if(ep.mEdgeChanged) ep.fixModifiedEdges(srcid);	//TODO: uncomment
+						if(ep.mEdgeChanged) {
+							ep.fixModifiedEdges(srcid);	//TODO: uncomment
+							ep.mEdgeChangedUntilNow = true;
+						}
 						if(mVertexActive(srcid)) ++numProcessed;
 					}
 				}
@@ -686,14 +686,19 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			
 			// update out edges
 			if(here.id == 0) sw.lap("update out edge");
-			EdgeProvider.updateOutEdge[V,E](mOutEdge, edgeProviderList, mIds);
+			EdgeProvider.updateOutEdge[V,E,M,A](mOutEdge, vctxs, mIds);
+
 			// update in edges
-			updateFewInEdge(edgeProviderList);
+			// val edgeProviderList = MemoryChunk.make[EdgeProvider[E]](numThreads as Long,
+			// 		(i:Long) => vctxs(i).mEdgeProvider);
+			updateFewInEdge(MemoryChunk.make[EdgeProvider[E]](numThreads as Long,
+					(i:Long) => vctxs(i).mEdgeProvider));
+
 			// update messageCommunicator's inedge
 			//ectx.mInEdgesOffset = mInEdge.offsets;
 			//ectx.mInEdgesVertex = mInEdge.vertexes;
 			
-			EdgeProvider.reInitializeEdgeProvider[E](edgeProviderList);
+			EdgeProvider.reInitializeEdgeProvider[V,E,M,A](vctxs);
 			
 			//-----directionOptimization
 			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
