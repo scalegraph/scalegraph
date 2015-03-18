@@ -79,10 +79,14 @@ public final struct MemoryChunk[T] implements Iterable[T] {
 	}
 
 	private def this(size :Long, alignment :Int, zeroed :Boolean, filename :MemoryPointer[Byte], num :Int) {
+		if(size < 0L) // TODO:
+			throw new ArrayIndexOutOfBoundsException("Size must be nonnegative interger, size: "+size);
 		data = MemoryChunkData.make[T](size, alignment, zeroed, filename, num);
 	}
 
 	private def this(size :Long, init :(Long) => T, filename :MemoryPointer[Byte], num :Int) {
+		if(size < 0L) // TODO:
+			throw new ArrayIndexOutOfBoundsException("Size must be nonnegative interger, size: "+size);
 		data = MemoryChunkData.make_nocons[T](size, 0, false, filename, num);
 		for(i in 0L..(size-1L)) {
 			data(i) = init(i);
