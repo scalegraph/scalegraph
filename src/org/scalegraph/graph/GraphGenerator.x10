@@ -27,24 +27,114 @@ import org.scalegraph.util.MathAppend;
 public final class GraphGenerator {
 
 	/** Generates a 2D-grid graph of Rows rows and Cols columns. */
+	//面倒なのでトーラス
+	/*
 	public static def genGrid(rows :Long, columns :Long)
 	: EdgeList[Long]
 	{
-		throw new UnsupportedOperationException();
-	}
+	    val team = Config.get().worldTeam();
+	    val numVertices = rows*columns;
+	    val numEdges = numVertices;
+	    val teamSize = team.size();
+	    val numLocalEdges = 4*numEdges / teamSize;
+	    
+	    // last place has edges less than another place by 1
+	    val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	    	() => MemoryChunk.make[Long](numLocalEdges));
+	    val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	    	() => MemoryChunk.make[Long](numLocalEdges));
+	    
+	    team.placeGroup().broadcastFlat(() => {
+	        val srcMem_ = srcMemory();
+	        val dstMem_ = dstMemory();
+	        val role = team.role()(0);
+	        
+	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
+	        val d4 = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+	        for (i in srcMem_.range()) {
+	            val src = teamSize * i + role;
+	            val x = src % columns;
+	            val y = src / rows;
+	        	for (j in 0..3) {
+					val nx = (x + d4[j][0] + rows - 1) % rows;
+					val nx = (x + d4[j][0] + columns - 1) % columns;
+					val dst = ny * rows + nx;
+		            srcMem_(i*4+j) = src;
+		            dstMem_(i*4+j) = dst;
+	        	}
+	        }
+	    });
+	    
+	    return EdgeList(srcMemory, dstMemory);
+	}*/
 
 	/** Generates a graph with star topology. Node id 0 is in the center and then links to all other nodes.  */
 	public static def genStar(scale :Int)
 	: EdgeList[Long]
 	{
-		throw new UnsupportedOperationException();
+	    val team = Config.get().worldTeam();
+	    val numVertices = 1L << scale;
+	    val numEdges = numVertices;
+	    val teamSize = team.size();
+	    val numLocalEdges = numEdges / teamSize;
+	    
+	    // last place has edges less than another place by 1
+	    val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	    	() => MemoryChunk.make[Long](numLocalEdges));
+	    val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	    	() => MemoryChunk.make[Long](numLocalEdges));
+	    
+	    team.placeGroup().broadcastFlat(() => {
+	        val srcMem_ = srcMemory();
+	        val dstMem_ = dstMemory();
+	        val role = team.role()(0);
+	        
+	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
+	        for (i in srcMem_.range()) {
+	            val src = teamSize * i + role;
+	            val dst = 0;
+	            srcMem_(i) = src;
+	            dstMem_(i) = dst;
+	        }
+	    });
+	    
+	    return EdgeList(srcMemory, dstMemory);
 	}
 
 	/** Generates a circle graph where every node creates out-links to NodeOutDeg forward nodes.  */
 	public static def genCircle(scale :Int, nodeOutDeg :Int)
 	: EdgeList[Long]
 	{
-		throw new UnsupportedOperationException();
+		Console.OUT.println(scale+" "+nodeOutDeg);
+	    val team = Config.get().worldTeam();
+	    val numVertices = 1L << scale;
+	    val numEdges = numVertices;
+	    val teamSize = team.size();
+	    val numLocalEdges = nodeOutDeg * numEdges / teamSize;
+	    
+	    // last place has edges less than another place by 1
+	    val srcMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	    	() => MemoryChunk.make[Long](numLocalEdges));
+	    val dstMemory = new DistMemoryChunk[Long](team.placeGroup(),
+	    	() => MemoryChunk.make[Long](numLocalEdges));
+	    
+	    team.placeGroup().broadcastFlat(() => {
+	        val srcMem_ = srcMemory();
+	        val dstMem_ = dstMemory();
+	        val role = team.role()(0);
+	        
+	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
+	        for (i in 0L..(numEdges / teamSize -1)) {
+            	val src = teamSize * i + role;
+	            for (j in 0..(nodeOutDeg-1)) {
+	            	val dst = (src + 1 + j) % numVertices;
+		            srcMem_(i*nodeOutDeg+j) = src;
+		            dstMem_(i*nodeOutDeg+j) = dst;
+	            }
+	        }
+	    });
+	    
+	    return EdgeList(srcMemory, dstMemory);
 	}
 
 	/** Generates a complete graph on Nodes nodes. Graph has no self-loops.  */

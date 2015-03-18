@@ -91,6 +91,36 @@ public abstract class AlgorithmTest extends STest {
 			sw.lap("Complete making graph");
 			return g;
 		}
+		else if (args(0).equals("circle")) {
+			val scale = Int.parse(args(1));
+			val A = (args.size > 2) ? Int.parse(args(2)) : 16;
+			val rnd = new Random(2, 3);
+
+			val team = Config.get().worldTeam();
+			val sw = Config.get().stopWatch();
+			val edgeList = GraphGenerator.genCircle(scale, A);
+			sw.lap("Generate circle[scale=" + scale + ",length=" + A + "]");
+			val rawWeight = GraphGenerator.genRandomEdgeValue(() => (1L << scale) * A / team.size(), rnd);
+			sw.lap("Generate random edge value");
+			val g = Graph.make(edgeList);
+			g.setEdgeAttribute[Double]("weight", rawWeight);
+			sw.lap("Complete making graph");
+			return g;
+		}
+		else if (args(0).equals("tree")) {
+			val scale = Int.parse(args(1));
+			val rnd = new Random(2, 3);
+			val team = Config.get().worldTeam();
+			val sw = Config.get().stopWatch();
+			val edgeList = GraphGenerator.genTree(scale);
+			sw.lap("Generate tree[scale=" + scale + "]");
+			val rawWeight = GraphGenerator.genRandomEdgeValue(() => (1L << scale)/team.size() - (here.id == 0 ? 1 : 0), rnd);
+			sw.lap("Generate random edge value");
+			val g = Graph.make(edgeList);
+			g.setEdgeAttribute[Double]("weight", rawWeight);
+			sw.lap("Complete making graph");
+			return g;
+		}
 		else if (args(0).equals("file") || args(0).equals("file-renumbering")) {
 			val randomEdge :Boolean = (args.size > 2) ? args(2).equals("random") : true;
 			val edgeConstVal = randomEdge ? 0.0 : Double.parse(args(2));
