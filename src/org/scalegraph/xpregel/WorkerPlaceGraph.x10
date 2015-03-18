@@ -567,7 +567,8 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	static def foreachVertexes(numLocalVertexes :Long, task :(Long, LongRange) => void) {
 		// Split the range of bitmat words to ensure the processing thread-safe.
 		Parallel.iter(0..(Bitmap.numWords(numLocalVertexes)-1), (tid :Long, r_word :LongRange) => {
-			val r = new LongRange(r_word.min * Bitmap.BitsPerWord,
+			val r = new LongRange(
+					Math.min(numLocalVertexes, r_word.min * Bitmap.BitsPerWord),
 					Math.min(numLocalVertexes, (r_word.max+1) * Bitmap.BitsPerWord) - 1);
 			task(tid, r);
 		});
@@ -592,16 +593,18 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			new MessageCommunicator[M](mTeam, mInEdge, mIds, numThreads);
 		
 		val localSrcids = MemoryChunk.make[Long](numThreads,0,true);
-		
+
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 			localSrcids(tid) = r.min;
 		});
-		
+
 		//debugging
 		val mOutEdgeModifyReqOffsets = MemoryChunk.make[MemoryChunk[Long]](numThreads);
+
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
 			mOutEdgeModifyReqOffsets(tid) = MemoryChunk.make[Long]((r.max - r.min +1L) +1L, 0, true);
 		});
+
 		val mOutEdgeModifyReqsWithAR = MemoryChunk.make[GrowableMemory[Tuple2[Long,E]]](
 				numThreads, (i :Long) => new GrowableMemory[Tuple2[Long,E]](0L));
 		val vctxs = MemoryChunk.make[VertexContext[V, E, M, A]](numThreads,
@@ -614,7 +617,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val aggregateBuffer = MemoryChunk.make[A](root ? mTeam.size() : 0);
 		val statistics = MemoryChunk.make[Long](STT_MAX*2);
 		val recvStatistics = statistics.subpart(STT_MAX, STT_MAX);
-		
+
 		//ectx.mInEdgesOffset = mInEdge.offsets;
 		//ectx.mInEdgesVertex = mInEdge.vertexes;
 		//ectx.mInEdgesMask = mInEdgesMask;
@@ -709,11 +712,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 					for (dosrcid in r){
 						if(BCbmp(dosrcid)){
 							vc.mSrcid = dosrcid;
-							// val OEsId = vc.outEdgesId();
 							val tempmes=ectx.mBCCMessages(dosrcid);
-							// for(eI in OEsId){
-							// 	vc.sendMessage(eI, tempmes);
-							// }
 							for (edgeId in vc) {
 								vc.sendMessage(edgeId, tempmes);
 							}
