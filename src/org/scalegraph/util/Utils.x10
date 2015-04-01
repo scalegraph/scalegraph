@@ -10,6 +10,7 @@
  */
 package org.scalegraph.util;
 
+import x10.xrx.Runtime;
 import x10.compiler.Native;
 
 import x10.compiler.Ifdef;

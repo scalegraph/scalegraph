@@ -10,6 +10,8 @@
  */
 package org.scalegraph;
 
+import x10.xrx.Runtime;
+
 import x10.util.Team;
 import x10.compiler.Uninitialized;
 import x10.compiler.Ifdef;

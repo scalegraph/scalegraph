@@ -11,6 +11,7 @@
 
 package org.scalegraph.util;
 
+import x10.xrx.Runtime;
 import x10.util.Team;
 //import x10.util.ArrayUtils;
 import x10.regionarray.Region;
@@ -90,7 +91,7 @@ public final struct Dist2D {
     	}
     	val create_allteam_ = create_allteam;
     	
-    	data = PlaceLocalHandle.make[Cell[LocalData], Point(2)](parentTeam.placeGroup(), (p :Place):Point(2) => placeMap(p)() as Point(2), (p :Point(2)) => {
+    	data = PlaceLocalHandle.make[Cell[LocalData], Point(2)](parentTeam.placeGroup(), (p :Place):Point(2) => placeMap(p)/*()*/ as Point(2), (p :Point(2)) => {
     		val r = p(0);
     		val c = p(1);
     		val role = r + c*R;

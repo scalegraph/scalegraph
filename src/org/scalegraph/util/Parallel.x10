@@ -11,6 +11,7 @@
 
 package org.scalegraph.util;
 
+import x10.xrx.Runtime;
 import x10.regionarray.Region;
 import x10.compiler.Inline;
 import x10.util.ArrayList;

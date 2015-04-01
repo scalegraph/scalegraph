@@ -10,6 +10,7 @@
  */
 package org.scalegraph.io.impl;
 
+import x10.xrx.Runtime;
 import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.NativeCPPOutputFile;
 import x10.compiler.NativeCPPInclude;

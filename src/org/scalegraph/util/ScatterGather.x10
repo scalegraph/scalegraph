@@ -11,6 +11,7 @@
 
 package org.scalegraph.util;
 
+import x10.xrx.Runtime;
 import x10.compiler.Ifdef;
 import x10.compiler.Ifndef;
 import x10.util.Team;

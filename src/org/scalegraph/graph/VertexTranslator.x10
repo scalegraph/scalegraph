@@ -11,6 +11,7 @@
 
 package org.scalegraph.graph;
 
+import x10.xrx.Runtime;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
 import x10.util.Timer;

@@ -10,9 +10,9 @@
  */
 
 package org.scalegraph.util;
+import x10.xrx.Runtime;
 import x10.compiler.Inline;
 import x10.util.Team;
-import x10.lang.Runtime;
 import x10.util.ArrayList;
 import x10.util.Timer;
 import x10.util.concurrent.AtomicInteger;

@@ -31,7 +31,7 @@ import x10.compiler.NativeRep;
  * <p>Limitations: Current memory chunk only support non-reference data. The supports for the class or any data structures which include class members are imcomplete.
  *  DO NOT USE MEMORYCHUNK TO STORE ANY DATA STRUCTURES THAT INCLUDE REFERENCES. </p>
  */
-public final struct MemoryChunk[T] implements Iterable[T] {
+public struct MemoryChunk[T] implements Iterable[T] {
 	val data :MemoryChunkData[T];
 	
 	/** The purpose of this class is to distribute continuous memory region into several memory chunks.

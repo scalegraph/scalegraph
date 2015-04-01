@@ -11,6 +11,7 @@
 
 package org.scalegraph.util;
 
+import x10.xrx.Runtime;
 import x10.util.Timer;
 import x10.util.Map;
 import x10.util.Box;

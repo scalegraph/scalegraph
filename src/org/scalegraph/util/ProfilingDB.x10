@@ -12,6 +12,7 @@
 
 package org.scalegraph.util;
 
+import x10.xrx.Runtime;
 import x10.util.Team;
 
 import org.scalegraph.Config;

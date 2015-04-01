@@ -11,6 +11,7 @@
 
 package org.scalegraph.xpregel;
 
+import x10.xrx.Runtime;
 import x10.util.Team;
 import x10.util.ArrayList;
 import x10.compiler.Ifdef;
