@@ -76,7 +76,7 @@ abstract public class STest {
 	    	buffer.clear();
     	}
     	if(here != Place.FIRST_PLACE) {
-    		at(Place.FIRST_PLACE) {
+    		finish at(Place.FIRST_PLACE) {
     			x10.io.Console.ERR.print(out);
     		}
     	}

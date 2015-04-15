@@ -257,7 +257,8 @@ import org.scalegraph.util.DistMemoryChunk;
 			if(withPut) {
 				// update max vertex ID if assigning new number is enabled
 				//maxVertexID = team.reduce(teamRank, 0n, table.size() as Long * teamSize + teamRank, Team.MAX);
-				maxVertexID = team.reduce(0n, table.size() as Long * teamSize + teamRank, Team.MAX);
+				//maxVertexID = team.reduce(0n, table.size() as Long * teamSize + teamRank, Team.MAX);
+				maxVertexID = team.reduce(Place.FIRST_PLACE, table.size() as Long * teamSize + teamRank, Team.MAX);
 				// update name attribute
 				vertexNamesAtt() = vertexNames.raw();
 			}
@@ -297,7 +298,8 @@ import org.scalegraph.util.DistMemoryChunk;
 			if(withPut) {
 				maxVertexID = Math.max(
 						//team.reduce(teamRank, 0n, localMaxId, Team.MAX), maxVertexID);
-						team.reduce(0n, localMaxId, Team.MAX), maxVertexID);
+						//team.reduce(0n, localMaxId, Team.MAX), maxVertexID);
+						team.reduce(Place.FIRST_PLACE, localMaxId, Team.MAX), maxVertexID);
 			}
 			return translated;
 		}
@@ -322,7 +324,8 @@ import org.scalegraph.util.DistMemoryChunk;
 			if(withPut) {
 				maxVertexID = Math.max(
 						//team.reduce(teamRank, 0n, localMaxId, Team.MAX), maxVertexID);
-						team.reduce(0n, localMaxId, Team.MAX), maxVertexID);
+						//team.reduce(0n, localMaxId, Team.MAX), maxVertexID);
+						team.reduce(Place.FIRST_PLACE, localMaxId, Team.MAX), maxVertexID);
 			}
 			return vertexes;
 		}
