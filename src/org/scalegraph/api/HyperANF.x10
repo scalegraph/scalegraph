@@ -77,7 +77,7 @@ public class HyperANF {
 		var Z:Double = 0.0;
 		val M:Double = counter.size();
 		for(i in counter.range()) {
-			Z += Math.pow(2.0, -counter(i));
+			Z += Math.pow(2.0, -counter(i) as Double);
 		}
 		Z = 1.0/Z;
 		val E:Double = alpha * M * M * Z;

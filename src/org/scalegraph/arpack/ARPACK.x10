@@ -69,24 +69,26 @@ public class ARPACK {
 		lworkl:Int, info:Int
 	): Int;
 	
-	@Native("c++", "pdsaupd_wrap(#comm, &#ido, #bmat, #n, #which, #nev, " +
+	//@Native("c++", "pdsaupd_wrap(#comm, &#ido, #bmat, #n, #which, #nev, " +
+	@Native("c++", "pdsaupd_wrap(&#ido, #bmat, #n, #which, #nev, " +
 			"#tol, (#resid)->raw, #ncv, (#v)->raw, #ldv, " +
 			"(#iparam)->raw, (#ipntr)->raw, " +
 			"(#workd)->raw, (#workl)->raw, #lworkl, &#info)")
 	public native static def pdsaupd(
-			comm:Int, ido:Int, bmat:Char, n:Int, which:Int, nev:Int,
+			/*comm:Int,*/ ido:Int, bmat:Char, n:Int, which:Int, nev:Int,
 			tol:Double, resid:Rail[Double], ncv:Int, v:Rail[Double], ldv:Int,
 			iparam:Rail[Int], ipntr:Rail[Int], workd:Rail[Double], workl:Rail[Double], lworkl:Int,
 			info:Int
 	): Int;
 
-	@Native("c++", "pdseupd_wrap(#comm, #rvec, #howmny, (#select)->raw, " +
+	//@Native("c++", "pdseupd_wrap(#comm, #rvec, #howmny, (#select)->raw, " +
+	@Native("c++", "pdseupd_wrap(#rvec, #howmny, (#select)->raw, " +
 			"(#d)->raw, (#z)->raw, #ldz, #sigma, #bmat, " +
 			"#n, #which, #nev, #tol, (#resid)->raw, #ncv, " +
 			"(#v)->raw, #ldv, (#iparam)->raw, (#ipntr)->raw, " +
 			"(#workd)->raw, (#workl)->raw, #lworkl, &#info)")
 	public native static def pdseupd(
-			comm:Int, rvec:Int, howmny:Char, select:Rail[Int], d:Rail[Double], z:Rail[Double],
+			/*comm:Int,*/ rvec:Int, howmny:Char, select:Rail[Int], d:Rail[Double], z:Rail[Double],
 			ldz:Int, sigma:Double, bmat:Char, n:Int, which:Int,
 			nev:Int, tol:Double, resid:Rail[Double], ncv:Int, v:Rail[Double],
 			ldv:Int, iparam:Rail[Int], ipntr:Rail[Int], workd:Rail[Double], workl:Rail[Double],

@@ -96,11 +96,11 @@ public class BufferedReader extends Reader {
 
 	public def markSupported():x10.lang.Boolean = false;
 
-	public def mark(n: Int):void {
+	public def mark(n: Long):void {
 	    throw new UnsupportedOperationException();
 	}
 
-	public def available():x10.lang.Int {
+	public def available():x10.lang.Long {
 		return length - offset + reader.available();
 	}
 

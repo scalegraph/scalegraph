@@ -93,9 +93,9 @@ final public class SpectralClusteringImpl {
 		// global params for pdsaupd
 		val n = n_ as Int;
 		val nloc = nloc_ as Int;
-		var comm_:Int = 0n;
-		@Native("c++", "comm_ = MPI_COMM_WORLD;") {}
-		val comm = comm_;
+		//var comm_:Int = 0n;
+		//@Native("c++", "comm_ = MPI_COMM_WORLD;") {}
+		//val comm = comm_;
 		val nev:Int = params.nev;
 		val bmat:Char = params.bmat;
 		val which:Int = params.which;
@@ -146,7 +146,7 @@ final public class SpectralClusteringImpl {
 				//}
 				iter++;
 				
-				ARPACK.pdsaupd(comm, ido, bmat, nloc, which, nev, tol,
+				ARPACK.pdsaupd(/*comm,*/ ido, bmat, nloc, which, nev, tol,
 						resid, ncv, u, ldu, iparam, ipntr,
 						workd, workl, lworkl, info);
 
@@ -194,7 +194,7 @@ final public class SpectralClusteringImpl {
 				//return Zero.get[DistMemoryChunk[Double]]();
 			}
 			
-			ARPACK.pdseupd(comm, rvec, howmny, select, d, v, ldv,
+			ARPACK.pdseupd(/*comm,*/ rvec, howmny, select, d, v, ldv,
 					sigma, bmat, nloc, which, nev, tol, resid,
 					ncv, u, ldu, iparam, ipntr, workd,
 					workl, lworkl, info);

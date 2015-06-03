@@ -9,6 +9,7 @@
  *  (C) Copyright ScaleGraph Team 2011-2012.
  */
 
+#include <mpi.h>
 #include <x10aux/config.h>
 #include "NativeARPACK.h"
 
@@ -60,22 +61,22 @@ int dseupd_wrap(int rvec, x10_char howmny, int *select, double *d, double *z,
                    &lworkl, info);
 }
 
-int pdsaupd_wrap(int comm, int *ido, x10_char bmat, int n, int which_, int nev,
+int pdsaupd_wrap(/*int comm,*/ int *ido, x10_char bmat, int n, int which_, int nev,
                  double tol, double *resid, int ncv, double *v, int ldv,
                  int *iparam, int *ipntr, double *workd, double *workl, int lworkl,
                  int *info){
-	return pdsaupd_(&comm, ido, (char *)&bmat.v, &n, which[which_], &nev,
+	return pdsaupd_(/*&comm,*/(int*)MPI_COMM_WORLD, ido, (char *)&bmat.v, &n, which[which_], &nev,
                    &tol, resid, &ncv, v, &ldv,
                    iparam, ipntr, workd, workl, &lworkl,
                    info);
 }
 
-int pdseupd_wrap(int comm, int rvec, x10_char howmny, int *select, double *d, double *z,
+int pdseupd_wrap(/*int comm,*/ int rvec, x10_char howmny, int *select, double *d, double *z,
                 int ldz, double sigma, x10_char bmat, int n, int which_,
                 int nev, double tol, double *resid, int ncv, double *v,
                 int ldv, int *iparam, int *ipntr, double *workd, double *workl,
                 int lworkl, int *info){
-	return pdseupd_(&comm, &rvec, (char *)&howmny.v, select, d, z,
+	return pdseupd_(/*&comm,*/(int*)MPI_COMM_WORLD, &rvec, (char *)&howmny.v, select, d, z,
                    &ldz, &sigma, (char *)&bmat.v, &n, which[which_],
                    &nev, &tol, resid, &ncv, v,
                    &ldv, iparam, ipntr, workd, workl,

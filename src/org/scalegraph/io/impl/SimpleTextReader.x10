@@ -15,6 +15,7 @@ import x10.util.Team;
 import x10.compiler.NativeCPPCompilationUnit;
 import x10.compiler.NativeCPPInclude;
 import x10.compiler.Native;
+import x10.xrx.Runtime;
 
 import org.scalegraph.util.SString;
 import org.scalegraph.util.MemoryChunk;

@@ -21,6 +21,7 @@ import x10.util.ArrayList;
 import x10.util.concurrent.Lock;
 import x10.util.GrowableRail;
 import x10.util.Team;
+import x10.xrx.Runtime;
 
 import org.scalegraph.util.DistMemoryChunk;
 import org.scalegraph.util.Dist2D;
@@ -855,7 +856,8 @@ public class DistBetweennessCentralityWeighted implements x10.io.CustomSerializa
             val p = bufferP(threadId)(pid).toRail();
             val s = bufferS(threadId)(pid).toRail();
             val count = p.size;
-            at (Place.place(pid)) {
+            //at (Place.place(pid)) {
+            at (Place.places()(pid)) {
                 for(k in 0..(count - 1)) {
                     addSuccessor(p(k),
                                  s(k));
