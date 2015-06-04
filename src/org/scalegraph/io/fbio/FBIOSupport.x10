@@ -537,7 +537,8 @@ public class FBIOSupport {
 	
 	
 	private static def getAppropriateNumBlocks(numTotalBytes : Long) : Int {
-		val numPlaces = Place.MAX_PLACES;
+		//val numPlaces = Place.MAX_PLACES;
+		val numPlaces = Place.numAllPlaces();
 		val numBlocksPerPlace = blockConfig.numBlocksPerPlace;
 		val minNumBlocks = blockConfig.minNumBlocks;
 		val minBlockSize = blockConfig.minBlockSize;

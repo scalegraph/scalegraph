@@ -24,6 +24,7 @@ import x10.util.ArrayList;
 //import x10.util.IndexedMemoryChunk;
 import x10.util.concurrent.AtomicLong;
 import x10.util.Team;
+import x10.xrx.Runtime;
 import org.scalegraph.util.Dist2D;
 import org.scalegraph.util.Parallel;
 import org.scalegraph.fileread.DistributedReader;

@@ -45,11 +45,11 @@ final struct MemoryChunkData[T] {
 	//@Native("java", "x10.core.IndexedMemoryChunk.<#T$box>allocate(#T$rtt, #numElements, #zeroed)")
 	private static native def allocateFlat[T](numElements :Long, alignment :Int, zeroed :Boolean) :Rail[T];
 
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw() + (#offset), (#size), NULL)")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw + (#offset), (#size), NULL)")
 	public static def make[T](backing :Rail[T], offset :Long, size :Long) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, offset, size);
 	}
-	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw(), (#backing).size, NULL)")
+	@Native("c++", "org::scalegraph::util::MCData_Impl<#T >((#backing)->raw, (#backing).size, NULL)")
 	public static def make[T](backing :Rail[T]) :MemoryChunkData[T] {
 		return new MemoryChunkData[T](backing, 0L, backing.size);
 	}

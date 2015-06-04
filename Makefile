@@ -6,7 +6,7 @@ LIBPATH		= $(SG_PREFIX)/lib
 OUTPATH		= $(SG_PREFIX)/x10lib
 
 # MVAPICH2
-LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
+LIBS		= -g -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
 
 # MPICH2
 #LIBS		= -cxx-postarg -larpack -cxx-postarg -lparpack -cxx-postarg -lparmetis -cxx-postarg -lgfortran -cxx-postarg -lmpifort -cxx-prearg -L$(LIBPATH) -cxx-prearg -I$(SG_PREFIX)/include
@@ -25,12 +25,12 @@ fetch: $(ARPACK_ARCHIVE) $(PAR_METIS_ARCHIVE)
 
 $(OUTPATH)/ScaleGraph.jar: $(ARPACK_LIB) $(PAR_METIS_LIB)
 	@ mkdir -p x10lib/lib
-	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -cxx-prearg -g -O -NO_CHECKS -define NO_BOUNDS_CHECKS -o ScaleGraph -d $(OUTPATH)/include $(X10FILES)
+	x10c++ $(LIBS) -cxx-prearg -g2 -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -O -NO_CHECKS -define NO_BOUNDS_CHECKS -o ScaleGraph -d $(OUTPATH)/include $(X10FILES)
 	cd src && jar cvf $(OUTPATH)/ScaleGraph.jar org x10
 
 $(OUTPATH)/ScaleGraphd.jar: $(ARPACK_LIB) $(PAR_METIS_LIB)
 	@ mkdir -p x10lib/lib
-	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -cxx-prearg -g -o ScaleGraphd -d $(OUTPATH)/include $(X10FILES)
+	x10c++ $(LIBS) -x10rt mpi -sourcepath ./src -buildx10lib $(OUTPATH) -o ScaleGraphd -d $(OUTPATH)/include $(X10FILES)
 	cd src && jar cvf $(OUTPATH)/ScaleGraphd.jar org x10
 
 ARPACK: $(ARPACK_ARCHIVE)

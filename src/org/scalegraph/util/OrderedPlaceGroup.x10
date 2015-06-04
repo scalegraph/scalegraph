@@ -26,23 +26,23 @@ public final class OrderedPlaceGroup extends PlaceGroup {
 		places = ps;
 	}
 	
-	public operator this(i :Int) :Place = places(i);
+	public operator this(i :Long) :Place = places(i);
 
-	public def indexOf(id :Int) :x10.lang.Int {
+	public def indexOf(id :Long) :x10.lang.Long {
 		for (i in places.range()) {
 			if (places(i).id == id as Long) return i as Int;
 		}
 		return -1n;
 	}
 
-	public def contains(var id:x10.lang.Int):x10.lang.Boolean {
+	public def contains(var id:x10.lang.Long):x10.lang.Boolean {
 		for (i in places.range()) {
 			if (places(i).id == id as Long) return true;
 		}
 		return false;
 	}
 
-	public def numPlaces() :Int = places.size() as Int;
+	public def numPlaces() :Long = places.size() as Long;
 	
 	// TODO: optimize
 	//public def iterator() :Iterator[Place] = places.toRail().values().iterator();

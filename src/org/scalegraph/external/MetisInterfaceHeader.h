@@ -14,6 +14,7 @@
 #define _METIS_INTERFACE_HEADER_H_
 
 #include <parmetis.h>
-extern int METIS_DEFAULT_TEAM;
+//extern int METIS_DEFAULT_TEAM;
+extern MPI_Comm METIS_DEFAULT_TEAM;
 
 #endif

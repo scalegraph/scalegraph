@@ -21,6 +21,7 @@ import org.scalegraph.util.Bitmap2;
 //mport x10.util.GrowableIndexedMemoryChunk;
 import x10.util.GrowableRail;
 import x10.util.Team;
+import x10.xrx.Runtime;
 //import x10.io.SerialData;
 import x10.compiler.Inline;
 import x10.compiler.Native;
@@ -287,10 +288,10 @@ public class DeltaSteppingVisitor {
     }
         
     /* GCC Built-in atomic function interface */
-    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw() + #index, #oldVal, #newVal)")
+    @Native("c++", "__sync_bool_compare_and_swap((#imc)->raw + #index, #oldVal, #newVal)")
     private static native def compare_and_swap[T](imc: Rail[T], index: Long, oldVal: T, newVal: T): Boolean;
     
-    @Native("c++", "__sync_add_and_fetch((#imc)->raw() + #index, #value)")
+    @Native("c++", "__sync_add_and_fetch((#imc)->raw + #index, #value)")
     private static native def add_and_fetch[T](imc: Rail[T], index: Long, value: T): T;
     
     

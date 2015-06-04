@@ -10,3 +10,5 @@ sandbox.sh
 src/Hello.x10
 *.swp
 x10_platform.conf
+*.gz
+*.tar

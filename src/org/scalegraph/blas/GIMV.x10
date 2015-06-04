@@ -13,6 +13,7 @@ package org.scalegraph.blas;
 
 import x10.compiler.Inline;
 import x10.util.Team;
+import x10.xrx.Runtime;
 import x10.util.Ordered;
 
 import org.scalegraph.util.GrowableMemory;

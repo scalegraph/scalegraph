@@ -11,6 +11,7 @@
 package org.scalegraph.io.impl;
 
 import x10.util.Team;
+import x10.xrx.Runtime;
 import x10.util.concurrent.Monitor;
 
 import org.scalegraph.test.STest;
