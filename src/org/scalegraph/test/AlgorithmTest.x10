@@ -92,6 +92,16 @@ public abstract class AlgorithmTest extends STest {
 			return g;
 		}
 		else if (args(0).equals("file")) {
+			/*
+			file format
+			---input.txt---
+			source, target
+			1, 2
+			1, 3
+			2, 3
+			---------------
+			(double quote can be used)
+			*/
 			val randomEdge :Boolean = (args.size > 2) ? args(2).equals("random") : true;
 			val edgeConstVal = randomEdge ? 0.0 : Double.parse(args(2));
 			val colTypes = [Type.Long as Int, Type.Long];
