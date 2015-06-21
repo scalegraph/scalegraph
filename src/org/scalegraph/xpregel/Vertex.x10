@@ -56,7 +56,7 @@ public final struct Vertex[V, E] /*{ V haszero, E haszero }*/ {
 		val length = edge.offsets(mSrcid + 1) - offset;
 		return new Tuple2[MemoryChunk[Long], MemoryChunk[E]](
 				edge.vertexes.subpart(offset, length),
-				edge.value.subpart(offset, length));
+				edge.values.subpart(offset, length));
 	}
 	
 	/**
@@ -76,6 +76,6 @@ public final struct Vertex[V, E] /*{ V haszero, E haszero }*/ {
 		val edge = mWorker.mOutEdge;
 		val offset = edge.offsets(mSrcid);
 		val length = edge.offsets(mSrcid + 1) - offset;
-		return edge.value.subpart(offset, length);
+		return edge.values.subpart(offset, length);
 	}
 }

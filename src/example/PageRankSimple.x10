@@ -53,7 +53,7 @@ public class PageRankSimple {
             if (ctx.superstep() < 30) {
                 ctx.aggregate(Math.abs(value - ctx.value()));
                 ctx.setValue(value);
-                ctx.sendMessageToAllNeighbors(value / ctx.outEdgesId().size());
+                ctx.sendMessageToAllNeighbors(value / ctx.numberOfOutEdges());
             }
             else {
                 ctx.voteToHalt();

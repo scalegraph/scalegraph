@@ -140,7 +140,6 @@ namespace org { namespace scalegraph { namespace util {
 					}else{
 						::free(ptr);
 					}
-//					::free(ptr);
 				}
 			}
 
@@ -173,9 +172,7 @@ namespace org { namespace scalegraph { namespace util {
 					ExpMemState.gcWait = true;
 					pthread_mutex_unlock(&ExpMemState.mutex);
 
-					x10aux::alloc_lock.lock();
 					GC_gcollect();
-					x10aux::alloc_lock.unlock();
 
 					pthread_mutex_lock(&ExpMemState.mutex);
 					ExpMemState.gcWait = false;
@@ -218,12 +215,10 @@ namespace org { namespace scalegraph { namespace util {
 					abort();
 				}
 
-				x10aux::alloc_lock.lock();
 //				if(containPtrs){
 //					GC_add_roots(allocMem, allocMem + size);//only when containsptr is true
 //				}
 				GC_register_finalizer(this_, finalization, NULL, NULL, NULL );
-				x10aux::alloc_lock.unlock();
 
 				if (zeroed) {
 					memset(allocMem, 0, size);
@@ -580,10 +575,8 @@ template<class THIS, typename ELEM> void MCData_Base<THIS, ELEM>::del() {
 			x10aux::dealloc(FMGL(pointer));
         }else{
         	// TODO: release memobj
-        	x10aux::alloc_lock.lock();
 			GC_register_finalizer(FMGL(memobj), NULL, NULL, NULL, NULL );
 			FMGL(memobj)->destruct();
-			x10aux::alloc_lock.unlock();
 
 			if(__ORG_SCALEGRAPH_UTIL_MEMORYCHUNKDATA_PRINT){
 				printf("del exp p;%p\n ", FMGL(memobj));

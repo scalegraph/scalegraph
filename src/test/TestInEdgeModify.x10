@@ -72,15 +72,22 @@ public class TestInEdgeModify {
 					//display current in edges
 					sb.add("--ss:"+ctx.superstep()+" id:"+ myId + 
 							" dstid:" + ctx.dstId(myId) + " --\n\tcurrent inedges:\n");
-					val IEsId = ctx.inEdgesId();
-					for(eI in IEsId){
-						sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
+					// val IEsId = ctx.inEdgesId();
+					// for(eI in IEsId){
+					// 	sb.add("\t" + ctx.realId(eI) + "\t->\t" + myId +"\n");
+					// }
+					for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()){
+						sb.add("\t" + ctx.realId(it.curId()) + "\t->\t" + myId +"\n");
 					}
+					
 					//display current out edges
 					sb.add("\tcurrent outedges:\n");
-					val OEsId = ctx.outEdgesId();
-					for(eI in OEsId){
-						sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
+					// val OEsId = ctx.outEdgesId();
+					// for(eI in OEsId){
+					// 	sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
+					// }
+					for(val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()){
+						sb.add("\t" + myId + "\t->\t" + ctx.realId(it.curId()) +"\n");
 					}
 					//add out edge
 					if(myId != 0L){
@@ -91,8 +98,11 @@ public class TestInEdgeModify {
 					}
 					//display current out edges
 					sb.add("\tcurrent outedges:\n");
-					val OEsId2 = ctx.outEdgesId();
-					for(eI in OEsId2){
+					// val OEsId2 = ctx.outEdgesId();
+					// for(eI in OEsId2){
+					// 	sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
+					// }
+					for(eI in ctx) {
 						sb.add("\t" + myId + "\t->\t" + ctx.realId(eI) +"\n");
 					}
 					

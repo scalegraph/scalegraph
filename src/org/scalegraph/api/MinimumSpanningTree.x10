@@ -61,9 +61,10 @@ final public class MinimumSpanningTree {
     }
     
     private static def run(inst: MinimumSpanningTree, g :Graph): Graph {
-        val team = g.team();
-        val dist = Dist2D.make2D(team, 1n, team.size() as Int);
-        val csr = g.createDistSparseMatrix[Double](dist, inst.weightAttrName, false, true);
+//        val team = g.team();
+//        val dist = Dist2D.make2D(team, 1, team.size());
+		//ok? true?
+        val csr = g.createDistSparseMatrix[Double](Config.get().distXPregel(), inst.weightAttrName, false, false);
         return run(csr);
     }
     

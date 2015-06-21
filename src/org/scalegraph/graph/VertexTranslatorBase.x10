@@ -28,7 +28,11 @@ abstract class VertexTranslatorBase {
 	public abstract def isTranslator() :Boolean;
 	public abstract def sizeOfDictionary() :Long;
 
-	/** maximum vertex ID that has been used
+	/**
+	 * If this is not translator, this returns
+	 * maximum vertex ID that has been used.
+	 * If this is translator, this returns
+	 * the number of local vertices.
 	 */
 	public def maxVertexID() = maxVertexID;
 }
