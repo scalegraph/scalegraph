@@ -18,7 +18,7 @@ import x10.compiler.Native;
 
 /** High performance growable memory. 
  */
-public class GrowableMemory[T] {
+public final class GrowableMemory[T] {
 	private var mc:MemoryChunk[T];
 	private var size:Long;
 	

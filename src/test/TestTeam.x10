@@ -13,6 +13,7 @@ package test;
 
 import x10.util.Team;
 import x10.util.Timer;
+import x10.xrx.Runtime;
 
 public class TestTeam {
 	private static def message (str:String) : void {
@@ -269,10 +270,10 @@ public class TestTeam {
 		testbcast1();
 		testsplit();
 		testscatter();
-		testscatterv();
+		//testscatterv();
 		testallgather();
 		testalltoall();
-		testalltoallv();
+		//testalltoallv();
 		message("Finish!");
 	}
 }

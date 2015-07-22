@@ -13,6 +13,7 @@ package test;
 
 import x10.util.Team;
 import x10.util.Timer;
+import x10.xrx.Runtime;
 import x10.util.StringBuilder;
 import org.scalegraph.Config;
 
@@ -107,6 +108,7 @@ final class Team2Test extends STest {
 			}
 		}
 	}
+
 	static def testalltoallv() : void{
 		val team = Team2(Team.WORLD);
 		val team_size = team.size() as Int;
@@ -117,6 +119,12 @@ final class Team2Test extends STest {
 			val src_counts = MemoryChunk.make[Int](team_size, (i:Long)=> role + 1n + i as Int );
 			team.barrier();
 			val recv = team.alltoallv[Double](src, src_counts);
+			for (i in src_counts.range()) {
+				message(here + ": alltoallv: src_counts( " + i + " ) = " + src_counts(i));
+			}
+			for (i in src.range()) {
+				message(here + ": alltoallv: src( " + i + " ) = " + src(i));
+			}
 			for (i in recv.get2().range()) {
 				message(here + ": alltoallv: dst_counts( " + i + " ) = " + recv.get2()(i));
 			}
