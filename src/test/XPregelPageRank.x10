@@ -33,19 +33,22 @@ final class XPregelPageRank extends AlgorithmTest {
 		new XPregelPageRank().execute(args);
 	}
 	
-	def pagerank_opt(xpregel :XPregelGraph[Double, Double]) {
+	def pagerank_opt(xpregel :XPregelGraph[Double, Double], diropt :Boolean) {
 		val sw = Config.get().stopWatch();
-		
+
+		xpregel.setEnableDirectionOptimization(diropt);
 		xpregel.updateInEdge();
 		sw.lap("Update In Edge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
-		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
-			else
-				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+			else {
+				var sum :Double = 0.0; for(mes in ctx) sum += mes;
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * sum;
+			}
 
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
@@ -69,12 +72,14 @@ final class XPregelPageRank extends AlgorithmTest {
 		sw.lap("Update In Edge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
-		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
-			else
-				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+			else {
+				var sum :Double = 0.0; for(mes in ctx) sum += mes;
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * sum;
+			}
 
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
@@ -94,19 +99,20 @@ final class XPregelPageRank extends AlgorithmTest {
 	def pagerank_naive(xpregel :XPregelGraph[Double, Double]) {
 		val sw = Config.get().stopWatch();
 		
-		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
-			else
-				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+			else {
+				var sum :Double = 0.0; for(mes in ctx) sum += mes;
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * sum;
+			}
 
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
 			
 			val next = value / ctx.numberOfOutEdges();
-			// val outEdges = ctx.outEdgesId();
-			for(id in ctx)
+			for(id in ctx.outEdges())
 				ctx.sendMessage(id, next);
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
@@ -123,19 +129,20 @@ final class XPregelPageRank extends AlgorithmTest {
 	def pagerank_combine(xpregel :XPregelGraph[Double, Double]) {
 		val sw = Config.get().stopWatch();
 		
-		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
+		xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double]) => {
 			val value :Double;
 			if(ctx.superstep() == 0n)
 				value = 1.0 / ctx.numberOfVertices();
-			else
-				value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
+			else {
+				var sum :Double = 0.0; for(mes in ctx) sum += mes;
+				value = 0.15 / ctx.numberOfVertices() + 0.85 * sum;
+			}
 
 			ctx.aggregate(Math.abs(value - ctx.value()));
 			ctx.setValue(value);
 			
 			val next = value / ctx.numberOfOutEdges();
-			// val outEdges = ctx.outEdgesId();
-			for(id in ctx)
+			for(id in ctx.outEdges())
 				ctx.sendMessage(id, next);
 		},
 		(values :MemoryChunk[Double]) => MathAppend.sum(values),
@@ -200,7 +207,7 @@ final class XPregelPageRank extends AlgorithmTest {
 		
 		Console.OUT.println("Update In Edge: " + (System.currentTimeMillis()-start_time) + "ms");
 		
-		pagerank_opt(xpregel);
+		pagerank_opt(xpregel, true);
 		
 		xpregel.once((ctx :VertexContext[Double, Double, Byte, Byte]) => {
 			ctx.output(ctx.value());
@@ -237,8 +244,11 @@ final class XPregelPageRank extends AlgorithmTest {
 		if(args(0).equals("naive")) {
 			pagerank_naive(xpregel);
 		}
+		else if(args(0).equals("optopt")) {
+			pagerank_opt(xpregel, true);
+		}
 		else if(args(0).equals("opt")) {
-			pagerank_opt(xpregel);
+			pagerank_opt(xpregel, false);
 		}
 		else if(args(0).equals("combine")) {
 			pagerank_combine(xpregel);

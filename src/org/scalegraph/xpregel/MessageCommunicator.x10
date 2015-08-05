@@ -121,6 +121,7 @@ final class MessageCommunicator[M] { M haszero } {
 	
 	def messageBuffer(tid :Long) = mUCCMessages.subpart(tid * mTeam.size(), mTeam.size());
 	
+	/*
 	def message(srcid :Long, buffer :GrowableMemory[M]) {
 		if(mUCREnabled) {
 			// unicast messages
@@ -155,6 +156,27 @@ final class MessageCommunicator[M] { M haszero } {
 			return buffer.raw();
 		}
 		return MemoryChunk.make[M]();
+	}
+	 */
+	
+	def message[E](srcid :Long, inEdge :GraphEdge[E], iter :MessageIterator[M, E]) :void {
+		if(mUCREnabled) {
+			// unicast messages
+			if(mUCROffset.size() == 0L) {
+				iter.init(MemoryChunk.make[M](0));
+				return ;
+			}
+			
+			val start = mUCROffset(srcid);
+			val length = mUCROffset(srcid + 1) - start;
+			iter.init(mUCRMessages.subpart(start, length));
+			return ;
+		} else if(mBCREnabled) {
+			// broadcast messages
+			iter.init(inEdge, srcid, mBCRMessages, mBCROffset, mBCRHasMessage);
+			return ;
+		}
+		iter.init(MemoryChunk.make[M]());
 	}
 	
 	def sqweezeMessage[V, E, A](ctx :VertexContext[V, E, M, A]) { /*V haszero, E haszero,*/ M haszero, A haszero } {

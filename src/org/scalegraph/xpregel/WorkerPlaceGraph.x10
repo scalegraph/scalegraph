@@ -73,6 +73,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	var mEnableStatistics :Boolean = true;
 	//not using
 	var mNeedsAllUpdateInEdge :Boolean = true;
+	var mEnableDirectionOptimization :Boolean = true;
 	
 	public def this(team :Team, ids :IdStruct) {
 		val rank_r = team.role()(0);
@@ -583,7 +584,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	}
 	
 	public def run[M, A](
-			compute :(VertexContext[V,E,M,A], MemoryChunk[M]) => void,
+			compute :(VertexContext[V,E,M,A]) => void,
 			aggregator :(MemoryChunk[A])=>A,
 			combiner :(MemoryChunk[M]) => M,
 			end :(Int,A)=>Boolean) { M haszero, A haszero }
@@ -656,12 +657,11 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 				for(srcid in r) {
 					vc.mSrcid = srcid;
 					vc.releaseAllIterators();
-					val mes = ectx.message(srcid, mesTempBuffer);
-					@Ifdef("PROF_XP") { numLocalMes += mes.size(); }
-					if(mes.size() > 0 || mVertexActive(srcid)) {
+					ectx.message(srcid, mInEdge, vc.messageIterator);
+					if(vc.messageIterator.hasNext() || mVertexActive(srcid)) {
 						ep.mEdgeChanged = false;
 						
-						compute(vc, mes);
+						compute(vc);
 
 						if(ep.mEdgeChanged) {
 							ep.fixModifiedEdges(srcid);	//TODO: uncomment
@@ -712,25 +712,27 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			EdgeProvider.reInitializeEdgeProvider[V,E,M,A](vctxs);
 			
 			//-----directionOptimization
-			val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
-			if(0L < numAllBCSCount && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/50)){	//TODO: modify /20
-				val BCbmp=ectx.mBCCHasMessage;
-				foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
-					val vc = vctxs(tid);
-					for (dosrcid in r){
-						if(BCbmp(dosrcid)){
-							vc.mSrcid = dosrcid;
-							val tempmes=ectx.mBCCMessages(dosrcid);
-							for (edgeId in vc) {
-								vc.sendMessage(edgeId, tempmes);
+			if(mEnableDirectionOptimization) {
+				val numAllBCSCount = mTeam.allreduce[Long](ectx.mBCSInputCount, Team.ADD);
+				if(0L < numAllBCSCount && numAllBCSCount  < (mIds.numberOfGlobalVertexes()/50)){	//TODO: modify /20
+					val BCbmp=ectx.mBCCHasMessage;
+					foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
+						val vc = vctxs(tid);
+						for (dosrcid in r){
+							if(BCbmp(dosrcid)){
+								vc.mSrcid = dosrcid;
+								val tempmes=ectx.mBCCMessages(dosrcid);
+								for (edgeId in vc.outEdges()) {
+									vc.sendMessage(edgeId, tempmes);
+								}
 							}
 						}
-					}
-				});
-				ectx.mBCCHasMessage.clear(false);
-				ectx.mBCCMessages.del();
-				ectx.mBCCMessages = MemoryChunk.make[M](mIds.numberOfLocalVertexes());
-				ectx.mBCSInputCount=0L;
+					});
+					ectx.mBCCHasMessage.clear(false);
+					ectx.mBCCMessages.del();
+					ectx.mBCCMessages = MemoryChunk.make[M](mIds.numberOfLocalVertexes());
+					ectx.mBCSInputCount=0L;
+				}
 			}
 			//-----
 			

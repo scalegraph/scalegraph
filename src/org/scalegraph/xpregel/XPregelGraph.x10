@@ -127,6 +127,17 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		mWorkers().mLogLevel = level;
 	}
 	
+	public def setEnableDirectionOptimization(enable :Boolean) {
+		val team_ = mTeam;
+		val workers_ = mWorkers;
+		team_.placeGroup().broadcastFlat( () => {
+			try {
+				val w = workers_();
+				w.mEnableDirectionOptimization = enable;
+			} catch (e :CheckedThrowable) { e.printStackTrace(); }
+		});
+	}
+	
 	public def ids() = mWorkers().mIds;
 	
 	public def addVertex(numVertices :Long, newVal :V) {
@@ -288,7 +299,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	 * Execute superstep.
 	 */
 	public def iterate[M,A](
-			compute :(VertexContext[V,E,M,A], MemoryChunk[M]) => void,
+			compute :(VertexContext[V,E,M,A]) => void,
 			aggregator :(MemoryChunk[A])=>A,
 			combiner :(MemoryChunk[M]) => M,
 			end :(Int,A)=>Boolean) { M haszero, A haszero}
@@ -310,7 +321,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 	 * Execute superstep with Aggregator, but withour Combiner.
 	 */
 	public def iterate[M,A](
-			compute :(ctx:VertexContext[V,E,M,A],messages:MemoryChunk[M]) => void, 
+			compute :(ctx:VertexContext[V,E,M,A]) => void, 
 			aggregator :(MemoryChunk[A])=>A,
 			end :(Int,A)=>Boolean) { M haszero, A haszero}
 	{
@@ -340,10 +351,7 @@ public final class XPregelGraph[V,E] /*{V haszero,E haszero}*/ implements Iterab
 		val workers_ = mWorkers;
 		team_.placeGroup().broadcastFlat( () => {
 			try {
-				val actual_compute =
-					(ctx:VertexContext[V,E,Byte,Byte],messages:MemoryChunk[Byte])
-					=> { compute(ctx); };
-				workers_().run[Byte,Byte](actual_compute, null, null, (Int,Byte) => true);
+				workers_().run[Byte,Byte](compute, null, null, (Int,Byte) => true);
 			} catch (e :CheckedThrowable) { e.printStackTrace(); }
 		});
 	}

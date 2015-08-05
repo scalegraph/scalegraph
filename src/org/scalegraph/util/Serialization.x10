@@ -42,23 +42,19 @@ public class Serialization {
 		val places = data_counts.size();
 		var ser_size: Int = 0n;
 		val sw = Config.get().stopWatch();
-		 sw.lap("before finish for async"+here.id);
 		finish for (p in 0..(places-1)) async {
 			ser_counts(p) = count_ser_size(p, data, data_offsets(p), data_counts(p));
 		}
 		for (p in 0..(places-1)) {
 			ser_size += ser_counts(p);
 		}
-		 sw.lap("after finish for async"+here.id);
 
 		ser_offsets(0) = 0n;
 		for (i in 0..(places-2)) ser_offsets(i+1) = ser_offsets(i) + ser_counts(i);
 		val ser_data = MemoryChunk.make[Byte](ser_size);
-		 sw.lap("before finish for async"+here.id);
 		finish for (p in 0..(places-1)) async {
 			write_ser_data(p, data, data_offsets(p), data_counts(p), ser_data, ser_offsets(p), ser_counts(p));
 		}
-		 sw.lap("after finish for async"+here.id);
 		
 		return ser_data;
 	}

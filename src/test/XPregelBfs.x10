@@ -36,7 +36,7 @@ final class XPregelBfs extends AlgorithmTest {
 		sw.lap("Update In Edge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
-		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
+		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
@@ -48,19 +48,17 @@ final class XPregelBfs extends AlgorithmTest {
 				bufferedPrintln("Vertex " + ctx.realId() + " (ROOT)");
 			}
 			else {
-				// debug print
-				bufferedPrint("Vertex " + ctx.realId() + "\nReceived from: ");
-				for(v in messages)
-					bufferedPrint(v + ",");
-				bufferedPrint("\n");
-				
 				if(ctx.value() != -1L) {
-					// debug print
-					flush();
-					
 					return ;
 				}
-				pred = messages(0);
+				pred = ctx.iterator().next();
+				
+				// debug print
+				bufferedPrint("Vertex " + ctx.realId() + "\nReceived from: ");
+				bufferedPrint(pred + ",");
+				for(v in ctx)
+					bufferedPrint(v + ",");
+				bufferedPrint("\n");
 			}
 
 			ctx.setValue(pred);
@@ -68,7 +66,7 @@ final class XPregelBfs extends AlgorithmTest {
 			
 			// debug print
 			bufferedPrint("Send message to: ");
-			for(v in ctx)
+			for(v in ctx.outEdges())
 				bufferedPrint(ctx.realId(v) + ",");
 			bufferedPrint("\n");
 			flush();
@@ -85,14 +83,15 @@ final class XPregelBfs extends AlgorithmTest {
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("BFS Main Iterate (debug):"); }
 	}
 	
-	def bfs_opt(xpregel :XPregelGraph[Long, Byte], root :Long) {
+	def bfs_opt(xpregel :XPregelGraph[Long, Byte], root :Long, diropt :Boolean) {
 		val sw = Config.get().stopWatch();
 		
+		xpregel.setEnableDirectionOptimization(diropt);
 		xpregel.updateInEdge();
 		sw.lap("Update In Edge");
 		@Ifdef("PROF_XP") { Config.get().dumpProfXPregel("Update In Edge:"); }
 		
-		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
+		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
@@ -104,7 +103,7 @@ final class XPregelBfs extends AlgorithmTest {
 				if(ctx.value() != -1L) {
 					return ;
 				}
-				pred = messages(0);
+				pred = ctx.iterator().next();
 			}
 			ctx.setValue(pred);
 			ctx.sendMessageToAllNeighbors(ctx.realId());
@@ -123,7 +122,7 @@ final class XPregelBfs extends AlgorithmTest {
 	
 	def bfs_naive(xpregel :XPregelGraph[Long, Byte], root :Long) {
 		val sw = Config.get().stopWatch();
-		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
+		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
@@ -135,14 +134,14 @@ final class XPregelBfs extends AlgorithmTest {
 				if(ctx.value() != -1L) {
 					return ;
 				}
-				pred = messages(0);
+				pred = ctx.iterator().next();
 			}
 			ctx.setValue(pred);
 			
 			// val outEdges = ctx.outEdgesId();
 			// for(i in outEdges.range())
 			// 	ctx.sendMessage(outEdges(i), ctx.realId());
-			for (id in ctx) {
+			for (id in ctx.outEdges()) {
 				ctx.sendMessage(id, ctx.realId());
 			}
 		},
@@ -160,7 +159,7 @@ final class XPregelBfs extends AlgorithmTest {
 	
 	def bfs_combine(xpregel :XPregelGraph[Long, Byte], root :Long) {
 		val sw = Config.get().stopWatch();
-		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte], messages :MemoryChunk[Long]) => {
+		xpregel.iterate[Long,Byte]((ctx :VertexContext[Long, Byte, Long, Byte]) => {
 			val pred :Long;
 			if(ctx.superstep() == 0n) {
 				ctx.setValue(-1L);
@@ -172,14 +171,14 @@ final class XPregelBfs extends AlgorithmTest {
 				if(ctx.value() != -1L) {
 					return ;
 				}
-				pred = messages(0);
+				pred = ctx.iterator().next();
 			}
 			ctx.setValue(pred);
 			
 			// val outEdges = ctx.outEdgesId();
 			// for(i in outEdges.range())
 			// 	ctx.sendMessage(outEdges(i), ctx.realId());
-			for (id in ctx) {
+			for (id in ctx.outEdges()) {
 				ctx.sendMessage(id, ctx.realId());
 			}
 		},
@@ -216,8 +215,11 @@ final class XPregelBfs extends AlgorithmTest {
 		if(args(0).equals("naive")) {
 			bfs_naive(xpregel, root);
 		}
+		else if(args(0).equals("optopt")) {
+			bfs_opt(xpregel, root, true);
+		}
 		else if(args(0).equals("opt")) {
-			bfs_opt(xpregel, root);
+			bfs_opt(xpregel, root, false);
 		}
 		else if(args(0).equals("combine")) {
 			bfs_combine(xpregel, root);

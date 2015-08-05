@@ -32,7 +32,7 @@ import x10.compiler.NonEscaping;
  * M: Message value type
  * A: Aggreator value type
  */
-public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M haszero, A haszero } implements Iterable[Long] {
+public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M haszero, A haszero } implements Iterable[M] {
 	val mWorker :WorkerPlaceGraph[V, E];
 	val mCtx :MessageCommunicator[M];
 	val mEdgeProvider :EdgeProvider[E];
@@ -117,9 +117,33 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 			parent.modifyOutEdge(curId(), newValue);
 		}
 	}
-	
+
 	private val iterPool : GrowableMemory[EdgeIterator[E]];
 	private var numUsedIters :Long;
+
+	val messageIterator = new MessageIterator[M, E]();
+	
+	private static struct OutEdges[V, E, M, A] { /*V haszero, E haszero,*/ M haszero, A haszero } implements Iterable[Long] {
+		
+		val vc :VertexContext[V, E, M, A];
+		
+		def this(vc :VertexContext[V, E, M, A]) {
+			this.vc = vc;
+		}
+
+		public def iterator() = vc.getOutEdgesIterator();
+	}
+	
+	private static struct InEdges[V, E, M, A] { /*V haszero, E haszero,*/ M haszero, A haszero } implements Iterable[Long] {
+		
+		val vc :VertexContext[V, E, M, A];
+		
+		def this(vc :VertexContext[V, E, M, A]) {
+			this.vc = vc;
+		}
+
+		public def iterator() = vc.getInEdgesIterator();
+	}
 	
 	//////////////////////////////////////////////////////////
 	
@@ -200,6 +224,11 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 	 */
 	public def setValue(value :V) { mWorker.mVertexValue(mSrcid) = value; }
 	
+	/**
+	 * returns received messages
+	 */
+	public def iterator() = messageIterator;
+	
 // 	/**
 // 	 * returns <vertex dst ids, values>
 // 	 */
@@ -234,9 +263,7 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 		return getIteratorBase(outEdges.get1(), outEdges.get2());
 	}
 
-	public def iterator():x10.lang.Iterator[x10.lang.Long] {
-		return getOutEdgesIterator();
-	}
+	public def outEdges() :Iterable[Long] = new OutEdges(this);
 	
 	public def numberOfOutEdges() = mEdgeProvider.outEdges(mSrcid).get1().size();
 	
@@ -253,6 +280,8 @@ public final class VertexContext[V, E, M, A] { /*V haszero, E haszero,*/ M hasze
 	public def getInEdgesIterator() {
 		return getIteratorBase(mEdgeProvider.inEdgesId(mSrcid), mEdgeProvider.inEdgesValue(mSrcid));
 	}
+
+	public def inEdges() :Iterable[Long] = new InEdges(this);
 	
 	public def numberOfInEdges() = mEdgeProvider.inEdgesId(mSrcid).size();
 	
