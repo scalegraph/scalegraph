@@ -74,14 +74,14 @@ public class CSVReader {
 		public transient val elemPtrs :MemoryPointer[MemoryPointer[Byte]];
 		public val chunkSize :GrowableMemory[Long];
 		public val stride :Long;
-		public val numElems :Int;
+		public val numElems :Long;
 		
 		public def this(attHandler :Rail[CSVAttributeHandler]) {
 			this.attHandler = attHandler;
-			this.numElems = attHandler.size as Int;
+			this.numElems = attHandler.size;// as Int;
 			this.stride = CSVAttributeHandler.H_CHUNK_SIZE;
 			this.buffer = new Rail[Any](numElems,
-					(i :Int) => attHandler(i).createBlockGrowableMemory());
+					(i :Long) => attHandler(i).createBlockGrowableMemory());
 			this.elemPtrs = allocatePtrBuffer(stride * numElems);
 			this.chunkSize = new GrowableMemory[Long]();
 		}

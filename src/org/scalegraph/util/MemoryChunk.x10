@@ -77,10 +77,14 @@ public struct MemoryChunk[T] implements Iterable[T] {
 	}
 
 	private def this(size :Long, alignment :Int, zeroed :Boolean, filename :MemoryPointer[Byte], num :Int) {
+		if(size < 0L) // TODO:
+			throw new ArrayIndexOutOfBoundsException("Size must be nonnegative interger, size: "+size);
 		data = MemoryChunkData.make[T](size, alignment, zeroed, filename, num);
 	}
 
 	private def this(size :Long, init :(Long) => T, filename :MemoryPointer[Byte], num :Int) {
+		if(size < 0L) // TODO:
+			throw new ArrayIndexOutOfBoundsException("Size must be nonnegative interger, size: "+size);
 		data = MemoryChunkData.make_nocons[T](size, 0n, false, filename, num);
 		for(i in 0L..(size-1L)) {
 			data(i) = init(i);
@@ -260,7 +264,7 @@ public struct MemoryChunk[T] implements Iterable[T] {
 		@Ifndef("NO_BOUNDS_CHECKS") {
 			if(!data.isValid())
 				throw new ArrayIndexOutOfBoundsException("This MemoryChunk is released.");
-			if(offset < 0 || offset + size > data.size)
+			if(offset < 0 || size < 0 || offset + size > data.size)
 				throw new ArrayIndexOutOfBoundsException("specified range is not contained in MemoryChunk");
 		}
 		return MemoryChunk[T](data.subpart(offset, size));

@@ -56,11 +56,15 @@ public final class SSSP extends AlgorithmTest {
 			if(mindist < ctx.value()) {
 				//Console.OUT.println("V: " + ctx.id() + " is updated: " + ctx.value() + " -> " + mindist);
 				ctx.setValue(mindist);
-				val outEdge = ctx.outEdgesId();
-				val outEdgeValue = ctx.outEdgesValue();
-				for(i in outEdge.range()) {
-					ctx.sendMessage(outEdge(i), mindist + outEdgeValue(i));
-				//	Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
+				//val outEdge = ctx.outEdgesId();
+				//val outEdgeValue = ctx.outEdgesValue();
+				//for(i in outEdge.range()) {
+				//	ctx.sendMessage(outEdge(i), mindist + outEdgeValue(i));
+				////	Console.OUT.println("SEND: " + ctx.id() + " -> " + outEdge(i) + ": " + (mindist + outEdgeValue(i)));
+				//}
+				for (val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+					//ctx.sendMessage(outEdge(i), mindist + outEdgeValue(i));
+					ctx.sendMessage(it.curId(), mindist + it.curValue());
 				}
 			}
 			ctx.voteToHalt();

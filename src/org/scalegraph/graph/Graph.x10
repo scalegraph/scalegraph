@@ -257,7 +257,7 @@ import org.scalegraph.id.Type;
 	public def getEdgeAttribute[T](name :String) {T haszero} =
 		edgeAttributes.getOrThrow(name) as DistMemoryChunk[T];
 	
-	private static def innerAddEdges(team_ :Team, maxVertexID :Long,
+	private static def innerAddEdges(team_ :Team, vtt_ :VertexTranslatorBase,
 			ref :GlobalRef[Graph],
 			srcList :DistMemoryChunk[Long], dstList :DistMemoryChunk[Long],
 			tlSrcs :MemoryChunk[Long], tlDsts :MemoryChunk[Long])
@@ -268,13 +268,26 @@ import org.scalegraph.id.Type;
 		val srcList_ = srcList();
 		val dstList_ = dstList();
 		
-		//val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size(), Team.ADD);
-		//val globalNumOfEdges = team_.reduce(0n, tlSrcs.size() as Int, Team.ADD);
-		val globalNumOfEdges = team_.reduce(Place.FIRST_PLACE, tlSrcs.size(), Team.ADD);
-		if(here == ref.home) {
-			val g = ref.getLocalOrCopy();
-			g.numberOfVertices = Math.max(maxVertexID + 1, g.numberOfVertices);
-			g.numberOfEdges += globalNumOfEdges;
+		if(vtt_.isTranslator()) {
+			val send = [tlSrcs.size() as Long, vtt_.maxVertexID()];
+			val recv = [0 as Long, 0l];
+			//ok?
+			//team_.reduce(team_.role()(0), 0, send, 0, recv, 0, 2, Team.ADD);
+			team_.reduce(Place.FIRST_PLACE, send, 0, recv, 0, 2, Team.ADD);
+			if(here == ref.home) {
+				val g = ref.getLocalOrCopy();
+				g.numberOfVertices = recv(1);
+				g.numberOfEdges += recv(0);
+			}
+		}
+		else {
+			//val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size(), Team.ADD);
+			val globalNumOfEdges = team_.reduce(Place.FIRST_PLACE, tlSrcs.size(), Team.ADD);
+			if(here == ref.home) {
+				val g = ref.getLocalOrCopy();
+				g.numberOfVertices = Math.max(vtt_.maxVertexID() + 1, g.numberOfVertices);
+				g.numberOfEdges += globalNumOfEdges;
+			}
 		}
 		
 		if(srcList_.size() == 0L) {
@@ -306,7 +319,7 @@ import org.scalegraph.id.Type;
 				val tlSrcs = vtt_.translateWithAll(srcs(), true);
 				val tlDsts = vtt_.translateWithAll(dsts(), true);
 				
-				innerAddEdges(team_, vtt_.maxVertexID(), ref, srcList_, dstList_, tlSrcs, tlDsts);
+				innerAddEdges(team_, vtt_, ref, srcList_, dstList_, tlSrcs, tlDsts);
 			}
 			catch(e : CheckedThrowable) {
 				e.printStackTrace();
@@ -951,7 +964,6 @@ import org.scalegraph.id.Type;
 		val team_ = team;
 		val att = vertexOrEdge ? getVertexAttribute[T](name) : getEdgeAttribute[T](name);
 
-		val verticesPerPlace = numberOfVertices / team.size();
 		val vertexType_ = vertexType;
 		
 		return new DistMemoryChunk[T](team_.placeGroup(), () => {

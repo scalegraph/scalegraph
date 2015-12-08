@@ -146,7 +146,7 @@ final class SCCDebug extends STest {
 						
 				if(ctx.superstep()==0n) {
 					//隣接点がなければその頂点はすぐに終わらせる
-					if(ctx.outEdgesId().size()==0L && ctx.inEdgesId().size()==0L && ctx.id()!=0L) {
+					if(ctx.numberOfOutEdges()==0L && ctx.numberOfInEdges()==0L && ctx.id()!=0L) {
 						val newInfo = new SCCVertex(ctx.id(), true,true,-1L);
 						ctx.setValue(newInfo);
 					}
@@ -166,10 +166,17 @@ final class SCCDebug extends STest {
 				val mesF = new MessageA(ctx.value().leaderId, false);
 				val mesT = new MessageA(ctx.value().leaderId, true);
 				if(ctx.superstep()==0n && ctx.id() == ctx.value().leaderId) {
-					for(i in ctx.outEdgesId().range()) 
-						ctx.sendMessage(ctx.outEdgesId()(i), mesF);
-					for(i in ctx.inEdgesId().range())
-						ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+					for(val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next()) {
+						ctx.sendMessage(iter.curId(), mesF);
+					}
+					for(val iter = ctx.getInEdgesIterator(); iter.hasNext(); iter.next()) {
+						ctx.sendMessage(iter.curId(), mesT);
+					}					
+					// for(i in ctx.outEdgesId().range()) 
+					// 	ctx.sendMessage(ctx.outEdgesId()(i), mesF);
+					// for(i in ctx.inEdgesId().range())
+					// 	ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+					
 					val newInfo = new SCCVertex(ctx.value().leaderId, true, true, -1L);
 					ctx.setValue(newInfo);
 				}
@@ -188,13 +195,19 @@ final class SCCDebug extends STest {
 					}
 					
 					if(existFront && !ctx.value().front) {
-						for(i in ctx.outEdgesId().range()) 
-							ctx.sendMessage(ctx.outEdgesId()(i), mesF);
+						for(val iter = ctx.getOutEdgesIterator(); iter.hasNext(); iter.next()) {
+							ctx.sendMessage(iter.curId(), mesF);
+						}
+						// for(i in ctx.outEdgesId().range()) 
+						// 	ctx.sendMessage(ctx.outEdgesId()(i), mesF);
 					}
 					if(existBack && !ctx.value().back) {
-						for(i in ctx.inEdgesId().range()) {
-							ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+						for(val iter = ctx.getInEdgesIterator(); iter.hasNext(); iter.next()) {
+							ctx.sendMessage(iter.curId(), mesT);
 						}
+						// for(i in ctx.inEdgesId().range()) {
+						// 	ctx.sendMessage(ctx.inEdgesId()(i), mesT);
+						// }
 					}
 					val newInfo = 
 						new SCCVertex(ctx.value().leaderId, existFront | ctx.value().front  , existBack | ctx.value().back, -1L );
@@ -242,7 +255,7 @@ final class SCCDebug extends STest {
 				if(ctx.superstep()==2n) {
 					//messageはそれぞれ一つしかこないので、0のはず
 					Console.OUT.println("    :ctx.realId() "+ctx.realId() );
-					Console.OUT.println("     edges"+ctx.realId()+" " + ctx.inEdgesId().size()+" "+ ctx.outEdgesId().size());
+					Console.OUT.println("     edges"+ctx.realId()+" " + ctx.numberOfInEdges()+" "+ ctx.numberOfOutEdges());
 //					Console.OUT.println("     value" + ctx.value().leaderId);
 					
 					if(messages(0).front) {
@@ -286,10 +299,16 @@ final class SCCDebug extends STest {
 				Console.OUT.println("value.minimId"+ctx.realId()+" " + ctx.value().minimId);
 				if(update) {
 					val mes = new MessageC(ctx.value().leaderId, ctx.value().minimId);
-					for(i in ctx.outEdgesId().range())
-						ctx.sendMessage(ctx.outEdgesId()(i), mes);
-					for(i in ctx.inEdgesId().range())
-						ctx.sendMessage(ctx.inEdgesId()(i), mes);
+					for(val it = ctx.getOutEdgesIterator(); it.hasNext(); it.next()) {
+						ctx.sendMessage(it.curId(), mes);
+					}
+					for(val it = ctx.getInEdgesIterator(); it.hasNext(); it.next()) {
+						ctx.sendMessage(it.curId(), mes);
+					}
+					// for(i in ctx.outEdgesId().range())
+					// 	ctx.sendMessage(ctx.outEdgesId()(i), mes);
+					// for(i in ctx.inEdgesId().range())
+					// 	ctx.sendMessage(ctx.inEdgesId()(i), mes);
 				}
 				ctx.voteToHalt();
 			},
