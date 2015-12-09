@@ -26,7 +26,7 @@ import org.scalegraph.xpregel.XPregelGraph;
 
 public class PageRankSimple {
     
-    public static def main(args:Array[String](1)) {
+    public static def main(args:Rail[String]) {
         
         val team = Team.WORLD;
         
@@ -45,12 +45,12 @@ public class PageRankSimple {
         // for each iteration
         xpregel.iterate[Double,Double]((ctx :VertexContext[Double, Double, Double, Double], messages :MemoryChunk[Double]) => {
             val value :Double;
-            if(ctx.superstep() == 0)
+            if(ctx.superstep() == 0n)
                 value = 1.0 / ctx.numberOfVertices();
             else
                 value = 0.15 / ctx.numberOfVertices() + 0.85 * MathAppend.sum(messages);
             
-            if (ctx.superstep() < 30) {
+            if (ctx.superstep() < 30n) {
                 ctx.aggregate(Math.abs(value - ctx.value()));
                 ctx.setValue(value);
                 ctx.sendMessageToAllNeighbors(value / ctx.numberOfOutEdges());
@@ -61,6 +61,6 @@ public class PageRankSimple {
         },
         (values :MemoryChunk[Double]) => MathAppend.sum(values),
         // stop computation if it is more than 30 steps or quadratic error is less than 0.0001
-        (superstep :Int, aggVal :Double) => (superstep >= 30 || aggVal < 0.0001));
+        (superstep :Int, aggVal :Double) => (superstep >= 30n || aggVal < 0.0001));
     }
 }

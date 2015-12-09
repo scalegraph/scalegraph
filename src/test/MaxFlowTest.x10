@@ -53,9 +53,10 @@ final class MaxFlowTest extends AlgorithmTest {
 		
 		if(args(1).equals("check")) {
 			val mf = result.maxFlow;
-			
-			if(MathAppend.abs((mf+1.0) / ( Double.parse(args(4)) + 1.0 ) - 1.0) > 0.01   ) {
-				throw new IllegalArgumentException("Answer is wrong");
+			val arg_mf = Double.parse(args(4));
+
+			if(MathAppend.abs((mf+1.0) / ( arg_mf + 1.0 ) - 1.0) > 0.01   ) {
+				throw new IllegalArgumentException("Answer is wrong (test result: " + mf + " != argument: " + arg_mf + ")");
 			}
 			return true;
 		}
