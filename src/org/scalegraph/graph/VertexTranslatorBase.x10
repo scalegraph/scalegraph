@@ -21,7 +21,7 @@ abstract class VertexTranslatorBase {
 	
 	def this(team__:Team){
 		team = team__;
-		teamRank = team.role()(0);
+		teamRank = team.role();
 		teamSize = team.size() as int;
 	}
 

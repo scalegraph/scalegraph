@@ -272,7 +272,7 @@ import org.scalegraph.id.Type;
 			val send = [tlSrcs.size() as Long, vtt_.maxVertexID()];
 			val recv = [0 as Long, 0l];
 			//ok?
-			//team_.reduce(team_.role()(0), 0, send, 0, recv, 0, 2, Team.ADD);
+			//team_.reduce(team_.role(), 0, send, 0, recv, 0, 2, Team.ADD);
 			team_.reduce(Place.FIRST_PLACE, send, 0, recv, 0, 2, Team.ADD);
 			if(here == ref.home) {
 				val g = ref.getLocalOrCopy();
@@ -281,7 +281,7 @@ import org.scalegraph.id.Type;
 			}
 		}
 		else {
-			//val globalNumOfEdges = team_.reduce(team_.role()(0), 0, tlSrcs.size(), Team.ADD);
+			//val globalNumOfEdges = team_.reduce(team_.role(), 0, tlSrcs.size(), Team.ADD);
 			val globalNumOfEdges = team_.reduce(Place.FIRST_PLACE, tlSrcs.size(), Team.ADD);
 			if(here == ref.home) {
 				val g = ref.getLocalOrCopy();
@@ -386,7 +386,7 @@ import org.scalegraph.id.Type;
 			try {
 				val att_ :MemoryChunk[T];
 				if(vertexOrEdge) {
-					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
+					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role());
 					att_ = MemoryChunk.make[T](actualLocalVertices);
 				}
 				else {
@@ -422,7 +422,7 @@ import org.scalegraph.id.Type;
 			var att_ :MemoryChunk[T] = MemoryChunk.make[T]();
 			try {
 				if(vertexOrEdge) {
-					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
+					val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role());
 					att_ = MemoryChunk.make[T](actualLocalVertices);
 				}
 				else {
@@ -532,7 +532,7 @@ import org.scalegraph.id.Type;
 		team_.placeGroup().broadcastFlat(() => {
 			try {
 				val values_ = values();
-				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
+				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role());
 				if(actualLocalVertices > values_.size())
 					throw new IllegalArgumentException("The number of attribute values is not match the number of vertices");
 			}
@@ -590,10 +590,10 @@ import org.scalegraph.id.Type;
 		
 		team_.placeGroup().broadcastFlat(() => {
 			try {
-				val roleInGraph = team_.role()(0);
+				val roleInGraph = team_.role();
 				val sizeOfGraph = team_.size();
 				val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
-				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role()(0));
+				val actualLocalVertices = getLocalNumberOfVertices(vi, team_.role());
 				if(attValues().size() == 0L) {
 					attValues() = MemoryChunk.make[T](actualLocalVertices);
 				}
@@ -605,7 +605,7 @@ import org.scalegraph.id.Type;
 
 				if(sparseMatrix.dist().z() == z as Long) {
 					val allTeam = sparseMatrix.dist().allTeam();
-					val roleInDist = allTeam.role()(0);
+					val roleInDist = allTeam.role();
 					val sizeOfDist = allTeam.size();
 					val localsize = sparseMatrix.ids().numberOfLocalVertexes();
 					val values_ = values();
@@ -646,7 +646,7 @@ import org.scalegraph.id.Type;
 			val srcList__ = srcList_();
 			val dstList__ = dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
-					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
+					getLocalNumberOfVertices(vi, team_.role()), transpose);
 			val roleMap = MemoryChunk.make[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for(i in places.range()) {
@@ -676,7 +676,7 @@ import org.scalegraph.id.Type;
 			});
 			scatterGather.sum();
 			if(here.id == 0) sw.lap("count edge finished");
-			val teamRank = team_.role()(0);
+			val teamRank = team_.role();
 			val teamSize = team_.size();
 			val sendCount = scatterGather.sendCount();
 			val sendSrcV = MemoryChunk.make[Long](sendCount);
@@ -747,7 +747,7 @@ import org.scalegraph.id.Type;
 			val srcList__ = transpose ? dstList_() : srcList_();
 			val dstList__ = transpose ? srcList_() : dstList_();
 			val ids = dist2d.getIds(vi.numberOfVertices,
-					getLocalNumberOfVertices(vi, team_.role()(0)), transpose);
+					getLocalNumberOfVertices(vi, team_.role()), transpose);
 			val roleMap = MemoryChunk.make[Int](dist2d.allTeam().size());
 			val places = dist2d.allTeam().places();
 			for(i in places.range()) {
@@ -761,7 +761,7 @@ import org.scalegraph.id.Type;
 					Console.OUT.println("allTeam = " + dist2d.allTeam());
 					Console.OUT.println("places = " + places);
 				}
-				team.barrier(team.role()(0));
+				team.barrier(team.role());
 			}
 			*/
 			val rmask = (1L << ids.lgr) - 1;
@@ -841,7 +841,7 @@ import org.scalegraph.id.Type;
 					Console.OUT.println(here);
 					Console.OUT.println("edgelist__ = " + edgelist__.raw());
 				}
-				team.barrier(team.role()(0));
+				team.barrier(team.role());
 			}
 			for(p in team.placeGroup()) {
 				if(here == p) {
@@ -850,7 +850,7 @@ import org.scalegraph.id.Type;
 					Console.OUT.println("sendDstV = " + sendDstV);
 					Console.OUT.println("sendValues = " + sendValues);
 				}
-				team.barrier(team.role()(0));
+				team.barrier(team.role());
 			}*/
 
 			if(here.id == 0) sw.lap("complete creating send data");
@@ -886,7 +886,7 @@ import org.scalegraph.id.Type;
 				val sendDstV = MemoryChunk.make[Long](sendCount);
 				val sendIndexes = MemoryChunk.make[Long](sendCount);
 				val teamSize = team_.size();
-				val teamRank = team_.role()(0);
+				val teamRank = team_.role();
 				Parallel.iter(srcList__.range(), (tid:Long, r:LongRange) => {
 					if(directed) {
 						for(i in r) {
@@ -969,12 +969,12 @@ import org.scalegraph.id.Type;
 		return new DistMemoryChunk[T](team_.placeGroup(), () => {
 			try {
 				if(vertexOrEdge) {
-					val roleInGraph = team_.role()(0);
+					val roleInGraph = team_.role();
 					val sizeOfGraph = team_.size();
 					val logSizeOfGraph = MathAppend.log2(sizeOfGraph) as Int;
 
 					val allTeam = edgeIndexMatrix.dist().allTeam();
-					val roleInDist = allTeam.role()(0);
+					val roleInDist = allTeam.role();
 					val sizeOfDist = allTeam.size();
 					val localsize = 1L << edgeIndexMatrix.ids().lgl;
 					

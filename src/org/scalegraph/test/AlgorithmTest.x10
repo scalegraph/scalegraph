@@ -42,7 +42,7 @@ public abstract class AlgorithmTest extends STest {
 				() => MemoryChunk.make[Double](getSize()));
 		
 		team.placeGroup().broadcastFlat(() => {
-			val role = team.role()(0);
+			val role = team.role();
 			Parallel.iter(0..(getSize() - 1), (tid :Long, r :LongRange) => {
 				val edgeMem_ = edgeMemory();
 				for(i in r) {
@@ -194,7 +194,7 @@ public abstract class AlgorithmTest extends STest {
 		val checkResult = GlobalRef[Cell[Boolean]](new Cell[Boolean](false));
 		
 		team.placeGroup().broadcastFlat( () => {
-			val teamRole = team.role()(0);
+			val teamRole = team.role();
 			val teamSize = team.size();
 			val result_ = result();
 			val index_ = index();
@@ -266,7 +266,7 @@ public abstract class AlgorithmTest extends STest {
 		val checkResult = GlobalRef[Cell[Boolean]](new Cell[Boolean](false));
 		
 		team.placeGroup().broadcastFlat( () => {
-			val teamRole = team.role()(0);
+			val teamRole = team.role();
 			val teamSize = team.size();
 			val res_ = result();
 			val ref_ = ref();

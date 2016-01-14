@@ -56,7 +56,7 @@ public final struct DistSparseMatrix[T] {
 		
 		// create z > 0 plane
 		dist.allTeam().placeGroup().broadcastFlat(() => {
-			val z = dist.parentTeam().role()(0) / dist.allTeam().size();
+			val z = dist.parentTeam().role() / dist.allTeam().size();
 			if(z > 0) {
 				val copy_from = dist.getCongruentPlace(0n);
 				val r = at (copy_from) Tuple2(data_()().ids, data_()().matrix);

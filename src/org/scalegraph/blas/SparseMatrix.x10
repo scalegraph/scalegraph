@@ -182,7 +182,7 @@ public final struct SparseMatrix[T] {
 	 * @param team The sparse matrix is created on each place of the team.
 	 */
 	public static def makeReplica[T](sparseMatrix :SparseMatrix[T], team :Team) {
-		val root = team.role()(0);
+		val root = team.role();
 		val numVerts = sparseMatrix.offsets.size();
 		val numEdges = sparseMatrix.vertexes.size();
 		val ref_matrix = new GlobalRef[Cell[SparseMatrix[T]]]

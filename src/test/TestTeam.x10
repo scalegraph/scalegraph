@@ -48,7 +48,7 @@ public class TestTeam {
 			val oracle = new Rail[Int](counts, (i:Long)=> (role * counts + i) as Int);
 
 			//val recv = comm.scatter(role, root, src);
-			val recv = comm.scatter(role, root, src);
+			val recv = comm.scatter(root, src);
 			if (recv.size != oracle.size)
 				message(here + ": length mistatch: received: " + recv + ", expected: " + oracle);
 			for (i in 0..(recv.size - 1)) {
@@ -68,8 +68,8 @@ public class TestTeam {
                         val src_offs = new Rail[Int](comm.size(), (i:Long)=> (i * counts) as Int);
                         val src_counts = new Rail[Int](comm.size(), (i:Long)=> counts as Int);
 
-                        val recv = comm.scatterv(role, root, src, src_counts);
-                        val oracle = comm.scatter(role, root, src);
+                        val recv = comm.scatterv(root, src, src_counts);
+                        val oracle = comm.scatter(root, src);
                         if (recv.size != oracle.size)
                           message(here + ": alltoallv: length mistatch: received: " + recv + ", expected: " + oracle);
                         for (i in 0..(recv.size - 1)) {
@@ -119,7 +119,7 @@ public class TestTeam {
 					// message(here + ": input: " + src);
 				}
 			}
-			val dst = comm.allgather(role, src);
+			val dst = comm.allgather(src);
 			// message(here + ": allgather output: " + dst);
 			val oracle = new Rail[Int](comm.size() * counts, (i:Long)=> i as Int);
             for (q in Place.places()) {
@@ -145,7 +145,7 @@ public class TestTeam {
 					// message(here + ": input: " + src);
 				}
 			}
-			val dst = comm.allgatherv(role, src);
+			val dst = comm.allgatherv(src);
 			message(here + ": allgatherv output: " + dst);
 			val oracle = new Rail[Int](comm.size() * (comm.size() + 1) / 2, (i:Long)=> i as Int);
             for (q in Place.places()) {
@@ -172,7 +172,7 @@ public class TestTeam {
 					// message(here + ": input: " + src);
 				}
 			}
-			val dst = comm.alltoall(role, src);
+			val dst = comm.alltoall(src);
 			// message(here + ": alltoall output: " + dst);
 			val oracle = new Rail[Int](places, (i:Long)=> (i * places + role) as Int);
             for (q in Place.places()) {
@@ -202,7 +202,7 @@ public class TestTeam {
 					}
 				}
 				message(here + " before alltoallv");
-				val dst = comm.alltoallv(role, src);
+				val dst = comm.alltoallv(src);
 				val oracle = new Rail[Int](places, (i:Long)=> (i * places + role) as Int);
 				// message(here + ": alltoallv output: " + dst);
                 for (q in Place.places()) {
@@ -225,7 +225,7 @@ public class TestTeam {
 					}
 				}
 				message(here + " before alltoallv");
-				val dst = comm.alltoallv(role, src);
+				val dst = comm.alltoallv(src);
 				// message(here + ": alltoallv output: " + dst);
 				val oracle = new Rail[Int](role * places, (i:Long)=> ((i / role) * places + role) as Int);
                 for (q in Place.places()) {
@@ -248,7 +248,7 @@ public class TestTeam {
 					}
 				}
 				message(here + " before alltoallv");
-				val dst = comm.alltoallv(role, src);
+				val dst = comm.alltoallv(src);
 				message(here + ": alltoallv output: " + dst);
 				val oracle = new Rail[Int]((places - role - 1) * places, (i:Long)=> ((i / (places - role - 1)) * places + role) as Int);
                 for (q in Place.places()) {

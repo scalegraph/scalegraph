@@ -98,8 +98,8 @@ public final struct Dist2D {
     		
     		var allTeam :Team;
     		if(create_allteam_) {
-    			val z = parentTeam.role()(0) / RC;
-    			//allTeam = parentTeam.split(parentTeam.role()(0), z, role);
+    			val z = parentTeam.role() / RC;
+    			//allTeam = parentTeam.split(parentTeam.role(), z, role);
     			allTeam = parentTeam.split(z as Int, role);
     			for(pp in parentTeam.placeGroup()) {
     				/// if(here == pp) {
@@ -107,7 +107,7 @@ public final struct Dist2D {
     				///	Console.OUT.println("allTeam = " + allTeam);
     				///	Console.OUT.println("split(key=" + role + ",color=" + z + ")");
     				/// }
-    				//parentTeam.barrier(parentTeam.role()(0));
+    				//parentTeam.barrier(parentTeam.role());
     				parentTeam.barrier();
     			}
     		}
@@ -115,7 +115,7 @@ public final struct Dist2D {
     			allTeam = parentTeam;
     		}
     		
-//    		assert role == allTeam.role()(0);
+//    		assert role == allTeam.role();
     		val rowTeam :Cell[Team];
     		val columnTeam :Cell[Team];
     		if(oned) {
@@ -207,7 +207,7 @@ public final struct Dist2D {
      */
     public def c() = data()().herePt(1);
     
-    public def z() = data()().parentTeam.role()(0) / data()().allTeam.size();
+    public def z() = data()().parentTeam.role() / data()().allTeam.size();
     
     /** Returns the plane wide rank for the current place.
      */

@@ -247,7 +247,7 @@ public abstract class InputSplitter {
 		val splits_per_place = (splits.size()+teamSize-1) / teamSize;
 		team.placeGroup().broadcastFlat(() => {
 			try {
-				val role = team.role()(0);
+				val role = team.role();
 				val splits_begin = Math.min(role * splits_per_place, splits.size());
 				val splits_end = Math.min((role + 1) * splits_per_place, splits.size());
 				val splits_here = splits.raw().subpart(splits_begin, splits_end - splits_begin);

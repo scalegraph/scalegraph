@@ -88,7 +88,7 @@ final class MessageCommunicator[M] { M haszero } {
 	
 	def this(team :Team2, inEdge :GraphEdgeBase, ids :IdStruct, numThreads :Int)
 	{
-		val rank_c = team.base.role()(0);
+		val rank_c = team.base.role();
 		mTeam = team;
 		mInEdge = inEdge;
 		mIds = ids;
@@ -513,16 +513,27 @@ final class MessageCommunicator[M] { M haszero } {
 
 			val recvSize = recvOffset(numPlaces);
 
-			if(here.id == 0) sw.lap("alltoallv...");
+			if(here.id == 0) sw.lap("allocating message memory...");
+			
 			mBCRMessages = MemoryChunk.make[M](recvSize);
+			mTeam.barrier(); // for exact profiling
+			if(here.id == 0) sw.lap("alltoallv...");
+			
 			mTeam.alltoallv(mBCSMessages, mBCSOffset, mBCSCount, mBCRMessages, recvOffset, recvCount);
 			mBCSMessages.del();
+			
+			if(here.id == 0) sw.lap("allocating bitmap memory...");
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_BC_COMM_MES); }
 
 			mBCRHasMessage = new Bitmap(numLocalVertexesBC * numPlaces);
+			mTeam.barrier(); // for exact profiling
+			if(here.id == 0) sw.lap("alltoall...");
+			
 			mTeam.alltoall(mBCSMask.raw(), mBCRHasMessage.raw());
 			mBCSMask.del();
 			@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_BC_COMM_MASK); }
+			
+			if(here.id == 0) sw.lap("scan...");
 			
 			// pack mBCRHasMessage if it is needed
 			if(numLocalVertexes2N < Bitmap.BitsPerWord) {
@@ -536,7 +547,6 @@ final class MessageCommunicator[M] { M haszero } {
 				mBCRHasMessage = dst;
 			}
 
-			if(here.id == 0) sw.lap("scan...");
 			mBCROffset = MemoryChunk.make[Long](Bitmap.numWords(mBCRHasMessage.size()) + 1);
 			Parallel.scan(mBCRHasMessage.raw().range(), mBCROffset, 0L,
 					(i:Long, v:Long) => MathAppend.popcount(mBCRHasMessage.word(i)) + v,

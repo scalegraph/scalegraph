@@ -157,7 +157,7 @@ public class CSVWriter {
 			try {
 				@Ifdef("PROF_IO") val mtimer = Config.get().profIO().timer(IO.MAIN_FRAME as Int, 0n);
 				@Ifdef("PROF_IO") { mtimer.start(); }
-				val teamRole = team.role()(0);
+				val teamRole = team.role();
 				val teamSize = team.size();
 			
 				//val makeStringClosures = new GrowableMemory[(sb :SStringBuilder, idx :Long) => void]();

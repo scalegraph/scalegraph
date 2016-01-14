@@ -34,7 +34,7 @@ public final struct Team2 {
 		base = baseTeam;
 	}
 
-	public @Inline def role() = base.role()(0);
+	public @Inline def role() = base.role();
 	public @Inline def size() = base.size();
 	public @Inline def places() = base.places();
 	public @Inline def placeGroup() = base.placeGroup();
@@ -53,7 +53,7 @@ public final struct Team2 {
 
 	private static def nativeScatterv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_scatterv(id, role, root, src->pointer(), src_offs->pointer(), src_counts->pointer(), dst->pointer(), dst_count, sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_scatterv(id, role, root, src->pointer(), src_offs->pointer(), src_counts->pointer(), dst->pointer(), dst_count, sizeof(TPMGL(T)), ::x10aux::failed_coll_handler, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1n); // for MPI transport
 	}
 
@@ -65,7 +65,7 @@ public final struct Team2 {
 
 	private static def nativeGatherv[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], src_count:Int, dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_gatherv(id, role, root, src->pointer(), src_count, dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), sizeof(TPMGL(T)), x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_gatherv(id, role, root, src->pointer(), src_count, dst->pointer(), dst_offs->pointer(), dst_counts->pointer(), sizeof(TPMGL(T)), ::x10aux::failed_coll_handler, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1n); // for MPI transport
 	}
 	
@@ -77,7 +77,7 @@ public final struct Team2 {
 
 	private static def nativeBcast[T] (id:Int, role:Int, root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_bcast(id, role, root, src->pointer(), dst->pointer(), sizeof(TPMGL(T)), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_bcast(id, role, root, src->pointer(), dst->pointer(), sizeof(TPMGL(T)), count, ::x10aux::failed_coll_handler, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1n); // for MPI transport
 	}
 
@@ -107,7 +107,7 @@ public final struct Team2 {
 
 	private static def nativeAllreduce[T](id:Int, role:Int, src:MemoryChunk[T], dst:MemoryChunk[T], count:Int, op:Int) : void {
 		Runtime.increaseParallelism(); // for MPI transport
-		@Native("c++", "x10rt_allreduce(id, role, src->pointer(), dst->pointer(), (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, x10aux::coll_handler, x10aux::coll_enter());") {}
+		@Native("c++", "x10rt_allreduce(id, role, src->pointer(), dst->pointer(), (x10rt_red_op_type)op, x10rt_get_red_type<TPMGL(T)>(), count, ::x10aux::failed_coll_handler, x10aux::coll_handler, x10aux::coll_enter());") {}
 		Runtime.decreaseParallelism(1n); // for MPI transport
 	}
 	
@@ -147,7 +147,7 @@ public final struct Team2 {
 	 * @param root The rank of the place that 
 	 */
 	public def scatter[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		if(role == root && src.size() != dst.size() * base.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -198,7 +198,7 @@ public final struct Team2 {
 	/** This is equivalent to MPI_scatterv
 	 */
 	public def scatterv[T] (root:Int, src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		
 		@Ifdef("__CPP__") {
 			if (Serialization.needToSerialize[T]()) {
@@ -242,7 +242,7 @@ public final struct Team2 {
 	/** This is equivalent to MPI_scatterv
 	 */
 	public def scatterv[T] (root:Int, src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : MemoryChunk[T] {
-		val role = base.role()(0);
+		val role = base.role();
 		val dst_size = MemoryChunk.make[Int](1);
 		val src_offs = root == role ? MemoryChunk.make[Int](src_counts.size() + 1) : MemoryChunk.getNull[Int]();
 		if(root == role){
@@ -257,7 +257,7 @@ public final struct Team2 {
 	/** This is equivalent to MPI_gather
 	 */
 	public def gather[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		if(role == root && src.size() * base.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -308,7 +308,7 @@ public final struct Team2 {
 	 }
 
 	public def gatherv[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		
 		@Ifdef("__CPP__") {
             if (Serialization.needToSerialize[T]()) {
@@ -352,7 +352,7 @@ public final struct Team2 {
 	 }
 	
 	public def gatherv[T] (root:Int, src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
-		val role = base.role()(0);
+		val role = base.role();
 		val src_size = MemoryChunk.make[Int](1);
 		src_size(0) = src.size() as Int;
 		
@@ -378,7 +378,7 @@ public final struct Team2 {
 	}
 
 	public def bcast[T] (root:Int, src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		if(role == root && src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -422,7 +422,7 @@ public final struct Team2 {
 	 }
 
 	public def allgather[T](src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		if(src.size() * base.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -462,7 +462,7 @@ public final struct Team2 {
 	 }
 
 	public def allgatherv[T] (src:MemoryChunk[T], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		
 		@Ifdef("__CPP__") {
             if (Serialization.needToSerialize[T]()) {
@@ -496,7 +496,7 @@ public final struct Team2 {
 	 }
 	
 	public def allgatherv[T] (src:MemoryChunk[T]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]]  {
-		val role = base.role()(0);
+		val role = base.role();
 		val src_size = MemoryChunk.make[Int](1);
 		val dst_counts = MemoryChunk.make[Int](size());
 		src_size(0) = src.size() as Int;
@@ -513,7 +513,7 @@ public final struct Team2 {
 	}
 
 	public def alltoall[T](src:MemoryChunk[T], dst:MemoryChunk[T]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		if(src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -564,7 +564,7 @@ public final struct Team2 {
 	 }
 
 	public def alltoallv[T] (src:MemoryChunk[T], src_offs:MemoryChunk[Int], src_counts:MemoryChunk[Int], dst:MemoryChunk[T], dst_offs:MemoryChunk[Int], dst_counts:MemoryChunk[Int]) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		
 		@Ifdef("__CPP__") {
 			if (Serialization.needToSerialize[T]()) {
@@ -601,7 +601,7 @@ public final struct Team2 {
 	 }
 	
 	public def alltoallv[T] (src:MemoryChunk[T], src_counts:MemoryChunk[Int]) : Tuple2[MemoryChunk[T],MemoryChunk[Int]] {
-		val role = base.role()(0);
+		val role = base.role();
 		val src_offs = MemoryChunk.make[Int](src_counts.size() + 1);
 		countOffsets(src_counts, src_offs, 0n);
 		val dst_counts = MemoryChunk.make[Int](size());
@@ -618,7 +618,7 @@ public final struct Team2 {
 	}
 
 	public def allreduce[T](src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		if(src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		
@@ -641,7 +641,7 @@ public final struct Team2 {
 	}
 	
 	public def reduce[T](root:Int, src:MemoryChunk[T], dst:MemoryChunk[T], op:Int) : void {
-		val role = base.role()(0);
+		val role = base.role();
 		if(role == root && src.size() != dst.size())
 			throw new IllegalArgumentException("src.size() != dst.size()");
 		

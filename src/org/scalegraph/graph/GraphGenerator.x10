@@ -47,7 +47,7 @@ public final class GraphGenerator {
 	    team.placeGroup().broadcastFlat(() => {
 	        val srcMem_ = srcMemory();
 	        val dstMem_ = dstMemory();
-	        val role = team.role()(0);
+	        val role = team.role();
 	        
 	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
 	        val d4 = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
@@ -87,7 +87,7 @@ public final class GraphGenerator {
 	    team.placeGroup().broadcastFlat(() => {
 	        val srcMem_ = srcMemory();
 	        val dstMem_ = dstMemory();
-	        val role = team.role()(0);
+	        val role = team.role();
 	        
 	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
 	        for (i in srcMem_.range()) {
@@ -121,7 +121,7 @@ public final class GraphGenerator {
 	    team.placeGroup().broadcastFlat(() => {
 	        val srcMem_ = srcMemory();
 	        val dstMem_ = dstMemory();
-	        val role = team.role()(0);
+	        val role = team.role();
 	        
 	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
 	        for (i in 0L..(numEdges / teamSize -1)) {
@@ -163,7 +163,7 @@ public final class GraphGenerator {
 	    team.placeGroup().broadcastFlat(() => {
 	        val srcMem_ = srcMemory();
 	        val dstMem_ = dstMemory();
-	        val role = team.role()(0);
+	        val role = team.role();
 	        val indexOffset = here.id == 0 ? 1: 0;
 	        
 	        // val range = here.id == 0 ? 1L..(srcMem_.range().max): srcMem_.range();
@@ -193,7 +193,7 @@ public final class GraphGenerator {
 				() => MemoryChunk.make[Long](numLocalEdges));
 		
 		team.placeGroup().broadcastFlat(() => {
-			val role = team.role()(0);
+			val role = team.role();
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
@@ -268,7 +268,7 @@ public final class GraphGenerator {
 				() => MemoryChunk.make[Double](numLocalEdges));
 		
 		team.placeGroup().broadcastFlat(() => {
-			val role = team.role()(0);
+			val role = team.role();
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();
@@ -324,7 +324,7 @@ public final class GraphGenerator {
 		}
 		
 		team.placeGroup().broadcastFlat(() => {
-			val role = team.role()(0);
+			val role = team.role();
 			val offset = role * numLocalEdges;
 			Parallel.iter(0..(numLocalEdges - 1), (tid :Long, r :LongRange) => {
 				val rnd_ = rnd.clone();

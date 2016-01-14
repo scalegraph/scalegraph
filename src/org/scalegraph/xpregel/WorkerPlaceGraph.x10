@@ -75,7 +75,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 	var mNeedsAllUpdateInEdge :Boolean = true;
 	
 	public def this(team :Team, ids :IdStruct) {
-		val rank_r = team.role()(0);
+		val rank_r = team.role();
 		mTeam = new Team2(team);
 		mIds = ids;
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
@@ -332,7 +332,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		if (!f) return;
 		val mesComm = new MessageCommunicator[Long](mTeam, mInEdge, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val StoD = new OnedR.StoD(mIds, mTeam.base.role()(0));
+		val StoD = new OnedR.StoD(mIds, mTeam.base.role());
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
 		if(here.id == 0) sw.lap("vertex processing start");
 		
@@ -390,7 +390,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Long](mTeam, mInEdge, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val StoD = new OnedR.StoD(mIds, mTeam.base.role()(0));
+		val StoD = new OnedR.StoD(mIds, mTeam.base.role());
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT as Int); }
 		if(here.id == 0) sw.lap("vertex processing start");
 		
@@ -438,7 +438,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val numThreads = Runtime.NTHREADS;
 		val mesComm = new MessageCommunicator[Tuple2[Long, E]](mTeam, mInEdge, mIds, numThreads);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
-		val StoD = new OnedR.StoD(mIds, mTeam.base.role()(0));
+		val StoD = new OnedR.StoD(mIds, mTeam.base.role());
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_INIT); }
 		
 		foreachVertexes(numLocalVertexes, (tid :Long, r :LongRange) => {
@@ -493,7 +493,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 			/*{A haszero }*/	//added
 	{
 		@Ifdef("PROF_XP") val mtimer = Config.get().profXPregel().timer(XP.MAIN_FRAME, 0n);
-		val root = (team.base.role()(0) == 0n);
+		val root = (team.base.role() == 0n);
 		src(0) = aggregator(src);
 		@Ifdef("PROF_XP") { mtimer.lap(XP.MAIN_AGGREGATE_COMPUTE); }
 		team.gather(0n, src.subpart(0, 1), buffer);
@@ -595,7 +595,7 @@ final class WorkerPlaceGraph[V,E] /*{ V haszero, E haszero } */{
 		val sw = Config.get().stopWatch();
 		if(here.id == 0) sw.lap("start xpregel iteration");
 		
-		val root = (mTeam.base.role()(0) == 0n);
+		val root = (mTeam.base.role() == 0n);
 		val numLocalVertexes = mIds.numberOfLocalVertexes();
 		val ectx :MessageCommunicator[M] =
 			new MessageCommunicator[M](mTeam, mInEdge, mIds, numThreads);

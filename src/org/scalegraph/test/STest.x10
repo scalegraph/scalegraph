@@ -108,17 +108,17 @@ abstract public class STest {
     	buffer.add(linebreak);
     }
 
-    public static def success(): void = {
+    public static def success(): void {
 	   at (Place.FIRST_PLACE) 
 	     System.setExitCode(0n);
     }
 
-    public static def failure(): void = {
+    public static def failure(): void {
         at (Place.FIRST_PLACE)
            System.setExitCode(1n);
     }
 
-    protected static def reportResult(b: boolean): void = {
+    protected static def reportResult(b: boolean): void {
         if (b) success(); else failure();
     }
 
@@ -134,11 +134,11 @@ abstract public class STest {
 
     }
 
-    public static def chk(b: boolean): void = {
+    public static def chk(b: boolean): void {
         if (!b) throw new TestException();
     }
 
-    public static def chk(b: boolean, s: String): void = {
+    public static def chk(b: boolean, s: String): void {
         if (!b) throw new TestException(s);
     }
 
